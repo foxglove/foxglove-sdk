@@ -4,149 +4,232 @@ on:
   push:
     branches: [main]
     tags: ["**"]
-  pull_request: {}
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
   workflow_call:
     inputs:
       sdk-version:
         required: true
         type: string
-    outputs:
-      artifact_pattern:
-        description: "pattern to match all uploaded artifact names"
-        value: ${{ jobs.build.outputs.artifact_pattern }}
+      ref:
+        description: "Git ref to check out. Defaults to the workflow's ref."
+        required: false
+        type: string
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      build: ${{ github.event_name != 'pull_request' || steps.paths.outputs.c-cpp == 'true' || contains(github.event.pull_request.labels.*.name, 'ci:c-cpp') }}
+    steps:
+      - uses: dorny/paths-filter@v4
+        if: github.event_name == 'pull_request'
+        id: paths
+        with:
+          filters: |
+            c-cpp:
+              - 'c/**'
+              - 'cpp/**'
+              - '.github/workflows/c_cpp.yml'
+
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref }}
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            clang-format-19 clang-tidy-19 \
+            gcc g++ libglib2.0-dev libva-dev  \
+            libwebsockets-dev nlohmann-json3-dev
+          echo "/usr/lib/llvm-19/bin" >> $GITHUB_PATH
       - run: clang-format --version
+      - run: clang-tidy --version
       - run: make lint
         working-directory: cpp
-      - run: make CLANG_TIDY=true build
+      - name: Build C libs
+        run: make -f Container.mk build-cpp-dist
+      - name: Test with clang tidy
+        run: |
+          make test \
+            CLANG_TIDY=true \
+            CMAKE_BUILD_TYPE=Debug \
+            FOXGLOVE_PREBUILT_LIB_DIR=dist/lib
         working-directory: cpp
 
   build:
+    needs: changes
+    if: needs.changes.outputs.build == 'true'
     strategy:
       fail-fast: false
       matrix:
         include:
-          # Linux
-          - runner: ubuntu-24.04
-            target: aarch64-unknown-linux-gnu
-            staticlib_name: libfoxglove.a
-            cdylib_name: libfoxglove.so
-            staticlib_artifact_name: libfoxglove-aarch64-unknown-linux-gnu.a
-            cdylib_artifact_name: libfoxglove-aarch64-unknown-linux-gnu.so
-            cross: true
-          - runner: ubuntu-24.04
+          # Linux (clang, remote access disabled)
+          - runner: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             staticlib_name: libfoxglove.a
             cdylib_name: libfoxglove.so
-            staticlib_artifact_name: libfoxglove-x86_64-unknown-linux-gnu.a
-            cdylib_artifact_name: libfoxglove-x86_64-unknown-linux-gnu.so
+            compiler: clang
+            skip_upload: true
             cross: false
 
-          # macOS
+          # Linux (remote access enabled). require_cuda is only set on the
+          # targets where webrtc-sys builds NVENC support and where this job
+          # installs nvidia-cuda-dev below.
+          - runner: ubuntu-22.04-arm
+            target: aarch64-unknown-linux-gnu
+            staticlib_name: libfoxglove.a
+            cdylib_name: libfoxglove.so
+            cross: false
+            remote_access: true
+            require_cuda: true
+          - runner: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            staticlib_name: libfoxglove.a
+            cdylib_name: libfoxglove.so
+            cross: false
+            remote_access: true
+            require_cuda: true
+
+          # macOS (remote access enabled)
           - runner: macos-15
             target: aarch64-apple-darwin
             staticlib_name: libfoxglove.a
             cdylib_name: libfoxglove.dylib
-            staticlib_artifact_name: libfoxglove-aarch64-apple-darwin.a
-            cdylib_artifact_name: libfoxglove-aarch64-apple-darwin.dylib
             cross: false
+            remote_access: true
           - runner: macos-15
             target: x86_64-apple-darwin
             staticlib_name: libfoxglove.a
             cdylib_name: libfoxglove.dylib
-            staticlib_artifact_name: libfoxglove-x86_64-apple-darwin.a
-            cdylib_artifact_name: libfoxglove-x86_64-apple-darwin.dylib
             cross: true
+            cmake_args: -DCMAKE_OSX_ARCHITECTURES=x86_64
+            remote_access: true
 
-          # Windows
+          # Windows (remote access enabled, static CRT to match livekit prebuilt webrtc)
           - runner: windows-2025
             target: x86_64-pc-windows-msvc
             staticlib_name: foxglove.lib
             cdylib_name: foxglove.dll
-            staticlib_artifact_name: foxglove-x86_64-pc-windows-msvc.lib
-            cdylib_artifact_name: foxglove-x86_64-pc-windows-msvc.dll
             cross: false
+            remote_access: true
           - runner: windows-2025
             target: aarch64-pc-windows-msvc
             staticlib_name: foxglove.lib
             cdylib_name: foxglove.dll
-            staticlib_artifact_name: foxglove-aarch64-pc-windows-msvc.lib
-            cdylib_artifact_name: foxglove-aarch64-pc-windows-msvc.dll
             cross: true
+            cmake_args: -A ARM64 -DFOXGLOVE_SKIP_TEST_DISCOVERY=ON
+            remote_access: true
 
           # iOS
           - runner: macos-15
             target: aarch64-apple-ios
             staticlib_name: libfoxglove.a
             cdylib_name: libfoxglove.dylib
-            staticlib_artifact_name: libfoxglove-aarch64-apple-ios.a
-            cdylib_artifact_name: libfoxglove-aarch64-apple-ios.dylib
             cross: true
-          # iOS simulator
+          # iOS simulator: use the `ring` rustls backend to avoid building aws-lc-sys
+          # for this target, which requires an external bindgen workaround
+          # (https://github.com/aws/aws-lc-rs/issues/761).
           - runner: macos-15
             target: aarch64-apple-ios-sim
             staticlib_name: libfoxglove.a
             cdylib_name: libfoxglove.dylib
-            staticlib_artifact_name: libfoxglove-aarch64-apple-ios-sim.a
-            cdylib_artifact_name: libfoxglove-aarch64-apple-ios-sim.dylib
             cross: true
+            crypto_provider: ring
           - runner: macos-15
             target: x86_64-apple-ios
             staticlib_name: libfoxglove.a
             cdylib_name: libfoxglove.dylib
-            staticlib_artifact_name: libfoxglove-x86_64-apple-ios.a
-            cdylib_artifact_name: libfoxglove-x86_64-apple-ios.dylib
             cross: true
 
-    name: build (${{ matrix.target }})
+    name: build (${{ matrix.target }}${{ matrix.remote_access && ', remote-access' || '' }}${{ matrix.compiler == 'clang' && ', clang' || ''}})
     runs-on: ${{ matrix.runner }}
 
     env:
       CARGO_BUILD_TARGET: ${{ matrix.target }}
 
-    outputs:
-      artifact_pattern: "*.zip"
-
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref }}
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           target: ${{ matrix.target }}
+          # Set a cache key to distinguish the remote-access-enabled linux
+          # builds from the non-remote-access-enabled linux builds.
+          cache-key: ${{ matrix.remote_access && 'ra-v2' || '' }}
 
-      - run: sudo apt-get update && sudo apt-get install gcc-aarch64-linux-gnu
-        if: matrix.target == 'aarch64-unknown-linux-gnu'
-      - run: echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
-        if: matrix.target == 'aarch64-unknown-linux-gnu'
+      # aws-lc-sys requires iOS 13+ to build. The conditional treats an unset
+      # `crypto_provider` as the aws-lc-rs default, and skips this step for any
+      # explicit opt-out (today only `ring`).
+      - run: echo "IPHONEOS_DEPLOYMENT_TARGET=13.0.0" >> $GITHUB_ENV
+        if: contains(matrix.target, 'apple-ios') && (matrix.crypto_provider || 'aws-lc-rs') == 'aws-lc-rs'
 
-      - name: Build C library for ${{ matrix.target }}
+      - name: Install remote access build dependencies (Linux)
+        if: matrix.remote_access && runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libglib2.0-dev libva-dev libwebsockets-dev
+          echo "CC=gcc" >> $GITHUB_ENV
+          echo "CXX=g++" >> $GITHUB_ENV
+
+      - name: Install CUDA build dependencies
+        if: matrix.require_cuda && runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y nvidia-cuda-dev
+          echo "CUDA_HOME=/usr" >> $GITHUB_ENV
+      - name: Use Clang
+        if: matrix.compiler == 'clang'
+        run: |
+          echo "CC=clang" >> $GITHUB_ENV
+          echo "CXX=clang++" >> $GITHUB_ENV
+
+      - if: contains(matrix.target, 'windows')
+        uses: ilammy/setup-nasm@v1
+
+      - name: Build and package C/C++ SDK
         env:
-          FOXGLOVE_SDK_LANGUAGE: c
-        run: cargo build --release
-        working-directory: c
+          RUSTFLAGS: ${{ runner.os == 'Windows' && '-C target-feature=+crt-static' || '' }}
+        run: >-
+          make -f Container.mk build-cpp-dist
+          CPP_SDK_DIR=artifacts/foxglove
+          FOXGLOVE_REMOTE_ACCESS=${{ matrix.remote_access && 'ON' || 'OFF' }}
+          FOXGLOVE_REQUIRE_CUDA=${{ matrix.require_cuda && 'ON' || 'OFF' }}
+          FOXGLOVE_CRYPTO_PROVIDER=${{ matrix.crypto_provider || 'aws-lc-rs' }}
+          STATICLIB_NAME=${{ matrix.staticlib_name }}
+          CDYLIB_NAME=${{ matrix.cdylib_name }}
+
       - name: Ensure generated files are up to date
         run: git diff --exit-code
 
-      - name: Build C++ library and run tests
-        if: ${{ !fromJson(matrix.cross) }}
-        run: make test
+      # Build and test C++ using the pre-built Rust libraries.
+      - name: Build C++ library
+        if: "!contains(matrix.target, 'apple-ios')"
+        run: make build
+        working-directory: cpp
+        env:
+          FOXGLOVE_PREBUILT_LIB_DIR: ${{ github.workspace }}/artifacts/foxglove/lib
+          FOXGLOVE_REMOTE_ACCESS: ${{ matrix.remote_access && 'ON' || 'OFF' }}
+          CMAKE_ARGS: ${{ matrix.cmake_args || '' }}
+      - name: Test C++ library
+        if: "!matrix.cross && !contains(matrix.target, 'apple-ios')"
+        run: ctest --test-dir build --verbose
         working-directory: cpp
 
-      - name: Organize artifacts for zip
-        shell: bash
-        run: |
-          mkdir -p artifacts/foxglove/lib
-          mkdir -p artifacts/foxglove/include
-          mkdir -p artifacts/foxglove/src
-          mv target/${{ matrix.target }}/release/${{ matrix.staticlib_name }} artifacts/foxglove/lib/
-          mv target/${{ matrix.target }}/release/${{ matrix.cdylib_name }} artifacts/foxglove/lib/
-          cp -R c/include/foxglove-c artifacts/foxglove/include/
-          cp -R cpp/foxglove/include/foxglove artifacts/foxglove/include/
-          cp -R cpp/foxglove/src/* artifacts/foxglove/src/
+      - name: Run remote data loader backend conformance tests
+        if: ${{ !matrix.cross }}
+        env:
+          REMOTE_DATA_LOADER_BACKEND_CMD: ${{ format('cpp/build/{0}', runner.os == 'Windows' && 'RelWithDebInfo/example_remote_data_loader_backend.exe' || 'example_remote_data_loader_backend') }}
+          REMOTE_DATA_LOADER_BACKEND_URL: "http://127.0.0.1:8081/v1/manifest?flightId=TEST123&startTime=2024-01-01T00:00:00Z&endTime=2024-01-01T00:00:05Z"
+          REMOTE_DATA_LOADER_BACKEND_EXPECTED_STREAMED_SOURCE_COUNT: "1"
+          REMOTE_DATA_LOADER_BACKEND_EXPECTED_STATIC_FILE_SOURCE_COUNT: "0"
+        run: cargo run -p remote_data_loader_backend_conformance
 
       - name: Zip libraries for artifact
         if: runner.os != 'Windows'
@@ -165,23 +248,138 @@ jobs:
             foxglove/
 
       - name: Upload static & shared library to artifacts
-        uses: actions/upload-artifact@v4
+        if: ${{ !(matrix.skip_upload || false) }}
+        uses: actions/upload-artifact@v7
         with:
           name: foxglove-${{inputs.sdk-version || github.sha}}-cpp-${{ matrix.target }}.zip
           path: artifacts/foxglove-${{inputs.sdk-version || github.sha}}-cpp-${{ matrix.target }}.zip
           if-no-files-found: error
 
   test-asan-ubsan:
+    needs: changes
+    if: needs.changes.outputs.build == 'true'
     runs-on: ubuntu-latest
     env:
       CC: clang
       CXX: clang++
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref }}
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: nightly
           components: rust-src
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libglib2.0-dev libva-dev \
+            libwebsockets-dev nlohmann-json3-dev
 
-      - run: make SANITIZE=address,undefined test
+      - run: make SANITIZE=address,undefined FOXGLOVE_REMOTE_ACCESS=OFF test
         working-directory: cpp
+
+  integration-test:
+    needs: [changes, build]
+    if: needs.changes.outputs.build == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      PREBUILT_ARTIFACT: foxglove-${{ inputs.sdk-version || github.sha }}-cpp-x86_64-unknown-linux-gnu.zip
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref }}
+          lfs: true
+
+      - name: Install common dependencies
+        uses: ./.github/actions/common-deps
+
+      - name: Install LiveKit C++ SDK dependencies
+        run: |
+          sudo apt-get install -y --no-install-recommends \
+            llvm-dev libclang-dev clang \
+            libdrm-dev libgbm-dev libx11-dev libgl1-mesa-dev \
+            libxext-dev libxcomposite-dev libxdamage-dev libxfixes-dev \
+            libxrandr-dev libxi-dev libxkbcommon-dev \
+            libasound2-dev libpulse-dev \
+            libssl-dev \
+            libabsl-dev \
+            libwayland-dev libdecor-0-dev
+
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+          # Share the cache with the remote-access-enabled linux build job.
+          cache-key: ra-v2
+
+      # Reuse the prebuilt libfoxglove.so from the `build` matrix (x86_64 linux, remote-access
+      # enabled). `FOXGLOVE_PREBUILT_LIB_DIR` lets CMake skip the corrosion/Rust build entirely.
+      - name: Download prebuilt libfoxglove (x86_64 linux, remote-access)
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ env.PREBUILT_ARTIFACT }}
+          path: artifacts
+      - name: Unpack prebuilt libfoxglove
+        run: unzip -q artifacts/${{ env.PREBUILT_ARTIFACT }} -d artifacts
+
+      # Persist the LiveKit/webrtc FetchContent sources and build tree across runs, keyed on the
+      # CMakeLists.txt hash so bumping the LiveKit/jwt-cpp/httplib tags invalidates the cache.
+      - name: Cache LiveKit / webrtc FetchContent
+        uses: actions/cache@v5
+        with:
+          path: cpp/build-integration/_deps
+          key: c-cpp-integration-deps-${{ runner.os }}-${{ hashFiles('cpp/CMakeLists.txt') }}
+          restore-keys: |
+            c-cpp-integration-deps-${{ runner.os }}-
+
+      # ccache is wired up in cpp/CMakeLists.txt (find_program(CCACHE_PROGRAM ccache)), so
+      # installing it + persisting its cache transparently speeds up C/C++ recompiles.
+      - name: Set up ccache
+        uses: hendrikmuhs/ccache-action@v1
+        with:
+          key: c-cpp-integration-${{ runner.os }}
+          max-size: 2G
+
+      - name: Start LiveKit server
+        run: docker compose up -d --wait
+
+      - name: Build and run C++ integration tests
+        working-directory: cpp
+        env:
+          RUSTFLAGS: ""
+          FOXGLOVE_PREBUILT_LIB_DIR: ${{ github.workspace }}/artifacts/foxglove/lib
+        run: |
+          make build-integration
+          ctest --test-dir build-integration --verbose -L integration
+
+      - name: Capture LiveKit logs on failure
+        if: failure()
+        run: docker compose logs livekit > livekit.log
+      - name: Upload LiveKit logs
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: livekit-logs
+          path: livekit.log
+
+      - name: Stop LiveKit server
+        if: always()
+        run: docker compose down
+
+  # Gate job for branch protection. Always posts a status so that the required
+  # check passes even when the other jobs are skipped. Configure your required
+  # status check to reference this job ("C/C++ / c-cpp-status") instead of the
+  # individual matrix jobs.
+  #
+  # Note: `integration-test` is intentionally excluded from this gate so that
+  # its long runtime does not block PR merges while it is still running. It
+  # still runs on PRs and posts its own status, but is not required.
+  c-cpp-status:
+    name: c-cpp-status
+    needs: [changes, lint, build, test-asan-ubsan]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1

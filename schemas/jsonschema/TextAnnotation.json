@@ -33,7 +33,11 @@
           "type": "number",
           "description": "y coordinate position"
         }
-      }
+      },
+      "required": [
+        "x",
+        "y"
+      ]
     },
     "text": {
       "type": "string",
@@ -64,7 +68,13 @@
           "type": "number",
           "description": "Alpha value between 0 and 1"
         }
-      }
+      },
+      "required": [
+        "r",
+        "g",
+        "b",
+        "a"
+      ]
     },
     "background_color": {
       "title": "foxglove.Color",
@@ -87,7 +97,44 @@
           "type": "number",
           "description": "Alpha value between 0 and 1"
         }
-      }
+      },
+      "required": [
+        "r",
+        "g",
+        "b",
+        "a"
+      ]
+    },
+    "metadata": {
+      "type": "array",
+      "items": {
+        "title": "foxglove.KeyValuePair",
+        "description": "A key with its associated value",
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Key"
+          },
+          "value": {
+            "type": "string",
+            "description": "Value"
+          }
+        },
+        "required": [
+          "key",
+          "value"
+        ]
+      },
+      "description": "Additional user-provided metadata associated with this annotation. Keys must be unique."
     }
-  }
+  },
+  "required": [
+    "timestamp",
+    "position",
+    "text",
+    "font_size",
+    "text_color",
+    "background_color"
+  ]
 }

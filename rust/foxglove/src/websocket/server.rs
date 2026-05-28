@@ -1,10 +1,10 @@
-use std::collections::hash_map::Entry;
 use std::collections::HashSet;
-use std::sync::atomic::AtomicU16;
-use std::sync::atomic::Ordering::{Acquire, Release};
+use std::collections::hash_map::Entry;
 use std::sync::Weak;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use std::{collections::HashMap, net::SocketAddr, sync::Arc};
+
+use indexmap::IndexSet;
 
 use futures_util::SinkExt;
 use tokio::net::{TcpListener, TcpStream};
@@ -15,18 +15,21 @@ use tokio_tungstenite::tungstenite::Message;
 use tokio_util::sync::CancellationToken;
 
 use crate::library_version::get_library_version;
+use crate::sink_channel_filter::SinkChannelFilter;
 use crate::websocket::connected_client::ShutdownReason;
+use crate::websocket::streams::{Acceptor, StreamConfiguration, TlsIdentity};
 use crate::{Context, FoxgloveError};
 
 use super::connected_client::ConnectedClient;
 use super::cow_vec::CowVec;
 use super::service::{Service, ServiceId, ServiceMap};
+use super::ws_protocol::server::PlaybackState;
 use super::ws_protocol::server::{
     AdvertiseServices, RemoveStatus, ServerInfo, UnadvertiseServices,
 };
 use super::{
-    advertise, handshake, AssetHandler, Capability, ClientId, ConnectionGraph, Parameter,
-    ServerListener, Status,
+    AssetHandler, Capability, ClientId, ConnectionGraph, Parameter, ParameterHandler,
+    ServerListener, Status, advertise, handshake,
 };
 
 // Queue up to 1024 messages per connected client before dropping messages
@@ -39,11 +42,16 @@ pub(crate) struct ServerOptions {
     pub name: Option<String>,
     pub message_backlog_size: Option<usize>,
     pub listener: Option<Arc<dyn ServerListener>>,
-    pub capabilities: Option<HashSet<Capability>>,
+    pub capabilities: Option<IndexSet<Capability>>,
     pub services: HashMap<String, Service>,
-    pub supported_encodings: Option<HashSet<String>>,
+    pub supported_encodings: Option<IndexSet<String>>,
     pub runtime: Option<Handle>,
-    pub fetch_asset_handler: Option<Box<dyn AssetHandler>>,
+    pub fetch_asset_handler: Option<Arc<dyn AssetHandler>>,
+    pub parameter_handler: Option<Arc<dyn ParameterHandler>>,
+    pub tls_identity: Option<TlsIdentity>,
+    pub channel_filter: Option<Arc<dyn SinkChannelFilter>>,
+    pub server_info: Option<HashMap<String, String>>,
+    pub playback_time_range: Option<(u64, u64)>,
 }
 
 impl std::fmt::Debug for ServerOptions {
@@ -55,6 +63,7 @@ impl std::fmt::Debug for ServerOptions {
             .field("services", &self.services)
             .field("capabilities", &self.capabilities)
             .field("supported_encodings", &self.supported_encodings)
+            .field("server_info", &self.server_info)
             .finish()
     }
 }
@@ -108,11 +117,43 @@ impl ShutdownHandle {
 }
 
 /// Creates a new server.
-pub(crate) fn create_server(ctx: &Arc<Context>, opts: ServerOptions) -> Arc<Server> {
-    Arc::new_cyclic(|weak_self| Server::new(weak_self.clone(), ctx, opts))
+pub(crate) fn create_server(
+    ctx: &Arc<Context>,
+    opts: ServerOptions,
+) -> Result<Arc<Server>, FoxgloveError> {
+    // Validate that services without a request encoding have at least one supported
+    // encoding available (either configured globally or from another service).
+    if !opts.services.is_empty() {
+        let has_encodings = opts
+            .supported_encodings
+            .as_ref()
+            .is_some_and(|e| !e.is_empty())
+            || opts
+                .services
+                .values()
+                .any(|s| s.request_encoding().is_some());
+        if !has_encodings {
+            if let Some(svc) = opts
+                .services
+                .values()
+                .find(|s| s.request_encoding().is_none())
+            {
+                return Err(FoxgloveError::MissingRequestEncoding(
+                    svc.name().to_string(),
+                ));
+            }
+        }
+    }
+
+    // TLS configuration is fallible, so build it prior to allocating the Arc with the weak ref
+    let stream_config = StreamConfiguration::new(opts.tls_identity.as_ref())?;
+
+    Ok(Arc::new_cyclic(|weak_self| {
+        Server::new(weak_self.clone(), ctx, opts, stream_config)
+    }))
 }
 
-/// A websocket server that implements the Foxglove WebSocket Protocol
+/// A WebSocket server that implements the Foxglove WebSocket Protocol
 pub(crate) struct Server {
     /// A weak reference to the Arc holding the server.
     /// This is used to get a reference to the outer `Arc<Server>` from Server methods.
@@ -121,33 +162,43 @@ pub(crate) struct Server {
     /// It's analogous to the mixin shared_from_this in C++.
     weak_self: Weak<Self>,
     context: Weak<Context>,
-    /// Local port the server is listening on, once it has been started
-    port: AtomicU16,
     message_backlog_size: u32,
     runtime: Handle,
     /// May be provided by the caller
     session_id: parking_lot::RwLock<String>,
     name: String,
     clients: CowVec<Arc<ConnectedClient>>,
+    /// Channel subscription filter
+    channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     /// Callbacks for handling client messages, etc.
     listener: Option<Arc<dyn ServerListener>>,
     /// Capabilities advertised to clients
-    capabilities: HashSet<Capability>,
+    capabilities: IndexSet<Capability>,
     /// Parameters subscribed to by clients
     subscribed_parameters: parking_lot::RwLock<HashMap<String, HashSet<ClientId>>>,
     /// Encodings server can accept from clients. Ignored unless the "clientPublish" capability is set.
-    supported_encodings: HashSet<String>,
+    supported_encodings: IndexSet<String>,
     /// The current connection graph, unused unless the "connectionGraph" capability is set.
-    /// see https://github.com/foxglove/ws-protocol/blob/main/docs/spec.md#connection-graph-update
     connection_graph: parking_lot::Mutex<ConnectionGraph>,
     /// Token for cancelling all tasks
     cancellation_token: CancellationToken,
     /// Registered services.
     services: parking_lot::RwLock<ServiceMap>,
     /// Handler for fetch asset requests
-    fetch_asset_handler: Option<Box<dyn AssetHandler>>,
+    fetch_asset_handler: Option<Arc<dyn AssetHandler>>,
+    /// Handler for client parameter operations. When set, takes precedence over the deprecated
+    /// parameter callbacks on [`ServerListener`].
+    parameter_handler: Option<Arc<dyn ParameterHandler>>,
     /// Client tasks.
     tasks: parking_lot::Mutex<Option<JoinSet<()>>>,
+    /// Configuration to support TLS streams when enabled.
+    stream_config: StreamConfiguration,
+    /// Information about the server, which is shared with clients.
+    /// Keys prefixed with "fg-" are reserved for internal use.
+    server_info: HashMap<String, String>,
+    /// Time range of data being played back, in absolute nanoseconds.
+    /// Implies the [`PlaybackControl`](crate::websocket::Capability::PlaybackControl) capability if set.
+    playback_time_range: Option<(u64, u64)>,
 }
 
 impl Server {
@@ -160,7 +211,12 @@ impl Server {
             .unwrap_or_default()
     }
 
-    fn new(weak_self: Weak<Self>, ctx: &Arc<Context>, opts: ServerOptions) -> Self {
+    fn new(
+        weak_self: Weak<Self>,
+        ctx: &Arc<Context>,
+        opts: ServerOptions,
+        stream_config: StreamConfiguration,
+    ) -> Self {
         let mut capabilities = opts.capabilities.unwrap_or_default();
         let mut supported_encodings = opts.supported_encodings.unwrap_or_default();
 
@@ -175,19 +231,37 @@ impl Server {
             );
         }
 
+        if opts.playback_time_range.is_some() {
+            capabilities.insert(Capability::PlaybackControl);
+        } else if capabilities.contains(&Capability::PlaybackControl) {
+            // The PlaybackControl capability requires a time range to be set using
+            // ServerOptions::playback_time_range
+            panic!(
+                "Server declared the PlaybackControl capability but did not provide a playback time range"
+            );
+        }
+
         // If the server was declared with fetch asset handler, automatically add the "assets" capability
         if opts.fetch_asset_handler.is_some() {
             capabilities.insert(Capability::Assets);
         }
 
+        // If the server was declared with a parameter handler, automatically add the "parameters"
+        // capability.
+        if opts.parameter_handler.is_some() {
+            capabilities.insert(Capability::Parameters);
+        }
+
         Server {
             weak_self,
-            port: AtomicU16::new(0),
             context: Arc::downgrade(ctx),
             message_backlog_size: opts
                 .message_backlog_size
                 .unwrap_or(DEFAULT_MESSAGE_BACKLOG_SIZE) as u32,
-            runtime: opts.runtime.unwrap_or_else(crate::get_runtime_handle),
+            runtime: opts
+                .runtime
+                .unwrap_or_else(crate::runtime::get_runtime_handle),
+            channel_filter: opts.channel_filter.clone(),
             listener: opts.listener,
             session_id: parking_lot::RwLock::new(
                 opts.session_id.unwrap_or_else(Self::generate_session_id),
@@ -201,7 +275,11 @@ impl Server {
             cancellation_token: CancellationToken::new(),
             services: parking_lot::RwLock::new(ServiceMap::from_iter(opts.services.into_values())),
             fetch_asset_handler: opts.fetch_asset_handler,
+            parameter_handler: opts.parameter_handler,
             tasks: parking_lot::Mutex::default(),
+            stream_config,
+            server_info: opts.server_info.unwrap_or_default(),
+            playback_time_range: opts.playback_time_range,
         }
     }
 
@@ -209,10 +287,6 @@ impl Server {
         self.weak_self
             .upgrade()
             .expect("server cannot be dropped while in use")
-    }
-
-    pub fn port(&self) -> u16 {
-        self.port.load(Acquire)
     }
 
     /// Returns true if the server supports the capability.
@@ -230,6 +304,11 @@ impl Server {
         self.fetch_asset_handler.as_deref()
     }
 
+    /// Returns a reference to the parameter handler, if registered.
+    pub(super) fn parameter_handler(&self) -> Option<&dyn ParameterHandler> {
+        self.parameter_handler.as_deref()
+    }
+
     /// Returns a reference to the server listener.
     pub(super) fn listener(&self) -> Option<&dyn ServerListener> {
         self.listener.as_deref()
@@ -245,12 +324,11 @@ impl Server {
             tasks.replace(JoinSet::new());
         }
 
-        let addr = format!("{}:{}", host, port);
+        let addr = format!("{host}:{port}");
         let listener = TcpListener::bind(&addr)
             .await
             .map_err(FoxgloveError::Bind)?;
         let local_addr = listener.local_addr().map_err(FoxgloveError::Bind)?;
-        self.port.store(local_addr.port(), Release);
 
         let cancellation_token = self.cancellation_token.clone();
         let server = self.arc();
@@ -262,7 +340,12 @@ impl Server {
             }
         });
 
-        tracing::info!("Started server on {}", local_addr);
+        let maybe_tls = if self.is_tls_configured() {
+            " (TLS enabled)"
+        } else {
+            ""
+        };
+        tracing::info!("Started server on {local_addr}{maybe_tls}");
 
         Ok(local_addr)
     }
@@ -305,13 +388,17 @@ impl Server {
     pub fn stop(&self) -> Option<ShutdownHandle> {
         let tasks = self.tasks.lock().take()?;
         tracing::info!("Shutting down");
-        self.port.store(0, Release);
         self.cancellation_token.cancel();
         let clients = self.clients.take_and_freeze();
         for client in clients.iter() {
             client.shutdown(ShutdownReason::ServerStopped);
         }
         Some(ShutdownHandle::new(self.runtime.clone(), tasks))
+    }
+
+    /// Returns the number of currently connected clients.
+    pub fn client_count(&self) -> usize {
+        self.clients.get().len()
     }
 
     /// Publish the current timestamp to all clients.
@@ -327,6 +414,18 @@ impl Server {
         let clients = self.clients.get();
         for client in clients.iter() {
             client.send_control_msg(&message);
+        }
+    }
+
+    /// Publish the current playback state to all clients.
+    pub fn broadcast_playback_state(&self, playback_state: PlaybackState) {
+        if !self.has_capability(Capability::PlaybackControl) {
+            tracing::error!("Server does not support the PlaybackControl capability");
+            return;
+        }
+
+        for client in self.clients.get().iter() {
+            client.send_control_msg(&playback_state);
         }
     }
 
@@ -348,7 +447,6 @@ impl Server {
             }
         }
 
-        // Notify listener.
         if !new_names.is_empty() {
             if let Some(listener) = self.listener.as_ref() {
                 listener.on_parameters_subscribe(new_names);
@@ -371,7 +469,6 @@ impl Server {
             }
         }
 
-        // Notify listener.
         if !old_names.is_empty() {
             if let Some(listener) = self.listener.as_ref() {
                 listener.on_parameters_unsubscribe(old_names);
@@ -387,14 +484,13 @@ impl Server {
         let mut old_names = vec![];
         for (name, entry) in subs.iter_mut() {
             if entry.remove(&client_id) && entry.is_empty() {
-                old_names.push(name.to_string());
+                old_names.push(name.clone());
             }
         }
         for name in &old_names {
             subs.remove(name);
         }
 
-        // Notify listener.
         if !old_names.is_empty() {
             if let Some(listener) = self.listener.as_ref() {
                 listener.on_parameters_unsubscribe(old_names);
@@ -467,7 +563,7 @@ impl Server {
 
             // Notify client.
             if !filtered.is_empty() {
-                client.update_parameters(filtered);
+                client.update_parameters(filtered, None);
             }
         }
     }
@@ -480,7 +576,7 @@ impl Server {
         }
     }
 
-    /// Remove status messages by id from all clients.
+    /// Remove status messages by ID from all clients.
     pub fn remove_status(&self, status_ids: Vec<String>) {
         let message = RemoveStatus { status_ids };
         let clients = self.clients.get();
@@ -491,6 +587,12 @@ impl Server {
 
     /// Builds a server info message.
     fn server_info(&self) -> ServerInfo {
+        let mut metadata = self.server_info.clone();
+        if metadata.contains_key("fg-library") {
+            tracing::warn!("Overwriting reserved server_info key 'fg-library'");
+        }
+        metadata.insert("fg-library".into(), get_library_version());
+
         ServerInfo::new(&self.name)
             .with_capabilities(
                 self.capabilities
@@ -498,12 +600,10 @@ impl Server {
                     .flat_map(Capability::as_protocol_capabilities)
                     .copied(),
             )
-            .with_metadata(HashMap::from([(
-                "fg-library".into(),
-                get_library_version(),
-            )]))
+            .with_metadata(metadata)
             .with_supported_encodings(&self.supported_encodings)
             .with_session_id(self.session_id.read().clone())
+            .with_playback_time_range(self.playback_time_range)
     }
 
     /// Sets a new session ID and notifies all clients, causing them to reset their state.
@@ -519,12 +619,21 @@ impl Server {
     }
 
     /// When a new client connects:
+    /// - SSL handshake (if configured)
     /// - Handshake
     /// - Send ServerInfo
     /// - Advertise existing channels
     /// - Advertise existing services
     /// - Listen for client messages
     async fn handle_connection(self: Arc<Self>, stream: TcpStream, addr: SocketAddr) {
+        let stream = match self.stream_config.accept(stream).await {
+            Ok(maybe_tls_stream) => maybe_tls_stream,
+            Err(e) => {
+                tracing::error!("Dropping client {addr}: secure handshake failed: {}", e);
+                return;
+            }
+        };
+
         let Ok(mut ws_stream) = handshake::do_handshake(stream).await else {
             tracing::error!("Dropping client {addr}: handshake failed");
             return;
@@ -543,6 +652,7 @@ impl Server {
             ws_stream,
             addr,
             self.message_backlog_size as usize,
+            self.channel_filter.clone(),
         );
         self.register_client_and_advertise(&client);
         client.run().await;
@@ -559,6 +669,12 @@ impl Server {
         }
 
         tracing::info!("Registered client {}", client.addr());
+
+        // Notify listener
+        if let Some(listener) = self.listener() {
+            tracing::debug!("Notifying listener of client connection");
+            listener.on_client_connect();
+        }
 
         // Add the client as a sink. This synchronously triggers advertisements for all channels
         // via the `Sink::add_channel` callback.
@@ -592,6 +708,7 @@ impl Server {
         }
 
         self.clients.retain(|c| c.id() != client.id());
+
         if self.has_capability(Capability::Parameters) {
             self.unsubscribe_all_parameters(client.id());
         }
@@ -599,13 +716,20 @@ impl Server {
             self.unsubscribe_connection_graph(client.id());
         }
         client.on_disconnect();
+
+        // Notify listener
+        if let Some(listener) = self.listener() {
+            listener.on_client_disconnect();
+        }
+
         tracing::info!("Unregistered client {}", client.addr());
     }
 
     /// Adds new services, and advertises them to all clients.
     ///
-    /// This method will fail if the services capability was not declared, or if a service name is
-    /// not unique.
+    /// This method will fail if the services capability was not declared, if a service name is
+    /// not unique, or if a service has no request encoding and the server has no supported
+    /// encodings.
     pub fn add_services(&self, new_services: Vec<Service>) -> Result<(), FoxgloveError> {
         // Make sure that the server supports services.
         if !self.has_capability(Capability::Services) {
@@ -732,5 +856,9 @@ impl Server {
             }
         }
         Ok(())
+    }
+
+    pub(crate) fn is_tls_configured(&self) -> bool {
+        self.stream_config.accepts_tls()
     }
 }

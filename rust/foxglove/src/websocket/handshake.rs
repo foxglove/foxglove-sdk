@@ -1,17 +1,18 @@
-use tokio::net::TcpStream;
+use tokio::io::{AsyncRead, AsyncWrite};
 use tokio_tungstenite::tungstenite::handshake::server;
 use tokio_tungstenite::tungstenite::http::HeaderValue;
-use tokio_tungstenite::{tungstenite, WebSocketStream};
+use tokio_tungstenite::{WebSocketStream, tungstenite};
 
-pub(crate) static SUBPROTOCOL: &str = "foxglove.sdk.v1";
+pub(crate) const SUBPROTOCOL: &str = "foxglove.sdk.v1";
 
 /// Add the subprotocol header to the response if the client requested it. If the client requests
 /// subprotocols which don't contain ours, or does not include the expected header, return a 400.
-pub(crate) async fn do_handshake(
-    stream: TcpStream,
-) -> Result<WebSocketStream<TcpStream>, tungstenite::Error> {
+pub(crate) async fn do_handshake<S: AsyncRead + AsyncWrite + Unpin>(
+    stream: S,
+) -> Result<WebSocketStream<S>, tungstenite::Error> {
     tokio_tungstenite::accept_hdr_async(
         stream,
+        #[allow(clippy::result_large_err)]
         |req: &server::Request, mut res: server::Response| {
             let protocol_headers = req.headers().get_all("sec-websocket-protocol");
             for header in &protocol_headers {
@@ -29,14 +30,12 @@ pub(crate) async fn do_handshake(
                 }
             }
 
-            let resp = server::Response::builder()
+            Err(server::Response::builder()
                 .status(400)
                 .body(Some(
                     "Missing expected sec-websocket-protocol header".into(),
                 ))
-                .unwrap();
-
-            Err(resp)
+                .unwrap())
         },
     )
     .await

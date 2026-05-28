@@ -1,0 +1,19 @@
+[project]
+name = "so101-visualization"
+version = "0.1.0"
+description = "SO-101 robot arm visualization with Foxglove"
+authors = [{ name = "Foxglove", email = "contact@foxglove.dev" }]
+requires-python = ">=3.10"
+dependencies = [
+    "foxglove-sdk>=0.4.0",
+    "scipy~=1.0",
+    "yourdfpy",
+    "lerobot[feetech]",
+    "av==15.1.0",
+]
+
+[dependency-groups]
+dev = ["mypy>=1,<2"]
+
+[tool.uv]
+package = false

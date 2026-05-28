@@ -1,0 +1,7 @@
+---
+source: rust/foxglove/src/protocol/common/parameter.rs
+expression: "Parameter::empty(\"test\")"
+---
+{
+  "name": "test"
+}

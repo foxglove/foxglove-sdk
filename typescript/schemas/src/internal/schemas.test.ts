@@ -34,8 +34,8 @@ describe("schemas", () => {
 
   it("has valid descriptions", () => {
     for (const schema of Object.values(foxgloveMessageSchemas)) {
-      // Multi-line descriptions are supported for fields, but not currently for schemas
-      expect(schema.description.includes("\n")).toBe(false);
+      // Ensure descriptions don't contain comment-closing sequences that would break generated code
+      expect(schema.description.includes("*/")).toBe(false);
       for (const field of schema.fields) {
         expect(field.description.includes("*/")).toBe(false);
       }

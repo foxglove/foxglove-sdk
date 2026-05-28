@@ -1,0 +1,6 @@
+---
+source: rust/img2yuv/src/tests.rs
+expression: yuv420.data
+extension: yuv420.raw
+snapshot_kind: binary
+---

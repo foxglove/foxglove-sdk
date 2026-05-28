@@ -1,0 +1,156 @@
+package foxglove:loader@0.1.0;
+
+// Used to log to the host console.
+interface console {
+    log: func(log: string);
+    error: func(log: string);
+    warn: func(log: string);
+}
+
+// Used for reading files provided by the host to the Data Loader.
+interface reader {
+    resource reader {
+        // Seek to a certain position in the reader
+        seek: func(pos: u64) -> u64;
+        // Get the current position of the reader
+        position: func() -> u64;
+        // Read data into a slice at the provided pointer with the provided length.
+        // The host implementation will write up to `len` bytes into the address starting at `ptr`. The caller must ensure that this memory region is valid.
+        read: func(ptr: u32, len: u32) -> u64;
+        // Get the total size of the file backed by the reader
+        size: func() -> u64;
+    }
+
+    // Open a reader for a particular path.
+    //
+    // This path must be one of the paths passed to the data loader constructor.
+    open: func(path: string) -> reader;
+}
+
+interface time {
+    type time-nanos = u64;
+
+    record time-range {
+        // The start time of the range in nanoseconds
+        start-time: time-nanos,
+        // The end time of the range in nanoseconds
+        end-time: time-nanos,
+    }
+}
+
+interface loader {
+    use time.{time-nanos, time-range};
+
+    type channel-id = u16;
+    type schema-id = u16;
+    type error = string;
+
+    enum severity {
+        info,
+        warn,
+        error,
+    }
+
+    record problem {
+        // The severity of the problem. Currently "error", "warn" and "info" are supported.
+        severity: severity,
+        // The problem that occurred.
+        message: string,
+        // Optional context that can be  displayed to the user along side the problem.
+        tip: option<string>
+    }
+
+    record initialization {
+        channels: list<channel>,
+        schemas: list<schema>,
+        time-range: time-range,
+        problems: list<problem>,
+    }
+
+    // Arguments to the get_backfill method.
+    //
+    // It contains the time that should be backfilled and the list of requested channels.
+    record backfill-args {
+        time: time-nanos,
+        channels: list<channel-id>,
+    }
+
+    // Arguments to the create_iter method.
+    record message-iterator-args {
+        // The start time in nanoseconds to begin returning messages from.
+        //
+        // If the start time is not supplied return messages from the beginning of the file.
+        start-time: option<time-nanos>,
+        // The end time in nanoseconds to return messages until.
+        //
+        // If the end time is not supplied return messages until the end of the file.
+        end-time: option<time-nanos>,
+        // The list of channels to return messages from.
+        channels: list<channel-id>,
+    }
+
+    // A [`Channel`] groups related messages that have the same [`Schema`]. Each channel is identified by a unique topic name.
+    record channel {
+        // A unique identifier for this channel within the file.
+        id: channel-id,
+        // The schema for messages on this channel.
+        schema-id: option<schema-id>,
+        // The channel topic.
+        topic-name: string,
+        // Encoding for messages on this channel.
+        message-encoding: string,
+        // The number of messages on this channel.
+        message-count: option<u64>,
+    }
+
+    // A [`Schema`] describes the structure of the contents of a [`Message`]
+    record schema {
+        // A unique identifier for this schema within the file. Must not be zero.
+        id: schema-id,
+        // An identifier for the schema.
+        name: string,
+        // Format for the schema. The well-known schema encodings are preferred. An empty string indicates no schema is available.
+        encoding: string,
+        // Must conform to the schema encoding. If encoding is an empty string, data should be 0 length.
+        data: list<u8>,
+    }
+
+    // A [`Message`] is a timestamped log entry containing data from a recording
+    record message {
+        // The ID of the channel on which this message was recorded.
+        channel-id: channel-id,
+        // The timestamp in nanoseconds at which the message was recorded.
+        log-time: time-nanos,
+        // The timestamp in nanoseconds at which the message was published.
+        // If not available, must be set to the log time.
+        publish-time: time-nanos,
+        data: list<u8>,
+    }
+
+    // Arguments passed to the data loader constructor.
+    record data-loader-args {
+        // A list of paths to files available for the data loader to open.
+        paths: list<string>,
+    }
+
+    resource message-iterator {
+        next: func() -> option<result<message, error>>;
+    }
+
+    resource data-loader {
+        // Create a new instance of the data loader for a list of file paths
+        constructor(args: data-loader-args);
+        // Initialize the data source, reading the time range and channels or generating list of problems.
+        initialize: func() -> result<initialization, error>;
+        // Create an iterator over the data for the requested channels and time range.
+        create-iterator: func(args: message-iterator-args) -> result<message-iterator, error>;
+        // Get the messages on certain channels at a certain time
+        get-backfill: func(args: backfill-args) -> result<list<message>, error>;
+    }
+}
+
+world host {
+    import console;
+    import reader;
+    export loader;
+}

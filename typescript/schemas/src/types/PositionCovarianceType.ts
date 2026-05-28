@@ -3,11 +3,15 @@
 
 /** Type of position covariance */
 export enum PositionCovarianceType {
+  /** Unknown position covariance type */
   UNKNOWN = 0,
 
+  /** Position covariance is approximated */
   APPROXIMATED = 1,
 
+  /** Position covariance is per-axis, so put it along the diagonal */
   DIAGONAL_KNOWN = 2,
 
+  /** Position covariance of the fix is known */
   KNOWN = 3,
 }

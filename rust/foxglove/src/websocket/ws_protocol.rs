@@ -1,12 +1,38 @@
-//! Implementation of the Foxglove WebSocket protocol
+//! Local re-exports of messages that now live in `crate::protocol` for backwards compatibility
+pub mod client {
+    pub use crate::protocol::v1::client::advertise;
+    pub use crate::protocol::v1::client::subscribe;
+    pub use crate::protocol::v1::client::{
+        Advertise, ClientMessage, FetchAsset, GetParameters, MessageData, PlaybackCommand,
+        PlaybackControlRequest, ServiceCallRequest, SetParameters, Subscribe,
+        SubscribeConnectionGraph, SubscribeParameterUpdates, Subscription, Unadvertise,
+        Unsubscribe, UnsubscribeConnectionGraph, UnsubscribeParameterUpdates,
+    };
+}
 
-pub mod client;
-mod message;
-pub mod parameter;
-mod parse_error;
-pub mod schema;
-pub mod server;
-pub mod tungstenite;
+pub mod parameter {
+    pub use crate::protocol::v1::parameter::*;
+}
 
-pub use message::{BinaryMessage, JsonMessage};
-pub use parse_error::ParseError;
+pub mod schema {
+    pub use crate::protocol::v1::schema::*;
+}
+
+pub mod server {
+    pub use crate::protocol::v1::server::advertise;
+    pub use crate::protocol::v1::server::advertise_services;
+    pub use crate::protocol::v1::server::connection_graph_update;
+    pub use crate::protocol::v1::server::fetch_asset_response;
+    pub use crate::protocol::v1::server::playback_state;
+    pub use crate::protocol::v1::server::server_info;
+    pub use crate::protocol::v1::server::status;
+    pub use crate::protocol::v1::server::{
+        Advertise, AdvertiseServices, Channel, ConnectionGraphUpdate, FetchAssetResponse,
+        MessageData, ParameterValues, PlaybackState, RemoveStatus, ServerInfo, ServerMessage,
+        ServiceCallFailure, ServiceCallResponse, Status, Time, Unadvertise, UnadvertiseServices,
+    };
+}
+
+pub use crate::protocol::v1::tungstenite;
+
+pub use crate::protocol::v1::{BinaryMessage, JsonMessage, ParseError};

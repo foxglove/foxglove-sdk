@@ -1,25 +1,98 @@
 [package]
 name = "foxglove"
-version = "0.7.1"
 description = "Foxglove SDK"
-edition = "2021"
-rust-version = "1.83.0"
-repository = "https://github.com/foxglove/foxglove-sdk"
-license = "MIT"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+license.workspace = true
 
 [features]
-default = ["live_visualization"]
+default = ["aws-lc-rs", "derive", "lz4", "websocket", "zstd"]
 chrono = ["dep:chrono"]
-unstable = []
-live_visualization = [
+derive = ["dep:foxglove_derive"]
+sysinfo = ["dep:sysinfo", "dep:tokio", "tokio/rt-multi-thread", "tokio/time"]
+_remote-common = [
   "dep:base64",
+  "dep:flume",
+  "dep:futures-util",
   "dep:tokio",
   "dep:tokio-util",
-  "dep:tokio-tungstenite",
   "dep:serde_repr",
   "dep:serde_with",
 ]
+websocket = ["_remote-common", "dep:tokio-tungstenite"]
+live_visualization = ["websocket"]
+remote-access = [
+  "_remote-common",
+  "img2yuv",
+  "dep:livekit",
+  "dep:libwebrtc",
+  "dep:reqwest",
+  "dep:rustls",
+  "dep:semver",
+]
+# Opts into a build-time check that NVENC hardware acceleration for video
+# encoding will be available. Only meaningful in combination with
+# `remote-access`; see [NVENC hardware acceleration](#nvenc-hardware-acceleration)
+# for details.
+require-cuda = []
+lz4 = ["mcap/lz4"]
+websocket-tls = [
+  "websocket",
+  "tokio-tungstenite/rustls-tls-native-roots",
+  "dep:rustls",
+  "dep:tokio-rustls",
+]
 
+# Selects the rustls crypto backend installed as the process-wide default before
+# Foxglove opens any TLS connections (for `websocket-tls` and `remote-access`).
+# `aws-lc-rs` is in the default feature set; `ring` is offered as an alternative
+# for targets where building aws-lc-sys is impractical. These features are
+# mutually exclusive when a TLS-using feature is enabled: see `src/crypto.rs`.
+# To use `ring`, disable default features and select it explicitly.
+aws-lc-rs = ["rustls?/aws-lc-rs", "tokio-rustls?/aws-lc-rs"]
+ring = ["rustls?/ring", "tokio-rustls?/ring"]
+
+stream = ["dep:futures", "dep:tokio"]
+data_provider = ["remote_data_loader_backend"]
+remote_data_loader_backend = ["dep:chrono", "chrono/serde", "dep:serde_with", "dep:serde-constant"]
+schemars = ["dep:schemars"]
+schemars-chrono = ["schemars", "chrono", "schemars/chrono04"]
+serde = ["dep:base64"]
+unstable = []
+_protocol = ["_remote-common"]
+zstd = ["mcap/zstd"]
+
+# img2yuv feature and sub-features
+img2yuv-core = ["dep:image", "dep:yuv"]
+img2yuv-png = ["img2yuv-core", "image/png"]
+img2yuv-jpeg = ["img2yuv-core", "image/jpeg"]
+img2yuv-webp = ["img2yuv-core", "image/webp"]
+img2yuv = ["img2yuv-png", "img2yuv-jpeg", "img2yuv-webp", "img2yuv-ros1", "img2yuv-ros2"]
+img2yuv-ros1 = ["img2yuv-core", "dep:regex"]
+img2yuv-ros2 = ["img2yuv-core", "dep:cdr", "dep:regex"]
+
+# The full set of supported features, with opinionated choices for mutually-
+# exclusive feature sets.
+full = [
+  "aws-lc-rs",
+  "chrono",
+  "data_provider",
+  "derive",
+  "img2yuv",
+  "live_visualization",
+  "lz4",
+  "remote-access",
+  "schemars",
+  "schemars-chrono",
+  "serde",
+  "stream",
+  "sysinfo",
+  "websocket",
+  "websocket-tls",
+  "zstd",
+]
 [lints]
 workspace = true
 
@@ -28,37 +101,72 @@ arc-swap = "1.7.1"
 base64 = { version = "0.22", optional = true }
 bimap = "0.6.3"
 bytes.workspace = true
-chrono = { version = "0.4.39", optional = true }
+chrono = { workspace = true, optional = true }
 delegate = "0.13.2"
-flume = "0.11.1"
-futures-util = { version = "0.3.31", features = ["sink", "std"] }
+flume = { version = "0.11.1", optional = true }
+indexmap = "2"
+foxglove_derive = { version = "0.24.0", path = "../foxglove_derive", optional = true }
+futures = { version = "0.3.31", optional = true }
+futures-util = { version = "0.3.31", features = ["sink", "std"], optional = true }
+livekit = { version = "0.7.37", optional = true, features = ["rustls-tls-native-roots"] }
+rustls = { version = "0.23", optional = true, default-features = false, features = [
+  "logging",
+  "std",
+  "tls12",
+] }
+libwebrtc = { version = "0.3.30", optional = true }
 mcap.workspace = true
-parking_lot = "0.12.3"
+parking_lot = "0.12.4"
 prost-types.workspace = true
 prost.workspace = true
-schemars = "0.8.21"
+reqwest = { workspace = true, features = [
+  "http2",
+  "json",
+  "query",
+  "rustls-no-provider",
+  "stream",
+  "system-proxy",
+], optional = true }
+schemars = { version = "1.0.4", optional = true }
+semver = { version = "1.0", optional = true }
 serde_json = "1.0"
 serde_repr = { version = "0.1.19", optional = true }
-serde_with = { version = "3.12.0", features = ["macros", "base64"], optional = true }
+serde-constant = { version = "0.1.0", optional = true }
+serde_with = { workspace = true, optional = true }
 serde.workspace = true
-smallvec = "1.14.0"
+smallvec = "1.15.1"
 smallbytes = "0.1.0"
+sysinfo = { workspace = true, optional = true }
 thiserror.workspace = true
+tokio-rustls = { version = "0.26.0", optional = true, default-features = false, features = [
+  "logging",
+  "tls12",
+] }
 tokio-tungstenite = { workspace = true, optional = true }
 tokio-util = { workspace = true, optional = true }
 tokio = { workspace = true, optional = true }
 tracing.workspace = true
+urlencoding = "2.1.3"
+
+# img2yuv dependencies
+image = { version = "0.25.9", default-features = false, optional = true }
+yuv = { version = "0.8.9", optional = true }
+regex = { version = "1", optional = true }
+cdr = { version = "0.2.4", optional = true }
 
 [dev-dependencies]
 assert_matches = "1.5.0"
-clap = { version = "4.5", features = ["derive"] }
-env_logger = "0.11.5"
-futures-util = "0.3.31"
-insta = { version = "1.42.2", features = ["json"] }
+rcgen = { version = "0.14.3", features = ["crypto", "pem", "x509-parser"] }
+reqwest = { workspace = true, features = ["rustls"] }
+insta.workspace = true
+axum = "0.8.8"
+hexdump = "0.1.2"
 maplit = "1.0.2"
+serde_cbor = "0.11.2"
+serde_json = "1.0"
 tempfile = "3.15.0"
-tracing-test = "0.2.5"
+tracing-test.workspace = true
 
 [package.metadata.docs.rs]
-all-features = true
+features = ["full"]
 rustdoc-args = ["--cfg", "docsrs"]

@@ -10,6 +10,12 @@ Install via [Poetry](https://python-poetry.org/):
 poetry add foxglove-schemas-protobuf
 ```
 
+Or install via [uv](https://docs.astral.sh/uv/):
+
+```sh
+uv add foxglove-schemas-protobuf
+```
+
 ## Usage
 
 Import types from the `foxglove_schemas_protobuf` module as follows:
@@ -20,4 +26,4 @@ from foxglove_schemas_protobuf.CompressedImage_pb2 import CompressedImage
 
 ## Stay in touch
 
-Join our [Slack channel](https://foxglove.dev/slack) to ask questions, share feedback, and stay up to date on what our team is working on.
+Join our [Discord](https://foxglove.dev/chat) to ask questions, share feedback, and stay up to date on what our team is working on.

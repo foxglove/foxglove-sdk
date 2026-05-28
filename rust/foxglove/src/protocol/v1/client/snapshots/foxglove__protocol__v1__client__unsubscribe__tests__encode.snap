@@ -1,0 +1,12 @@
+---
+source: rust/foxglove/src/protocol/v1/client/unsubscribe.rs
+expression: message()
+---
+{
+  "op": "unsubscribe",
+  "subscriptionIds": [
+    1,
+    2,
+    3
+  ]
+}

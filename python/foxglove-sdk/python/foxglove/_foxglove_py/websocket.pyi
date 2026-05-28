@@ -1,19 +1,30 @@
-from collections.abc import Callable
 from enum import Enum
-from typing import Dict, List, Optional, Union
 
-import foxglove
+from foxglove import (
+    AnyNativeParameterValue,
+    AnyParameterValue,
+    ConnectionGraph,
+    MessageSchema,
+    Parameter,
+    ParameterType,
+    ParameterValue,
+    Service,
+    ServiceHandler,
+    ServiceRequest,
+    ServiceSchema,
+    StatusLevel,
+)
 
 class Capability(Enum):
     """
-    An enumeration of capabilities that the websocket server can advertise to its clients.
+    An enumeration of capabilities that the WebSocket server can advertise to its clients.
     """
 
     ClientPublish = ...
     """Allow clients to advertise channels to send data messages to the server."""
 
-    Connectiongraph = ...
-    """Allow clients to subscribe and make connection graph updates"""
+    ConnectionGraph = ...
+    """Allow clients to subscribe to connection graph updates"""
 
     Parameters = ...
     """Allow clients to get & set parameters."""
@@ -24,9 +35,12 @@ class Capability(Enum):
     Time = ...
     """Inform clients about the latest server time."""
 
+    PlaybackControl = ...
+    """Indicates that the server is capable of responding to playback control requests from controls in the Foxglove app."""
+
 class Client:
     """
-    A client that is connected to a running websocket server.
+    A client that is connected to a running WebSocket server.
     """
 
     id: int = ...
@@ -48,239 +62,115 @@ class ClientChannel:
     topic: str = ...
     encoding: str = ...
     schema_name: str = ...
-    schema_encoding: Optional[str] = ...
-    schema: Optional[bytes] = ...
+    schema_encoding: str | None = ...
+    schema: bytes | None = ...
 
-class ConnectionGraph:
+class PlaybackCommand(Enum):
+    """The command for playback requested by the client player"""
+
+    Play = ...
+    Pause = ...
+
+class PlaybackControlRequest:
     """
-    A graph of connections between clients.
-    """
+    A request to control playback from the client
 
-    def __new__(cls) -> "ConnectionGraph": ...
-    def set_published_topic(self, topic: str, publisher_ids: List[str]) -> None:
-        """
-        Set a published topic and its associated publisher ids. Overwrites any existing topic with
-        the same name.
-
-        :param topic: The topic name.
-        :param publisher_ids: The set of publisher ids.
-        """
-        ...
-
-    def set_subscribed_topic(self, topic: str, subscriber_ids: List[str]) -> None:
-        """
-        Set a subscribed topic and its associated subscriber ids. Overwrites any existing topic with
-        the same name.
-
-        :param topic: The topic name.
-        :param subscriber_ids: The set of subscriber ids.
-        """
-        ...
-
-    def set_advertised_service(self, service: str, provider_ids: List[str]) -> None:
-        """
-        Set an advertised service and its associated provider ids Overwrites any existing service
-        with the same name.
-
-        :param service: The service name.
-        :param provider_ids: The set of provider ids.
-        """
-        ...
-
-class MessageSchema:
-    """
-    A service request or response schema.
+    :param playback_command: The command for playback requested by the client player
+    :type playback_command: PlaybackCommand
+    :param playback_speed: The speed of playback requested by the client player
+    :type playback_speed: float
+    :param seek_time: The time the client player is requesting to seek to, in nanoseconds. None if no seek is requested.
+    :type seek_time: int | None
+    :param request_id: Unique string identifier, used to indicate that a PlaybackState is in response to a particular request from the client.
+    :type request_id: str
     """
 
-    encoding: str
-    schema: "foxglove.Schema"
+    playback_command: PlaybackCommand
+    playback_speed: float
+    seek_time: int | None
+    request_id: str
 
-    def __new__(
-        cls,
-        *,
-        encoding: str,
-        schema: "foxglove.Schema",
-    ) -> "MessageSchema": ...
-
-class Parameter:
+class PlaybackState:
     """
-    A parameter which can be sent to a client.
+    The state of data playback on the server
 
-    :param name: The parameter name.
-    :type name: str
-    :param value: Optional value, represented as a native python object, or a ParameterValue.
-    :type value: None|bool|float|str|bytes|list|dict|ParameterValue
-    :param type: Optional parameter type. This is automatically derived when passing a native
-                 python object as the value.
-    :type type: ParameterType|None
+    :param status: The status of server data playback
+    :type status: PlaybackStatus
+    :param current_time: The current time of playback, in absolute nanoseconds
+    :type current_time: int
+    :param playback_speed: The speed of playback, as a factor of realtime
+    :type playback_speed: float
+    :param did_seek: Whether a seek forward or backward in time triggered this message to be emitted
+    :type did_seek: bool
+    :param request_id: If this message is being emitted in response to a PlaybackControlRequest message, the request_id from that message. Set this to an empty string if the state of playback has been changed by any other condition.
+    :type request_id: str | None
     """
 
-    name: str
-    type: Optional["ParameterType"]
-    value: Optional["AnyParameterValue"]
+    status: PlaybackStatus
+    current_time: int
+    playback_speed: float
+    did_seek: bool
+    request_id: str | None
 
     def __init__(
         self,
-        name: str,
-        *,
-        value: Optional["AnyNativeParameterValue"] = None,
-        type: Optional["ParameterType"] = None,
-    ) -> None: ...
-    def get_value(self) -> Optional["AnyNativeParameterValue"]:
-        """Returns the parameter value as a native python object."""
-        ...
+        status: PlaybackStatus,
+        current_time: int,
+        playback_speed: float,
+        did_seek: bool,
+        request_id: str | None,
+    ): ...
 
-class ParameterType(Enum):
-    """
-    The type of a parameter.
-    """
+class PlaybackStatus(Enum):
+    """The status of server data playback"""
 
-    ByteArray = ...
-    """A byte array."""
-
-    Float64 = ...
-    """A decimal or integer value that can be represented as a `float64`."""
-
-    Float64Array = ...
-    """An array of decimal or integer values that can be represented as `float64`s."""
-
-class ParameterValue:
-    """
-    A parameter value.
-    """
-
-    class Bool:
-        """A boolean value."""
-
-        def __new__(cls, value: bool) -> "ParameterValue.Bool": ...
-
-    class Number:
-        """A decimal or integer value."""
-
-        def __new__(cls, value: float) -> "ParameterValue.Number": ...
-
-    class String:
-        """
-        A string value.
-
-        For parameters of type :py:attr:ParameterType.ByteArray, this is a
-        base64 encoding of the byte array.
-        """
-
-        def __new__(cls, value: str) -> "ParameterValue.String": ...
-
-    class Array:
-        """An array of parameter values."""
-
-        def __new__(
-            cls, value: List["AnyParameterValue"]
-        ) -> "ParameterValue.Array": ...
-
-    class Dict:
-        """An associative map of parameter values."""
-
-        def __new__(
-            cls, value: dict[str, "AnyParameterValue"]
-        ) -> "ParameterValue.Dict": ...
-
-AnyParameterValue = Union[
-    ParameterValue.Bool,
-    ParameterValue.Number,
-    ParameterValue.String,
-    ParameterValue.Array,
-    ParameterValue.Dict,
-]
-
-AnyInnerParameterValue = Union[
-    AnyParameterValue,
-    bool,
-    float,
-    str,
-    List["AnyInnerParameterValue"],
-    Dict[str, "AnyInnerParameterValue"],
-]
-
-AnyNativeParameterValue = Union[
-    AnyInnerParameterValue,
-    bytes,
-]
-
-AssetHandler = Callable[[str], Optional[bytes]]
-
-class ServiceRequest:
-    """
-    A websocket service request.
-    """
-
-    service_name: str
-    client_id: int
-    call_id: int
-    encoding: str
-    payload: bytes
-
-ServiceHandler = Callable[["ServiceRequest"], bytes]
-
-class Service:
-    """
-    A websocket service.
-    """
-
-    name: str
-    schema: "ServiceSchema"
-    handler: "ServiceHandler"
-
-    def __new__(
-        cls,
-        *,
-        name: str,
-        schema: "ServiceSchema",
-        handler: "ServiceHandler",
-    ) -> "Service": ...
-
-class ServiceSchema:
-    """
-    A websocket service schema.
-    """
-
-    name: str
-    request: Optional["MessageSchema"]
-    response: Optional["MessageSchema"]
-
-    def __new__(
-        cls,
-        *,
-        name: str,
-        request: Optional["MessageSchema"] = None,
-        response: Optional["MessageSchema"] = None,
-    ) -> "ServiceSchema": ...
-
-class StatusLevel(Enum):
-    """A level for `WebSocketServer.publish_status`"""
-
-    Info = ...
-    Warning = ...
-    Error = ...
+    Playing = ...
+    Paused = ...
+    Buffering = ...
+    Ended = ...
 
 class WebSocketServer:
     """
-    A websocket server for live visualization.
+    A WebSocket server for live visualization.
     """
 
-    def __new__(cls) -> "WebSocketServer": ...
+    def __init__(self) -> None: ...
     @property
     def port(self) -> int:
         """Get the port on which the server is listening."""
+        ...
+
+    def app_url(
+        self,
+        *,
+        layout_id: str | None = None,
+        open_in_desktop: bool = False,
+    ) -> str | None:
+        """
+        Returns a web app URL to open the WebSocket as a data source.
+
+        Returns None if the server has been stopped.
+
+        :param layout_id: An optional layout ID to include in the URL.
+        :param open_in_desktop: Opens the foxglove desktop app.
+        """
         ...
 
     def stop(self) -> None:
         """Explicitly stop the server."""
         ...
 
-    def clear_session(self, session_id: Optional[str] = None) -> None:
+    def clear_session(self, session_id: str | None = None) -> None:
         """
         Sets a new session ID and notifies all clients, causing them to reset their state.
         If no session ID is provided, generates a new one based on the current timestamp.
         If the server has been stopped, this has no effect.
+        """
+        ...
+
+    def broadcast_playback_state(self, playback_state: PlaybackState) -> None:
+        """
+        Publish the current playback state to all clients.
         """
         ...
 
@@ -291,12 +181,12 @@ class WebSocketServer:
         """
         ...
 
-    def publish_parameter_values(self, parameters: List["Parameter"]) -> None:
+    def publish_parameter_values(self, parameters: list[Parameter]) -> None:
         """Publishes parameter values to all subscribed clients."""
         ...
 
     def publish_status(
-        self, message: str, level: "StatusLevel", id: Optional[str] = None
+        self, message: str, level: StatusLevel, id: str | None = None
     ) -> None:
         """
         Send a status message to all clients. If the server has been stopped, this has no effect.
@@ -305,23 +195,31 @@ class WebSocketServer:
 
     def remove_status(self, ids: list[str]) -> None:
         """
-        Remove status messages by id from all clients. If the server has been stopped, this has no
+        Remove status messages by ID from all clients. If the server has been stopped, this has no
         effect.
         """
         ...
 
-    def add_services(self, services: list["Service"]) -> None:
-        """Add services to the server."""
+    def add_services(self, services: list[Service]) -> None:
+        """
+        Add services to the server.
+
+        This method will fail if the server was not configured with
+        :py:attr:`Capability.Services`, if a service name is not unique, or if a service has no
+        request encoding and the server has no supported encodings.
+        """
         ...
 
     def remove_services(self, names: list[str]) -> None:
         """Removes services that were previously advertised."""
         ...
 
-    def publish_connection_graph(self, graph: "ConnectionGraph") -> None:
+    def publish_connection_graph(self, graph: ConnectionGraph) -> None:
         """
         Publishes a connection graph update to all subscribed clients. An update is published to
         clients as a difference from the current graph to the replacement graph. When a client first
         subscribes to connection graph updates, it receives the current graph.
+
+        Raises an error if the server wasn't started with :py:attr:`Capability.ConnectionGraph`.
         """
         ...

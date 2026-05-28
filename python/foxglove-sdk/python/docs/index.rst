@@ -10,33 +10,118 @@ Version: |release|
 The official `Foxglove <https://docs.foxglove.dev/docs>`_ SDK for Python.
 
 This package provides support for integrating with the Foxglove platform. It can be used to log
-events to local `MCAP <https://mcap.dev/>`_ files or a local visualization server that communicates
-with the Foxglove app.
+events to local `MCAP <https://mcap.dev/>`_ files, a local WebSocket server, or a remote access
+gateway that communicates with the Foxglove app.
 
+Getting started
+---------------
 
-Overview
+Install the ``foxglove-sdk`` package from `PyPI <https://pypi.org/project/foxglove-sdk/>`_.
+
+This will depend on your package manager. Our `examples
+<https://github.com/foxglove/foxglove-sdk/tree/main/python/foxglove-sdk-examples>`_ use `uv
+<https://docs.astral.sh/uv/>`_.
+
+To record messages, you need to initialize a sink such as an MCAP file writer, a WebSocket server,
+or a remote access gateway.
+
+For a hands-on walk-through, see https://docs.foxglove.dev/docs/sdk/example?lang=python.
+
+Concepts
 --------
 
-To record messages, you need at least one sink and at least one channel.
+Context
+^^^^^^^
 
-A "sink" is a destination for logged messages — either an MCAP file or a live visualization server.
-Use :py:func:`.open_mcap` to register a new MCAP sink. Use
-:py:func:`.start_server` to create a new live visualization server.
+A :py:class:`.Context` is the binding between channels and sinks. Each channel and sink belongs to
+exactly one context. Sinks receive advertisements about channels on the context, and can optionally
+subscribe to receive logged messages on those channels.
 
-A "channel" gives a way to log related messages which have the same schema. Each channel is
-instantiated with a unique topic name.
+When the context goes out of scope, its corresponding channels and sinks will be disconnected from
+one another, and logging will stop. Attempts to log further messages on the channels will elicit
+throttled warning messages.
 
-The SDK provides classes for well-known schemas. These can be used in conjunction with associated
+Since many applications only need a single context, the SDK provides a static default context for
+convenience.
+
+
+Channels
+^^^^^^^^
+
+A :py:class:`.Channel` gives a way to log related messages which have the same type, or
+:py:class:`.Schema`. Each channel is instantiated with a unique "topic", or name, which is typically
+prefixed by a `/`. If you're familiar with MCAP, it's the same concept as an `MCAP channel <https://mcap.dev/guides/concepts#channel>`_.
+
+A channel is always associated with exactly one :py:class:`.Context` throughout its lifecycle. The
+channel remains attached to the context until it is either explicitly closed with
+`Channel.close`, or the context is dropped. Attempting to log a message on a closed channel
+will elicit a throttled warning.
+
+Message Types
+^^^^^^^^^^^^^
+
+The SDK provides classes for well-known message types. These can be used in conjunction with associated
 channel classes for type-safe logging, which ensures at compile time that messages logged to a
 channel all share a common schema. For example, you may create a :py:class:`.channels.SceneUpdateChannel` on
-which you will log :py:class:`.schemas.SceneUpdate` messages.
+which you will log :py:class:`.messages.SceneUpdate` messages. Note that the message classes
+are currently immutable and do not expose getters and setters for their fields. This is a limitation
+we plan to address in the future.
+
+.. deprecated:: 0.21.0
+   The ``foxglove.schemas`` module is deprecated. Use :py:mod:`foxglove.messages` instead.
 
 You can also log messages with arbitrary schemas and provide your own encoding, by instantiating a
 :py:class:`.Channel` class.
 
+Sinks
+^^^^^
+
+A "sink" is a destination for logged messages. If you do not configure a sink, log messages will
+simply be dropped without being recorded. You can configure multiple sinks, and you can create
+or destroy them dynamically at runtime.
+
+A sink is typically associated with exactly one :py:class:`.Context` throughout its lifecycle.
+Details about how the sink is registered and unregistered from the context are sink-specific.
+
+To create an MCAP file sink, use :py:func:`.open_mcap` and keep a reference to the returned handle.
+As long as the handle remains in scope, events will be logged to the MCAP file. When the handle is
+closed or dropped, the sink will be unregistered from the :py:class:`.Context`, and the file will be
+finalized and flushed.
+
+To create a WebSocket server sink, use :py:func:`.start_server`. By default, the server
+listens on ``127.0.0.1:8765``. Each client that connects to the WebSocket server is its own
+independent sink. The sink is dynamically added to the :py:class:`.Context` associated with the
+server when the client connects, and removed from the context when the client disconnects.
+
+To create a remote access gateway sink, use :py:func:`.start_gateway`. You must provide a device
+token to authenticate with the Foxglove API; this can be passed directly or set via the
+``FOXGLOVE_DEVICE_TOKEN`` environment variable. Once started, the gateway connects to the Foxglove
+platform over WebRTC and makes the device available for remote visualization and teleop. The gateway
+acts as a single sink on the :py:class:`.Context`, registered when the gateway starts and
+unregistered when it stops.
+
+Notebook integration
+^^^^^^^^^^^^^^^^^^^^
+
+See :doc:`../notebook/index` for details on using Foxglove with Python/Jupyter notebooks.
+
+Playground
+^^^^^^^^^^
+
+The `Foxglove SDK Playground <https://playground.foxglove.dev/>`__ allows you to run Python code
+using the Foxglove SDK, and visualize the resulting data in Foxglove. Inside a playground, the
+following APIs are available:
+
+.. py:function:: playground.set_layout(layout: Layout, /) -> None
+
+   Update the layout used in the playground.
+
+Table of contents
+^^^^^^^^^^^^^^^^^
 
 .. toctree::
    :maxdepth: 3
 
    examples
    api/index
+   notebook/index

@@ -11,14 +11,14 @@ import {
   BYTE_VECTOR_FB,
   DURATION_FB,
   TIME_FB,
+  flatbufferMessageSchemaName,
   generateFlatbuffers,
 } from "../typescript/schemas/src/internal/generateFlatbufferSchema";
 import { generateJsonSchema } from "../typescript/schemas/src/internal/generateJsonSchema";
 import { generateMarkdown } from "../typescript/schemas/src/internal/generateMarkdown";
 import {
-  DURATION_IDL,
-  TIME_IDL,
   generateOmgIdl,
+  omgIdlMessageSchemaName,
 } from "../typescript/schemas/src/internal/generateOmgIdl";
 import { generateProto } from "../typescript/schemas/src/internal/generateProto";
 import {
@@ -28,9 +28,18 @@ import {
   generatePySchemaStub,
   generateChannelClasses,
   generatePyChannelStub,
+  generatePyMessageModule,
   generatePySchemaModule,
   generatePyChannelModule,
 } from "../typescript/schemas/src/internal/generatePyclass";
+import {
+  generateCppSchemas,
+  generateHppSchemas,
+} from "../typescript/schemas/src/internal/generateSdkCpp";
+import {
+  generateRustTypes,
+  generateBindgenConfig,
+} from "../typescript/schemas/src/internal/generateSdkRustCTypes";
 import {
   foxgloveEnumSchemas,
   foxgloveMessageSchemas,
@@ -72,7 +81,7 @@ async function exec(command: string, args: string[], { cwd }: Pick<SpawnOptions,
 async function main({ clean }: { clean: boolean }) {
   const repoRoot = path.resolve(__dirname, "..");
   const outDir = path.join(repoRoot, "schemas");
-  const rosOutDir = path.join(repoRoot, "ros/foxglove_msgs");
+  const rosOutDir = path.join(repoRoot, "ros/src/foxglove_msgs");
   const typescriptTypesDir = path.join(repoRoot, "typescript/schemas/src/types");
 
   const pythonSdkRoot = path.resolve(repoRoot, "python", "foxglove-sdk");
@@ -84,11 +93,13 @@ async function main({ clean }: { clean: boolean }) {
     await rimraf(path.join(rosOutDir, "ros1"));
     await rimraf(path.join(rosOutDir, "ros2"));
     await rimraf(typescriptTypesDir);
-    await rimraf(path.join(repoRoot, "rust/foxglove/src/schemas"));
+    await rimraf(path.join(repoRoot, "rust/foxglove/src/messages"));
     await rimraf(pythonSdkGeneratedRoot);
     await rimraf(path.join(pythonSdkPyRoot, "_foxglove_py/schemas.pyi"));
     await rimraf(path.join(pythonSdkPyRoot, "schemas/__init__.py"));
+    await rimraf(path.join(pythonSdkPyRoot, "messages/__init__.py"));
     await rimraf(path.join(pythonSdkPyRoot, "_foxglove_py/channels.pyi"));
+    await rimraf(path.join(pythonSdkPyRoot, "_foxglove_py/messages.pyi"));
     await rimraf(path.join(pythonSdkPyRoot, "channels/__init__.py"));
   });
 
@@ -105,6 +116,8 @@ async function main({ clean }: { clean: boolean }) {
       await fs.writeFile(path.join(outDir, "jsonschema", `${schema.name}.json`), json + "\n");
       indexTS += `export const ${schema.name} = ${json};\n\n`;
     }
+    // Include the legacy `Time` export for backwards compatibility.
+    indexTS += `export const Time = Timestamp;\n\n`;
     await fs.writeFile(path.join(outDir, "jsonschema", `index.ts`), indexTS);
   });
 
@@ -141,6 +154,9 @@ async function main({ clean }: { clean: boolean }) {
   await logProgress("Generating Protobuf definitions", async () => {
     await fs.mkdir(path.join(outDir, "proto", "foxglove"), { recursive: true });
     for (const schema of Object.values(foxgloveMessageSchemas)) {
+      if (schema.protoEquivalent != undefined) {
+        continue;
+      }
       const enums = Object.values(foxgloveEnumSchemas).filter(
         (enumSchema) => enumSchema.parentSchemaName === schema.name,
       );
@@ -154,16 +170,25 @@ async function main({ clean }: { clean: boolean }) {
   await logProgress("Generating FlatBuffer definitions", async () => {
     await fs.mkdir(path.join(outDir, "flatbuffer"), { recursive: true });
     await fs.writeFile(path.join(outDir, "flatbuffer", "ByteVector.fbs"), BYTE_VECTOR_FB);
+    // Time and Duration are handled differently:
+    // - The name "Time" is kept for backwards compatibility.
+    // - We use structs instead of tables
+    // - Duration uses int32 for nsec instead of uint32.
     await fs.writeFile(path.join(outDir, "flatbuffer", "Time.fbs"), TIME_FB);
     await fs.writeFile(path.join(outDir, "flatbuffer", "Duration.fbs"), DURATION_FB);
 
-    for (const schema of Object.values(foxgloveMessageSchemas)) {
+    const messageSchemas = Object.values(foxgloveMessageSchemas).filter(
+      (schema) => schema.name !== "Timestamp" && schema.name !== "Duration",
+    );
+
+    for (const schema of messageSchemas) {
       // want enums with their corresponding parent tables for usage
       const enums = Object.values(foxgloveEnumSchemas).filter(
         (enumSchema) => enumSchema.parentSchemaName === schema.name,
       );
+      const name = flatbufferMessageSchemaName(schema);
       await fs.writeFile(
-        path.join(outDir, "flatbuffer", `${schema.name}.fbs`),
+        path.join(outDir, "flatbuffer", `${name}.fbs`),
         generateFlatbuffers(schema, enums),
       );
     }
@@ -178,13 +203,15 @@ async function main({ clean }: { clean: boolean }) {
     }
   });
 
+  // Build the schemas package for easier documentation previews
+  await exec("yarn", ["workspace", "@foxglove/schemas", "clean-build"], { cwd: repoRoot });
+
   await logProgress("Generating OMG IDL definitions", async () => {
     await fs.mkdir(path.join(outDir, "omgidl", "foxglove"), { recursive: true });
-    await fs.writeFile(path.join(outDir, "omgidl", "foxglove", "Time.idl"), TIME_IDL);
-    await fs.writeFile(path.join(outDir, "omgidl", "foxglove", "Duration.idl"), DURATION_IDL);
     for (const schema of Object.values(foxgloveMessageSchemas)) {
+      const schemaName = omgIdlMessageSchemaName(schema);
       await fs.writeFile(
-        path.join(outDir, "omgidl", "foxglove", `${schema.name}.idl`),
+        path.join(outDir, "omgidl", "foxglove", `${schemaName}.idl`),
         generateOmgIdl(schema),
       );
     }
@@ -205,7 +232,7 @@ async function main({ clean }: { clean: boolean }) {
 
   // This must run before generating the Pyclass definitions
   await logProgressLn("Generating Rust code", async () => {
-    await exec("cargo", ["run", "--bin", "foxglove-proto-gen"], {
+    await exec("cargo", ["run", "--bin", "foxglove_proto_gen"], {
       cwd: path.join(repoRoot, "rust"),
     });
   });
@@ -216,13 +243,14 @@ async function main({ clean }: { clean: boolean }) {
   await logProgressLn("Generating Pyclass definitions", async () => {
     // Source files (.rs) are re-generated.
     // Stub file is placed into the existing hierarchy.
-    const schemasFile = path.join(pythonSdkGeneratedRoot, "schemas.rs");
+    const messagesFile = path.join(pythonSdkGeneratedRoot, "messages.rs");
     await fs.mkdir(pythonSdkGeneratedRoot, { recursive: true });
+    await fs.mkdir(path.join(pythonSdkPyRoot, "messages"), { recursive: true });
     await fs.mkdir(path.join(pythonSdkPyRoot, "schemas"), { recursive: true });
     await fs.mkdir(path.join(pythonSdkPyRoot, "channels"), { recursive: true });
 
-    // Schemas file
-    const writer = (await fs.open(schemasFile, "wx")).createWriteStream();
+    // Messages file (generated Rust bindings)
+    const writer = (await fs.open(messagesFile, "wx")).createWriteStream();
     writer.write(generateSchemaPrelude());
 
     const enumSchemas = Object.values(foxgloveEnumSchemas);
@@ -248,26 +276,77 @@ async function main({ clean }: { clean: boolean }) {
     // Python module indexes are added for the public API.
     const schemasStubFile = path.join(pythonSdkPyRoot, "_foxglove_py/schemas.pyi");
     const schemasStubModule = path.join(pythonSdkPyRoot, "schemas/__init__.py");
+    const messagesStubFile = path.join(pythonSdkPyRoot, "_foxglove_py/messages.pyi");
     const channelStubFile = path.join(pythonSdkPyRoot, "_foxglove_py/channels.pyi");
     const channelStubModule = path.join(pythonSdkPyRoot, "channels/__init__.py");
 
-    await fs.writeFile(schemasStubFile, generatePySchemaStub(allSchemas));
+    const messagesStubModule = path.join(pythonSdkPyRoot, "messages/__init__.py");
+
+    await fs.writeFile(
+      messagesStubFile,
+      generatePySchemaStub(allSchemas, { unionName: "FoxgloveMessage" }),
+    );
+    await fs.writeFile(
+      schemasStubFile,
+      [
+        "# Generated by https://github.com/foxglove/foxglove-sdk",
+        "from .messages import *",
+        "",
+      ].join("\n"),
+    );
+    await fs.writeFile(messagesStubModule, generatePyMessageModule(allSchemas));
     await fs.writeFile(schemasStubModule, generatePySchemaModule(allSchemas));
     await fs.writeFile(channelStubFile, generatePyChannelStub(messageSchemas));
     await fs.writeFile(channelStubModule, generatePyChannelModule(messageSchemas));
 
-    await exec("cargo", ["fmt", "--", path.resolve(channelClassesFile, schemasFile)], {
+    await exec("cargo", ["fmt", "--", channelClassesFile, messagesFile], {
       cwd: repoRoot,
     });
 
     const pythonFiles = [
       path.resolve(schemasStubFile),
+      path.resolve(messagesStubFile),
       path.resolve(channelStubFile),
+      path.resolve(messagesStubModule),
       path.resolve(schemasStubModule),
       path.resolve(channelStubModule),
     ];
-    await exec("poetry", ["run", "black", ...pythonFiles], { cwd: repoRoot });
-    await exec("poetry", ["run", "isort", ...pythonFiles], { cwd: repoRoot });
+    await exec("uv", ["run", "black", ...pythonFiles], { cwd: repoRoot });
+    await exec("uv", ["run", "isort", ...pythonFiles], { cwd: repoRoot });
+  });
+
+  await logProgress("Generating C library types", async () => {
+    const typesFile = path.join(repoRoot, "c", "src", "generated_types.rs");
+    await fs.writeFile(
+      typesFile,
+      generateRustTypes(Object.values(foxgloveMessageSchemas), Object.values(foxgloveEnumSchemas)),
+    );
+
+    const bindgenConfig = await generateBindgenConfig(
+      Object.values(foxgloveMessageSchemas),
+      Object.values(foxgloveEnumSchemas),
+      path.join(repoRoot, "c/cbindgen.prelude.toml"),
+    );
+    const bindgenConfigFile = path.join(repoRoot, "c/cbindgen.toml");
+    await fs.writeFile(bindgenConfigFile, bindgenConfig);
+
+    await exec("cargo", ["build"], { cwd: path.join(repoRoot, "c") });
+    await exec("cargo", ["fmt", "--", path.resolve(typesFile)], {
+      cwd: repoRoot,
+    });
+  });
+
+  await logProgress("Generating C++ messages", async () => {
+    const hppFile = path.join(repoRoot, "cpp", "foxglove", "include", "foxglove", "messages.hpp");
+    await fs.writeFile(
+      hppFile,
+      generateHppSchemas(Object.values(foxgloveMessageSchemas), Object.values(foxgloveEnumSchemas)),
+    );
+    const cppFile = path.join(repoRoot, "cpp", "foxglove", "src", "messages.cpp");
+    await fs.writeFile(cppFile, generateCppSchemas(Object.values(foxgloveMessageSchemas)));
+
+    await exec("clang-format", [hppFile, "-i", "-Werror"], { cwd: repoRoot });
+    await exec("clang-format", [cppFile, "-i", "-Werror"], { cwd: repoRoot });
   });
 
   await logProgressLn("Updating Jest snapshots", async () => {

@@ -36,10 +36,10 @@ message LinePrimitive {
   // Points along the line
   repeated foxglove.Point3 points = 5;
 
-  // Solid color to use for the whole line. One of `color` or `colors` must be provided.
+  // Solid color to use for the whole line. Ignored if `colors` is non-empty.
   foxglove.Color color = 6;
 
-  // Per-point colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided.
+  // Per-point colors (if non-empty, must have the same length as `points`).
   repeated foxglove.Color colors = 7;
 
   // Indices into the `points` and `colors` attribute arrays, which can be used to avoid duplicating attribute data.

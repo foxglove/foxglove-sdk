@@ -2,6 +2,9 @@
 
 syntax = "proto3";
 
+import "foxglove/Color.proto";
+import "foxglove/KeyValuePair.proto";
+import "foxglove/Vector3.proto";
 import "google/protobuf/timestamp.proto";
 
 package foxglove;
@@ -10,12 +13,16 @@ package foxglove;
 message LocationFix {
   // Type of position covariance
   enum PositionCovarianceType {
+    // Unknown position covariance type
     UNKNOWN = 0;
 
+    // Position covariance is approximated
     APPROXIMATED = 1;
 
+    // Position covariance is per-axis, so put it along the diagonal
     DIAGONAL_KNOWN = 2;
 
+    // Position covariance of the fix is known
     KNOWN = 3;
   }
   // Timestamp of the message
@@ -38,4 +45,16 @@ message LocationFix {
 
   // If `position_covariance` is available, `position_covariance_type` must be set to indicate the type of covariance.
   PositionCovarianceType position_covariance_type = 5;
+
+  // Heading (yaw angle), in radians, measured clockwise from north
+  optional double heading = 10;
+
+  // Velocity in local East-North-Up (ENU) frame in m/s
+  optional foxglove.Vector3 velocity = 11;
+
+  // Color used to visualize the location
+  optional foxglove.Color color = 8;
+
+  // Additional user-provided metadata associated with the location fix. Keys must be unique.
+  repeated foxglove.KeyValuePair metadata = 9;
 }

@@ -1,15 +1,22 @@
-//! Websocket server
+//! WebSocket server
 
+use std::collections::HashMap;
 use std::fmt::{Debug, Display};
 use std::future::Future;
+use std::net::SocketAddr;
 use std::sync::Arc;
 
+use crate::sink_channel_filter::{SinkChannelFilter, SinkChannelFilterFn};
+use crate::websocket::PlaybackState;
+#[cfg(feature = "websocket-tls")]
+use crate::websocket::TlsIdentity;
 use crate::websocket::service::Service;
 use crate::websocket::{
-    create_server, AssetHandler, AsyncAssetHandlerFn, BlockingAssetHandlerFn, Capability, Client,
-    ConnectionGraph, Parameter, Server, ServerOptions, ShutdownHandle, Status,
+    AnyClient, AssetHandler, AsyncAssetHandlerFn, BlockingAssetHandlerFn, Capability,
+    ConnectionGraph, Parameter, ParameterHandler, Server, ServerOptions, ShutdownHandle, Status,
+    create_server,
 };
-use crate::{get_runtime_handle, Context, FoxgloveError};
+use crate::{AppUrl, ChannelDescriptor, Context, FoxgloveError, runtime::get_runtime_handle};
 
 /// A WebSocket server for live visualization in Foxglove.
 ///
@@ -52,12 +59,12 @@ impl Default for WebSocketServer {
 }
 
 impl WebSocketServer {
-    /// Creates a new websocket server with default options.
+    /// Creates a new WebSocket server with default options.
     pub fn new() -> Self {
         Self::default()
     }
 
-    /// Set the websocket server name to advertise to clients.
+    /// Set the WebSocket server name to advertise to clients.
     ///
     /// By default, the server is not given a name.
     pub fn name(mut self, name: impl Into<String>) -> Self {
@@ -76,11 +83,53 @@ impl WebSocketServer {
         self
     }
 
+    /// Sets a [`SinkChannelFilter`] for connected clients.
+    ///
+    /// The filter is a function that takes a channel and returns a boolean indicating whether the
+    /// channel should be logged.
+    pub fn channel_filter(mut self, filter: Arc<dyn SinkChannelFilter>) -> Self {
+        self.options.channel_filter = Some(filter);
+        self
+    }
+
+    /// Sets a channel filter for connected clients. See [`SinkChannelFilter`] for more information.
+    pub fn channel_filter_fn(
+        mut self,
+        filter: impl Fn(&ChannelDescriptor) -> bool + Sync + Send + 'static,
+    ) -> Self {
+        self.options.channel_filter = Some(Arc::new(SinkChannelFilterFn(filter)));
+        self
+    }
+
+    /// Configure TLS with a PEM-formatted x509 certificate chain and pkcs8 private key.
+    /// If enabled, the server will only accept connections using wss://.
+    /// If TLS configuration fails, starting the server will result in an error.
+    #[doc(hidden)]
+    #[cfg(feature = "websocket-tls")]
+    pub fn tls(mut self, tls_identity: TlsIdentity) -> Self {
+        self.options.tls_identity = Some(tls_identity);
+        self
+    }
+
     /// Sets the server capabilities to advertise to the client.
     ///
     /// By default, the server does not advertise any capabilities.
     pub fn capabilities(mut self, capabilities: impl IntoIterator<Item = Capability>) -> Self {
         self.options.capabilities = Some(capabilities.into_iter().collect());
+        self
+    }
+
+    /// Sets server metadata.
+    #[doc(hidden)]
+    pub fn server_info(mut self, info: HashMap<String, String>) -> Self {
+        self.options.server_info = Some(info);
+        self
+    }
+
+    /// Declare the time range for playback, in absolute nanoseconds. This applies if the server is playing back a fixed time range of data.
+    /// This will add the PlaybackControl capability to the server.
+    pub fn playback_time_range(mut self, start_time: u64, end_time: u64) -> Self {
+        self.options.playback_time_range = Some((start_time, end_time));
         self
     }
 
@@ -92,7 +141,7 @@ impl WebSocketServer {
 
     /// Configure the handler for fetching assets.
     /// There can only be one asset handler, exclusive with the other fetch_asset_handler methods.
-    pub fn fetch_asset_handler(mut self, handler: Box<dyn AssetHandler>) -> Self {
+    pub fn fetch_asset_handler(mut self, handler: Arc<dyn AssetHandler>) -> Self {
         self.options.fetch_asset_handler = Some(handler);
         self
     }
@@ -101,25 +150,34 @@ impl WebSocketServer {
     /// There can only be one asset handler, exclusive with the other fetch_asset_handler methods.
     pub fn fetch_asset_handler_blocking_fn<F, T, Err>(mut self, handler: F) -> Self
     where
-        F: Fn(Client, String) -> Result<T, Err> + Send + Sync + 'static,
+        F: Fn(AnyClient, String) -> Result<T, Err> + Send + Sync + 'static,
         T: AsRef<[u8]>,
         Err: Display,
     {
         self.options.fetch_asset_handler =
-            Some(Box::new(BlockingAssetHandlerFn(Arc::new(handler))));
+            Some(Arc::new(BlockingAssetHandlerFn(Arc::new(handler))));
         self
     }
-
     /// Configure an asynchronous function as a fetch asset handler.
     /// There can only be one asset handler, exclusive with the other fetch_asset_handler methods.
     pub fn fetch_asset_handler_async_fn<F, Fut, T, Err>(mut self, handler: F) -> Self
     where
-        F: Fn(Client, String) -> Fut + Send + Sync + 'static,
+        F: Fn(AnyClient, String) -> Fut + Send + Sync + 'static,
         Fut: Future<Output = Result<T, Err>> + Send + 'static,
         T: AsRef<[u8]>,
         Err: Display,
     {
-        self.options.fetch_asset_handler = Some(Box::new(AsyncAssetHandlerFn(Arc::new(handler))));
+        self.options.fetch_asset_handler = Some(Arc::new(AsyncAssetHandlerFn(Arc::new(handler))));
+        self
+    }
+
+    /// Configure the handler for client-initiated parameter operations.
+    ///
+    /// When set, the handler takes precedence over the deprecated parameter callbacks on
+    /// [`ServerListener`](crate::websocket::ServerListener). Automatically adds
+    /// [`Capability::Parameters`] to the set of advertised capabilities.
+    pub fn parameter_handler(mut self, handler: Arc<dyn ParameterHandler>) -> Self {
+        self.options.parameter_handler = Some(handler);
         self
     }
 
@@ -179,7 +237,6 @@ impl WebSocketServer {
     /// [`WebSocketServer::start`]), or spawn its own internal runtime (if started with
     /// [`WebSocketServer::start_blocking`]).
     #[doc(hidden)]
-    #[cfg(feature = "unstable")]
     pub fn tokio_runtime(mut self, handle: &tokio::runtime::Handle) -> Self {
         self.options.runtime = Some(handle.clone());
         self
@@ -191,17 +248,17 @@ impl WebSocketServer {
         self
     }
 
-    /// Starts the websocket server.
+    /// Starts the WebSocket server.
     ///
     /// Returns a handle that can optionally be used to gracefully shutdown the server. The caller
     /// can safely drop the handle, and the server will run forever.
     pub async fn start(self) -> Result<WebSocketServerHandle, FoxgloveError> {
-        let server = create_server(&self.context, self.options);
-        server.start(&self.host, self.port).await?;
-        Ok(WebSocketServerHandle(server))
+        let server = create_server(&self.context, self.options)?;
+        let addr = server.start(&self.host, self.port).await?;
+        Ok(WebSocketServerHandle(server, addr))
     }
 
-    /// Starts the websocket server.
+    /// Starts the WebSocket server.
     ///
     /// Returns a handle that can optionally be used to gracefully shutdown the server. The caller
     /// can safely drop the handle, and the server will run forever.
@@ -224,10 +281,10 @@ impl WebSocketServer {
     }
 }
 
-/// A handle to the websocket server.
+/// A handle to the WebSocket server.
 ///
 /// This handle can safely be dropped and the server will run forever.
-pub struct WebSocketServerHandle(Arc<Server>);
+pub struct WebSocketServerHandle(Arc<Server>, SocketAddr);
 
 impl Debug for WebSocketServerHandle {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -238,7 +295,22 @@ impl Debug for WebSocketServerHandle {
 impl WebSocketServerHandle {
     /// Returns the local port that the server is listening on.
     pub fn port(&self) -> u16 {
-        self.0.port()
+        self.1.port()
+    }
+
+    /// Returns the number of currently connected clients.
+    pub fn client_count(&self) -> usize {
+        self.0.client_count()
+    }
+
+    /// Returns an app URL to open the WebSocket connection as a data source.
+    pub fn app_url(&self) -> AppUrl {
+        let protocol = if self.0.is_tls_configured() {
+            "wss"
+        } else {
+            "ws"
+        };
+        AppUrl::new().with_websocket(format!("{protocol}://{}:{}", self.1.ip(), self.1.port()))
     }
 
     /// Advertises support for the provided services.
@@ -246,7 +318,11 @@ impl WebSocketServerHandle {
     /// These services will be available for clients to use until they are removed with
     /// [`remove_services`][WebSocketServerHandle::remove_services].
     ///
-    /// This method will fail if the server was not configured with [`Capability::Services`].
+    /// This method will fail if the server was not configured with [`Capability::Services`]
+    /// ([`ServicesNotSupported`](FoxgloveError::ServicesNotSupported)), if a service name is
+    /// not unique ([`DuplicateService`](FoxgloveError::DuplicateService)), or if a service has
+    /// no request encoding and the server has no supported encodings
+    /// ([`MissingRequestEncoding`](FoxgloveError::MissingRequestEncoding)).
     pub fn add_services(
         &self,
         services: impl IntoIterator<Item = Service>,
@@ -266,6 +342,13 @@ impl WebSocketServerHandle {
         self.0.broadcast_time(timestamp_nanos);
     }
 
+    /// Publish the current playback state to all clients.
+    ///
+    /// Requires the [`PlaybackControl`](crate::websocket::Capability::PlaybackControl) capability.
+    pub fn broadcast_playback_state(&self, playback_state: PlaybackState) {
+        self.0.broadcast_playback_state(playback_state);
+    }
+
     /// Sets a new session ID and notifies all clients, causing them to reset their state.
     /// If no session ID is provided, generates a new one based on the current timestamp.
     pub fn clear_session(&self, new_session_id: Option<String>) {
@@ -279,18 +362,13 @@ impl WebSocketServerHandle {
 
     /// Publishes a status message to all clients.
     ///
-    /// For more information, refer to the [Status][status] message specification.
-    ///
-    /// [status]: https://github.com/foxglove/ws-protocol/blob/main/docs/spec.md#status
+    /// This can be used to communicate information, warnings, and errors to the Foxglove app. An
+    /// ID may be included in the status to later remove it by referencing that ID.
     pub fn publish_status(&self, status: Status) {
         self.0.publish_status(status);
     }
 
-    /// Removes status messages by id from all clients.
-    ///
-    /// For more information, refer to the [Remove Status][remove-status] message specification.
-    ///
-    /// [remove-status]: https://github.com/foxglove/ws-protocol/blob/main/docs/spec.md#remove-status
+    /// Removes status messages by ID from all clients.
     pub fn remove_status(&self, status_ids: Vec<String>) {
         self.0.remove_status(status_ids);
     }
@@ -308,7 +386,7 @@ impl WebSocketServerHandle {
         self.0.replace_connection_graph(replacement_graph)
     }
 
-    /// Gracefully shut down the websocket server.
+    /// Gracefully shut down the WebSocket server.
     ///
     /// Returns a handle that can be used to wait for the graceful shutdown to complete. If the
     /// handle is dropped, all client tasks will be immediately aborted.

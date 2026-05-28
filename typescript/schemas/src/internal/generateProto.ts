@@ -5,8 +5,10 @@ import {
   FoxglovePrimitive,
 } from "./types";
 
-function primitiveToProto(type: Exclude<FoxglovePrimitive, "time" | "duration">) {
+function primitiveToProto(type: FoxglovePrimitive) {
   switch (type) {
+    case "int32":
+      return "sfixed32";
     case "uint32":
       return "fixed32";
     case "bytes":
@@ -18,6 +20,26 @@ function primitiveToProto(type: Exclude<FoxglovePrimitive, "time" | "duration">)
     case "float64":
       return "double";
   }
+}
+
+/**
+ * The protobuf type name for a message schema (e.g. "foxglove.Pose" or "google.protobuf.Timestamp")
+ */
+function protoName(schema: FoxgloveMessageSchema): string {
+  if (schema.protoEquivalent != undefined) {
+    return schema.protoEquivalent;
+  }
+  return `foxglove.${schema.name}`;
+}
+
+/**
+ * The import path for a type (e.g. "foxglove/Pose" or "google/protobuf/timestamp")
+ */
+function protoImportPath(schema: FoxgloveMessageSchema): string {
+  if (schema.protoEquivalent != undefined) {
+    return schema.protoEquivalent.replace(/\./g, "/").toLowerCase();
+  }
+  return `foxglove/${schema.name}`;
 }
 
 export function generateProto(
@@ -71,6 +93,8 @@ export function generateProto(
     const qualifiers: string[] = [];
     if (field.array != undefined) {
       qualifiers.push("repeated");
+    } else if (field.optional) {
+      qualifiers.push("optional");
     }
     if (typeof field.array === "number") {
       lineComments.push(`length ${field.array}`);
@@ -80,19 +104,11 @@ export function generateProto(
         qualifiers.push(field.type.enum.protobufEnumName);
         break;
       case "nested":
-        qualifiers.push(`foxglove.${field.type.schema.name}`);
-        imports.add(`foxglove/${field.type.schema.name}`);
+        qualifiers.push(protoName(field.type.schema));
+        imports.add(protoImportPath(field.type.schema));
         break;
       case "primitive":
-        if (field.type.name === "time") {
-          qualifiers.push("google.protobuf.Timestamp");
-          imports.add(`google/protobuf/timestamp`);
-        } else if (field.type.name === "duration") {
-          qualifiers.push("google.protobuf.Duration");
-          imports.add(`google/protobuf/duration`);
-        } else {
-          qualifiers.push(primitiveToProto(field.type.name));
-        }
+        qualifiers.push(primitiveToProto(field.type.name));
         break;
     }
     return `${field.description
@@ -104,7 +120,13 @@ export function generateProto(
     }`;
   });
 
-  const definition = `// ${schema.description}\nmessage ${schema.name} {\n${enumDefinitions.join(
+  const schemaDescription = schema.description
+    .trim()
+    .split("\n")
+    .map((line) => `// ${line}`)
+    .join("\n");
+
+  const definition = `${schemaDescription}\nmessage ${schema.name} {\n${enumDefinitions.join(
     "\n\n",
   )}${fields.join("\n\n")}\n}`;
 

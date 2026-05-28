@@ -1,2 +1,2 @@
 pub(crate) mod channels;
-pub(crate) mod schemas;
+pub(crate) mod messages;

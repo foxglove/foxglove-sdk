@@ -10,7 +10,9 @@ jobs:
   rust:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+        with:
+          lfs: true
 
       - name: Install common dependencies
         uses: ./.github/actions/common-deps
@@ -18,18 +20,19 @@ jobs:
       - uses: arduino/setup-protoc@v3
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-          version: "29.x"
+          version: "29.6"
 
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           # The last-specified toolchain is the default.
-          toolchain: 1.83.0,nightly,stable
+          toolchain: 1.85.0,nightly,stable
+          components: rustfmt, clippy
 
       - name: Ensure generated protobuf schemas are up to date
-        run: cargo run --bin foxglove-proto-gen && git diff --exit-code
+        run: cargo run --bin foxglove_proto_gen && git diff --exit-code
 
       - run: cargo fmt --all --check
-      - run: cargo build --verbose
+      - run: cargo build
       # Validate that we can build each example individually.
       - name: Build examples individually
         run: |
@@ -42,16 +45,74 @@ jobs:
             cargo build -p "$package"
           done
       # Validate that we can build without default features.
-      - run: cargo build -p foxglove --verbose --no-default-features
+      - run: cargo build -p foxglove --no-default-features
+      # Validate that the ring-only crypto backend path compiles.
+      - run: cargo check -p foxglove --no-default-features --features "remote-access,ring"
       # Validate that we can build against the MSRV (minimum specified rust version).
-      - run: cargo +1.83.0 build -p foxglove --verbose
+      - run: cargo +1.85.0 build -p foxglove
       - run: cargo clippy --no-deps --all-targets --tests -- -D warnings
-      - run: cargo +nightly rustdoc -p foxglove --all-features -- -D warnings --cfg docsrs
-      - run: cargo test --features unstable --verbose
-        timeout-minutes: 10
-      - run: cargo publish --package foxglove --dry-run
-      - run: cargo publish --package foxglove
-        if: startsWith(github.ref, 'refs/tags/sdk/v')
+      - run: cargo +nightly rustdoc -p foxglove --features full -- -D warnings --cfg docsrs
+      - run: "[ -d ./target/doc/foxglove ] || exit 1"
+      - name: Check for ws-protocol references in public docs
+        run: '! grep -R "foxglove/ws-protocol" ./target/doc/foxglove'
+      - run: cargo test -p foxglove --features full
+        timeout-minutes: 5
+      - run: cargo test -p foxglove --no-default-features
+        timeout-minutes: 5
+      - run: cargo test -p foxglove_c --features full
+      - run: cargo test -p foxglove_data_loader
+      - run: cargo test -p foxglove_derive
+      - run: cargo test -p foxglove-sdk-python --features remote-access
+
+  release-rust:
+    if: startsWith(github.ref, 'refs/tags/sdk/v')
+    runs-on: ubuntu-latest
+    needs: rust
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - id: detect-version
+        name: Detect local Cargo version
+        run: |
+          version=$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[] | select(.name=="'foxglove'").version')
+          echo "version=$version" >> $GITHUB_OUTPUT
+      - name: Publish foxglove_derive
+        run: cargo publish --package foxglove_derive
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+      - name: Wait for foxglove_derive to be published
+        run: until cargo info --registry=crates-io foxglove_derive@${{ steps.detect-version.outputs.version }}; do sleep 10; done
+      - name: Publish foxglove
+        run: cargo publish --package foxglove
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
+  release-foxglove-data-loader:
+    if: startsWith(github.ref, 'refs/tags/rust/foxglove_data_loader/v')
+    runs-on: ubuntu-latest
+    needs: rust
+    timeout-minutes: 10
+    env:
+      github_ref: ${{ github.ref }}
+    steps:
+      - uses: actions/checkout@v6
+      - id: detect-version
+        name: Detect local Cargo version
+        run: |
+          set -eu
+
+          version=$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[] | select(.name=="'foxglove_data_loader'").version')
+          echo "version=$version" >> $GITHUB_OUTPUT
+
+          # remove the prefix from the github ref to get the version
+          expected_version="${github_ref#"refs/tags/rust/foxglove_data_loader/v"}"
+
+          if [ "$version" != "$expected_version" ]; then
+            echo "Expected version '$expected_version' but got '$version'"
+            exit 1
+          fi
+      - name: Publish foxglove_data_loader
+        run: cargo publish --package foxglove_data_loader
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
 
@@ -59,15 +120,16 @@ jobs:
     runs-on: ubuntu-latest
 
     permissions:
+      contents: read
       # https://docs.npmjs.com/generating-provenance-statements#publishing-packages-with-provenance-via-github-actions
       id-token: write
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - run: corepack enable
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: yarn
@@ -84,7 +146,7 @@ jobs:
       - uses: arduino/setup-protoc@v3
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-          version: "29.x"
+          version: "29.6"
 
       - run: yarn install --immutable
       - run: yarn lint:ci
@@ -98,12 +160,11 @@ jobs:
       - run: yarn test
 
       # Install python dependencies required to prettify generated SDK files
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
-          python-version: "3.9"
-      - run: pipx install poetry
-      - run: poetry check --strict
-      - run: poetry install
+          python-version: "3.10"
+
+      - uses: astral-sh/setup-uv@v7
 
       - name: Ensure generated files are up to date
         run: |
@@ -111,7 +172,7 @@ jobs:
           git add --all
           changes=$(git status --porcelain)
           if [ -n "$changes" ]; then
-            echo "::error::The following generated files need to be updated. Run 'yarn generate' to update them."
+            echo "::error::The following generated files need to be updated. Run 'make generate' to update them."
             echo "$changes"
             echo ""
             git diff --cached
@@ -135,70 +196,4 @@ jobs:
       - run: yarn workspace @foxglove/schemas pack
       - name: Publish @foxglove/schemas to NPM
         if: startsWith(github.ref, 'refs/tags/typescript/schemas/v')
-        # `yarn npm publish` does not currently support --provenance: https://github.com/yarnpkg/berry/issues/5430
-        run: npm publish typescript/schemas/package.tgz --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
-
-  ros:
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - docker_image: rostooling/setup-ros-docker:ubuntu-focal-ros-noetic-ros-base-latest
-            ros_distribution: noetic
-            ros_version: 1
-          - docker_image: rostooling/setup-ros-docker:ubuntu-focal-ros-foxy-ros-base-latest
-            ros_distribution: foxy
-            ros_version: 2
-          - docker_image: rostooling/setup-ros-docker:ubuntu-focal-ros-galactic-ros-base-latest
-            ros_distribution: galactic
-            ros_version: 2
-          - docker_image: rostooling/setup-ros-docker:ubuntu-jammy-ros-humble-ros-base-latest
-            ros_distribution: humble
-            ros_version: 2
-          - docker_image: rostooling/setup-ros-docker:ubuntu-jammy-ros-iron-ros-base-latest
-            ros_distribution: iron
-            ros_version: 2
-          - docker_image: rostooling/setup-ros-docker:ubuntu-noble-ros-jazzy-ros-base-latest
-            ros_distribution: jazzy
-            ros_version: 2
-          - docker_image: rostooling/setup-ros-docker:ubuntu-noble-ros-rolling-ros-base-latest
-            ros_distribution: rolling
-            ros_version: 2
-    name: "ROS ${{ matrix.ros_distribution }}"
-    container:
-      image: ${{ matrix.docker_image }}
-    steps:
-      - name: setup directories
-        run: mkdir -p ros_ws/src
-      - name: checkout
-        uses: actions/checkout@v4
-        with:
-          path: ros_ws/src
-      - name: build and test ros1
-        if: matrix.ros_version == 1
-        uses: ros-tooling/action-ros-ci@master
-        with:
-          package-name: foxglove_msgs
-          target-ros1-distro: ${{ matrix.ros_distribution }}
-          vcs-repo-file-url: ""
-
-      - name: Downgrade pydocstyle as a workaround for ament_lint error https://github.com/ament/ament_lint/pull/428
-        if: matrix.ros_distribution == 'galactic'
-        run: |
-          sudo pip install pydocstyle==6.1.1
-
-      - name: Downgrade pytest as a workaround for https://github.com/scientific-python/pytest-doctestplus/issues/240
-        if: matrix.ros_distribution == 'humble' || matrix.ros_distribution == 'iron'
-        run: |
-          sudo pip install pytest==8.0.2
-
-      - name: build and test ros2
-        if: matrix.ros_version == 2
-        uses: ros-tooling/action-ros-ci@master
-        with:
-          package-name: foxglove_msgs
-          target-ros2-distro: ${{ matrix.ros_distribution }}
-          vcs-repo-file-url: ""
+        run: npx npm@11.7.0 publish typescript/schemas/package.tgz --provenance --access public

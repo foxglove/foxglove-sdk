@@ -9,12 +9,25 @@
 //!
 //! # Getting started
 //!
-//! To record messages, you need at least one sink. In this example, we create an MCAP file sink,
-//! and log a [`Log`](`crate::schemas::Log`) message on a topic called `/log`. We write one log
-//! message and close the file.
+//! The easiest way to get started is to install the `foxglove` crate with default features, which
+//! will allow logging messages to the Foxglove app and to an MCAP file.
+//!
+//! ```bash
+//! cargo add foxglove
+//! ```
+//!
+//! The following sections illustrate how to use the SDK. For a more hands-on walk-through, see
+//! <https://docs.foxglove.dev/docs/sdk/example>.
+//!
+//! # Recording messages
+//!
+//! To record messages, you need to initialize either an MCAP file writer or a WebSocket server for
+//! live visualization. In this example, we create an MCAP writer, and record a
+//! [`Log`](`crate::messages::Log`) message on a topic called `/log`. We write one log message and
+//! close the file.
 //!
 //! ```no_run
-//! use foxglove::schemas::Log;
+//! use foxglove::messages::Log;
 //! use foxglove::{log, McapWriter};
 //!
 //! // Create a new MCAP file named 'test.mcap'.
@@ -51,7 +64,7 @@
 //! If we wanted to use an explicit context instead, we'd write:
 //!
 //! ```no_run
-//! use foxglove::schemas::Log;
+//! use foxglove::messages::Log;
 //! use foxglove::Context;
 //!
 //! // Create a new context.
@@ -91,7 +104,7 @@
 //! the first call. The example could be equivalently written as:
 //!
 //! ```no_run
-//! use foxglove::schemas::Log;
+//! use foxglove::messages::Log;
 //! use foxglove::{Channel, McapWriter};
 //!
 //! // Create a new MCAP file named 'test.mcap'.
@@ -115,19 +128,22 @@
 //!
 //! ### Well-known types
 //!
-//! The SDK provides [structs for well-known schemas](schemas). These can be used in conjunction
+//! The SDK provides [structs for well-known message types](messages). These can be used in conjunction
 //! with [`Channel`] for type-safe logging, which ensures at compile time that messages logged to a
 //! channel all share a common schema.
 //!
 //! ### Custom data
 //!
-//! You can also define your own custom data types by implementing the [`Encode`] trait. This allows
-//! you to log arbitrary custom data types. Notably, the `Encode` trait is automatically implemented
-//! for types that implement [`Serialize`](serde::Serialize) and [`JsonSchema`][jsonschema-trait].
-//! This makes it easy to define new custom messages:
+//! You can also define your own custom data types by implementing the [`Encode`] trait.
+//!
+//! The easiest way to do this is to enable the `derive` feature and derive the [`Encode`] trait,
+//! which will generate a schema and allow you to log your struct to a channel. The underlying
+//! serialization format is an implementation detail and may change across SDK versions.
 //!
 //! ```no_run
-//! #[derive(serde::Serialize, schemars::JsonSchema)]
+//! # #[cfg(feature = "derive")]
+//! # {
+//! #[derive(foxglove::Encode)]
 //! struct Custom<'a> {
 //!     msg: &'a str,
 //!     count: u32,
@@ -138,7 +154,20 @@
 //!     msg: "custom",
 //!     count: 42,
 //! });
+//! # }
 //! ```
+//!
+//! **Note:** The `Encode` derive macro is a convenience for getting data into Foxglove with
+//! minimal friction. The generated schema is not designed for evolution — reordering, inserting,
+//! or removing fields will silently break compatibility with previously recorded data. If you need
+//! backwards-compatible schema evolution, maintain an explicit `.proto` file and implement
+//! [`Encode`] manually for your generated types. See
+//! [logging with protobuf schemas](https://docs.foxglove.dev/docs/sdk/logging-messages#logging-with-protobuf-schemas)
+//! for an example.
+//!
+//! If you'd like to use JSON encoding for integration with particular tooling, you can enable the
+//! `schemars` feature, which will provide a blanket [`Encode`] implementation for types that
+//! implement [`Serialize`](serde::Serialize) and [`JsonSchema`][jsonschema-trait].
 //!
 //! [jsonschema-trait]: https://docs.rs/schemars/latest/schemars/trait.JsonSchema.html
 //!
@@ -155,7 +184,7 @@
 //! In this example, we create two lazy channels on the default context:
 //!
 //! ```
-//! use foxglove::schemas::SceneUpdate;
+//! use foxglove::messages::SceneUpdate;
 //! use foxglove::{LazyChannel, LazyRawChannel};
 //!
 //! static BOXES: LazyChannel<SceneUpdate> = LazyChannel::new("/boxes");
@@ -165,7 +194,7 @@
 //! It is also possible to bind lazy channels to an explicit [`LazyContext`]:
 //!
 //! ```
-//! use foxglove::schemas::SceneUpdate;
+//! use foxglove::messages::SceneUpdate;
 //! use foxglove::{LazyChannel, LazyContext, LazyRawChannel};
 //!
 //! static CTX: LazyContext = LazyContext::new();
@@ -198,6 +227,8 @@
 //! [`WriteOptions`](`mcap::WriteOptions`) for more detail about these parameters:
 //!
 //! ```no_run
+//! # #[cfg(feature = "lz4")]
+//! # {
 //! let options = mcap::WriteOptions::default()
 //!     .chunk_size(Some(1024 * 1024))
 //!     .compression(Some(mcap::Compression::Lz4));
@@ -205,19 +236,20 @@
 //! let mcap = foxglove::McapWriter::with_options(options)
 //!     .create_new_buffered_file("test.mcap")
 //!     .expect("create failed");
+//! # }
 //! ```
 //!
-//! ### Live visualization server
+//! ### WebSocket server
 //!
-//! You can use the SDK to publish messages to the Foxglove app.
+//! You can use the SDK to publish messages to the Foxglove app over a local WebSocket connection.
 //!
-//! Note: this requires the `live_visualization` feature, which is enabled by default.
+//! Note: this requires the `websocket` feature, which is enabled by default.
 //!
-//! Use [`WebSocketServer::new`] to create a new live visualization server. By default, the server
+//! Use [`WebSocketServer::new`] to create a new WebSocket server. By default, the server
 //! listens on `127.0.0.1:8765`. Once the server is configured, call [`WebSocketServer::start`] to
-//! start the server, and begin accepting websocket connections from the Foxglove app.
+//! start the server, and begin accepting WebSocket connections from the Foxglove app.
 //!
-//! Each client that connects to the websocket server is its own independent sink. The sink is
+//! Each client that connects to the WebSocket server is its own independent sink. The sink is
 //! dynamically added to the [`Context`] associated with the server when the client connects, and
 //! removed from the context when the client disconnects.
 //!
@@ -230,63 +262,175 @@
 //! [app-connect]: https://docs.foxglove.dev/docs/connecting-to-data/frameworks/custom#connect
 //!
 //! ```no_run
+//! # #[cfg(feature = "websocket")]
 //! # async fn func() {
 //! let server = foxglove::WebSocketServer::new()
 //!     .name("Wall-E")
 //!     .bind("127.0.0.1", 9999)
 //!     .start()
 //!     .await
-//!     .expect("Failed to start visualization server");
+//!     .expect("Failed to start WebSocket server");
 //!
 //! // Log stuff here.
 //!
-//! server.stop();
+//! server.stop().wait().await;
 //! # }
 //! ```
+//!
+//! ### Remote access gateway
+//!
+//! You can use the SDK to publish messages to the Foxglove app over a remote WebRTC connection,
+//! using the Foxglove remote access service.
+//!
+//! Note: this requires the `remote-access` feature, which is not enabled by default.
+//!
+//! Use [`remote_access::Gateway::new`] to create a new remote access gateway. You must provide a
+//! device token to authenticate with the Foxglove API; this can be set via the builder or with
+//! the `FOXGLOVE_DEVICE_TOKEN` environment variable.
+//!
+//! Once started, the gateway connects to the Foxglove platform and makes the device available for
+//! remote visualization and teleop. The gateway acts as a single sink on the [`Context`], registered
+//! when the gateway starts and unregistered when it stops.
+//!
+//! The gateway handle can safely be dropped and the connection will continue to run. Use
+//! [`stop`](`remote_access::GatewayHandle::stop`) to shut down the gateway explicitly.
+//!
+//! ```no_run
+//! # #[cfg(feature = "remote-access")]
+//! # async fn func() {
+//! use foxglove::remote_access::Gateway;
+//!
+//! let gateway = Gateway::new()
+//!     .name("R2-D2")
+//!     .start()
+//!     .expect("Failed to start remote access gateway");
+//!
+//! // Log stuff here.
+//!
+//! gateway.stop().await.expect("Failed to stop remote access gateway");
+//! # }
+//! ```
+//!
+//! #### NVENC hardware acceleration
+//!
+//! When available, NVIDIA NVENC is used to accelerate H.264 video encoding for the remote
+//! access gateway. Without it, the gateway falls back to software H.264 encoding, which is
+//! slower and lower quality.
+//!
+//! NVENC is available on Linux for x86_64, arm, and aarch64. It requires `cuda.h` to be present
+//! at `/usr/local/cuda/include/cuda.h` or at $CUDA_HOME/include/cuda.h if you set `CUDA_HOME`.
+//!
+//! On Ubuntu you can install the headers with `apt install nvidia-cuda-toolkit` or `apt install nvidia-cuda-dev`.
+//! If that places `cuda.h` at `/usr/include/cuda.h` rather than `/usr/local/cuda/include/`,
+//! you will also need to set `CUDA_HOME=/usr` so the build can find it.
+//!
+//! You can enable the `require-cuda` feature on this crate to make it a build error if
+//! `remote-access` is disabled, the target does not support NVENC, or `cuda.h` is not
+//! found on a target where NVENC would be built.
 //!
 //! # Feature flags
 //!
 //! The Foxglove SDK defines the following feature flags:
 //!
-//! - `chrono`: enables [chrono] conversions for [`Duration`][crate::schemas::Duration] and
-//!   [`Timestamp`][crate::schemas::Timestamp].
-//! - `live_visualization`: enables the live visualization server and client, and adds dependencies
-//!   on [tokio]. Enabled by default.
+//! - `aws-lc-rs`: selects [aws-lc-rs] as the rustls crypto backend used for TLS. Enabled by
+//!   default. Mutually exclusive with `ring`. See [Crypto backend](#crypto-backend).
+//! - `chrono`: enables [chrono] conversions for [`Duration`][crate::messages::Duration] and
+//!   [`Timestamp`][crate::messages::Timestamp].
+//! - `derive`: enables the use of `#[derive(Encode)]` to derive the [`Encode`] trait for logging
+//!   custom structs. Enabled by default.
+//! - `full`: the full set of supported features, with opinionated picks for mutually exclusive
+//!   choices.
+//! - `lz4`: enables support for the LZ4 compression algorithm for mcap files. Enabled by default.
+//! - `remote-access`: enables the remote access gateway for live visualization and teleop via
+//!   WebRTC. Requires a crypto backend; `aws-lc-rs` is enabled by default.
+//! - `require-cuda`: opts into a build-time check that `cuda.h` is present on targets where
+//!   webrtc-sys would build NVENC support. Requires `remote-access` to also be enabled.
+//!   See [NVENC hardware acceleration](#nvenc-hardware-acceleration).
+//! - `ring`: selects [ring] as the rustls crypto backend used for TLS. Alternative to
+//!   `aws-lc-rs`; mutually exclusive with it. See [Crypto backend](#crypto-backend).
+//! - `schemars`: provides a blanket implementation of the [`Encode`] trait for types that
+//!   implement [`Serialize`](serde::Serialize) and [`JsonSchema`][jsonschema-trait].
+//! - `serde`: derives [`Serialize`](serde::Serialize) and [`Deserialize`](serde::Deserialize) for
+//!   all [message types](crate::messages).
 //! - `unstable`: features which are under active development and likely to change in an upcoming
 //!   version.
+//! - `websocket`: enables the WebSocket server and client for live visualization. Enabled by
+//!   default.
+//! - `zstd`: enables support for the zstd compression algorithm for mcap files. Enabled by
+//!   default.
 //!
-//! If you do not require live visualization features, you can disable that flag to reduce the
+//! If you do not require WebSocket features, you can disable that flag to reduce the
 //! compiled size of the SDK.
+//!
+//! ## Crypto backend
+//!
+//! The `remote-access` and `websocket-tls` features rely on [rustls] for TLS, which requires
+//! a crypto provider to be installed as the process-wide default. The `aws-lc-rs` and `ring`
+//! crate features select which backend Foxglove installs and are **mutually exclusive**:
+//! enabling both is a compile error. `aws-lc-rs` is in the default feature set, so opting
+//! into TLS with default features just works:
+//!
+//! ```toml
+//! foxglove = { version = "...", features = ["remote-access"] }
+//! ```
+//!
+//! [ring] is offered as an alternative for targets where building aws-lc-sys is impractical
+//! (e.g. the iOS simulator). To use it, disable default features and select `ring` explicitly:
+//!
+//! ```toml
+//! foxglove = { version = "...", default-features = false, features = ["remote-access", "ring", ...] }
+//! ```
+//!
+//! Foxglove installs the selected provider before opening any TLS connections. Applications
+//! that want to install a different provider should call
+//! [`rustls::crypto::CryptoProvider::install_default`] themselves before any Foxglove TLS code
+//! runs.
+//!
+//! [aws-lc-rs]: https://github.com/aws/aws-lc-rs
+//! [ring]: https://github.com/briansmith/ring
+//! [rustls]: https://github.com/rustls/rustls
 //!
 //! # Requirements
 //!
-//! With the `live_visualization` feature (enabled by default), the Foxglove SDK depends on [tokio]
-//! as its async runtime. See [`WebSocketServer`] for more information. Refer to the tokio
-//! documentation for more information about how to configure your application to use tokio.
+//! With the `websocket` or `remote-access` features, the Foxglove SDK depends on [tokio]
+//! as its async runtime. Refer to the tokio documentation for more information about how to
+//! configure your application to use tokio.
 //!
 //! [chrono]: https://docs.rs/chrono/latest/chrono/
 //! [tokio]: https://docs.rs/tokio/latest/tokio/
 
 #![warn(missing_docs)]
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 use thiserror::Error;
 
+mod app_url;
 mod channel;
 mod channel_builder;
 mod context;
 pub mod convert;
+mod decode;
 mod encode;
 pub mod library_version;
 #[doc(hidden)]
 pub mod log_macro;
 mod log_sink_set;
 mod mcap_writer;
+pub mod messages;
+mod messages_wkt;
 mod metadata;
+#[doc(hidden)]
+#[cfg(feature = "derive")]
+pub mod protobuf;
 mod schema;
-pub mod schemas;
-mod schemas_wkt;
+
+/// Deprecated: Use [`messages`] instead.
+#[deprecated(since = "0.21.0", note = "Use foxglove::messages instead.")]
+pub mod schemas {
+    pub use crate::messages::*;
+}
 mod sink;
+mod sink_channel_filter;
 
 #[cfg(test)]
 mod tests;
@@ -295,31 +439,89 @@ mod testutil;
 mod throttler;
 mod time;
 
+#[cfg(feature = "stream")]
+pub mod stream;
+
+#[cfg(any(feature = "data_provider", feature = "remote_data_loader_backend"))]
+pub mod remote_data_loader_backend;
+#[cfg(feature = "data_provider")]
+// Alias for backward compatibility
+pub use remote_data_loader_backend as data_provider;
+
+#[cfg(feature = "img2yuv-core")]
+#[allow(unused)]
+mod img2yuv;
+
+pub use app_url::AppUrl;
 // Re-export bytes crate for convenience when implementing the `Encode` trait
 pub use bytes;
-
-pub use channel::{Channel, ChannelId, LazyChannel, LazyRawChannel, RawChannel};
+pub use channel::{Channel, ChannelDescriptor, ChannelId, LazyChannel, LazyRawChannel, RawChannel};
 pub use channel_builder::ChannelBuilder;
 pub use context::{Context, LazyContext};
+#[doc(hidden)]
+pub use decode::Decode;
 pub use encode::Encode;
-pub use mcap_writer::{McapCompression, McapWriteOptions, McapWriter, McapWriterHandle};
-pub use metadata::{Metadata, PartialMetadata};
+pub use mcap_writer::{
+    McapAttachment, McapCompression, McapWriteOptions, McapWriter, McapWriterHandle,
+};
+pub use metadata::{Metadata, PartialMetadata, ToUnixNanos};
 pub use schema::Schema;
 pub use sink::{Sink, SinkId};
+pub use sink_channel_filter::SinkChannelFilter;
+pub use std::collections::BTreeMap;
 pub(crate) use time::nanoseconds_since_epoch;
 
-#[cfg(feature = "live_visualization")]
+// Common dependencies for remote-access & WebSocket, with docsrs attributes to ensure that the
+// feature gate badges in docs.rs render as the public features, as opposed to _remote-common. This
+// is only needed for modules that contain types which are publicly re-exported (Parameter,
+// Service, etc.).
+#[doc(hidden)]
+#[cfg(all(feature = "_remote-common", feature = "_protocol"))]
+pub mod protocol;
+#[cfg(all(feature = "_remote-common", not(feature = "_protocol")))]
+mod protocol;
+#[cfg(feature = "_remote-common")]
+#[cfg_attr(
+    docsrs,
+    doc(cfg(any(feature = "remote-access", feature = "websocket")))
+)]
+pub mod remote_common;
+#[cfg(any(feature = "_remote-common", feature = "sysinfo"))]
 mod runtime;
-#[cfg(feature = "live_visualization")]
-pub mod websocket;
-#[cfg(feature = "live_visualization")]
-mod websocket_server;
-#[cfg(feature = "live_visualization")]
-pub(crate) use runtime::get_runtime_handle;
-#[cfg(feature = "live_visualization")]
+#[cfg(any(feature = "_remote-common", feature = "sysinfo"))]
+#[cfg_attr(
+    docsrs,
+    doc(cfg(any(feature = "remote-access", feature = "websocket", feature = "sysinfo")))
+)]
 pub use runtime::shutdown_runtime;
-#[cfg(feature = "live_visualization")]
+
+#[cfg(any(feature = "websocket-tls", feature = "remote-access"))]
+mod crypto;
+
+#[cfg(feature = "remote-access")]
+mod api_client;
+#[cfg(feature = "remote-access")]
+pub mod remote_access;
+
+#[cfg(feature = "sysinfo")]
+pub mod system_info;
+
+#[cfg(feature = "websocket")]
+pub mod websocket;
+#[cfg(feature = "websocket")]
+mod websocket_server;
+#[doc(hidden)]
+#[cfg(feature = "websocket")]
+pub use websocket::ws_protocol;
+#[cfg(feature = "websocket")]
 pub use websocket_server::{WebSocketServer, WebSocketServerHandle};
+
+#[doc(hidden)]
+#[cfg(feature = "derive")]
+pub use foxglove_derive::Encode;
+#[doc(hidden)]
+#[cfg(feature = "derive")]
+pub use prost_types;
 
 /// An error type for errors generated by this crate.
 #[derive(Error, Debug)]
@@ -364,9 +566,15 @@ pub enum FoxgloveError {
     /// An I/O error.
     #[error(transparent)]
     IoError(#[from] std::io::Error),
-    /// An error related to MCAP encoding.
+    /// An error related to MCAP writing.
     #[error("MCAP error: {0}")]
     McapError(#[from] mcap::McapError),
+    /// An error occurred while encoding a message.
+    #[error("Encoding error: {0}")]
+    EncodeError(String),
+    /// An error related to configuration
+    #[error("Configuration error: {0}")]
+    ConfigurationError(String),
 }
 
 impl From<convert::RangeError> for FoxgloveError {

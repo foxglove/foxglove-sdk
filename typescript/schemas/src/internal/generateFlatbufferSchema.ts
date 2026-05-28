@@ -1,4 +1,10 @@
-import { FoxgloveEnumSchema, FoxglovePrimitive, FoxgloveSchema } from "./types";
+import {
+  FoxgloveEnumSchema,
+  FoxgloveMessageField,
+  FoxgloveMessageSchema,
+  FoxglovePrimitive,
+  FoxgloveSchema,
+} from "./types";
 
 // Flatbuffers only supports nested vectors via table
 export const BYTE_VECTOR_FB = `
@@ -11,7 +17,6 @@ table ByteVector {
 root_type ByteVector;
 `;
 
-// Same as protobuf wellknown types
 export const TIME_FB = `
 namespace foxglove;
 
@@ -27,7 +32,7 @@ export const DURATION_FB = `
 namespace foxglove;
 
 struct Duration {
-  /// Signed seconds of the span of time. Must be from -315,576,000,000 to +315,576,000,000 inclusive.
+  /// Signed seconds of the span of time.
   sec:int32;
   /// if sec === 0 : -999,999,999 <= nsec <= +999,999,999
   /// otherwise sign of sec must match sign of nsec or be 0 and abs(nsec) <= 999,999,999
@@ -37,6 +42,8 @@ struct Duration {
 
 function primitiveToFlatbuffers(type: Exclude<FoxglovePrimitive, "time" | "duration">) {
   switch (type) {
+    case "int32":
+      return "int32";
     case "uint32":
       return "uint32";
     case "bytes":
@@ -48,6 +55,39 @@ function primitiveToFlatbuffers(type: Exclude<FoxglovePrimitive, "time" | "durat
     case "float64":
       return "double";
   }
+}
+
+function isFlatbuffersScalarPrimitive(type: FoxglovePrimitive): boolean {
+  return type === "int32" || type === "uint32" || type === "boolean" || type === "float64";
+}
+
+function isOptionalFlatbuffersScalarField(field: FoxgloveMessageField): boolean {
+  return (
+    field.array == undefined &&
+    field.optional === true &&
+    ((field.type.type === "primitive" && isFlatbuffersScalarPrimitive(field.type.name)) ||
+      field.type.type === "enum")
+  );
+}
+
+/**
+ * Time is used instead of Timestamp for backwards compatibility.
+ */
+export function flatbufferMessageSchemaName(schema: FoxgloveMessageSchema): string {
+  if (schema.name === "Timestamp") {
+    return "Time";
+  }
+  return schema.name;
+}
+
+/**
+ * Time and Duration are not namespaced, for backwards compatibility.
+ */
+function namespacedMessageSchemaName(schema: FoxgloveMessageSchema): string {
+  if (schema.name === "Timestamp" || schema.name === "Duration") {
+    return flatbufferMessageSchemaName(schema);
+  }
+  return `foxglove.${flatbufferMessageSchemaName(schema)}`;
 }
 
 export function generateFlatbuffers(
@@ -84,13 +124,43 @@ export function generateFlatbuffers(
       });
 
       // `///` comments required to show up in compiled flatbuffer schemas
-      definition = `/// ${schema.description}\nenum ${schema.name} : ubyte {\n  ${fields.join(
+      const enumDescriptionLines = schema.description
+        .trim()
+        .split("\n")
+        .map((line) => `/// ${line}`)
+        .join("\n");
+      definition = `${enumDescriptionLines}\nenum ${schema.name} : ubyte {\n  ${fields.join(
         "\n\n  ",
       )}\n}\n`;
       break;
     }
     case "message": {
-      const fields = schema.fields.map((field, fieldId) => {
+      const explicitFieldNumbers = new Set<number>();
+      for (const field of schema.fields) {
+        if (field.flatbuffersFieldNumber != undefined) {
+          if (explicitFieldNumbers.has(field.flatbuffersFieldNumber)) {
+            throw new Error(
+              `More than one field with flatbuffersFieldNumber ${field.flatbuffersFieldNumber}`,
+            );
+          }
+          explicitFieldNumbers.add(field.flatbuffersFieldNumber);
+        }
+      }
+
+      let nextFieldNumber = 0;
+      const numberedFields = schema.fields.map(
+        (field): FoxgloveMessageField & { flatbuffersFieldNumber: number } => {
+          if (field.flatbuffersFieldNumber != undefined) {
+            return { ...field, flatbuffersFieldNumber: field.flatbuffersFieldNumber };
+          }
+          while (explicitFieldNumbers.has(nextFieldNumber)) {
+            ++nextFieldNumber;
+          }
+          return { ...field, flatbuffersFieldNumber: nextFieldNumber++ };
+        },
+      );
+
+      const fields = numberedFields.map((field) => {
         const isArray = field.array != undefined;
 
         let type;
@@ -99,17 +169,11 @@ export function generateFlatbuffers(
             type = field.type.enum.name;
             break;
           case "nested":
-            type = `foxglove.${field.type.schema.name}`;
-            imports.add(field.type.schema.name);
+            type = namespacedMessageSchemaName(field.type.schema);
+            imports.add(flatbufferMessageSchemaName(field.type.schema));
             break;
           case "primitive":
-            if (field.type.name === "time") {
-              type = "Time";
-              imports.add(`Time`);
-            } else if (field.type.name === "duration") {
-              type = "Duration";
-              imports.add(`Duration`);
-            } else if (field.type.name === "bytes" && isArray) {
+            if (field.type.name === "bytes" && isArray) {
               type = "ByteVector";
               imports.add("ByteVector");
             } else {
@@ -123,12 +187,17 @@ export function generateFlatbuffers(
           // can't specify length of vector outside of struct, all of these are tables
           lengthComment = `  /// length ${field.array}\n`;
         }
+        const isOptionalScalarField = isOptionalFlatbuffersScalarField(field);
+
+        if (isOptionalScalarField && field.defaultValue != undefined) {
+          throw new Error(
+            `Field "${field.name}": optional FlatBuffer scalar fields cannot have a default value`,
+          );
+        }
+
         let defaultValue;
         if (field.defaultValue != undefined && !isArray) {
-          if (
-            field.type.type === "primitive" &&
-            !(field.type.name === "duration" || field.type.name === "time")
-          ) {
+          if (field.type.type === "primitive") {
             if (typeof field.defaultValue === "string") {
               defaultValue = `"${field.defaultValue}"`;
             } else if (typeof field.defaultValue === "number") {
@@ -147,6 +216,8 @@ export function generateFlatbuffers(
             // ie: type numericType: NumericType = INT32;
             defaultValue = field.defaultValue as string;
           }
+        } else if (isOptionalScalarField) {
+          defaultValue = "null";
         }
         if (field.defaultValue != undefined && defaultValue == undefined) {
           throw new Error("Flatbuffers does not support non-scalar default values");
@@ -162,10 +233,15 @@ export function generateFlatbuffers(
           // convert field.name to lowercase for flatbuffer compilation compliance
         }  ${field.name.toLowerCase()}:${isArray ? `[${type}]` : type}${
           defaultValue ? ` = ${defaultValue}` : ""
-        } (id: ${fieldId});`;
+        } (id: ${field.flatbuffersFieldNumber});`;
       });
 
-      definition = `${enumDefinitions.join("\n\n")}/// ${schema.description}\ntable ${
+      const tableDescriptionLines = schema.description
+        .trim()
+        .split("\n")
+        .map((line) => `/// ${line}`)
+        .join("\n");
+      definition = `${enumDefinitions.join("\n\n")}${tableDescriptionLines}\ntable ${
         schema.name
       } {\n${fields.join("\n\n")}\n}\n\nroot_type ${schema.name};`;
       break;

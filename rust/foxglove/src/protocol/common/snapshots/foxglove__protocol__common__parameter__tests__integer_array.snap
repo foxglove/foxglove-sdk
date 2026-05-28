@@ -1,0 +1,11 @@
+---
+source: rust/foxglove/src/protocol/common/parameter.rs
+expression: "Parameter::integer_array(\"i64[]\", [123, 456])"
+---
+{
+  "name": "i64[]",
+  "value": [
+    123,
+    456
+  ]
+}

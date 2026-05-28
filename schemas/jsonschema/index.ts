@@ -18,17 +18,22 @@ export const ArrowPrimitive = {
           "properties": {
             "x": {
               "type": "number",
-              "description": "x coordinate length"
+              "description": "x component"
             },
             "y": {
               "type": "number",
-              "description": "y coordinate length"
+              "description": "y component"
             },
             "z": {
               "type": "number",
-              "description": "z coordinate length"
+              "description": "z component"
             }
-          }
+          },
+          "required": [
+            "x",
+            "y",
+            "z"
+          ]
         },
         "orientation": {
           "title": "foxglove.Quaternion",
@@ -51,9 +56,19 @@ export const ArrowPrimitive = {
               "type": "number",
               "description": "w value"
             }
-          }
+          },
+          "required": [
+            "x",
+            "y",
+            "z",
+            "w"
+          ]
         }
-      }
+      },
+      "required": [
+        "position",
+        "orientation"
+      ]
     },
     "shaft_length": {
       "type": "number",
@@ -92,9 +107,23 @@ export const ArrowPrimitive = {
           "type": "number",
           "description": "Alpha value between 0 and 1"
         }
-      }
+      },
+      "required": [
+        "r",
+        "g",
+        "b",
+        "a"
+      ]
     }
-  }
+  },
+  "required": [
+    "pose",
+    "shaft_length",
+    "shaft_diameter",
+    "head_length",
+    "head_diameter",
+    "color"
+  ]
 };
 
 export const CameraCalibration = {
@@ -135,7 +164,7 @@ export const CameraCalibration = {
     },
     "distortion_model": {
       "type": "string",
-      "description": "Name of distortion model\n\nSupported parameters: `plumb_bob` (k1, k2, p1, p2, k3) and `rational_polynomial` (k1, k2, p1, p2, k3, k4, k5, k6). Distortion models are based on [OpenCV's](https://docs.opencv.org/2.4/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html) [pinhole camera model](https://en.wikipedia.org/wiki/Distortion_%28optics%29#Software_correction). This is the same [implementation used by ROS](http://docs.ros.org/en/diamondback/api/image_geometry/html/c++/pinhole__camera__model_8cpp_source.html)"
+      "description": "Name of distortion model\n\nSupported parameters: `plumb_bob` (k1, k2, p1, p2, k3), `rational_polynomial` (k1, k2, p1, p2, k3, k4, k5, k6), and `kannala_brandt` (k1, k2, k3, k4), and `fisheye62` (k0, k1, k2, k3, p0, p1, crit_theta [optional]). `plumb_bob` and `rational_polynomial` models are based on the pinhole model [OpenCV's](https://docs.opencv.org/4.11.0/d9/d0c/group__calib3d.html) [pinhole camera model](https://en.wikipedia.org/wiki/Distortion_%28optics%29#Software_correction). The `kannala_brandt` model matches the [OpenvCV fisheye](https://docs.opencv.org/4.11.0/db/d58/group__calib3d__fisheye.html) model. The `fisheye62` model matches the [Project Aria's Fisheye62 Model](https://facebookresearch.github.io/projectaria_tools/docs/tech_insights/camera_intrinsic_models)."
     },
     "D": {
       "type": "array",
@@ -151,7 +180,7 @@ export const CameraCalibration = {
       },
       "minItems": 9,
       "maxItems": 9,
-      "description": "Intrinsic camera matrix (3x3 row-major matrix)\n\nA 3x3 row-major matrix for the raw (distorted) image.\n\nProjects 3D points in the camera coordinate frame to 2D pixel coordinates using the focal lengths (fx, fy) and principal point (cx, cy).\n\n```\n    [fx  0 cx]\nK = [ 0 fy cy]\n    [ 0  0  1]\n```\n"
+      "description": "Intrinsic camera matrix (3x3 row-major matrix)\n\nA 3x3 row-major matrix for the raw (distorted) image.\n\nProjects 3D points in the camera coordinate frame to 2D pixel coordinates using the focal lengths (fx, fy) and principal point (cx, cy).\n\n```\n    [fx  0 cx]\nK = [ 0 fy cy]\n    [ 0  0  1]\n```\n\n**Uncalibrated cameras:** Following ROS conventions for [CameraInfo](https://docs.ros.org/en/noetic/api/sensor_msgs/html/msg/CameraInfo.html), Foxglove also treats K[0] == 0.0 as indicating an uncalibrated camera, and calibration data will be ignored.\n"
     },
     "R": {
       "type": "array",
@@ -169,9 +198,20 @@ export const CameraCalibration = {
       },
       "minItems": 12,
       "maxItems": 12,
-      "description": "Projection/camera matrix (3x4 row-major matrix)\n\n```\n    [fx'  0  cx' Tx]\nP = [ 0  fy' cy' Ty]\n    [ 0   0   1   0]\n```\n\nBy convention, this matrix specifies the intrinsic (camera) matrix of the processed (rectified) image. That is, the left 3x3 portion is the normal camera intrinsic matrix for the rectified image.\n\nIt projects 3D points in the camera coordinate frame to 2D pixel coordinates using the focal lengths (fx', fy') and principal point (cx', cy') - these may differ from the values in K.\n\nFor monocular cameras, Tx = Ty = 0. Normally, monocular cameras will also have R = the identity and P[1:3,1:3] = K.\n\nFor a stereo pair, the fourth column [Tx Ty 0]' is related to the position of the optical center of the second camera in the first camera's frame. We assume Tz = 0 so both cameras are in the same stereo image plane. The first camera always has Tx = Ty = 0. For the right (second) camera of a horizontal stereo pair, Ty = 0 and Tx = -fx' * B, where B is the baseline between the cameras.\n\nGiven a 3D point [X Y Z]', the projection (x, y) of the point onto the rectified image is given by:\n\n```\n[u v w]' = P * [X Y Z 1]'\n       x = u / w\n       y = v / w\n```\n\nThis holds for both images of a stereo pair.\n"
+      "description": "Projection/camera matrix (3x4 row-major matrix)\n\n```\n    [fx'  0  cx' Tx]\nP = [ 0  fy' cy' Ty]\n    [ 0   0   1   0]\n```\n\nBy convention, this matrix specifies the intrinsic (camera) matrix of the processed (rectified) image. That is, the left 3x3 portion is the normal camera intrinsic matrix for the rectified image.\n\nIt projects 3D points in the camera coordinate frame to 2D pixel coordinates using the focal lengths (fx', fy') and principal point (cx', cy') - these may differ from the values in K.\n\nFor monocular cameras, Tx = Ty = 0. Normally, monocular cameras will also have R = the identity and P[1:3,1:3] = K.\n\nFoxglove currently does not support displaying stereo images, so Tx and Ty are ignored.\n\nGiven a 3D point [X Y Z]', the projection (x, y) of the point onto the rectified image is given by:\n\n```\n[u v w]' = P * [X Y Z 1]'\n       x = u / w\n       y = v / w\n```\n\nThis holds for both images of a stereo pair.\n"
     }
-  }
+  },
+  "required": [
+    "timestamp",
+    "frame_id",
+    "width",
+    "height",
+    "distortion_model",
+    "D",
+    "K",
+    "R",
+    "P"
+  ]
 };
 
 export const CircleAnnotation = {
@@ -209,7 +249,11 @@ export const CircleAnnotation = {
           "type": "number",
           "description": "y coordinate position"
         }
-      }
+      },
+      "required": [
+        "x",
+        "y"
+      ]
     },
     "diameter": {
       "type": "number",
@@ -240,7 +284,13 @@ export const CircleAnnotation = {
           "type": "number",
           "description": "Alpha value between 0 and 1"
         }
-      }
+      },
+      "required": [
+        "r",
+        "g",
+        "b",
+        "a"
+      ]
     },
     "outline_color": {
       "title": "foxglove.Color",
@@ -263,9 +313,46 @@ export const CircleAnnotation = {
           "type": "number",
           "description": "Alpha value between 0 and 1"
         }
-      }
+      },
+      "required": [
+        "r",
+        "g",
+        "b",
+        "a"
+      ]
+    },
+    "metadata": {
+      "type": "array",
+      "items": {
+        "title": "foxglove.KeyValuePair",
+        "description": "A key with its associated value",
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Key"
+          },
+          "value": {
+            "type": "string",
+            "description": "Value"
+          }
+        },
+        "required": [
+          "key",
+          "value"
+        ]
+      },
+      "description": "Additional user-provided metadata associated with this annotation. Keys must be unique."
     }
-  }
+  },
+  "required": [
+    "timestamp",
+    "position",
+    "diameter",
+    "thickness",
+    "fill_color",
+    "outline_color"
+  ]
 };
 
 export const Color = {
@@ -290,7 +377,13 @@ export const Color = {
       "type": "number",
       "description": "Alpha value between 0 and 1"
     }
-  }
+  },
+  "required": [
+    "r",
+    "g",
+    "b",
+    "a"
+  ]
 };
 
 export const CompressedAudio = {
@@ -324,7 +417,12 @@ export const CompressedAudio = {
       "contentEncoding": "base64",
       "description": "Compressed audio data\n\nSpecifically, the requirements for different `format` values are:\n\n- `opus`\n  - Each message should contain a complete raw Opus packet, without Ogg, WebM, or other container framing, as described in https://datatracker.ietf.org/doc/html/rfc6716#section-3.\n- `mp4a.40.2`\n  - Each message should contain a complete MPEG-4 AAC LC ADTS frame, including the ADTS header, as described in section 1.A.3.2 of ISO/IEC 14496-3:2019.\n\nAny combination of sample rate and number of channels allowed by the respective audio format is supported.\n"
     }
-  }
+  },
+  "required": [
+    "timestamp",
+    "format",
+    "data"
+  ]
 };
 
 export const CompressedImage = {
@@ -362,7 +460,122 @@ export const CompressedImage = {
       "type": "string",
       "description": "Image format\n\nSupported values: `jpeg`, `png`, `webp`, `avif`"
     }
-  }
+  },
+  "required": [
+    "timestamp",
+    "frame_id",
+    "data",
+    "format"
+  ]
+};
+
+export const CompressedPointCloud = {
+  "title": "foxglove.CompressedPointCloud",
+  "description": "A compressed point cloud. A decoder for `format` must decompress `data`, using metadata stored in the compressed payload to recover point positions and any additional per-point attributes. The decoded point cloud must include at least 2 coordinate fields from `x`, `y`, and `z`; `red`, `green`, `blue`, and `alpha` are optional for customizing each point's color.",
+  "$comment": "Generated by https://github.com/foxglove/foxglove-sdk",
+  "type": "object",
+  "properties": {
+    "timestamp": {
+      "type": "object",
+      "title": "time",
+      "properties": {
+        "sec": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "nsec": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 999999999
+        }
+      },
+      "description": "Timestamp of point cloud"
+    },
+    "frame_id": {
+      "type": "string",
+      "description": "Frame of reference"
+    },
+    "pose": {
+      "title": "foxglove.Pose",
+      "description": "The origin of the point cloud relative to the frame of reference",
+      "type": "object",
+      "properties": {
+        "position": {
+          "title": "foxglove.Vector3",
+          "description": "Point denoting position in 3D space",
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "number",
+              "description": "x component"
+            },
+            "y": {
+              "type": "number",
+              "description": "y component"
+            },
+            "z": {
+              "type": "number",
+              "description": "z component"
+            }
+          },
+          "required": [
+            "x",
+            "y",
+            "z"
+          ]
+        },
+        "orientation": {
+          "title": "foxglove.Quaternion",
+          "description": "Quaternion denoting orientation in 3D space",
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "number",
+              "description": "x value"
+            },
+            "y": {
+              "type": "number",
+              "description": "y value"
+            },
+            "z": {
+              "type": "number",
+              "description": "z value"
+            },
+            "w": {
+              "type": "number",
+              "description": "w value"
+            }
+          },
+          "required": [
+            "x",
+            "y",
+            "z",
+            "w"
+          ]
+        }
+      },
+      "required": [
+        "position",
+        "orientation"
+      ]
+    },
+    "data": {
+      "type": "string",
+      "contentEncoding": "base64",
+      "description": "Compressed point cloud data for exactly one point cloud, including any format-specific metadata needed to describe the decoded point attributes."
+    },
+    "format": {
+      "type": "string",
+      "description": "Point cloud compression format.\n\nSupported values: `draco` ([Google Draco](https://google.github.io/draco/))."
+    }
+  },
+  "required": [
+    "timestamp",
+    "frame_id",
+    "pose",
+    "data",
+    "format"
+  ]
 };
 
 export const CompressedVideo = {
@@ -400,7 +613,13 @@ export const CompressedVideo = {
       "type": "string",
       "description": "Video format.\n\nSupported values: `h264`, `h265`, `vp9`, `av1`.\n\nNote: compressed video support is subject to hardware limitations and patent licensing, so not all encodings may be supported on all platforms. See more about [H.265 support](https://caniuse.com/hevc), [VP9 support](https://caniuse.com/webm), and [AV1 support](https://caniuse.com/av1)."
     }
-  }
+  },
+  "required": [
+    "timestamp",
+    "frame_id",
+    "data",
+    "format"
+  ]
 };
 
 export const CylinderPrimitive = {
@@ -421,17 +640,22 @@ export const CylinderPrimitive = {
           "properties": {
             "x": {
               "type": "number",
-              "description": "x coordinate length"
+              "description": "x component"
             },
             "y": {
               "type": "number",
-              "description": "y coordinate length"
+              "description": "y component"
             },
             "z": {
               "type": "number",
-              "description": "z coordinate length"
+              "description": "z component"
             }
-          }
+          },
+          "required": [
+            "x",
+            "y",
+            "z"
+          ]
         },
         "orientation": {
           "title": "foxglove.Quaternion",
@@ -454,9 +678,19 @@ export const CylinderPrimitive = {
               "type": "number",
               "description": "w value"
             }
-          }
+          },
+          "required": [
+            "x",
+            "y",
+            "z",
+            "w"
+          ]
         }
-      }
+      },
+      "required": [
+        "position",
+        "orientation"
+      ]
     },
     "size": {
       "title": "foxglove.Vector3",
@@ -465,17 +699,22 @@ export const CylinderPrimitive = {
       "properties": {
         "x": {
           "type": "number",
-          "description": "x coordinate length"
+          "description": "x component"
         },
         "y": {
           "type": "number",
-          "description": "y coordinate length"
+          "description": "y component"
         },
         "z": {
           "type": "number",
-          "description": "z coordinate length"
+          "description": "z component"
         }
-      }
+      },
+      "required": [
+        "x",
+        "y",
+        "z"
+      ]
     },
     "bottom_scale": {
       "type": "number",
@@ -506,9 +745,22 @@ export const CylinderPrimitive = {
           "type": "number",
           "description": "Alpha value between 0 and 1"
         }
-      }
+      },
+      "required": [
+        "r",
+        "g",
+        "b",
+        "a"
+      ]
     }
-  }
+  },
+  "required": [
+    "pose",
+    "size",
+    "bottom_scale",
+    "top_scale",
+    "color"
+  ]
 };
 
 export const CubePrimitive = {
@@ -529,17 +781,22 @@ export const CubePrimitive = {
           "properties": {
             "x": {
               "type": "number",
-              "description": "x coordinate length"
+              "description": "x component"
             },
             "y": {
               "type": "number",
-              "description": "y coordinate length"
+              "description": "y component"
             },
             "z": {
               "type": "number",
-              "description": "z coordinate length"
+              "description": "z component"
             }
-          }
+          },
+          "required": [
+            "x",
+            "y",
+            "z"
+          ]
         },
         "orientation": {
           "title": "foxglove.Quaternion",
@@ -562,9 +819,19 @@ export const CubePrimitive = {
               "type": "number",
               "description": "w value"
             }
-          }
+          },
+          "required": [
+            "x",
+            "y",
+            "z",
+            "w"
+          ]
         }
-      }
+      },
+      "required": [
+        "position",
+        "orientation"
+      ]
     },
     "size": {
       "title": "foxglove.Vector3",
@@ -573,17 +840,22 @@ export const CubePrimitive = {
       "properties": {
         "x": {
           "type": "number",
-          "description": "x coordinate length"
+          "description": "x component"
         },
         "y": {
           "type": "number",
-          "description": "y coordinate length"
+          "description": "y component"
         },
         "z": {
           "type": "number",
-          "description": "z coordinate length"
+          "description": "z component"
         }
-      }
+      },
+      "required": [
+        "x",
+        "y",
+        "z"
+      ]
     },
     "color": {
       "title": "foxglove.Color",
@@ -606,14 +878,47 @@ export const CubePrimitive = {
           "type": "number",
           "description": "Alpha value between 0 and 1"
         }
-      }
+      },
+      "required": [
+        "r",
+        "g",
+        "b",
+        "a"
+      ]
     }
-  }
+  },
+  "required": [
+    "pose",
+    "size",
+    "color"
+  ]
+};
+
+export const Duration = {
+  "title": "foxglove.Duration",
+  "description": "A duration of time, composed of seconds and nanoseconds",
+  "$comment": "Generated by https://github.com/foxglove/foxglove-sdk",
+  "type": "object",
+  "properties": {
+    "sec": {
+      "type": "integer",
+      "description": "The number of seconds in the duration"
+    },
+    "nsec": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "The number of nanoseconds in the positive direction"
+    }
+  },
+  "required": [
+    "sec",
+    "nsec"
+  ]
 };
 
 export const FrameTransform = {
   "title": "foxglove.FrameTransform",
-  "description": "A transform between two reference frames in 3D space",
+  "description": "A transform between two reference frames in 3D space. The transform defines the position and orientation of a child frame within a parent frame. Translation moves the origin of the child frame relative to the parent origin. The rotation changes the orientation of the child frame around its origin.\n\nExamples:\n\n- With translation (x=1, y=0, z=0) and identity rotation (x=0, y=0, z=0, w=1), a point at (x=0, y=0, z=0) in the child frame maps to (x=1, y=0, z=0) in the parent frame.\n\n- With translation (x=1, y=2, z=0) and a 90-degree rotation around the z-axis (x=0, y=0, z=0.707, w=0.707), a point at (x=1, y=0, z=0) in the child frame maps to (x=-1, y=3, z=0) in the parent frame.",
   "$comment": "Generated by https://github.com/foxglove/foxglove-sdk",
   "type": "object",
   "properties": {
@@ -643,26 +948,31 @@ export const FrameTransform = {
     },
     "translation": {
       "title": "foxglove.Vector3",
-      "description": "Translation component of the transform",
+      "description": "Translation component of the transform, representing the position of the child frame's origin in the parent frame.",
       "type": "object",
       "properties": {
         "x": {
           "type": "number",
-          "description": "x coordinate length"
+          "description": "x component"
         },
         "y": {
           "type": "number",
-          "description": "y coordinate length"
+          "description": "y component"
         },
         "z": {
           "type": "number",
-          "description": "z coordinate length"
+          "description": "z component"
         }
-      }
+      },
+      "required": [
+        "x",
+        "y",
+        "z"
+      ]
     },
     "rotation": {
       "title": "foxglove.Quaternion",
-      "description": "Rotation component of the transform",
+      "description": "Rotation component of the transform, representing the orientation of the child frame in the parent frame",
       "type": "object",
       "properties": {
         "x": {
@@ -681,9 +991,22 @@ export const FrameTransform = {
           "type": "number",
           "description": "w value"
         }
-      }
+      },
+      "required": [
+        "x",
+        "y",
+        "z",
+        "w"
+      ]
     }
-  }
+  },
+  "required": [
+    "timestamp",
+    "parent_frame_id",
+    "child_frame_id",
+    "translation",
+    "rotation"
+  ]
 };
 
 export const FrameTransforms = {
@@ -696,7 +1019,7 @@ export const FrameTransforms = {
       "type": "array",
       "items": {
         "title": "foxglove.FrameTransform",
-        "description": "A transform between two reference frames in 3D space",
+        "description": "A transform between two reference frames in 3D space. The transform defines the position and orientation of a child frame within a parent frame. Translation moves the origin of the child frame relative to the parent origin. The rotation changes the orientation of the child frame around its origin.\n\nExamples:\n\n- With translation (x=1, y=0, z=0) and identity rotation (x=0, y=0, z=0, w=1), a point at (x=0, y=0, z=0) in the child frame maps to (x=1, y=0, z=0) in the parent frame.\n\n- With translation (x=1, y=2, z=0) and a 90-degree rotation around the z-axis (x=0, y=0, z=0.707, w=0.707), a point at (x=1, y=0, z=0) in the child frame maps to (x=-1, y=3, z=0) in the parent frame.",
         "type": "object",
         "properties": {
           "timestamp": {
@@ -725,26 +1048,31 @@ export const FrameTransforms = {
           },
           "translation": {
             "title": "foxglove.Vector3",
-            "description": "Translation component of the transform",
+            "description": "Translation component of the transform, representing the position of the child frame's origin in the parent frame.",
             "type": "object",
             "properties": {
               "x": {
                 "type": "number",
-                "description": "x coordinate length"
+                "description": "x component"
               },
               "y": {
                 "type": "number",
-                "description": "y coordinate length"
+                "description": "y component"
               },
               "z": {
                 "type": "number",
-                "description": "z coordinate length"
+                "description": "z component"
               }
-            }
+            },
+            "required": [
+              "x",
+              "y",
+              "z"
+            ]
           },
           "rotation": {
             "title": "foxglove.Quaternion",
-            "description": "Rotation component of the transform",
+            "description": "Rotation component of the transform, representing the orientation of the child frame in the parent frame",
             "type": "object",
             "properties": {
               "x": {
@@ -763,13 +1091,29 @@ export const FrameTransforms = {
                 "type": "number",
                 "description": "w value"
               }
-            }
+            },
+            "required": [
+              "x",
+              "y",
+              "z",
+              "w"
+            ]
           }
-        }
+        },
+        "required": [
+          "timestamp",
+          "parent_frame_id",
+          "child_frame_id",
+          "translation",
+          "rotation"
+        ]
       },
       "description": "Array of transforms"
     }
-  }
+  },
+  "required": [
+    "transforms"
+  ]
 };
 
 export const GeoJSON = {
@@ -782,7 +1126,10 @@ export const GeoJSON = {
       "type": "string",
       "description": "GeoJSON data encoded as a UTF-8 string"
     }
-  }
+  },
+  "required": [
+    "geojson"
+  ]
 };
 
 export const Grid = {
@@ -823,17 +1170,22 @@ export const Grid = {
           "properties": {
             "x": {
               "type": "number",
-              "description": "x coordinate length"
+              "description": "x component"
             },
             "y": {
               "type": "number",
-              "description": "y coordinate length"
+              "description": "y component"
             },
             "z": {
               "type": "number",
-              "description": "z coordinate length"
+              "description": "z component"
             }
-          }
+          },
+          "required": [
+            "x",
+            "y",
+            "z"
+          ]
         },
         "orientation": {
           "title": "foxglove.Quaternion",
@@ -856,9 +1208,19 @@ export const Grid = {
               "type": "number",
               "description": "w value"
             }
-          }
+          },
+          "required": [
+            "x",
+            "y",
+            "z",
+            "w"
+          ]
         }
-      }
+      },
+      "required": [
+        "position",
+        "orientation"
+      ]
     },
     "column_count": {
       "type": "integer",
@@ -872,13 +1234,17 @@ export const Grid = {
       "properties": {
         "x": {
           "type": "number",
-          "description": "x coordinate length"
+          "description": "x component"
         },
         "y": {
           "type": "number",
-          "description": "y coordinate length"
+          "description": "y component"
         }
-      }
+      },
+      "required": [
+        "x",
+        "y"
+      ]
     },
     "row_stride": {
       "type": "integer",
@@ -912,52 +1278,313 @@ export const Grid = {
             "oneOf": [
               {
                 "title": "UNKNOWN",
-                "const": 0
+                "const": 0,
+                "description": "Unknown numeric type"
               },
               {
                 "title": "UINT8",
-                "const": 1
+                "const": 1,
+                "description": "Unsigned 8-bit integer"
               },
               {
                 "title": "INT8",
-                "const": 2
+                "const": 2,
+                "description": "Signed 8-bit integer"
               },
               {
                 "title": "UINT16",
-                "const": 3
+                "const": 3,
+                "description": "Unsigned 16-bit integer"
               },
               {
                 "title": "INT16",
-                "const": 4
+                "const": 4,
+                "description": "Signed 16-bit integer"
               },
               {
                 "title": "UINT32",
-                "const": 5
+                "const": 5,
+                "description": "Unsigned 32-bit integer"
               },
               {
                 "title": "INT32",
-                "const": 6
+                "const": 6,
+                "description": "Signed 32-bit integer"
               },
               {
                 "title": "FLOAT32",
-                "const": 7
+                "const": 7,
+                "description": "32-bit floating-point number"
               },
               {
                 "title": "FLOAT64",
-                "const": 8
+                "const": 8,
+                "description": "64-bit floating-point number"
               }
             ]
           }
+        },
+        "required": [
+          "name",
+          "offset",
+          "type"
+        ]
+      },
+      "description": "Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.\nTo enable RGB color visualization in the [3D panel](https://docs.foxglove.dev/docs/visualization/panels/3d#rgba-separate-fields-color-mode), include **all four** of these fields in your `fields` array:\n\n- `red` - Red channel value\n- `green` - Green channel value\n- `blue` - Blue channel value\n- `alpha` - Alpha/transparency channel value\n\n**note:** All four fields must be present with these exact names for RGB visualization to work. The order of fields doesn't matter, but the names must match exactly.\n\nRecommended type: `UINT8` (0-255 range) for standard 8-bit color channels.\n\nExample field definitions:\n\n**RGB color only:**\n\n```javascript\nfields: [\n { name: \"red\", offset: 0, type: NumericType.UINT8 },\n { name: \"green\", offset: 1, type: NumericType.UINT8 },\n { name: \"blue\", offset: 2, type: NumericType.UINT8 },\n { name: \"alpha\", offset: 3, type: NumericType.UINT8 },\n];\n```\n\n**RGB color with elevation (for 3D terrain visualization):**\n\n```javascript\nfields: [\n { name: \"red\", offset: 0, type: NumericType.UINT8 },\n { name: \"green\", offset: 1, type: NumericType.UINT8 },\n { name: \"blue\", offset: 2, type: NumericType.UINT8 },\n { name: \"alpha\", offset: 3, type: NumericType.UINT8 },\n { name: \"elevation\", offset: 4, type: NumericType.FLOAT32 },\n];\n```\n\nWhen these fields are present, the 3D panel will offer additional \"Color Mode\" options including \"RGBA (separate fields)\" to visualize the RGB data directly. For elevation visualization, set the \"Elevation field\" to your elevation layer name."
+    },
+    "data": {
+      "type": "string",
+      "contentEncoding": "base64",
+      "description": "Grid cell data, interpreted using `fields`, in row-major (y-major) order.\nFor the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:\n\n- y = i / row_stride * cell_size.y\n- x = (i % row_stride) / cell_stride * cell_size.x"
+    }
+  },
+  "required": [
+    "timestamp",
+    "frame_id",
+    "pose",
+    "column_count",
+    "cell_size",
+    "row_stride",
+    "cell_stride",
+    "fields",
+    "data"
+  ]
+};
+
+export const VoxelGrid = {
+  "title": "foxglove.VoxelGrid",
+  "description": "A 3D grid of data",
+  "$comment": "Generated by https://github.com/foxglove/foxglove-sdk",
+  "type": "object",
+  "properties": {
+    "timestamp": {
+      "type": "object",
+      "title": "time",
+      "properties": {
+        "sec": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "nsec": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 999999999
         }
+      },
+      "description": "Timestamp of grid"
+    },
+    "frame_id": {
+      "type": "string",
+      "description": "Frame of reference"
+    },
+    "pose": {
+      "title": "foxglove.Pose",
+      "description": "Origin of the grid’s lower-front-left corner in the reference frame. The grid’s pose is defined relative to this corner, so an untransformed grid with an identity orientation has this corner at the origin.",
+      "type": "object",
+      "properties": {
+        "position": {
+          "title": "foxglove.Vector3",
+          "description": "Point denoting position in 3D space",
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "number",
+              "description": "x component"
+            },
+            "y": {
+              "type": "number",
+              "description": "y component"
+            },
+            "z": {
+              "type": "number",
+              "description": "z component"
+            }
+          },
+          "required": [
+            "x",
+            "y",
+            "z"
+          ]
+        },
+        "orientation": {
+          "title": "foxglove.Quaternion",
+          "description": "Quaternion denoting orientation in 3D space",
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "number",
+              "description": "x value"
+            },
+            "y": {
+              "type": "number",
+              "description": "y value"
+            },
+            "z": {
+              "type": "number",
+              "description": "z value"
+            },
+            "w": {
+              "type": "number",
+              "description": "w value"
+            }
+          },
+          "required": [
+            "x",
+            "y",
+            "z",
+            "w"
+          ]
+        }
+      },
+      "required": [
+        "position",
+        "orientation"
+      ]
+    },
+    "row_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of grid rows"
+    },
+    "column_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of grid columns"
+    },
+    "cell_size": {
+      "title": "foxglove.Vector3",
+      "description": "Size of single grid cell along x, y, and z axes, relative to `pose`",
+      "type": "object",
+      "properties": {
+        "x": {
+          "type": "number",
+          "description": "x component"
+        },
+        "y": {
+          "type": "number",
+          "description": "y component"
+        },
+        "z": {
+          "type": "number",
+          "description": "z component"
+        }
+      },
+      "required": [
+        "x",
+        "y",
+        "z"
+      ]
+    },
+    "slice_stride": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of bytes between depth slices in `data`"
+    },
+    "row_stride": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of bytes between rows in `data`"
+    },
+    "cell_stride": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of bytes between cells within a row in `data`"
+    },
+    "fields": {
+      "type": "array",
+      "items": {
+        "title": "foxglove.PackedElementField",
+        "description": "A field present within each element in a byte array of packed elements.",
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name of the field"
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Byte offset from start of data buffer"
+          },
+          "type": {
+            "title": "foxglove.NumericType",
+            "description": "Type of data in the field. Integers are stored using little-endian byte order.",
+            "oneOf": [
+              {
+                "title": "UNKNOWN",
+                "const": 0,
+                "description": "Unknown numeric type"
+              },
+              {
+                "title": "UINT8",
+                "const": 1,
+                "description": "Unsigned 8-bit integer"
+              },
+              {
+                "title": "INT8",
+                "const": 2,
+                "description": "Signed 8-bit integer"
+              },
+              {
+                "title": "UINT16",
+                "const": 3,
+                "description": "Unsigned 16-bit integer"
+              },
+              {
+                "title": "INT16",
+                "const": 4,
+                "description": "Signed 16-bit integer"
+              },
+              {
+                "title": "UINT32",
+                "const": 5,
+                "description": "Unsigned 32-bit integer"
+              },
+              {
+                "title": "INT32",
+                "const": 6,
+                "description": "Signed 32-bit integer"
+              },
+              {
+                "title": "FLOAT32",
+                "const": 7,
+                "description": "32-bit floating-point number"
+              },
+              {
+                "title": "FLOAT64",
+                "const": 8,
+                "description": "64-bit floating-point number"
+              }
+            ]
+          }
+        },
+        "required": [
+          "name",
+          "offset",
+          "type"
+        ]
       },
       "description": "Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color."
     },
     "data": {
       "type": "string",
       "contentEncoding": "base64",
-      "description": "Grid cell data, interpreted using `fields`, in row-major (y-major) order"
+      "description": "Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.\nFor the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:\n\n- z = i / slice_stride * cell_size.z\n- y = (i % slice_stride) / row_stride * cell_size.y\n- x = (i % row_stride) / cell_stride * cell_size.x"
     }
-  }
+  },
+  "required": [
+    "timestamp",
+    "frame_id",
+    "pose",
+    "row_count",
+    "column_count",
+    "cell_size",
+    "slice_stride",
+    "row_stride",
+    "cell_stride",
+    "fields",
+    "data"
+  ]
 };
 
 export const ImageAnnotations = {
@@ -966,6 +1593,22 @@ export const ImageAnnotations = {
   "$comment": "Generated by https://github.com/foxglove/foxglove-sdk",
   "type": "object",
   "properties": {
+    "timestamp": {
+      "type": "object",
+      "title": "time",
+      "properties": {
+        "sec": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "nsec": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 999999999
+        }
+      },
+      "description": "Timestamp of the image annotations. When set, individual annotation timestamps will be ignored."
+    },
     "circles": {
       "type": "array",
       "items": {
@@ -1002,7 +1645,11 @@ export const ImageAnnotations = {
                 "type": "number",
                 "description": "y coordinate position"
               }
-            }
+            },
+            "required": [
+              "x",
+              "y"
+            ]
           },
           "diameter": {
             "type": "number",
@@ -1033,7 +1680,13 @@ export const ImageAnnotations = {
                 "type": "number",
                 "description": "Alpha value between 0 and 1"
               }
-            }
+            },
+            "required": [
+              "r",
+              "g",
+              "b",
+              "a"
+            ]
           },
           "outline_color": {
             "title": "foxglove.Color",
@@ -1056,9 +1709,46 @@ export const ImageAnnotations = {
                 "type": "number",
                 "description": "Alpha value between 0 and 1"
               }
-            }
+            },
+            "required": [
+              "r",
+              "g",
+              "b",
+              "a"
+            ]
+          },
+          "metadata": {
+            "type": "array",
+            "items": {
+              "title": "foxglove.KeyValuePair",
+              "description": "A key with its associated value",
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "description": "Key"
+                },
+                "value": {
+                  "type": "string",
+                  "description": "Value"
+                }
+              },
+              "required": [
+                "key",
+                "value"
+              ]
+            },
+            "description": "Additional user-provided metadata associated with this annotation. Keys must be unique."
           }
-        }
+        },
+        "required": [
+          "timestamp",
+          "position",
+          "diameter",
+          "thickness",
+          "fill_color",
+          "outline_color"
+        ]
       },
       "description": "Circle annotations"
     },
@@ -1091,7 +1781,8 @@ export const ImageAnnotations = {
             "oneOf": [
               {
                 "title": "UNKNOWN",
-                "const": 0
+                "const": 0,
+                "description": "Unknown points annotation type"
               },
               {
                 "title": "POINTS",
@@ -1130,7 +1821,11 @@ export const ImageAnnotations = {
                   "type": "number",
                   "description": "y coordinate position"
                 }
-              }
+              },
+              "required": [
+                "x",
+                "y"
+              ]
             },
             "description": "Points in 2D image coordinates (pixels).\nThese coordinates use the top-left corner of the top-left pixel of the image as the origin."
           },
@@ -1155,7 +1850,13 @@ export const ImageAnnotations = {
                 "type": "number",
                 "description": "Alpha value between 0 and 1"
               }
-            }
+            },
+            "required": [
+              "r",
+              "g",
+              "b",
+              "a"
+            ]
           },
           "outline_colors": {
             "type": "array",
@@ -1180,7 +1881,13 @@ export const ImageAnnotations = {
                   "type": "number",
                   "description": "Alpha value between 0 and 1"
                 }
-              }
+              },
+              "required": [
+                "r",
+                "g",
+                "b",
+                "a"
+              ]
             },
             "description": "Per-point colors, if `type` is `POINTS`, or per-segment stroke colors, if `type` is `LINE_LIST`, `LINE_STRIP` or `LINE_LOOP`."
           },
@@ -1205,13 +1912,51 @@ export const ImageAnnotations = {
                 "type": "number",
                 "description": "Alpha value between 0 and 1"
               }
-            }
+            },
+            "required": [
+              "r",
+              "g",
+              "b",
+              "a"
+            ]
           },
           "thickness": {
             "type": "number",
             "description": "Stroke thickness in pixels"
+          },
+          "metadata": {
+            "type": "array",
+            "items": {
+              "title": "foxglove.KeyValuePair",
+              "description": "A key with its associated value",
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "description": "Key"
+                },
+                "value": {
+                  "type": "string",
+                  "description": "Value"
+                }
+              },
+              "required": [
+                "key",
+                "value"
+              ]
+            },
+            "description": "Additional user-provided metadata associated with this annotation. Keys must be unique."
           }
-        }
+        },
+        "required": [
+          "timestamp",
+          "type",
+          "points",
+          "outline_color",
+          "outline_colors",
+          "fill_color",
+          "thickness"
+        ]
       },
       "description": "Points annotations"
     },
@@ -1251,7 +1996,11 @@ export const ImageAnnotations = {
                 "type": "number",
                 "description": "y coordinate position"
               }
-            }
+            },
+            "required": [
+              "x",
+              "y"
+            ]
           },
           "text": {
             "type": "string",
@@ -1282,7 +2031,13 @@ export const ImageAnnotations = {
                 "type": "number",
                 "description": "Alpha value between 0 and 1"
               }
-            }
+            },
+            "required": [
+              "r",
+              "g",
+              "b",
+              "a"
+            ]
           },
           "background_color": {
             "title": "foxglove.Color",
@@ -1305,13 +2060,173 @@ export const ImageAnnotations = {
                 "type": "number",
                 "description": "Alpha value between 0 and 1"
               }
-            }
+            },
+            "required": [
+              "r",
+              "g",
+              "b",
+              "a"
+            ]
+          },
+          "metadata": {
+            "type": "array",
+            "items": {
+              "title": "foxglove.KeyValuePair",
+              "description": "A key with its associated value",
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "description": "Key"
+                },
+                "value": {
+                  "type": "string",
+                  "description": "Value"
+                }
+              },
+              "required": [
+                "key",
+                "value"
+              ]
+            },
+            "description": "Additional user-provided metadata associated with this annotation. Keys must be unique."
           }
-        }
+        },
+        "required": [
+          "timestamp",
+          "position",
+          "text",
+          "font_size",
+          "text_color",
+          "background_color"
+        ]
       },
       "description": "Text annotations"
+    },
+    "metadata": {
+      "type": "array",
+      "items": {
+        "title": "foxglove.KeyValuePair",
+        "description": "A key with its associated value",
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Key"
+          },
+          "value": {
+            "type": "string",
+            "description": "Value"
+          }
+        },
+        "required": [
+          "key",
+          "value"
+        ]
+      },
+      "description": "Additional user-provided metadata associated with the image annotations. Keys must be unique within this object. Per-annotation metadata takes precedence over these values."
     }
-  }
+  },
+  "required": [
+    "circles",
+    "points",
+    "texts"
+  ]
+};
+
+export const JointState = {
+  "title": "foxglove.JointState",
+  "description": "The state of a single joint (revolute or prismatic).",
+  "$comment": "Generated by https://github.com/foxglove/foxglove-sdk",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Joint name"
+    },
+    "position": {
+      "type": "number",
+      "description": "Joint position. Radians for revolute joints, meters for prismatic joints."
+    },
+    "velocity": {
+      "type": "number",
+      "description": "Joint velocity. Rad/s for revolute joints, m/s for prismatic joints."
+    },
+    "acceleration": {
+      "type": "number",
+      "description": "Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints."
+    },
+    "effort": {
+      "type": "number",
+      "description": "Joint effort (force or torque). Nm for revolute joints, N for prismatic joints."
+    }
+  },
+  "required": [
+    "name"
+  ]
+};
+
+export const JointStates = {
+  "title": "foxglove.JointStates",
+  "description": "The state of a set of joints at a given time.",
+  "$comment": "Generated by https://github.com/foxglove/foxglove-sdk",
+  "type": "object",
+  "properties": {
+    "timestamp": {
+      "type": "object",
+      "title": "time",
+      "properties": {
+        "sec": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "nsec": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 999999999
+        }
+      },
+      "description": "Timestamp of the joint states"
+    },
+    "joints": {
+      "type": "array",
+      "items": {
+        "title": "foxglove.JointState",
+        "description": "The state of a single joint (revolute or prismatic).",
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Joint name"
+          },
+          "position": {
+            "type": "number",
+            "description": "Joint position. Radians for revolute joints, meters for prismatic joints."
+          },
+          "velocity": {
+            "type": "number",
+            "description": "Joint velocity. Rad/s for revolute joints, m/s for prismatic joints."
+          },
+          "acceleration": {
+            "type": "number",
+            "description": "Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints."
+          },
+          "effort": {
+            "type": "number",
+            "description": "Joint effort (force or torque). Nm for revolute joints, N for prismatic joints."
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "description": "Joint states"
+    }
+  },
+  "required": [
+    "timestamp",
+    "joints"
+  ]
 };
 
 export const KeyValuePair = {
@@ -1328,7 +2243,11 @@ export const KeyValuePair = {
       "type": "string",
       "description": "Value"
     }
-  }
+  },
+  "required": [
+    "key",
+    "value"
+  ]
 };
 
 export const LaserScan = {
@@ -1369,17 +2288,22 @@ export const LaserScan = {
           "properties": {
             "x": {
               "type": "number",
-              "description": "x coordinate length"
+              "description": "x component"
             },
             "y": {
               "type": "number",
-              "description": "y coordinate length"
+              "description": "y component"
             },
             "z": {
               "type": "number",
-              "description": "z coordinate length"
+              "description": "z component"
             }
-          }
+          },
+          "required": [
+            "x",
+            "y",
+            "z"
+          ]
         },
         "orientation": {
           "title": "foxglove.Quaternion",
@@ -1402,9 +2326,19 @@ export const LaserScan = {
               "type": "number",
               "description": "w value"
             }
-          }
+          },
+          "required": [
+            "x",
+            "y",
+            "z",
+            "w"
+          ]
         }
-      }
+      },
+      "required": [
+        "position",
+        "orientation"
+      ]
     },
     "start_angle": {
       "type": "number",
@@ -1428,7 +2362,16 @@ export const LaserScan = {
       },
       "description": "Intensity of detections"
     }
-  }
+  },
+  "required": [
+    "timestamp",
+    "frame_id",
+    "pose",
+    "start_angle",
+    "end_angle",
+    "ranges",
+    "intensities"
+  ]
 };
 
 export const LinePrimitive = {
@@ -1470,17 +2413,22 @@ export const LinePrimitive = {
           "properties": {
             "x": {
               "type": "number",
-              "description": "x coordinate length"
+              "description": "x component"
             },
             "y": {
               "type": "number",
-              "description": "y coordinate length"
+              "description": "y component"
             },
             "z": {
               "type": "number",
-              "description": "z coordinate length"
+              "description": "z component"
             }
-          }
+          },
+          "required": [
+            "x",
+            "y",
+            "z"
+          ]
         },
         "orientation": {
           "title": "foxglove.Quaternion",
@@ -1503,9 +2451,19 @@ export const LinePrimitive = {
               "type": "number",
               "description": "w value"
             }
-          }
+          },
+          "required": [
+            "x",
+            "y",
+            "z",
+            "w"
+          ]
         }
-      }
+      },
+      "required": [
+        "position",
+        "orientation"
+      ]
     },
     "thickness": {
       "type": "number",
@@ -1534,13 +2492,18 @@ export const LinePrimitive = {
             "type": "number",
             "description": "z coordinate position"
           }
-        }
+        },
+        "required": [
+          "x",
+          "y",
+          "z"
+        ]
       },
       "description": "Points along the line"
     },
     "color": {
       "title": "foxglove.Color",
-      "description": "Solid color to use for the whole line. One of `color` or `colors` must be provided.",
+      "description": "Solid color to use for the whole line. Ignored if `colors` is non-empty.",
       "type": "object",
       "properties": {
         "r": {
@@ -1559,7 +2522,13 @@ export const LinePrimitive = {
           "type": "number",
           "description": "Alpha value between 0 and 1"
         }
-      }
+      },
+      "required": [
+        "r",
+        "g",
+        "b",
+        "a"
+      ]
     },
     "colors": {
       "type": "array",
@@ -1584,9 +2553,15 @@ export const LinePrimitive = {
             "type": "number",
             "description": "Alpha value between 0 and 1"
           }
-        }
+        },
+        "required": [
+          "r",
+          "g",
+          "b",
+          "a"
+        ]
       },
-      "description": "Per-point colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided."
+      "description": "Per-point colors (if non-empty, must have the same length as `points`)."
     },
     "indices": {
       "type": "array",
@@ -1596,7 +2571,17 @@ export const LinePrimitive = {
       },
       "description": "Indices into the `points` and `colors` attribute arrays, which can be used to avoid duplicating attribute data.\n\nIf omitted or empty, indexing will not be used. This default behavior is equivalent to specifying [0, 1, ..., N-1] for the indices (where N is the number of `points` provided)."
     }
-  }
+  },
+  "required": [
+    "type",
+    "pose",
+    "thickness",
+    "scale_invariant",
+    "points",
+    "color",
+    "colors",
+    "indices"
+  ]
 };
 
 export const LocationFix = {
@@ -1652,23 +2637,295 @@ export const LocationFix = {
       "oneOf": [
         {
           "title": "UNKNOWN",
-          "const": 0
+          "const": 0,
+          "description": "Unknown position covariance type"
         },
         {
           "title": "APPROXIMATED",
-          "const": 1
+          "const": 1,
+          "description": "Position covariance is approximated"
         },
         {
           "title": "DIAGONAL_KNOWN",
-          "const": 2
+          "const": 2,
+          "description": "Position covariance is per-axis, so put it along the diagonal"
         },
         {
           "title": "KNOWN",
-          "const": 3
+          "const": 3,
+          "description": "Position covariance of the fix is known"
         }
       ]
+    },
+    "heading": {
+      "type": "number",
+      "description": "Heading (yaw angle), in radians, measured clockwise from north"
+    },
+    "velocity": {
+      "title": "foxglove.Vector3",
+      "description": "Velocity in local East-North-Up (ENU) frame in m/s",
+      "type": "object",
+      "properties": {
+        "x": {
+          "type": "number",
+          "description": "x component"
+        },
+        "y": {
+          "type": "number",
+          "description": "y component"
+        },
+        "z": {
+          "type": "number",
+          "description": "z component"
+        }
+      },
+      "required": [
+        "x",
+        "y",
+        "z"
+      ]
+    },
+    "color": {
+      "title": "foxglove.Color",
+      "description": "Color used to visualize the location",
+      "type": "object",
+      "properties": {
+        "r": {
+          "type": "number",
+          "description": "Red value between 0 and 1"
+        },
+        "g": {
+          "type": "number",
+          "description": "Green value between 0 and 1"
+        },
+        "b": {
+          "type": "number",
+          "description": "Blue value between 0 and 1"
+        },
+        "a": {
+          "type": "number",
+          "description": "Alpha value between 0 and 1"
+        }
+      },
+      "required": [
+        "r",
+        "g",
+        "b",
+        "a"
+      ]
+    },
+    "metadata": {
+      "type": "array",
+      "items": {
+        "title": "foxglove.KeyValuePair",
+        "description": "A key with its associated value",
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Key"
+          },
+          "value": {
+            "type": "string",
+            "description": "Value"
+          }
+        },
+        "required": [
+          "key",
+          "value"
+        ]
+      },
+      "description": "Additional user-provided metadata associated with the location fix. Keys must be unique."
     }
-  }
+  },
+  "required": [
+    "timestamp",
+    "frame_id",
+    "latitude",
+    "longitude",
+    "altitude",
+    "position_covariance",
+    "position_covariance_type"
+  ]
+};
+
+export const LocationFixes = {
+  "title": "foxglove.LocationFixes",
+  "description": "A group of LocationFix messages",
+  "$comment": "Generated by https://github.com/foxglove/foxglove-sdk",
+  "type": "object",
+  "properties": {
+    "fixes": {
+      "type": "array",
+      "items": {
+        "title": "foxglove.LocationFix",
+        "description": "A navigation satellite fix for any Global Navigation Satellite System",
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "object",
+            "title": "time",
+            "properties": {
+              "sec": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "nsec": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 999999999
+              }
+            },
+            "description": "Timestamp of the message"
+          },
+          "frame_id": {
+            "type": "string",
+            "description": "Frame for the sensor. Latitude and longitude readings are at the origin of the frame."
+          },
+          "latitude": {
+            "type": "number",
+            "description": "Latitude in degrees"
+          },
+          "longitude": {
+            "type": "number",
+            "description": "Longitude in degrees"
+          },
+          "altitude": {
+            "type": "number",
+            "description": "Altitude in meters"
+          },
+          "position_covariance": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 9,
+            "maxItems": 9,
+            "description": "Position covariance (m^2) defined relative to a tangential plane through the reported position. The components are East, North, and Up (ENU), in row-major order."
+          },
+          "position_covariance_type": {
+            "title": "foxglove.PositionCovarianceType",
+            "description": "If `position_covariance` is available, `position_covariance_type` must be set to indicate the type of covariance.",
+            "oneOf": [
+              {
+                "title": "UNKNOWN",
+                "const": 0,
+                "description": "Unknown position covariance type"
+              },
+              {
+                "title": "APPROXIMATED",
+                "const": 1,
+                "description": "Position covariance is approximated"
+              },
+              {
+                "title": "DIAGONAL_KNOWN",
+                "const": 2,
+                "description": "Position covariance is per-axis, so put it along the diagonal"
+              },
+              {
+                "title": "KNOWN",
+                "const": 3,
+                "description": "Position covariance of the fix is known"
+              }
+            ]
+          },
+          "heading": {
+            "type": "number",
+            "description": "Heading (yaw angle), in radians, measured clockwise from north"
+          },
+          "velocity": {
+            "title": "foxglove.Vector3",
+            "description": "Velocity in local East-North-Up (ENU) frame in m/s",
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number",
+                "description": "x component"
+              },
+              "y": {
+                "type": "number",
+                "description": "y component"
+              },
+              "z": {
+                "type": "number",
+                "description": "z component"
+              }
+            },
+            "required": [
+              "x",
+              "y",
+              "z"
+            ]
+          },
+          "color": {
+            "title": "foxglove.Color",
+            "description": "Color used to visualize the location",
+            "type": "object",
+            "properties": {
+              "r": {
+                "type": "number",
+                "description": "Red value between 0 and 1"
+              },
+              "g": {
+                "type": "number",
+                "description": "Green value between 0 and 1"
+              },
+              "b": {
+                "type": "number",
+                "description": "Blue value between 0 and 1"
+              },
+              "a": {
+                "type": "number",
+                "description": "Alpha value between 0 and 1"
+              }
+            },
+            "required": [
+              "r",
+              "g",
+              "b",
+              "a"
+            ]
+          },
+          "metadata": {
+            "type": "array",
+            "items": {
+              "title": "foxglove.KeyValuePair",
+              "description": "A key with its associated value",
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "description": "Key"
+                },
+                "value": {
+                  "type": "string",
+                  "description": "Value"
+                }
+              },
+              "required": [
+                "key",
+                "value"
+              ]
+            },
+            "description": "Additional user-provided metadata associated with the location fix. Keys must be unique."
+          }
+        },
+        "required": [
+          "timestamp",
+          "frame_id",
+          "latitude",
+          "longitude",
+          "altitude",
+          "position_covariance",
+          "position_covariance_type"
+        ]
+      },
+      "description": "An array of location fixes"
+    }
+  },
+  "required": [
+    "fixes"
+  ]
 };
 
 export const Log = {
@@ -1699,27 +2956,33 @@ export const Log = {
       "oneOf": [
         {
           "title": "UNKNOWN",
-          "const": 0
+          "const": 0,
+          "description": "Unknown log level"
         },
         {
           "title": "DEBUG",
-          "const": 1
+          "const": 1,
+          "description": "Debug log level"
         },
         {
           "title": "INFO",
-          "const": 2
+          "const": 2,
+          "description": "Info log level"
         },
         {
           "title": "WARNING",
-          "const": 3
+          "const": 3,
+          "description": "Warning log level"
         },
         {
           "title": "ERROR",
-          "const": 4
+          "const": 4,
+          "description": "Error log level"
         },
         {
           "title": "FATAL",
-          "const": 5
+          "const": 5,
+          "description": "Fatal log level"
         }
       ]
     },
@@ -1740,7 +3003,15 @@ export const Log = {
       "minimum": 0,
       "description": "Line number in the file"
     }
-  }
+  },
+  "required": [
+    "timestamp",
+    "level",
+    "message",
+    "name",
+    "file",
+    "line"
+  ]
 };
 
 export const SceneEntityDeletion = {
@@ -1785,7 +3056,12 @@ export const SceneEntityDeletion = {
       "type": "string",
       "description": "Identifier which must match if `type` is `MATCHING_ID`."
     }
-  }
+  },
+  "required": [
+    "timestamp",
+    "type",
+    "id"
+  ]
 };
 
 export const SceneEntity = {
@@ -1852,7 +3128,11 @@ export const SceneEntity = {
             "type": "string",
             "description": "Value"
           }
-        }
+        },
+        "required": [
+          "key",
+          "value"
+        ]
       },
       "description": "Additional user-provided metadata associated with the entity. Keys must be unique."
     },
@@ -1875,17 +3155,22 @@ export const SceneEntity = {
                 "properties": {
                   "x": {
                     "type": "number",
-                    "description": "x coordinate length"
+                    "description": "x component"
                   },
                   "y": {
                     "type": "number",
-                    "description": "y coordinate length"
+                    "description": "y component"
                   },
                   "z": {
                     "type": "number",
-                    "description": "z coordinate length"
+                    "description": "z component"
                   }
-                }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "z"
+                ]
               },
               "orientation": {
                 "title": "foxglove.Quaternion",
@@ -1908,9 +3193,19 @@ export const SceneEntity = {
                     "type": "number",
                     "description": "w value"
                   }
-                }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "z",
+                  "w"
+                ]
               }
-            }
+            },
+            "required": [
+              "position",
+              "orientation"
+            ]
           },
           "shaft_length": {
             "type": "number",
@@ -1949,9 +3244,23 @@ export const SceneEntity = {
                 "type": "number",
                 "description": "Alpha value between 0 and 1"
               }
-            }
+            },
+            "required": [
+              "r",
+              "g",
+              "b",
+              "a"
+            ]
           }
-        }
+        },
+        "required": [
+          "pose",
+          "shaft_length",
+          "shaft_diameter",
+          "head_length",
+          "head_diameter",
+          "color"
+        ]
       },
       "description": "Arrow primitives"
     },
@@ -1974,17 +3283,22 @@ export const SceneEntity = {
                 "properties": {
                   "x": {
                     "type": "number",
-                    "description": "x coordinate length"
+                    "description": "x component"
                   },
                   "y": {
                     "type": "number",
-                    "description": "y coordinate length"
+                    "description": "y component"
                   },
                   "z": {
                     "type": "number",
-                    "description": "z coordinate length"
+                    "description": "z component"
                   }
-                }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "z"
+                ]
               },
               "orientation": {
                 "title": "foxglove.Quaternion",
@@ -2007,9 +3321,19 @@ export const SceneEntity = {
                     "type": "number",
                     "description": "w value"
                   }
-                }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "z",
+                  "w"
+                ]
               }
-            }
+            },
+            "required": [
+              "position",
+              "orientation"
+            ]
           },
           "size": {
             "title": "foxglove.Vector3",
@@ -2018,17 +3342,22 @@ export const SceneEntity = {
             "properties": {
               "x": {
                 "type": "number",
-                "description": "x coordinate length"
+                "description": "x component"
               },
               "y": {
                 "type": "number",
-                "description": "y coordinate length"
+                "description": "y component"
               },
               "z": {
                 "type": "number",
-                "description": "z coordinate length"
+                "description": "z component"
               }
-            }
+            },
+            "required": [
+              "x",
+              "y",
+              "z"
+            ]
           },
           "color": {
             "title": "foxglove.Color",
@@ -2051,9 +3380,20 @@ export const SceneEntity = {
                 "type": "number",
                 "description": "Alpha value between 0 and 1"
               }
-            }
+            },
+            "required": [
+              "r",
+              "g",
+              "b",
+              "a"
+            ]
           }
-        }
+        },
+        "required": [
+          "pose",
+          "size",
+          "color"
+        ]
       },
       "description": "Cube primitives"
     },
@@ -2076,17 +3416,22 @@ export const SceneEntity = {
                 "properties": {
                   "x": {
                     "type": "number",
-                    "description": "x coordinate length"
+                    "description": "x component"
                   },
                   "y": {
                     "type": "number",
-                    "description": "y coordinate length"
+                    "description": "y component"
                   },
                   "z": {
                     "type": "number",
-                    "description": "z coordinate length"
+                    "description": "z component"
                   }
-                }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "z"
+                ]
               },
               "orientation": {
                 "title": "foxglove.Quaternion",
@@ -2109,9 +3454,19 @@ export const SceneEntity = {
                     "type": "number",
                     "description": "w value"
                   }
-                }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "z",
+                  "w"
+                ]
               }
-            }
+            },
+            "required": [
+              "position",
+              "orientation"
+            ]
           },
           "size": {
             "title": "foxglove.Vector3",
@@ -2120,17 +3475,22 @@ export const SceneEntity = {
             "properties": {
               "x": {
                 "type": "number",
-                "description": "x coordinate length"
+                "description": "x component"
               },
               "y": {
                 "type": "number",
-                "description": "y coordinate length"
+                "description": "y component"
               },
               "z": {
                 "type": "number",
-                "description": "z coordinate length"
+                "description": "z component"
               }
-            }
+            },
+            "required": [
+              "x",
+              "y",
+              "z"
+            ]
           },
           "color": {
             "title": "foxglove.Color",
@@ -2153,9 +3513,20 @@ export const SceneEntity = {
                 "type": "number",
                 "description": "Alpha value between 0 and 1"
               }
-            }
+            },
+            "required": [
+              "r",
+              "g",
+              "b",
+              "a"
+            ]
           }
-        }
+        },
+        "required": [
+          "pose",
+          "size",
+          "color"
+        ]
       },
       "description": "Sphere primitives"
     },
@@ -2178,17 +3549,22 @@ export const SceneEntity = {
                 "properties": {
                   "x": {
                     "type": "number",
-                    "description": "x coordinate length"
+                    "description": "x component"
                   },
                   "y": {
                     "type": "number",
-                    "description": "y coordinate length"
+                    "description": "y component"
                   },
                   "z": {
                     "type": "number",
-                    "description": "z coordinate length"
+                    "description": "z component"
                   }
-                }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "z"
+                ]
               },
               "orientation": {
                 "title": "foxglove.Quaternion",
@@ -2211,9 +3587,19 @@ export const SceneEntity = {
                     "type": "number",
                     "description": "w value"
                   }
-                }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "z",
+                  "w"
+                ]
               }
-            }
+            },
+            "required": [
+              "position",
+              "orientation"
+            ]
           },
           "size": {
             "title": "foxglove.Vector3",
@@ -2222,17 +3608,22 @@ export const SceneEntity = {
             "properties": {
               "x": {
                 "type": "number",
-                "description": "x coordinate length"
+                "description": "x component"
               },
               "y": {
                 "type": "number",
-                "description": "y coordinate length"
+                "description": "y component"
               },
               "z": {
                 "type": "number",
-                "description": "z coordinate length"
+                "description": "z component"
               }
-            }
+            },
+            "required": [
+              "x",
+              "y",
+              "z"
+            ]
           },
           "bottom_scale": {
             "type": "number",
@@ -2263,9 +3654,22 @@ export const SceneEntity = {
                 "type": "number",
                 "description": "Alpha value between 0 and 1"
               }
-            }
+            },
+            "required": [
+              "r",
+              "g",
+              "b",
+              "a"
+            ]
           }
-        }
+        },
+        "required": [
+          "pose",
+          "size",
+          "bottom_scale",
+          "top_scale",
+          "color"
+        ]
       },
       "description": "Cylinder primitives"
     },
@@ -2309,17 +3713,22 @@ export const SceneEntity = {
                 "properties": {
                   "x": {
                     "type": "number",
-                    "description": "x coordinate length"
+                    "description": "x component"
                   },
                   "y": {
                     "type": "number",
-                    "description": "y coordinate length"
+                    "description": "y component"
                   },
                   "z": {
                     "type": "number",
-                    "description": "z coordinate length"
+                    "description": "z component"
                   }
-                }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "z"
+                ]
               },
               "orientation": {
                 "title": "foxglove.Quaternion",
@@ -2342,9 +3751,19 @@ export const SceneEntity = {
                     "type": "number",
                     "description": "w value"
                   }
-                }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "z",
+                  "w"
+                ]
               }
-            }
+            },
+            "required": [
+              "position",
+              "orientation"
+            ]
           },
           "thickness": {
             "type": "number",
@@ -2373,13 +3792,18 @@ export const SceneEntity = {
                   "type": "number",
                   "description": "z coordinate position"
                 }
-              }
+              },
+              "required": [
+                "x",
+                "y",
+                "z"
+              ]
             },
             "description": "Points along the line"
           },
           "color": {
             "title": "foxglove.Color",
-            "description": "Solid color to use for the whole line. One of `color` or `colors` must be provided.",
+            "description": "Solid color to use for the whole line. Ignored if `colors` is non-empty.",
             "type": "object",
             "properties": {
               "r": {
@@ -2398,7 +3822,13 @@ export const SceneEntity = {
                 "type": "number",
                 "description": "Alpha value between 0 and 1"
               }
-            }
+            },
+            "required": [
+              "r",
+              "g",
+              "b",
+              "a"
+            ]
           },
           "colors": {
             "type": "array",
@@ -2423,9 +3853,15 @@ export const SceneEntity = {
                   "type": "number",
                   "description": "Alpha value between 0 and 1"
                 }
-              }
+              },
+              "required": [
+                "r",
+                "g",
+                "b",
+                "a"
+              ]
             },
-            "description": "Per-point colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided."
+            "description": "Per-point colors (if non-empty, must have the same length as `points`)."
           },
           "indices": {
             "type": "array",
@@ -2435,7 +3871,17 @@ export const SceneEntity = {
             },
             "description": "Indices into the `points` and `colors` attribute arrays, which can be used to avoid duplicating attribute data.\n\nIf omitted or empty, indexing will not be used. This default behavior is equivalent to specifying [0, 1, ..., N-1] for the indices (where N is the number of `points` provided)."
           }
-        }
+        },
+        "required": [
+          "type",
+          "pose",
+          "thickness",
+          "scale_invariant",
+          "points",
+          "color",
+          "colors",
+          "indices"
+        ]
       },
       "description": "Line primitives"
     },
@@ -2458,17 +3904,22 @@ export const SceneEntity = {
                 "properties": {
                   "x": {
                     "type": "number",
-                    "description": "x coordinate length"
+                    "description": "x component"
                   },
                   "y": {
                     "type": "number",
-                    "description": "y coordinate length"
+                    "description": "y component"
                   },
                   "z": {
                     "type": "number",
-                    "description": "z coordinate length"
+                    "description": "z component"
                   }
-                }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "z"
+                ]
               },
               "orientation": {
                 "title": "foxglove.Quaternion",
@@ -2491,9 +3942,19 @@ export const SceneEntity = {
                     "type": "number",
                     "description": "w value"
                   }
-                }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "z",
+                  "w"
+                ]
               }
-            }
+            },
+            "required": [
+              "position",
+              "orientation"
+            ]
           },
           "points": {
             "type": "array",
@@ -2514,13 +3975,18 @@ export const SceneEntity = {
                   "type": "number",
                   "description": "z coordinate position"
                 }
-              }
+              },
+              "required": [
+                "x",
+                "y",
+                "z"
+              ]
             },
             "description": "Vertices to use for triangles, interpreted as a list of triples (0-1-2, 3-4-5, ...)"
           },
           "color": {
             "title": "foxglove.Color",
-            "description": "Solid color to use for the whole shape. One of `color` or `colors` must be provided.",
+            "description": "Solid color to use for the whole shape. Ignored if `colors` is non-empty.",
             "type": "object",
             "properties": {
               "r": {
@@ -2539,7 +4005,13 @@ export const SceneEntity = {
                 "type": "number",
                 "description": "Alpha value between 0 and 1"
               }
-            }
+            },
+            "required": [
+              "r",
+              "g",
+              "b",
+              "a"
+            ]
           },
           "colors": {
             "type": "array",
@@ -2564,9 +4036,15 @@ export const SceneEntity = {
                   "type": "number",
                   "description": "Alpha value between 0 and 1"
                 }
-              }
+              },
+              "required": [
+                "r",
+                "g",
+                "b",
+                "a"
+              ]
             },
-            "description": "Per-vertex colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided."
+            "description": "Per-vertex colors (if specified, must have the same length as `points`)."
           },
           "indices": {
             "type": "array",
@@ -2576,7 +4054,14 @@ export const SceneEntity = {
             },
             "description": "Indices into the `points` and `colors` attribute arrays, which can be used to avoid duplicating attribute data.\n\nIf omitted or empty, indexing will not be used. This default behavior is equivalent to specifying [0, 1, ..., N-1] for the indices (where N is the number of `points` provided)."
           }
-        }
+        },
+        "required": [
+          "pose",
+          "points",
+          "color",
+          "colors",
+          "indices"
+        ]
       },
       "description": "Triangle list primitives"
     },
@@ -2599,17 +4084,22 @@ export const SceneEntity = {
                 "properties": {
                   "x": {
                     "type": "number",
-                    "description": "x coordinate length"
+                    "description": "x component"
                   },
                   "y": {
                     "type": "number",
-                    "description": "y coordinate length"
+                    "description": "y component"
                   },
                   "z": {
                     "type": "number",
-                    "description": "z coordinate length"
+                    "description": "z component"
                   }
-                }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "z"
+                ]
               },
               "orientation": {
                 "title": "foxglove.Quaternion",
@@ -2632,9 +4122,19 @@ export const SceneEntity = {
                     "type": "number",
                     "description": "w value"
                   }
-                }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "z",
+                  "w"
+                ]
               }
-            }
+            },
+            "required": [
+              "position",
+              "orientation"
+            ]
           },
           "billboard": {
             "type": "boolean",
@@ -2669,13 +4169,27 @@ export const SceneEntity = {
                 "type": "number",
                 "description": "Alpha value between 0 and 1"
               }
-            }
+            },
+            "required": [
+              "r",
+              "g",
+              "b",
+              "a"
+            ]
           },
           "text": {
             "type": "string",
             "description": "Text"
           }
-        }
+        },
+        "required": [
+          "pose",
+          "billboard",
+          "font_size",
+          "scale_invariant",
+          "color",
+          "text"
+        ]
       },
       "description": "Text primitives"
     },
@@ -2698,17 +4212,22 @@ export const SceneEntity = {
                 "properties": {
                   "x": {
                     "type": "number",
-                    "description": "x coordinate length"
+                    "description": "x component"
                   },
                   "y": {
                     "type": "number",
-                    "description": "y coordinate length"
+                    "description": "y component"
                   },
                   "z": {
                     "type": "number",
-                    "description": "z coordinate length"
+                    "description": "z component"
                   }
-                }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "z"
+                ]
               },
               "orientation": {
                 "title": "foxglove.Quaternion",
@@ -2731,9 +4250,19 @@ export const SceneEntity = {
                     "type": "number",
                     "description": "w value"
                   }
-                }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "z",
+                  "w"
+                ]
               }
-            }
+            },
+            "required": [
+              "position",
+              "orientation"
+            ]
           },
           "scale": {
             "title": "foxglove.Vector3",
@@ -2742,17 +4271,22 @@ export const SceneEntity = {
             "properties": {
               "x": {
                 "type": "number",
-                "description": "x coordinate length"
+                "description": "x component"
               },
               "y": {
                 "type": "number",
-                "description": "y coordinate length"
+                "description": "y component"
               },
               "z": {
                 "type": "number",
-                "description": "z coordinate length"
+                "description": "z component"
               }
-            }
+            },
+            "required": [
+              "x",
+              "y",
+              "z"
+            ]
           },
           "color": {
             "title": "foxglove.Color",
@@ -2775,7 +4309,13 @@ export const SceneEntity = {
                 "type": "number",
                 "description": "Alpha value between 0 and 1"
               }
-            }
+            },
+            "required": [
+              "r",
+              "g",
+              "b",
+              "a"
+            ]
           },
           "override_color": {
             "type": "boolean",
@@ -2783,7 +4323,7 @@ export const SceneEntity = {
           },
           "url": {
             "type": "string",
-            "description": "URL pointing to model file. One of `url` or `data` should be provided."
+            "description": "URL pointing to model file. One of `url` or `data` should be non-empty."
           },
           "media_type": {
             "type": "string",
@@ -2792,13 +4332,38 @@ export const SceneEntity = {
           "data": {
             "type": "string",
             "contentEncoding": "base64",
-            "description": "Embedded model. One of `url` or `data` should be provided. If `data` is provided, `media_type` must be set to indicate the type of the data."
+            "description": "Embedded model. One of `url` or `data` should be non-empty. If `data` is non-empty, `media_type` must be set to indicate the type of the data."
           }
-        }
+        },
+        "required": [
+          "pose",
+          "scale",
+          "color",
+          "override_color",
+          "url",
+          "media_type",
+          "data"
+        ]
       },
       "description": "Model primitives"
     }
-  }
+  },
+  "required": [
+    "timestamp",
+    "frame_id",
+    "id",
+    "lifetime",
+    "frame_locked",
+    "metadata",
+    "arrows",
+    "cubes",
+    "spheres",
+    "cylinders",
+    "lines",
+    "triangles",
+    "texts",
+    "models"
+  ]
 };
 
 export const SceneUpdate = {
@@ -2850,7 +4415,12 @@ export const SceneUpdate = {
             "type": "string",
             "description": "Identifier which must match if `type` is `MATCHING_ID`."
           }
-        }
+        },
+        "required": [
+          "timestamp",
+          "type",
+          "id"
+        ]
       },
       "description": "Scene entities to delete"
     },
@@ -2919,7 +4489,11 @@ export const SceneUpdate = {
                   "type": "string",
                   "description": "Value"
                 }
-              }
+              },
+              "required": [
+                "key",
+                "value"
+              ]
             },
             "description": "Additional user-provided metadata associated with the entity. Keys must be unique."
           },
@@ -2942,17 +4516,22 @@ export const SceneUpdate = {
                       "properties": {
                         "x": {
                           "type": "number",
-                          "description": "x coordinate length"
+                          "description": "x component"
                         },
                         "y": {
                           "type": "number",
-                          "description": "y coordinate length"
+                          "description": "y component"
                         },
                         "z": {
                           "type": "number",
-                          "description": "z coordinate length"
+                          "description": "z component"
                         }
-                      }
+                      },
+                      "required": [
+                        "x",
+                        "y",
+                        "z"
+                      ]
                     },
                     "orientation": {
                       "title": "foxglove.Quaternion",
@@ -2975,9 +4554,19 @@ export const SceneUpdate = {
                           "type": "number",
                           "description": "w value"
                         }
-                      }
+                      },
+                      "required": [
+                        "x",
+                        "y",
+                        "z",
+                        "w"
+                      ]
                     }
-                  }
+                  },
+                  "required": [
+                    "position",
+                    "orientation"
+                  ]
                 },
                 "shaft_length": {
                   "type": "number",
@@ -3016,9 +4605,23 @@ export const SceneUpdate = {
                       "type": "number",
                       "description": "Alpha value between 0 and 1"
                     }
-                  }
+                  },
+                  "required": [
+                    "r",
+                    "g",
+                    "b",
+                    "a"
+                  ]
                 }
-              }
+              },
+              "required": [
+                "pose",
+                "shaft_length",
+                "shaft_diameter",
+                "head_length",
+                "head_diameter",
+                "color"
+              ]
             },
             "description": "Arrow primitives"
           },
@@ -3041,17 +4644,22 @@ export const SceneUpdate = {
                       "properties": {
                         "x": {
                           "type": "number",
-                          "description": "x coordinate length"
+                          "description": "x component"
                         },
                         "y": {
                           "type": "number",
-                          "description": "y coordinate length"
+                          "description": "y component"
                         },
                         "z": {
                           "type": "number",
-                          "description": "z coordinate length"
+                          "description": "z component"
                         }
-                      }
+                      },
+                      "required": [
+                        "x",
+                        "y",
+                        "z"
+                      ]
                     },
                     "orientation": {
                       "title": "foxglove.Quaternion",
@@ -3074,9 +4682,19 @@ export const SceneUpdate = {
                           "type": "number",
                           "description": "w value"
                         }
-                      }
+                      },
+                      "required": [
+                        "x",
+                        "y",
+                        "z",
+                        "w"
+                      ]
                     }
-                  }
+                  },
+                  "required": [
+                    "position",
+                    "orientation"
+                  ]
                 },
                 "size": {
                   "title": "foxglove.Vector3",
@@ -3085,17 +4703,22 @@ export const SceneUpdate = {
                   "properties": {
                     "x": {
                       "type": "number",
-                      "description": "x coordinate length"
+                      "description": "x component"
                     },
                     "y": {
                       "type": "number",
-                      "description": "y coordinate length"
+                      "description": "y component"
                     },
                     "z": {
                       "type": "number",
-                      "description": "z coordinate length"
+                      "description": "z component"
                     }
-                  }
+                  },
+                  "required": [
+                    "x",
+                    "y",
+                    "z"
+                  ]
                 },
                 "color": {
                   "title": "foxglove.Color",
@@ -3118,9 +4741,20 @@ export const SceneUpdate = {
                       "type": "number",
                       "description": "Alpha value between 0 and 1"
                     }
-                  }
+                  },
+                  "required": [
+                    "r",
+                    "g",
+                    "b",
+                    "a"
+                  ]
                 }
-              }
+              },
+              "required": [
+                "pose",
+                "size",
+                "color"
+              ]
             },
             "description": "Cube primitives"
           },
@@ -3143,17 +4777,22 @@ export const SceneUpdate = {
                       "properties": {
                         "x": {
                           "type": "number",
-                          "description": "x coordinate length"
+                          "description": "x component"
                         },
                         "y": {
                           "type": "number",
-                          "description": "y coordinate length"
+                          "description": "y component"
                         },
                         "z": {
                           "type": "number",
-                          "description": "z coordinate length"
+                          "description": "z component"
                         }
-                      }
+                      },
+                      "required": [
+                        "x",
+                        "y",
+                        "z"
+                      ]
                     },
                     "orientation": {
                       "title": "foxglove.Quaternion",
@@ -3176,9 +4815,19 @@ export const SceneUpdate = {
                           "type": "number",
                           "description": "w value"
                         }
-                      }
+                      },
+                      "required": [
+                        "x",
+                        "y",
+                        "z",
+                        "w"
+                      ]
                     }
-                  }
+                  },
+                  "required": [
+                    "position",
+                    "orientation"
+                  ]
                 },
                 "size": {
                   "title": "foxglove.Vector3",
@@ -3187,17 +4836,22 @@ export const SceneUpdate = {
                   "properties": {
                     "x": {
                       "type": "number",
-                      "description": "x coordinate length"
+                      "description": "x component"
                     },
                     "y": {
                       "type": "number",
-                      "description": "y coordinate length"
+                      "description": "y component"
                     },
                     "z": {
                       "type": "number",
-                      "description": "z coordinate length"
+                      "description": "z component"
                     }
-                  }
+                  },
+                  "required": [
+                    "x",
+                    "y",
+                    "z"
+                  ]
                 },
                 "color": {
                   "title": "foxglove.Color",
@@ -3220,9 +4874,20 @@ export const SceneUpdate = {
                       "type": "number",
                       "description": "Alpha value between 0 and 1"
                     }
-                  }
+                  },
+                  "required": [
+                    "r",
+                    "g",
+                    "b",
+                    "a"
+                  ]
                 }
-              }
+              },
+              "required": [
+                "pose",
+                "size",
+                "color"
+              ]
             },
             "description": "Sphere primitives"
           },
@@ -3245,17 +4910,22 @@ export const SceneUpdate = {
                       "properties": {
                         "x": {
                           "type": "number",
-                          "description": "x coordinate length"
+                          "description": "x component"
                         },
                         "y": {
                           "type": "number",
-                          "description": "y coordinate length"
+                          "description": "y component"
                         },
                         "z": {
                           "type": "number",
-                          "description": "z coordinate length"
+                          "description": "z component"
                         }
-                      }
+                      },
+                      "required": [
+                        "x",
+                        "y",
+                        "z"
+                      ]
                     },
                     "orientation": {
                       "title": "foxglove.Quaternion",
@@ -3278,9 +4948,19 @@ export const SceneUpdate = {
                           "type": "number",
                           "description": "w value"
                         }
-                      }
+                      },
+                      "required": [
+                        "x",
+                        "y",
+                        "z",
+                        "w"
+                      ]
                     }
-                  }
+                  },
+                  "required": [
+                    "position",
+                    "orientation"
+                  ]
                 },
                 "size": {
                   "title": "foxglove.Vector3",
@@ -3289,17 +4969,22 @@ export const SceneUpdate = {
                   "properties": {
                     "x": {
                       "type": "number",
-                      "description": "x coordinate length"
+                      "description": "x component"
                     },
                     "y": {
                       "type": "number",
-                      "description": "y coordinate length"
+                      "description": "y component"
                     },
                     "z": {
                       "type": "number",
-                      "description": "z coordinate length"
+                      "description": "z component"
                     }
-                  }
+                  },
+                  "required": [
+                    "x",
+                    "y",
+                    "z"
+                  ]
                 },
                 "bottom_scale": {
                   "type": "number",
@@ -3330,9 +5015,22 @@ export const SceneUpdate = {
                       "type": "number",
                       "description": "Alpha value between 0 and 1"
                     }
-                  }
+                  },
+                  "required": [
+                    "r",
+                    "g",
+                    "b",
+                    "a"
+                  ]
                 }
-              }
+              },
+              "required": [
+                "pose",
+                "size",
+                "bottom_scale",
+                "top_scale",
+                "color"
+              ]
             },
             "description": "Cylinder primitives"
           },
@@ -3376,17 +5074,22 @@ export const SceneUpdate = {
                       "properties": {
                         "x": {
                           "type": "number",
-                          "description": "x coordinate length"
+                          "description": "x component"
                         },
                         "y": {
                           "type": "number",
-                          "description": "y coordinate length"
+                          "description": "y component"
                         },
                         "z": {
                           "type": "number",
-                          "description": "z coordinate length"
+                          "description": "z component"
                         }
-                      }
+                      },
+                      "required": [
+                        "x",
+                        "y",
+                        "z"
+                      ]
                     },
                     "orientation": {
                       "title": "foxglove.Quaternion",
@@ -3409,9 +5112,19 @@ export const SceneUpdate = {
                           "type": "number",
                           "description": "w value"
                         }
-                      }
+                      },
+                      "required": [
+                        "x",
+                        "y",
+                        "z",
+                        "w"
+                      ]
                     }
-                  }
+                  },
+                  "required": [
+                    "position",
+                    "orientation"
+                  ]
                 },
                 "thickness": {
                   "type": "number",
@@ -3440,13 +5153,18 @@ export const SceneUpdate = {
                         "type": "number",
                         "description": "z coordinate position"
                       }
-                    }
+                    },
+                    "required": [
+                      "x",
+                      "y",
+                      "z"
+                    ]
                   },
                   "description": "Points along the line"
                 },
                 "color": {
                   "title": "foxglove.Color",
-                  "description": "Solid color to use for the whole line. One of `color` or `colors` must be provided.",
+                  "description": "Solid color to use for the whole line. Ignored if `colors` is non-empty.",
                   "type": "object",
                   "properties": {
                     "r": {
@@ -3465,7 +5183,13 @@ export const SceneUpdate = {
                       "type": "number",
                       "description": "Alpha value between 0 and 1"
                     }
-                  }
+                  },
+                  "required": [
+                    "r",
+                    "g",
+                    "b",
+                    "a"
+                  ]
                 },
                 "colors": {
                   "type": "array",
@@ -3490,9 +5214,15 @@ export const SceneUpdate = {
                         "type": "number",
                         "description": "Alpha value between 0 and 1"
                       }
-                    }
+                    },
+                    "required": [
+                      "r",
+                      "g",
+                      "b",
+                      "a"
+                    ]
                   },
-                  "description": "Per-point colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided."
+                  "description": "Per-point colors (if non-empty, must have the same length as `points`)."
                 },
                 "indices": {
                   "type": "array",
@@ -3502,7 +5232,17 @@ export const SceneUpdate = {
                   },
                   "description": "Indices into the `points` and `colors` attribute arrays, which can be used to avoid duplicating attribute data.\n\nIf omitted or empty, indexing will not be used. This default behavior is equivalent to specifying [0, 1, ..., N-1] for the indices (where N is the number of `points` provided)."
                 }
-              }
+              },
+              "required": [
+                "type",
+                "pose",
+                "thickness",
+                "scale_invariant",
+                "points",
+                "color",
+                "colors",
+                "indices"
+              ]
             },
             "description": "Line primitives"
           },
@@ -3525,17 +5265,22 @@ export const SceneUpdate = {
                       "properties": {
                         "x": {
                           "type": "number",
-                          "description": "x coordinate length"
+                          "description": "x component"
                         },
                         "y": {
                           "type": "number",
-                          "description": "y coordinate length"
+                          "description": "y component"
                         },
                         "z": {
                           "type": "number",
-                          "description": "z coordinate length"
+                          "description": "z component"
                         }
-                      }
+                      },
+                      "required": [
+                        "x",
+                        "y",
+                        "z"
+                      ]
                     },
                     "orientation": {
                       "title": "foxglove.Quaternion",
@@ -3558,9 +5303,19 @@ export const SceneUpdate = {
                           "type": "number",
                           "description": "w value"
                         }
-                      }
+                      },
+                      "required": [
+                        "x",
+                        "y",
+                        "z",
+                        "w"
+                      ]
                     }
-                  }
+                  },
+                  "required": [
+                    "position",
+                    "orientation"
+                  ]
                 },
                 "points": {
                   "type": "array",
@@ -3581,13 +5336,18 @@ export const SceneUpdate = {
                         "type": "number",
                         "description": "z coordinate position"
                       }
-                    }
+                    },
+                    "required": [
+                      "x",
+                      "y",
+                      "z"
+                    ]
                   },
                   "description": "Vertices to use for triangles, interpreted as a list of triples (0-1-2, 3-4-5, ...)"
                 },
                 "color": {
                   "title": "foxglove.Color",
-                  "description": "Solid color to use for the whole shape. One of `color` or `colors` must be provided.",
+                  "description": "Solid color to use for the whole shape. Ignored if `colors` is non-empty.",
                   "type": "object",
                   "properties": {
                     "r": {
@@ -3606,7 +5366,13 @@ export const SceneUpdate = {
                       "type": "number",
                       "description": "Alpha value between 0 and 1"
                     }
-                  }
+                  },
+                  "required": [
+                    "r",
+                    "g",
+                    "b",
+                    "a"
+                  ]
                 },
                 "colors": {
                   "type": "array",
@@ -3631,9 +5397,15 @@ export const SceneUpdate = {
                         "type": "number",
                         "description": "Alpha value between 0 and 1"
                       }
-                    }
+                    },
+                    "required": [
+                      "r",
+                      "g",
+                      "b",
+                      "a"
+                    ]
                   },
-                  "description": "Per-vertex colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided."
+                  "description": "Per-vertex colors (if specified, must have the same length as `points`)."
                 },
                 "indices": {
                   "type": "array",
@@ -3643,7 +5415,14 @@ export const SceneUpdate = {
                   },
                   "description": "Indices into the `points` and `colors` attribute arrays, which can be used to avoid duplicating attribute data.\n\nIf omitted or empty, indexing will not be used. This default behavior is equivalent to specifying [0, 1, ..., N-1] for the indices (where N is the number of `points` provided)."
                 }
-              }
+              },
+              "required": [
+                "pose",
+                "points",
+                "color",
+                "colors",
+                "indices"
+              ]
             },
             "description": "Triangle list primitives"
           },
@@ -3666,17 +5445,22 @@ export const SceneUpdate = {
                       "properties": {
                         "x": {
                           "type": "number",
-                          "description": "x coordinate length"
+                          "description": "x component"
                         },
                         "y": {
                           "type": "number",
-                          "description": "y coordinate length"
+                          "description": "y component"
                         },
                         "z": {
                           "type": "number",
-                          "description": "z coordinate length"
+                          "description": "z component"
                         }
-                      }
+                      },
+                      "required": [
+                        "x",
+                        "y",
+                        "z"
+                      ]
                     },
                     "orientation": {
                       "title": "foxglove.Quaternion",
@@ -3699,9 +5483,19 @@ export const SceneUpdate = {
                           "type": "number",
                           "description": "w value"
                         }
-                      }
+                      },
+                      "required": [
+                        "x",
+                        "y",
+                        "z",
+                        "w"
+                      ]
                     }
-                  }
+                  },
+                  "required": [
+                    "position",
+                    "orientation"
+                  ]
                 },
                 "billboard": {
                   "type": "boolean",
@@ -3736,13 +5530,27 @@ export const SceneUpdate = {
                       "type": "number",
                       "description": "Alpha value between 0 and 1"
                     }
-                  }
+                  },
+                  "required": [
+                    "r",
+                    "g",
+                    "b",
+                    "a"
+                  ]
                 },
                 "text": {
                   "type": "string",
                   "description": "Text"
                 }
-              }
+              },
+              "required": [
+                "pose",
+                "billboard",
+                "font_size",
+                "scale_invariant",
+                "color",
+                "text"
+              ]
             },
             "description": "Text primitives"
           },
@@ -3765,17 +5573,22 @@ export const SceneUpdate = {
                       "properties": {
                         "x": {
                           "type": "number",
-                          "description": "x coordinate length"
+                          "description": "x component"
                         },
                         "y": {
                           "type": "number",
-                          "description": "y coordinate length"
+                          "description": "y component"
                         },
                         "z": {
                           "type": "number",
-                          "description": "z coordinate length"
+                          "description": "z component"
                         }
-                      }
+                      },
+                      "required": [
+                        "x",
+                        "y",
+                        "z"
+                      ]
                     },
                     "orientation": {
                       "title": "foxglove.Quaternion",
@@ -3798,9 +5611,19 @@ export const SceneUpdate = {
                           "type": "number",
                           "description": "w value"
                         }
-                      }
+                      },
+                      "required": [
+                        "x",
+                        "y",
+                        "z",
+                        "w"
+                      ]
                     }
-                  }
+                  },
+                  "required": [
+                    "position",
+                    "orientation"
+                  ]
                 },
                 "scale": {
                   "title": "foxglove.Vector3",
@@ -3809,17 +5632,22 @@ export const SceneUpdate = {
                   "properties": {
                     "x": {
                       "type": "number",
-                      "description": "x coordinate length"
+                      "description": "x component"
                     },
                     "y": {
                       "type": "number",
-                      "description": "y coordinate length"
+                      "description": "y component"
                     },
                     "z": {
                       "type": "number",
-                      "description": "z coordinate length"
+                      "description": "z component"
                     }
-                  }
+                  },
+                  "required": [
+                    "x",
+                    "y",
+                    "z"
+                  ]
                 },
                 "color": {
                   "title": "foxglove.Color",
@@ -3842,7 +5670,13 @@ export const SceneUpdate = {
                       "type": "number",
                       "description": "Alpha value between 0 and 1"
                     }
-                  }
+                  },
+                  "required": [
+                    "r",
+                    "g",
+                    "b",
+                    "a"
+                  ]
                 },
                 "override_color": {
                   "type": "boolean",
@@ -3850,7 +5684,7 @@ export const SceneUpdate = {
                 },
                 "url": {
                   "type": "string",
-                  "description": "URL pointing to model file. One of `url` or `data` should be provided."
+                  "description": "URL pointing to model file. One of `url` or `data` should be non-empty."
                 },
                 "media_type": {
                   "type": "string",
@@ -3859,17 +5693,46 @@ export const SceneUpdate = {
                 "data": {
                   "type": "string",
                   "contentEncoding": "base64",
-                  "description": "Embedded model. One of `url` or `data` should be provided. If `data` is provided, `media_type` must be set to indicate the type of the data."
+                  "description": "Embedded model. One of `url` or `data` should be non-empty. If `data` is non-empty, `media_type` must be set to indicate the type of the data."
                 }
-              }
+              },
+              "required": [
+                "pose",
+                "scale",
+                "color",
+                "override_color",
+                "url",
+                "media_type",
+                "data"
+              ]
             },
             "description": "Model primitives"
           }
-        }
+        },
+        "required": [
+          "timestamp",
+          "frame_id",
+          "id",
+          "lifetime",
+          "frame_locked",
+          "metadata",
+          "arrows",
+          "cubes",
+          "spheres",
+          "cylinders",
+          "lines",
+          "triangles",
+          "texts",
+          "models"
+        ]
       },
       "description": "Scene entities to add or replace"
     }
-  }
+  },
+  "required": [
+    "deletions",
+    "entities"
+  ]
 };
 
 export const ModelPrimitive = {
@@ -3890,17 +5753,22 @@ export const ModelPrimitive = {
           "properties": {
             "x": {
               "type": "number",
-              "description": "x coordinate length"
+              "description": "x component"
             },
             "y": {
               "type": "number",
-              "description": "y coordinate length"
+              "description": "y component"
             },
             "z": {
               "type": "number",
-              "description": "z coordinate length"
+              "description": "z component"
             }
-          }
+          },
+          "required": [
+            "x",
+            "y",
+            "z"
+          ]
         },
         "orientation": {
           "title": "foxglove.Quaternion",
@@ -3923,9 +5791,19 @@ export const ModelPrimitive = {
               "type": "number",
               "description": "w value"
             }
-          }
+          },
+          "required": [
+            "x",
+            "y",
+            "z",
+            "w"
+          ]
         }
-      }
+      },
+      "required": [
+        "position",
+        "orientation"
+      ]
     },
     "scale": {
       "title": "foxglove.Vector3",
@@ -3934,17 +5812,22 @@ export const ModelPrimitive = {
       "properties": {
         "x": {
           "type": "number",
-          "description": "x coordinate length"
+          "description": "x component"
         },
         "y": {
           "type": "number",
-          "description": "y coordinate length"
+          "description": "y component"
         },
         "z": {
           "type": "number",
-          "description": "z coordinate length"
+          "description": "z component"
         }
-      }
+      },
+      "required": [
+        "x",
+        "y",
+        "z"
+      ]
     },
     "color": {
       "title": "foxglove.Color",
@@ -3967,7 +5850,13 @@ export const ModelPrimitive = {
           "type": "number",
           "description": "Alpha value between 0 and 1"
         }
-      }
+      },
+      "required": [
+        "r",
+        "g",
+        "b",
+        "a"
+      ]
     },
     "override_color": {
       "type": "boolean",
@@ -3975,7 +5864,7 @@ export const ModelPrimitive = {
     },
     "url": {
       "type": "string",
-      "description": "URL pointing to model file. One of `url` or `data` should be provided."
+      "description": "URL pointing to model file. One of `url` or `data` should be non-empty."
     },
     "media_type": {
       "type": "string",
@@ -3984,9 +5873,210 @@ export const ModelPrimitive = {
     "data": {
       "type": "string",
       "contentEncoding": "base64",
-      "description": "Embedded model. One of `url` or `data` should be provided. If `data` is provided, `media_type` must be set to indicate the type of the data."
+      "description": "Embedded model. One of `url` or `data` should be non-empty. If `data` is non-empty, `media_type` must be set to indicate the type of the data."
     }
-  }
+  },
+  "required": [
+    "pose",
+    "scale",
+    "color",
+    "override_color",
+    "url",
+    "media_type",
+    "data"
+  ]
+};
+
+export const Odometry = {
+  "title": "foxglove.Odometry",
+  "description": "An estimate of position, orientation, and velocity for an object or reference frame in 3D space",
+  "$comment": "Generated by https://github.com/foxglove/foxglove-sdk",
+  "type": "object",
+  "properties": {
+    "timestamp": {
+      "type": "object",
+      "title": "time",
+      "properties": {
+        "sec": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "nsec": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 999999999
+        }
+      },
+      "description": "Timestamp of the message"
+    },
+    "frame_id": {
+      "type": "string",
+      "description": "Reference coordinate frame (e.g. `map` or `odom`)"
+    },
+    "body_frame_id": {
+      "type": "string",
+      "description": "Coordinate frame of the body whose motion is being estimated (e.g. `base_link`)"
+    },
+    "pose": {
+      "title": "foxglove.Pose",
+      "description": "Position and orientation of body_frame_id in frame_id",
+      "type": "object",
+      "properties": {
+        "position": {
+          "title": "foxglove.Vector3",
+          "description": "Point denoting position in 3D space",
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "number",
+              "description": "x component"
+            },
+            "y": {
+              "type": "number",
+              "description": "y component"
+            },
+            "z": {
+              "type": "number",
+              "description": "z component"
+            }
+          },
+          "required": [
+            "x",
+            "y",
+            "z"
+          ]
+        },
+        "orientation": {
+          "title": "foxglove.Quaternion",
+          "description": "Quaternion denoting orientation in 3D space",
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "number",
+              "description": "x value"
+            },
+            "y": {
+              "type": "number",
+              "description": "y value"
+            },
+            "z": {
+              "type": "number",
+              "description": "z value"
+            },
+            "w": {
+              "type": "number",
+              "description": "w value"
+            }
+          },
+          "required": [
+            "x",
+            "y",
+            "z",
+            "w"
+          ]
+        }
+      },
+      "required": [
+        "position",
+        "orientation"
+      ]
+    },
+    "linear_velocity": {
+      "title": "foxglove.Vector3",
+      "description": "Linear velocity in m/s in body_frame_id",
+      "type": "object",
+      "properties": {
+        "x": {
+          "type": "number",
+          "description": "x component"
+        },
+        "y": {
+          "type": "number",
+          "description": "y component"
+        },
+        "z": {
+          "type": "number",
+          "description": "z component"
+        }
+      },
+      "required": [
+        "x",
+        "y",
+        "z"
+      ]
+    },
+    "angular_velocity": {
+      "title": "foxglove.Vector3",
+      "description": "Angular velocity in rad/s in body_frame_id",
+      "type": "object",
+      "properties": {
+        "x": {
+          "type": "number",
+          "description": "x component"
+        },
+        "y": {
+          "type": "number",
+          "description": "y component"
+        },
+        "z": {
+          "type": "number",
+          "description": "z component"
+        }
+      },
+      "required": [
+        "x",
+        "y",
+        "z"
+      ]
+    },
+    "pose_covariance": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "minItems": 36,
+      "maxItems": 36,
+      "description": "Row-major 6x6 covariance matrix (x, y, z, rotation about x, rotation about y, rotation about z). Set to zero if unknown."
+    },
+    "velocity_covariance": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "minItems": 36,
+      "maxItems": 36,
+      "description": "Row-major 6x6 covariance matrix (vx, vy, vz, angular rate about x, angular rate about y, angular rate about z). Set to zero if unknown."
+    },
+    "metadata": {
+      "type": "array",
+      "items": {
+        "title": "foxglove.KeyValuePair",
+        "description": "A key with its associated value",
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Key"
+          },
+          "value": {
+            "type": "string",
+            "description": "Value"
+          }
+        },
+        "required": [
+          "key",
+          "value"
+        ]
+      },
+      "description": "Additional user-provided metadata associated with the odometry message. Keys must be unique."
+    }
+  },
+  "required": [
+    "timestamp",
+    "frame_id",
+    "body_frame_id",
+    "pose"
+  ]
 };
 
 export const PackedElementField = {
@@ -4010,43 +6100,57 @@ export const PackedElementField = {
       "oneOf": [
         {
           "title": "UNKNOWN",
-          "const": 0
+          "const": 0,
+          "description": "Unknown numeric type"
         },
         {
           "title": "UINT8",
-          "const": 1
+          "const": 1,
+          "description": "Unsigned 8-bit integer"
         },
         {
           "title": "INT8",
-          "const": 2
+          "const": 2,
+          "description": "Signed 8-bit integer"
         },
         {
           "title": "UINT16",
-          "const": 3
+          "const": 3,
+          "description": "Unsigned 16-bit integer"
         },
         {
           "title": "INT16",
-          "const": 4
+          "const": 4,
+          "description": "Signed 16-bit integer"
         },
         {
           "title": "UINT32",
-          "const": 5
+          "const": 5,
+          "description": "Unsigned 32-bit integer"
         },
         {
           "title": "INT32",
-          "const": 6
+          "const": 6,
+          "description": "Signed 32-bit integer"
         },
         {
           "title": "FLOAT32",
-          "const": 7
+          "const": 7,
+          "description": "32-bit floating-point number"
         },
         {
           "title": "FLOAT64",
-          "const": 8
+          "const": 8,
+          "description": "64-bit floating-point number"
         }
       ]
     }
-  }
+  },
+  "required": [
+    "name",
+    "offset",
+    "type"
+  ]
 };
 
 export const Point2 = {
@@ -4063,7 +6167,11 @@ export const Point2 = {
       "type": "number",
       "description": "y coordinate position"
     }
-  }
+  },
+  "required": [
+    "x",
+    "y"
+  ]
 };
 
 export const Point3 = {
@@ -4084,7 +6192,70 @@ export const Point3 = {
       "type": "number",
       "description": "z coordinate position"
     }
-  }
+  },
+  "required": [
+    "x",
+    "y",
+    "z"
+  ]
+};
+
+export const Point3InFrame = {
+  "title": "foxglove.Point3InFrame",
+  "description": "A timestamped point for a position in 3D space",
+  "$comment": "Generated by https://github.com/foxglove/foxglove-sdk",
+  "type": "object",
+  "properties": {
+    "timestamp": {
+      "type": "object",
+      "title": "time",
+      "properties": {
+        "sec": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "nsec": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 999999999
+        }
+      },
+      "description": "Timestamp of point"
+    },
+    "frame_id": {
+      "type": "string",
+      "description": "Frame of reference for point position"
+    },
+    "point": {
+      "title": "foxglove.Point3",
+      "description": "Point in 3D space",
+      "type": "object",
+      "properties": {
+        "x": {
+          "type": "number",
+          "description": "x coordinate position"
+        },
+        "y": {
+          "type": "number",
+          "description": "y coordinate position"
+        },
+        "z": {
+          "type": "number",
+          "description": "z coordinate position"
+        }
+      },
+      "required": [
+        "x",
+        "y",
+        "z"
+      ]
+    }
+  },
+  "required": [
+    "timestamp",
+    "frame_id",
+    "point"
+  ]
 };
 
 export const PointCloud = {
@@ -4125,17 +6296,22 @@ export const PointCloud = {
           "properties": {
             "x": {
               "type": "number",
-              "description": "x coordinate length"
+              "description": "x component"
             },
             "y": {
               "type": "number",
-              "description": "y coordinate length"
+              "description": "y component"
             },
             "z": {
               "type": "number",
-              "description": "z coordinate length"
+              "description": "z component"
             }
-          }
+          },
+          "required": [
+            "x",
+            "y",
+            "z"
+          ]
         },
         "orientation": {
           "title": "foxglove.Quaternion",
@@ -4158,9 +6334,19 @@ export const PointCloud = {
               "type": "number",
               "description": "w value"
             }
-          }
+          },
+          "required": [
+            "x",
+            "y",
+            "z",
+            "w"
+          ]
         }
-      }
+      },
+      "required": [
+        "position",
+        "orientation"
+      ]
     },
     "point_stride": {
       "type": "integer",
@@ -4189,43 +6375,57 @@ export const PointCloud = {
             "oneOf": [
               {
                 "title": "UNKNOWN",
-                "const": 0
+                "const": 0,
+                "description": "Unknown numeric type"
               },
               {
                 "title": "UINT8",
-                "const": 1
+                "const": 1,
+                "description": "Unsigned 8-bit integer"
               },
               {
                 "title": "INT8",
-                "const": 2
+                "const": 2,
+                "description": "Signed 8-bit integer"
               },
               {
                 "title": "UINT16",
-                "const": 3
+                "const": 3,
+                "description": "Unsigned 16-bit integer"
               },
               {
                 "title": "INT16",
-                "const": 4
+                "const": 4,
+                "description": "Signed 16-bit integer"
               },
               {
                 "title": "UINT32",
-                "const": 5
+                "const": 5,
+                "description": "Unsigned 32-bit integer"
               },
               {
                 "title": "INT32",
-                "const": 6
+                "const": 6,
+                "description": "Signed 32-bit integer"
               },
               {
                 "title": "FLOAT32",
-                "const": 7
+                "const": 7,
+                "description": "32-bit floating-point number"
               },
               {
                 "title": "FLOAT64",
-                "const": 8
+                "const": 8,
+                "description": "64-bit floating-point number"
               }
             ]
           }
-        }
+        },
+        "required": [
+          "name",
+          "offset",
+          "type"
+        ]
       },
       "description": "Fields in `data`. At least 2 coordinate fields from `x`, `y`, and `z` are required for each point's position; `red`, `green`, `blue`, and `alpha` are optional for customizing each point's color."
     },
@@ -4234,7 +6434,15 @@ export const PointCloud = {
       "contentEncoding": "base64",
       "description": "Point data, interpreted using `fields`"
     }
-  }
+  },
+  "required": [
+    "timestamp",
+    "frame_id",
+    "pose",
+    "point_stride",
+    "fields",
+    "data"
+  ]
 };
 
 export const PointsAnnotation = {
@@ -4265,7 +6473,8 @@ export const PointsAnnotation = {
       "oneOf": [
         {
           "title": "UNKNOWN",
-          "const": 0
+          "const": 0,
+          "description": "Unknown points annotation type"
         },
         {
           "title": "POINTS",
@@ -4304,7 +6513,11 @@ export const PointsAnnotation = {
             "type": "number",
             "description": "y coordinate position"
           }
-        }
+        },
+        "required": [
+          "x",
+          "y"
+        ]
       },
       "description": "Points in 2D image coordinates (pixels).\nThese coordinates use the top-left corner of the top-left pixel of the image as the origin."
     },
@@ -4329,7 +6542,13 @@ export const PointsAnnotation = {
           "type": "number",
           "description": "Alpha value between 0 and 1"
         }
-      }
+      },
+      "required": [
+        "r",
+        "g",
+        "b",
+        "a"
+      ]
     },
     "outline_colors": {
       "type": "array",
@@ -4354,7 +6573,13 @@ export const PointsAnnotation = {
             "type": "number",
             "description": "Alpha value between 0 and 1"
           }
-        }
+        },
+        "required": [
+          "r",
+          "g",
+          "b",
+          "a"
+        ]
       },
       "description": "Per-point colors, if `type` is `POINTS`, or per-segment stroke colors, if `type` is `LINE_LIST`, `LINE_STRIP` or `LINE_LOOP`."
     },
@@ -4379,13 +6604,51 @@ export const PointsAnnotation = {
           "type": "number",
           "description": "Alpha value between 0 and 1"
         }
-      }
+      },
+      "required": [
+        "r",
+        "g",
+        "b",
+        "a"
+      ]
     },
     "thickness": {
       "type": "number",
       "description": "Stroke thickness in pixels"
+    },
+    "metadata": {
+      "type": "array",
+      "items": {
+        "title": "foxglove.KeyValuePair",
+        "description": "A key with its associated value",
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Key"
+          },
+          "value": {
+            "type": "string",
+            "description": "Value"
+          }
+        },
+        "required": [
+          "key",
+          "value"
+        ]
+      },
+      "description": "Additional user-provided metadata associated with this annotation. Keys must be unique."
     }
-  }
+  },
+  "required": [
+    "timestamp",
+    "type",
+    "points",
+    "outline_color",
+    "outline_colors",
+    "fill_color",
+    "thickness"
+  ]
 };
 
 export const Pose = {
@@ -4401,17 +6664,22 @@ export const Pose = {
       "properties": {
         "x": {
           "type": "number",
-          "description": "x coordinate length"
+          "description": "x component"
         },
         "y": {
           "type": "number",
-          "description": "y coordinate length"
+          "description": "y component"
         },
         "z": {
           "type": "number",
-          "description": "z coordinate length"
+          "description": "z component"
         }
-      }
+      },
+      "required": [
+        "x",
+        "y",
+        "z"
+      ]
     },
     "orientation": {
       "title": "foxglove.Quaternion",
@@ -4434,9 +6702,19 @@ export const Pose = {
           "type": "number",
           "description": "w value"
         }
-      }
+      },
+      "required": [
+        "x",
+        "y",
+        "z",
+        "w"
+      ]
     }
-  }
+  },
+  "required": [
+    "position",
+    "orientation"
+  ]
 };
 
 export const PoseInFrame = {
@@ -4477,17 +6755,22 @@ export const PoseInFrame = {
           "properties": {
             "x": {
               "type": "number",
-              "description": "x coordinate length"
+              "description": "x component"
             },
             "y": {
               "type": "number",
-              "description": "y coordinate length"
+              "description": "y component"
             },
             "z": {
               "type": "number",
-              "description": "z coordinate length"
+              "description": "z component"
             }
-          }
+          },
+          "required": [
+            "x",
+            "y",
+            "z"
+          ]
         },
         "orientation": {
           "title": "foxglove.Quaternion",
@@ -4510,11 +6793,26 @@ export const PoseInFrame = {
               "type": "number",
               "description": "w value"
             }
-          }
+          },
+          "required": [
+            "x",
+            "y",
+            "z",
+            "w"
+          ]
         }
-      }
+      },
+      "required": [
+        "position",
+        "orientation"
+      ]
     }
-  }
+  },
+  "required": [
+    "timestamp",
+    "frame_id",
+    "pose"
+  ]
 };
 
 export const PosesInFrame = {
@@ -4557,17 +6855,22 @@ export const PosesInFrame = {
             "properties": {
               "x": {
                 "type": "number",
-                "description": "x coordinate length"
+                "description": "x component"
               },
               "y": {
                 "type": "number",
-                "description": "y coordinate length"
+                "description": "y component"
               },
               "z": {
                 "type": "number",
-                "description": "z coordinate length"
+                "description": "z component"
               }
-            }
+            },
+            "required": [
+              "x",
+              "y",
+              "z"
+            ]
           },
           "orientation": {
             "title": "foxglove.Quaternion",
@@ -4590,13 +6893,28 @@ export const PosesInFrame = {
                 "type": "number",
                 "description": "w value"
               }
-            }
+            },
+            "required": [
+              "x",
+              "y",
+              "z",
+              "w"
+            ]
           }
-        }
+        },
+        "required": [
+          "position",
+          "orientation"
+        ]
       },
       "description": "Poses in 3D space"
     }
-  }
+  },
+  "required": [
+    "timestamp",
+    "frame_id",
+    "poses"
+  ]
 };
 
 export const Quaternion = {
@@ -4621,7 +6939,13 @@ export const Quaternion = {
       "type": "number",
       "description": "w value"
     }
-  }
+  },
+  "required": [
+    "x",
+    "y",
+    "z",
+    "w"
+  ]
 };
 
 export const RawAudio = {
@@ -4665,7 +6989,14 @@ export const RawAudio = {
       "minimum": 0,
       "description": "Number of channels in the audio block"
     }
-  }
+  },
+  "required": [
+    "timestamp",
+    "data",
+    "format",
+    "sample_rate",
+    "number_of_channels"
+  ]
 };
 
 export const RawImage = {
@@ -4697,28 +7028,37 @@ export const RawImage = {
     "width": {
       "type": "integer",
       "minimum": 0,
-      "description": "Image width"
+      "description": "Image width in pixels"
     },
     "height": {
       "type": "integer",
       "minimum": 0,
-      "description": "Image height"
+      "description": "Image height in pixels"
     },
     "encoding": {
       "type": "string",
-      "description": "Encoding of the raw image data\n\nSupported values: `8UC1`, `8UC3`, `16UC1` (little endian), `32FC1` (little endian), `bayer_bggr8`, `bayer_gbrg8`, `bayer_grbg8`, `bayer_rggb8`, `bgr8`, `bgra8`, `mono8`, `mono16`, `rgb8`, `rgba8`, `uyvy` or `yuv422`, `yuyv` or `yuv422_yuy2`"
+      "description": "Encoding of the raw image data. See the `data` field description for supported values."
     },
     "step": {
       "type": "integer",
       "minimum": 0,
-      "description": "Byte length of a single row"
+      "description": "Byte length of a single row. This is usually some multiple of `width` depending on the encoding, but can be greater to incorporate padding."
     },
     "data": {
       "type": "string",
       "contentEncoding": "base64",
-      "description": "Raw image data"
+      "description": "Raw image data.\n\nFor each `encoding` value, the `data` field contains image pixel data serialized as follows:\n\n- `yuv422` or `uyvy`:\n  - Pixel colors are decomposed into [Y'UV](https://en.wikipedia.org/wiki/Y%E2%80%B2UV) channels.\n  - Pixel channel values are represented as unsigned 8-bit integers.\n  - U and V values are shared between horizontal pairs of pixels. Each pair of output pixels is serialized as [U, Y1, V, Y2].\n  - `step` must be greater than or equal to `width` * 2.\n- `yuv422_yuy2` or  `yuyv`:\n  - Pixel colors are decomposed into [Y'UV](https://en.wikipedia.org/wiki/Y%E2%80%B2UV) channels.\n  - Pixel channel values are represented as unsigned 8-bit integers.\n  - U and V values are shared between horizontal pairs of pixels. Each pair of output pixels is encoded as [Y1, U, Y2, V].\n  - `step` must be greater than or equal to `width` * 2.\n- `nv12`:\n  - Pixel colors are decomposed into [Y'UV](https://en.wikipedia.org/wiki/Y%E2%80%B2UV) channels using 4:2:0 chroma subsampling. The data is stored in [NV12](https://www.kernel.org/doc/html/v4.10/media/uapi/v4l/pixfmt-nv12.html) semi-planar layout with two contiguous planes: a Y (luma) plane followed by an interleaved UV (chroma) plane.\n  - All channel values are represented as unsigned 8-bit integers.\n  - Both planes use `step` as their row stride.\n  - The Y plane contains one luma value per pixel (`step` * `height` bytes).\n  - The UV plane contains interleaved U, V chroma pairs, subsampled by a factor of 2 in both dimensions (`width`/2 pairs per row, `height`/2 rows, `step` * `height`/2 bytes). Each U, V pair is shared by a 2x2 block of pixels.\n  - `width` and `height` must be even.\n  - `step` must be greater than or equal to `width`.\n  - Total `data` length is `step` * `height` * 3/2 bytes.\n- `rgb8`:\n  - Pixel colors are decomposed into Red, Green, and Blue channels.\n  - Pixel channel values are represented as unsigned 8-bit integers.\n  - Each output pixel is serialized as [R, G, B].\n  - `step` must be greater than or equal to `width` * 3.\n- `rgba8`:\n  - Pixel colors are decomposed into Red, Green, Blue, and Alpha channels.\n  - Pixel channel values are represented as unsigned 8-bit integers.\n  - Each output pixel is serialized as [R, G, B, Alpha].\n  - `step` must be greater than or equal to `width` * 4.\n- `bgr8` or `8UC3`:\n  - Pixel colors are decomposed into Blue, Green, and Red channels.\n  - Pixel channel values are represented as unsigned 8-bit integers.\n  - Each output pixel is serialized as [B, G, R].\n  - `step` must be greater than or equal to `width` * 3.\n- `bgra8`:\n  - Pixel colors are decomposed into Blue, Green, Red, and Alpha channels.\n  - Pixel channel values are represented as unsigned 8-bit integers.\n  - Each output pixel is encoded as [B, G, R, Alpha].\n  - `step` must be greater than or equal to `width` * 4.\n- `32FC1`:\n  - Pixel brightness is represented as a single-channel, 32-bit little-endian IEEE 754 floating-point value, ranging from 0.0 (black) to 1.0 (white).\n  - `step` must be greater than or equal to `width` * 4.\n- `bayer_rggb8`, `bayer_bggr8`, `bayer_gbrg8`, or `bayer_grbg8`:\n  - Pixel colors are decomposed into Red, Blue and Green channels.\n  - Pixel channel values are represented as unsigned 8-bit integers, and serialized in a 2x2 bayer filter pattern.\n  - The order of the four letters after `bayer_` determine the layout, so for `bayer_wxyz8` the pattern is:\n  ```text\n  w | x\n  - + -\n  y | z\n  ```\n  - `step` must be greater than or equal to `width`.\n- `mono8` or `8UC1`:\n  - Pixel brightness is represented as unsigned 8-bit integers.\n  - `step` must be greater than or equal to `width`.\n- `mono16` or `16UC1`:\n  - Pixel brightness is represented as 16-bit unsigned little-endian integers. Rendering of these values is controlled in [Image panel color mode settings](https://docs.foxglove.dev/docs/visualization/panels/image#general).\n  - `step` must be greater than or equal to `width` * 2.\n"
     }
-  }
+  },
+  "required": [
+    "timestamp",
+    "frame_id",
+    "width",
+    "height",
+    "encoding",
+    "step",
+    "data"
+  ]
 };
 
 export const SpherePrimitive = {
@@ -4739,17 +7079,22 @@ export const SpherePrimitive = {
           "properties": {
             "x": {
               "type": "number",
-              "description": "x coordinate length"
+              "description": "x component"
             },
             "y": {
               "type": "number",
-              "description": "y coordinate length"
+              "description": "y component"
             },
             "z": {
               "type": "number",
-              "description": "z coordinate length"
+              "description": "z component"
             }
-          }
+          },
+          "required": [
+            "x",
+            "y",
+            "z"
+          ]
         },
         "orientation": {
           "title": "foxglove.Quaternion",
@@ -4772,9 +7117,19 @@ export const SpherePrimitive = {
               "type": "number",
               "description": "w value"
             }
-          }
+          },
+          "required": [
+            "x",
+            "y",
+            "z",
+            "w"
+          ]
         }
-      }
+      },
+      "required": [
+        "position",
+        "orientation"
+      ]
     },
     "size": {
       "title": "foxglove.Vector3",
@@ -4783,17 +7138,22 @@ export const SpherePrimitive = {
       "properties": {
         "x": {
           "type": "number",
-          "description": "x coordinate length"
+          "description": "x component"
         },
         "y": {
           "type": "number",
-          "description": "y coordinate length"
+          "description": "y component"
         },
         "z": {
           "type": "number",
-          "description": "z coordinate length"
+          "description": "z component"
         }
-      }
+      },
+      "required": [
+        "x",
+        "y",
+        "z"
+      ]
     },
     "color": {
       "title": "foxglove.Color",
@@ -4816,9 +7176,20 @@ export const SpherePrimitive = {
           "type": "number",
           "description": "Alpha value between 0 and 1"
         }
-      }
+      },
+      "required": [
+        "r",
+        "g",
+        "b",
+        "a"
+      ]
     }
-  }
+  },
+  "required": [
+    "pose",
+    "size",
+    "color"
+  ]
 };
 
 export const TextAnnotation = {
@@ -4856,7 +7227,11 @@ export const TextAnnotation = {
           "type": "number",
           "description": "y coordinate position"
         }
-      }
+      },
+      "required": [
+        "x",
+        "y"
+      ]
     },
     "text": {
       "type": "string",
@@ -4887,7 +7262,13 @@ export const TextAnnotation = {
           "type": "number",
           "description": "Alpha value between 0 and 1"
         }
-      }
+      },
+      "required": [
+        "r",
+        "g",
+        "b",
+        "a"
+      ]
     },
     "background_color": {
       "title": "foxglove.Color",
@@ -4910,9 +7291,46 @@ export const TextAnnotation = {
           "type": "number",
           "description": "Alpha value between 0 and 1"
         }
-      }
+      },
+      "required": [
+        "r",
+        "g",
+        "b",
+        "a"
+      ]
+    },
+    "metadata": {
+      "type": "array",
+      "items": {
+        "title": "foxglove.KeyValuePair",
+        "description": "A key with its associated value",
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Key"
+          },
+          "value": {
+            "type": "string",
+            "description": "Value"
+          }
+        },
+        "required": [
+          "key",
+          "value"
+        ]
+      },
+      "description": "Additional user-provided metadata associated with this annotation. Keys must be unique."
     }
-  }
+  },
+  "required": [
+    "timestamp",
+    "position",
+    "text",
+    "font_size",
+    "text_color",
+    "background_color"
+  ]
 };
 
 export const TextPrimitive = {
@@ -4933,17 +7351,22 @@ export const TextPrimitive = {
           "properties": {
             "x": {
               "type": "number",
-              "description": "x coordinate length"
+              "description": "x component"
             },
             "y": {
               "type": "number",
-              "description": "y coordinate length"
+              "description": "y component"
             },
             "z": {
               "type": "number",
-              "description": "z coordinate length"
+              "description": "z component"
             }
-          }
+          },
+          "required": [
+            "x",
+            "y",
+            "z"
+          ]
         },
         "orientation": {
           "title": "foxglove.Quaternion",
@@ -4966,9 +7389,19 @@ export const TextPrimitive = {
               "type": "number",
               "description": "w value"
             }
-          }
+          },
+          "required": [
+            "x",
+            "y",
+            "z",
+            "w"
+          ]
         }
-      }
+      },
+      "required": [
+        "position",
+        "orientation"
+      ]
     },
     "billboard": {
       "type": "boolean",
@@ -5003,13 +7436,50 @@ export const TextPrimitive = {
           "type": "number",
           "description": "Alpha value between 0 and 1"
         }
-      }
+      },
+      "required": [
+        "r",
+        "g",
+        "b",
+        "a"
+      ]
     },
     "text": {
       "type": "string",
       "description": "Text"
     }
-  }
+  },
+  "required": [
+    "pose",
+    "billboard",
+    "font_size",
+    "scale_invariant",
+    "color",
+    "text"
+  ]
+};
+
+export const Timestamp = {
+  "title": "foxglove.Timestamp",
+  "description": "A timestamp composed of seconds and nanoseconds",
+  "$comment": "Generated by https://github.com/foxglove/foxglove-sdk",
+  "type": "object",
+  "properties": {
+    "sec": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "The number of seconds since a user-defined epoch"
+    },
+    "nsec": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "The number of nanoseconds since the sec value"
+    }
+  },
+  "required": [
+    "sec",
+    "nsec"
+  ]
 };
 
 export const TriangleListPrimitive = {
@@ -5030,17 +7500,22 @@ export const TriangleListPrimitive = {
           "properties": {
             "x": {
               "type": "number",
-              "description": "x coordinate length"
+              "description": "x component"
             },
             "y": {
               "type": "number",
-              "description": "y coordinate length"
+              "description": "y component"
             },
             "z": {
               "type": "number",
-              "description": "z coordinate length"
+              "description": "z component"
             }
-          }
+          },
+          "required": [
+            "x",
+            "y",
+            "z"
+          ]
         },
         "orientation": {
           "title": "foxglove.Quaternion",
@@ -5063,9 +7538,19 @@ export const TriangleListPrimitive = {
               "type": "number",
               "description": "w value"
             }
-          }
+          },
+          "required": [
+            "x",
+            "y",
+            "z",
+            "w"
+          ]
         }
-      }
+      },
+      "required": [
+        "position",
+        "orientation"
+      ]
     },
     "points": {
       "type": "array",
@@ -5086,13 +7571,18 @@ export const TriangleListPrimitive = {
             "type": "number",
             "description": "z coordinate position"
           }
-        }
+        },
+        "required": [
+          "x",
+          "y",
+          "z"
+        ]
       },
       "description": "Vertices to use for triangles, interpreted as a list of triples (0-1-2, 3-4-5, ...)"
     },
     "color": {
       "title": "foxglove.Color",
-      "description": "Solid color to use for the whole shape. One of `color` or `colors` must be provided.",
+      "description": "Solid color to use for the whole shape. Ignored if `colors` is non-empty.",
       "type": "object",
       "properties": {
         "r": {
@@ -5111,7 +7601,13 @@ export const TriangleListPrimitive = {
           "type": "number",
           "description": "Alpha value between 0 and 1"
         }
-      }
+      },
+      "required": [
+        "r",
+        "g",
+        "b",
+        "a"
+      ]
     },
     "colors": {
       "type": "array",
@@ -5136,9 +7632,15 @@ export const TriangleListPrimitive = {
             "type": "number",
             "description": "Alpha value between 0 and 1"
           }
-        }
+        },
+        "required": [
+          "r",
+          "g",
+          "b",
+          "a"
+        ]
       },
-      "description": "Per-vertex colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided."
+      "description": "Per-vertex colors (if specified, must have the same length as `points`)."
     },
     "indices": {
       "type": "array",
@@ -5148,7 +7650,14 @@ export const TriangleListPrimitive = {
       },
       "description": "Indices into the `points` and `colors` attribute arrays, which can be used to avoid duplicating attribute data.\n\nIf omitted or empty, indexing will not be used. This default behavior is equivalent to specifying [0, 1, ..., N-1] for the indices (where N is the number of `points` provided)."
     }
-  }
+  },
+  "required": [
+    "pose",
+    "points",
+    "color",
+    "colors",
+    "indices"
+  ]
 };
 
 export const Vector2 = {
@@ -5159,13 +7668,17 @@ export const Vector2 = {
   "properties": {
     "x": {
       "type": "number",
-      "description": "x coordinate length"
+      "description": "x component"
     },
     "y": {
       "type": "number",
-      "description": "y coordinate length"
+      "description": "y component"
     }
-  }
+  },
+  "required": [
+    "x",
+    "y"
+  ]
 };
 
 export const Vector3 = {
@@ -5176,16 +7689,23 @@ export const Vector3 = {
   "properties": {
     "x": {
       "type": "number",
-      "description": "x coordinate length"
+      "description": "x component"
     },
     "y": {
       "type": "number",
-      "description": "y coordinate length"
+      "description": "y component"
     },
     "z": {
       "type": "number",
-      "description": "z coordinate length"
+      "description": "z component"
     }
-  }
+  },
+  "required": [
+    "x",
+    "y",
+    "z"
+  ]
 };
+
+export const Time = Timestamp;
 

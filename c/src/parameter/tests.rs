@@ -3,7 +3,7 @@ use super::*;
 #[test]
 fn test_empty() {
     let mut p = std::ptr::null_mut();
-    let err = unsafe { foxglove_parameter_create_empty(&mut p, "empty".into()) };
+    let err = unsafe { foxglove_parameter_create_empty(&raw mut p, "empty".into()) };
     assert_eq!(err, FoxgloveError::Ok);
 
     let p = unsafe { FoxgloveParameter::from_raw(p) };
@@ -14,7 +14,7 @@ fn test_empty() {
 #[test]
 fn test_float() {
     let mut p = std::ptr::null_mut();
-    let err = unsafe { foxglove_parameter_create_float64(&mut p, "float".into(), 1.23) };
+    let err = unsafe { foxglove_parameter_create_float64(&raw mut p, "float".into(), 1.23) };
     assert_eq!(err, FoxgloveError::Ok);
 
     let p = unsafe { FoxgloveParameter::from_raw(p) };
@@ -28,7 +28,7 @@ fn test_float_array() {
     let mut p = std::ptr::null_mut();
     let err = unsafe {
         foxglove_parameter_create_float64_array(
-            &mut p,
+            &raw mut p,
             "float array".into(),
             values.as_ptr(),
             values.len(),
@@ -44,7 +44,8 @@ fn test_float_array() {
 #[test]
 fn test_string() {
     let mut p = std::ptr::null_mut();
-    let err = unsafe { foxglove_parameter_create_string(&mut p, "string".into(), "data".into()) };
+    let err =
+        unsafe { foxglove_parameter_create_string(&raw mut p, "string".into(), "data".into()) };
     assert_eq!(err, FoxgloveError::Ok);
 
     let p = unsafe { FoxgloveParameter::from_raw(p) };
@@ -57,7 +58,7 @@ fn test_byte_array() {
     let mut p = std::ptr::null_mut();
     let err = unsafe {
         foxglove_parameter_create_byte_array(
-            &mut p,
+            &raw mut p,
             "string".into(),
             FoxgloveBytes::from_slice(b"data"),
         )
@@ -72,7 +73,7 @@ fn test_byte_array() {
 #[test]
 fn test_bool() {
     let mut p = std::ptr::null_mut();
-    let err = unsafe { foxglove_parameter_create_boolean(&mut p, "bool".into(), true) };
+    let err = unsafe { foxglove_parameter_create_boolean(&raw mut p, "bool".into(), true) };
     assert_eq!(err, FoxgloveError::Ok);
 
     let p = unsafe { FoxgloveParameter::from_raw(p) };
@@ -117,11 +118,11 @@ fn make_dict_param() -> *mut FoxgloveParameter {
     let array_ptr = foxglove_parameter_value_array_create(2);
     array_insert!(
         array_ptr,
-        foxglove_parameter_value_create_number(std::f64::consts::E)
+        foxglove_parameter_value_create_float64(std::f64::consts::E)
     );
     array_insert!(
         array_ptr,
-        foxglove_parameter_value_create_number(std::f64::consts::PI)
+        foxglove_parameter_value_create_float64(std::f64::consts::PI)
     );
     dict_insert!(
         inner,
@@ -137,13 +138,13 @@ fn make_dict_param() -> *mut FoxgloveParameter {
     );
     dict_insert!(
         outer,
-        "number",
-        foxglove_parameter_value_create_number(1.23)
+        "float64",
+        foxglove_parameter_value_create_float64(1.23)
     );
     dict_insert!(outer, "nested", foxglove_parameter_value_create_dict(inner));
 
     let mut param = std::ptr::null_mut();
-    let err = unsafe { foxglove_parameter_create_dict(&mut param, "outer".into(), outer) };
+    let err = unsafe { foxglove_parameter_create_dict(&raw mut param, "outer".into(), outer) };
     assert_eq!(err, FoxgloveError::Ok);
     param
 }
@@ -153,16 +154,16 @@ fn make_dict_native() -> Parameter {
         "outer",
         maplit::btreemap! {
             "bool".into() => ParameterValue::Bool(false),
-            "number".into() => ParameterValue::Number(1.23),
             "nested".into() => ParameterValue::Dict(
                 maplit::btreemap! {
                     "string".into() => ParameterValue::String("xyzzy".into()),
                     "f64[]".into() => ParameterValue::Array(vec![
-                        ParameterValue::Number(std::f64::consts::E),
-                        ParameterValue::Number(std::f64::consts::PI),
+                        ParameterValue::Float64(std::f64::consts::E),
+                        ParameterValue::Float64(std::f64::consts::PI),
                     ]),
                 }
-            )
+            ),
+            "float64".into() => ParameterValue::Float64(1.23),
         },
     )
 }

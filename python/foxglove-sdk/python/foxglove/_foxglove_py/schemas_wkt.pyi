@@ -1,16 +1,15 @@
 import datetime
-from typing import Optional
 
 class Duration:
     """
     A duration in seconds and nanoseconds
     """
 
-    def __new__(
-        cls,
+    def __init__(
+        self,
         sec: int,
-        nsec: Optional[int] = None,
-    ) -> "Duration": ...
+        nsec: int | None = None,
+    ) -> None: ...
     @property
     def sec(self) -> int: ...
     @property
@@ -42,11 +41,11 @@ class Timestamp:
     A timestamp in seconds and nanoseconds
     """
 
-    def __new__(
-        cls,
+    def __init__(
+        self,
         sec: int,
-        nsec: Optional[int] = None,
-    ) -> "Timestamp": ...
+        nsec: int | None = None,
+    ) -> None: ...
     @property
     def sec(self) -> int: ...
     @property
@@ -73,5 +72,14 @@ class Timestamp:
         Raises `OverflowError` if the timestamp cannot be represented.
 
         :param dt: Datetime
+        """
+        ...
+
+    @staticmethod
+    def now() -> "Timestamp":
+        """
+        Creates a :py:class:`Timestamp` from the current system time.
+
+        Raises `OverflowError` if the timestamp cannot be represented.
         """
         ...

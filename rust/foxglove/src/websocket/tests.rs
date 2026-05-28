@@ -1,15 +1,20 @@
 use assert_matches::assert_matches;
 use bytes::{BufMut, Bytes, BytesMut};
 use futures_util::FutureExt;
+use maplit::hashmap;
+#[cfg(feature = "websocket-tls")]
+use rcgen::{CertificateParams, Issuer, KeyPair};
 use std::borrow::Cow;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
+
+use indexmap::IndexSet;
 use std::sync::Arc;
+use std::sync::Mutex;
 use std::time::Duration;
-use tokio_tungstenite::tungstenite::{self, http::HeaderValue, Message};
+use tokio_tungstenite::tungstenite::{self, Message, http::HeaderValue};
 use tracing_test::traced_test;
 use tungstenite::client::IntoClientRequest;
 
-use super::testutil::WebSocketClient;
 use super::ws_protocol::client::subscribe::Subscription;
 use super::ws_protocol::client::{
     self, Advertise, FetchAsset, GetParameters, ServiceCallRequest, SetParameters, Subscribe,
@@ -19,19 +24,34 @@ use super::ws_protocol::client::{
 use super::ws_protocol::server::connection_graph_update::{
     AdvertisedService, PublishedTopic, SubscribedTopic,
 };
+use super::ws_protocol::server::server_info::{
+    Capability as ServerInfoCapability, SerializedTimestamp,
+};
 use super::ws_protocol::server::{
-    advertise_services, ConnectionGraphUpdate, FetchAssetResponse, ParameterValues, ServerInfo,
-    ServerMessage, ServiceCallFailure, ServiceCallResponse, Status,
+    ConnectionGraphUpdate, FetchAssetResponse, ParameterValues, ServerInfo, ServerMessage,
+    ServiceCallFailure, ServiceCallResponse, Status, advertise_services,
 };
 use crate::library_version::get_library_version;
-use crate::testutil::{assert_eventually, RecordingServerListener};
+use crate::testutil::{
+    RecordingGetBehavior, RecordingParameterHandler, RecordingServerListener, RecordingSetBehavior,
+    assert_eventually,
+};
+use crate::testutil::{WebSocketClient, WebSocketClientError};
+#[cfg(feature = "websocket-tls")]
+use crate::websocket::TlsIdentity;
 use crate::websocket::handshake::SUBPROTOCOL;
-use crate::websocket::server::{create_server, ServerOptions};
+use crate::websocket::server::{ServerOptions, create_server as do_create_server};
 use crate::websocket::service::{CallId, Service, ServiceSchema};
 use crate::websocket::{
-    BlockingAssetHandlerFn, Capability, ClientChannelId, ConnectionGraph, Parameter,
+    BlockingAssetHandlerFn, Capability, ClientChannelId, ConnectionGraph, Parameter, Server,
 };
-use crate::{ChannelBuilder, Context, FoxgloveError, PartialMetadata, RawChannel, Schema};
+use crate::websocket::{
+    PlaybackCommand, PlaybackControlRequest, PlaybackState, PlaybackStatus, ServerListener,
+};
+use crate::{
+    ChannelBuilder, ChannelDescriptor, Context, FoxgloveError, PartialMetadata, RawChannel, Schema,
+    SinkChannelFilter,
+};
 
 macro_rules! expect_recv {
     ($client:expr, $variant:path) => {{
@@ -51,6 +71,10 @@ macro_rules! expect_recv_close {
             m => panic!("Received unexpected message: {m:?}"),
         }
     }};
+}
+
+fn create_server(ctx: &Arc<Context>, opts: ServerOptions) -> Arc<Server> {
+    do_create_server(ctx, opts).expect("Failed to create server")
 }
 
 fn new_channel(topic: &str, ctx: &Arc<Context>) -> Arc<RawChannel> {
@@ -84,7 +108,9 @@ async fn test_client_connect() {
         .await
         .expect("Failed to start server");
 
-    let mut client = WebSocketClient::connect(addr).await;
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
 
     let msg = expect_recv!(client, ServerMessage::ServerInfo);
     assert_eq!(
@@ -95,6 +121,77 @@ async fn test_client_connect() {
     );
 
     let _ = server.stop();
+}
+
+#[traced_test]
+#[tokio::test]
+#[cfg(feature = "websocket-tls")]
+async fn test_secure_client_connect() {
+    let ctx = Context::new();
+    let ca_params = CertificateParams::default();
+    let ca_key = KeyPair::generate().expect("default keygen will succeed");
+    let ca_cert = ca_params
+        .self_signed(&ca_key)
+        .expect("failed to sign CA cert");
+    let issuer = Issuer::new(ca_params, ca_key);
+
+    let host = "127.0.0.1";
+    let params = CertificateParams::new(vec![host.to_string()]).expect("SAN is valid");
+
+    let key = KeyPair::generate().expect("default keygen will succeed");
+    let cert = params
+        .signed_by(&key, &issuer)
+        .expect("failed to sign cert");
+
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            session_id: Some("tls_sess_id".to_string()),
+            tls_identity: Some(TlsIdentity {
+                cert: cert.pem().as_bytes().to_vec(),
+                key: key.serialize_pem().as_bytes().to_vec(),
+            }),
+            ..Default::default()
+        },
+    );
+    let addr = server.start(host, 0).await.expect("Failed to start server");
+
+    let mut client = WebSocketClient::connect_secure(addr.to_string(), ca_cert)
+        .await
+        .expect("Failed to connect");
+
+    let msg = expect_recv!(client, ServerMessage::ServerInfo);
+    assert_eq!(msg.session_id, Some("tls_sess_id".to_string()));
+
+    let _ = server.stop();
+}
+
+#[cfg(feature = "websocket-tls")]
+#[traced_test]
+#[tokio::test]
+async fn test_invalid_tls_config() {
+    let ctx = Context::new();
+    let cert = rcgen::generate_simple_self_signed(vec![])
+        .expect("default certgen will succeed")
+        .cert;
+    let key = KeyPair::generate().expect("default keygen will succeed");
+
+    let result = do_create_server(
+        &ctx,
+        ServerOptions {
+            name: Some("invalid_tls_server".to_string()),
+            tls_identity: Some(TlsIdentity {
+                cert: cert.pem().as_bytes().to_vec(),
+                key: key.serialize_pem().as_bytes().to_vec(),
+            }),
+            ..Default::default()
+        },
+    );
+    assert!(result.is_err());
+
+    let error = result.err();
+    assert!(matches!(&error, Some(FoxgloveError::ConfigurationError(_))));
+    assert!(error.unwrap().to_string().contains("KeyMismatch"));
 }
 
 #[traced_test]
@@ -167,7 +264,7 @@ async fn test_handshake_with_multiple_subprotocols() {
         .expect("Failed to build request");
 
     let mut req1 = request.clone();
-    let header = format!("{}, foxglove.sdk.v2", SUBPROTOCOL);
+    let header = format!("{SUBPROTOCOL}, foxglove.sdk.v2");
     req1.headers_mut().insert(
         "sec-websocket-protocol",
         HeaderValue::from_str(&header).unwrap(),
@@ -184,7 +281,7 @@ async fn test_handshake_with_multiple_subprotocols() {
 
     // In req2, the client's preferred (initial) subprotocol is not valid
     let mut req2 = request.clone();
-    let header = format!("unknown, {}, another", SUBPROTOCOL);
+    let header = format!("unknown, {SUBPROTOCOL}, another");
     req2.headers_mut().insert(
         "sec-websocket-protocol",
         HeaderValue::from_str(&header).unwrap(),
@@ -221,22 +318,31 @@ async fn test_advertise_to_client() {
         .await
         .expect("Failed to start server");
 
-    let mut client = WebSocketClient::connect(addr).await;
+    let ch = new_channel("/foo", &ctx);
+
+    // Create a channel that requires a schema, but doesn't have one. This won't be advertised.
+    let ch2 = ChannelBuilder::new("/bar")
+        .message_encoding("flatbuffer")
+        .context(&ctx)
+        .build_raw()
+        .expect("Failed to create channel");
+
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
     expect_recv!(client, ServerMessage::ServerInfo);
 
-    let ch = new_channel("/foo", &ctx);
-    ch.log(b"foo bar");
-
     let msg = expect_recv!(client, ServerMessage::Advertise);
-    let adv_ch = msg.channels.first().expect("not empty");
+    assert_eq!(msg.channels.len(), 1);
+    let adv_ch = &msg.channels[0];
     assert_eq!(adv_ch.id, u64::from(ch.id()));
     assert_eq!(adv_ch.topic, ch.topic());
 
+    ch.log(b"foo bar");
+    ch2.log(b"{\"a\":1}");
+
     let subscription_id = 42;
-    let subscribe_msg = Subscribe::new([Subscription {
-        id: subscription_id,
-        channel_id: ch.id().into(),
-    }]);
+    let subscribe_msg = Subscribe::new([Subscription::new(subscription_id, ch.id().into())]);
     client.send(&subscribe_msg).await.expect("Failed to send");
 
     // Allow the server to process the subscription
@@ -263,6 +369,17 @@ async fn test_advertise_to_client() {
         ))
     );
 
+    // Remove the channels
+    ctx.remove_channel(ch.id());
+    ctx.remove_channel(ch2.id());
+
+    // Ensure we get an unadvertise message only for the first channel
+    let msg = expect_recv!(client, ServerMessage::Unadvertise);
+    assert_eq!(msg.channel_ids.len(), 1);
+    assert_eq!(msg.channel_ids[0], u64::from(ch.id()));
+
+    assert!(client.recv().now_or_never().is_none());
+
     let _ = server.stop();
 }
 
@@ -285,7 +402,9 @@ async fn test_advertise_schemaless_channels() {
         .await
         .expect("Failed to start server");
 
-    let mut client = WebSocketClient::connect(addr).await;
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
     expect_recv!(client, ServerMessage::ServerInfo);
 
     // Client receives the correct advertisement for schemaless JSON
@@ -343,9 +462,15 @@ async fn test_log_only_to_subscribers() {
         .await
         .expect("Failed to start server");
 
-    let mut client1 = WebSocketClient::connect(addr).await;
-    let mut client2 = WebSocketClient::connect(addr).await;
-    let mut client3 = WebSocketClient::connect(addr).await;
+    let mut client1 = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
+    let mut client2 = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
+    let mut client3 = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
 
     // client1 subscribes to ch1; client2 subscribes to ch2; client3 unsubscribes from all
     // Read the server info message from each
@@ -366,18 +491,12 @@ async fn test_log_only_to_subscribers() {
     }
 
     client1
-        .send(&Subscribe::new([Subscription {
-            id: 1,
-            channel_id: ch1.id().into(),
-        }]))
+        .send(&Subscribe::new([Subscription::new(1, ch1.id().into())]))
         .await
         .expect("Failed to send");
 
     client2
-        .send(&Subscribe::new([Subscription {
-            id: 2,
-            channel_id: ch2.id().into(),
-        }]))
+        .send(&Subscribe::new([Subscription::new(2, ch2.id().into())]))
         .await
         .expect("Failed to send");
 
@@ -386,14 +505,8 @@ async fn test_log_only_to_subscribers() {
 
     client3
         .send(&Subscribe::new([
-            Subscription {
-                id: 111,
-                channel_id: ch1.id().into(),
-            },
-            Subscription {
-                id: 222,
-                channel_id: ch2.id().into(),
-            },
+            Subscription::new(111, ch1.id().into()),
+            Subscription::new(222, ch2.id().into()),
         ]))
         .await
         .expect("Failed to send");
@@ -451,6 +564,48 @@ async fn test_log_only_to_subscribers() {
     let _ = server.stop();
 }
 
+#[traced_test]
+#[tokio::test]
+async fn test_server_transmits_empty_message() {
+    let ctx = Context::new();
+    let server = create_server(&ctx, ServerOptions::default());
+    let ch = new_channel("/empty", &ctx);
+
+    let addr = server
+        .start("127.0.0.1", 0)
+        .await
+        .expect("Failed to start server");
+
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
+    expect_recv!(client, ServerMessage::ServerInfo);
+    expect_recv!(client, ServerMessage::Advertise);
+
+    let subscription_id = 7;
+    client
+        .send(&Subscribe::new([Subscription::new(
+            subscription_id,
+            ch.id().into(),
+        )]))
+        .await
+        .expect("Failed to subscribe");
+
+    assert_eventually(|| ch.num_sinks() == 1).await;
+
+    let metadata = PartialMetadata {
+        log_time: Some(987654),
+    };
+    ch.log_with_meta(b"", metadata);
+
+    let msg = expect_recv!(client, ServerMessage::MessageData);
+    assert_eq!(msg.subscription_id, subscription_id);
+    assert_eq!(msg.log_time, 987654);
+    assert!(msg.data.is_empty(), "expected empty MessageData payload");
+
+    let _ = server.stop();
+}
+
 #[tokio::test]
 async fn test_on_unsubscribe_called_after_disconnect() {
     let recording_listener = Arc::new(RecordingServerListener::new());
@@ -470,15 +625,14 @@ async fn test_on_unsubscribe_called_after_disconnect() {
         .await
         .expect("Failed to start server");
 
-    let mut client = WebSocketClient::connect(addr).await;
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
     expect_recv!(client, ServerMessage::ServerInfo);
     expect_recv!(client, ServerMessage::Advertise);
 
     client
-        .send(&Subscribe::new([Subscription {
-            id: 1,
-            channel_id: chan.id().into(),
-        }]))
+        .send(&Subscribe::new([Subscription::new(1, chan.id().into())]))
         .await
         .expect("Failed to send");
 
@@ -492,13 +646,69 @@ async fn test_on_unsubscribe_called_after_disconnect() {
     assert_eq!(unsubscriptions.len(), 0);
 
     // Disconnect the client without unsubscribing explicitly
-    client.close().await;
+    client.close().await.expect("Failed to close");
 
     // Allow the server to process the disconnection
     assert_eventually(|| dbg!(chan.num_sinks()) == 0).await;
 
     let unsubscriptions = recording_listener.take_unsubscribe();
     assert_eq!(unsubscriptions.len(), 1);
+
+    let _ = server.stop();
+}
+
+#[tokio::test]
+async fn test_on_unsubscribe_called_after_channel_removal() {
+    let recording_listener = Arc::new(RecordingServerListener::new());
+
+    let ctx = Context::new();
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            listener: Some(recording_listener.clone()),
+            ..Default::default()
+        },
+    );
+
+    let chan = new_channel("/foo", &ctx);
+    let addr = server
+        .start("127.0.0.1", 0)
+        .await
+        .expect("Failed to start server");
+
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
+    expect_recv!(client, ServerMessage::ServerInfo);
+    expect_recv!(client, ServerMessage::Advertise);
+
+    client
+        .send(&Subscribe::new([Subscription::new(1, chan.id().into())]))
+        .await
+        .expect("Failed to send");
+
+    // Allow the server to process the subscription
+    assert_eventually(|| dbg!(chan.num_sinks()) == 1).await;
+
+    let subscriptions = recording_listener.take_subscribe();
+    assert_eq!(subscriptions.len(), 1);
+
+    let unsubscriptions = recording_listener.take_unsubscribe();
+    assert_eq!(unsubscriptions.len(), 0);
+
+    // Remove the channel from the context while a subscription is active
+    ctx.remove_channel(chan.id());
+
+    // Expect an Unadvertise message
+    let msg = expect_recv!(client, ServerMessage::Unadvertise);
+    assert_eq!(msg.channel_ids.len(), 1);
+    assert_eq!(msg.channel_ids[0], u64::from(chan.id()));
+
+    // on_unsubscribe should have been called for the active subscription
+    let unsubscriptions = recording_listener.take_unsubscribe();
+    assert_eq!(unsubscriptions.len(), 1);
+    assert_eq!(unsubscriptions[0].1.id, chan.id());
+    assert_eq!(unsubscriptions[0].1.topic, chan.topic());
 
     let _ = server.stop();
 }
@@ -514,7 +724,9 @@ async fn test_error_when_client_publish_unsupported() {
         .await
         .expect("Failed to start server");
 
-    let mut client = WebSocketClient::connect(addr).await;
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
     expect_recv!(client, ServerMessage::ServerInfo);
 
     let advertise = Advertise::new([client::advertise::Channel::builder(1, "/test", "json")
@@ -532,7 +744,7 @@ async fn test_error_when_client_publish_unsupported() {
         Status::error("Server does not support clientPublish capability")
     );
 
-    client.close().await;
+    client.close().await.expect("Failed to close");
     let _ = server.stop();
 }
 
@@ -546,7 +758,9 @@ async fn test_error_status_message() {
         .await
         .expect("Failed to start server");
 
-    let mut client = WebSocketClient::connect(addr).await;
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
     expect_recv!(client, ServerMessage::ServerInfo);
 
     {
@@ -563,10 +777,7 @@ async fn test_error_status_message() {
 
     {
         client
-            .send(&Subscribe::new([Subscription {
-                id: 1,
-                channel_id: 555,
-            }]))
+            .send(&Subscribe::new([Subscription::new(1, 555)]))
             .await
             .expect("Failed to send message");
 
@@ -614,7 +825,7 @@ async fn test_service_registration_missing_request_encoding() {
     let server = create_server(
         &ctx,
         ServerOptions {
-            capabilities: Some(HashSet::from([Capability::Services])),
+            capabilities: Some(IndexSet::from([Capability::Services])),
             ..Default::default()
         },
     );
@@ -626,6 +837,24 @@ async fn test_service_registration_missing_request_encoding() {
 }
 
 #[tokio::test]
+async fn test_initial_service_missing_request_encoding() {
+    // Services configured at creation time are also validated for request encodings.
+    let ctx = Context::new();
+    let svc = Service::builder("/s", ServiceSchema::new("")).handler_fn(svc_unreachable);
+    let result = do_create_server(
+        &ctx,
+        ServerOptions {
+            services: HashMap::from([(svc.name().to_string(), svc)]),
+            ..Default::default()
+        },
+    );
+    assert!(matches!(
+        result,
+        Err(FoxgloveError::MissingRequestEncoding(_))
+    ));
+}
+
+#[tokio::test]
 async fn test_service_registration_duplicate_name() {
     // Can't register a service with no encoding unless we declare global encodings.
     let ctx = Context::new();
@@ -633,9 +862,9 @@ async fn test_service_registration_duplicate_name() {
     let server = create_server(
         &ctx,
         ServerOptions {
-            capabilities: Some(HashSet::from([Capability::Services])),
+            capabilities: Some(IndexSet::from([Capability::Services])),
             services: HashMap::from([(sa1.name().to_string(), sa1)]),
-            supported_encodings: Some(HashSet::from(["ros1msg".into()])),
+            supported_encodings: Some(IndexSet::from(["ros1msg".into()])),
             ..Default::default()
         },
     );
@@ -665,7 +894,9 @@ async fn test_publish_status_message() {
         .await
         .expect("Failed to start server");
 
-    let mut client = WebSocketClient::connect(addr).await;
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
     expect_recv!(client, ServerMessage::ServerInfo);
 
     let statuses = [
@@ -690,8 +921,12 @@ async fn test_remove_status() {
         .await
         .expect("Failed to start server");
 
-    let mut client1 = WebSocketClient::connect(addr).await;
-    let mut client2 = WebSocketClient::connect(addr).await;
+    let mut client1 = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
+    let mut client2 = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
     expect_recv!(client1, ServerMessage::ServerInfo);
     expect_recv!(client2, ServerMessage::ServerInfo);
 
@@ -713,8 +948,8 @@ async fn test_client_advertising() {
     let server = create_server(
         &ctx,
         ServerOptions {
-            capabilities: Some(HashSet::from([Capability::ClientPublish])),
-            supported_encodings: Some(HashSet::from(["json".to_string()])),
+            capabilities: Some(IndexSet::from([Capability::ClientPublish])),
+            supported_encodings: Some(IndexSet::from(["json".to_string()])),
             listener: Some(recording_listener.clone()),
             ..Default::default()
         },
@@ -725,7 +960,9 @@ async fn test_client_advertising() {
         .await
         .expect("Failed to start server");
 
-    let mut client = WebSocketClient::connect(addr).await;
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
     expect_recv!(client, ServerMessage::ServerInfo);
 
     let channel_id = 1;
@@ -764,6 +1001,12 @@ async fn test_client_advertising() {
         .await
         .expect("Failed to send binary message");
 
+    // Send a zero-length message payload on the same channel.
+    client
+        .send(&client::MessageData::new(channel_id, &[][..]))
+        .await
+        .expect("Failed to send empty MessageData");
+
     // Does not error on a binary message with no opcode
     client
         .send(Message::binary(vec![]))
@@ -783,17 +1026,23 @@ async fn test_client_advertising() {
         .expect("Failed to send unadvertise");
 
     assert_eventually(|| {
-        dbg!(recording_listener.message_data_len()) == 1
+        dbg!(recording_listener.message_data_len()) == 2
             && dbg!(recording_listener.client_advertise_len()) == 1
             && dbg!(recording_listener.client_unadvertise_len()) == 1
     })
     .await;
 
-    // Server should have received one message
-    let mut received = recording_listener.take_message_data();
-    let message_data = received.pop().expect("No message received");
-    assert_eq!(message_data.channel.id, ClientChannelId::new(1));
-    assert_eq!(message_data.data, data);
+    // Server should have received both messages (in order): the non-empty payload first,
+    // then the zero-length payload.
+    let received = recording_listener.take_message_data();
+    assert_eq!(received.len(), 2);
+    assert_eq!(received[0].channel.id, ClientChannelId::new(1));
+    assert_eq!(received[0].data, data);
+    assert_eq!(received[1].channel.id, ClientChannelId::new(1));
+    assert!(
+        received[1].data.is_empty(),
+        "expected zero-length client MessageData",
+    );
 
     // Server should have ignored the duplicate advertisement
     let advertisements = recording_listener.take_client_advertise();
@@ -805,7 +1054,55 @@ async fn test_client_advertising() {
     assert_eq!(unadvertises.len(), 1);
     assert_eq!(unadvertises[0].1.id, ClientChannelId::new(channel_id));
 
-    client.close().await;
+    client.close().await.expect("Failed to close");
+    let _ = server.stop();
+}
+
+#[traced_test]
+#[tokio::test]
+async fn test_parameter_values_with_empty_values() {
+    let ctx = Context::new();
+    // NOTE: It's rare that a parameter will be manually initialized with an empty value like this. Per the
+    // spec, a non-valued parameter should be treated as if it were unset.
+    //
+    // This also comes up in practice because ROS will return a rclcpp::Parameter with the requested name and an empty value
+    // if a deleted parameter value is requested, or if a parameter is requested that has never been set.
+    //
+    // In this case, we don't want the server to send the parameter to the client and have it show up in the UI.
+    let parameters = vec![Parameter::empty("some-nonexistent-value")];
+
+    let listener = Arc::new(RecordingServerListener::new());
+    listener.set_parameters_get_result(parameters);
+
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            capabilities: Some(IndexSet::from([Capability::Parameters])),
+            listener: Some(listener.clone()),
+            ..Default::default()
+        },
+    );
+
+    let addr = server
+        .start("127.0.0.1", 0)
+        .await
+        .expect("Failed to start server");
+
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
+    expect_recv!(client, ServerMessage::ServerInfo);
+
+    client
+        .send(&GetParameters::new(["some-nonexistent-value"]))
+        .await
+        .expect("Failed to request parameters");
+
+    let msg = expect_recv!(client, ServerMessage::ParameterValues);
+
+    // Expect the message to be an empty list
+    assert_eq!(msg, ParameterValues::new([]));
+
     let _ = server.stop();
 }
 
@@ -817,7 +1114,7 @@ async fn test_parameter_values() {
     let server = create_server(
         &ctx,
         ServerOptions {
-            capabilities: Some(HashSet::from([Capability::Parameters])),
+            capabilities: Some(IndexSet::from([Capability::Parameters])),
             listener: Some(recording_listener.clone()),
             ..Default::default()
         },
@@ -827,7 +1124,9 @@ async fn test_parameter_values() {
         .await
         .expect("Failed to start server");
 
-    let mut client = WebSocketClient::connect(addr).await;
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
 
     // Send the Subscribe Parameter Update message for "some-float-value"
     // Otherwise we won't get the update after we publish it.
@@ -858,7 +1157,7 @@ async fn test_parameter_unsubscribe_no_updates() {
     let server = create_server(
         &ctx,
         ServerOptions {
-            capabilities: Some(HashSet::from([Capability::Parameters])),
+            capabilities: Some(IndexSet::from([Capability::Parameters])),
             listener: Some(recording_listener.clone()),
             ..Default::default()
         },
@@ -868,7 +1167,9 @@ async fn test_parameter_unsubscribe_no_updates() {
         .await
         .expect("Failed to start server");
 
-    let mut client = WebSocketClient::connect(addr).await;
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
 
     // Send the Subscribe Parameter Update message for "some-float-value"
     client
@@ -927,7 +1228,7 @@ async fn test_set_parameters() {
     let server = create_server(
         &ctx,
         ServerOptions {
-            capabilities: Some(HashSet::from([Capability::Parameters])),
+            capabilities: Some(IndexSet::from([Capability::Parameters])),
             listener: Some(recording_listener.clone()),
             ..Default::default()
         },
@@ -937,7 +1238,9 @@ async fn test_set_parameters() {
         .await
         .expect("Failed to start server");
 
-    let mut client = WebSocketClient::connect(addr).await;
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
 
     // Subscribe to "foo" and "bar"
     client
@@ -986,7 +1289,7 @@ async fn test_get_parameters() {
     let server = create_server(
         &ctx,
         ServerOptions {
-            capabilities: Some(HashSet::from([Capability::Parameters])),
+            capabilities: Some(IndexSet::from([Capability::Parameters])),
             listener: Some(recording_listener.clone()),
             ..Default::default()
         },
@@ -996,7 +1299,9 @@ async fn test_get_parameters() {
         .await
         .expect("Failed to start server");
 
-    let mut client = WebSocketClient::connect(addr).await;
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
 
     client
         .send(&GetParameters::new(["foo", "bar", "baz"]).with_id("123"))
@@ -1038,7 +1343,7 @@ async fn test_services() {
                 .into_iter()
                 .map(|s| (s.name().to_string(), s))
                 .collect(),
-            supported_encodings: Some(HashSet::from(["raw".to_string()])),
+            supported_encodings: Some(IndexSet::from(["raw".to_string()])),
             ..Default::default()
         },
     );
@@ -1048,7 +1353,9 @@ async fn test_services() {
         .await
         .expect("Failed to start server");
 
-    let mut client1 = WebSocketClient::connect(addr).await;
+    let mut client1 = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
     expect_recv!(client1, ServerMessage::ServerInfo);
     let msg = expect_recv!(client1, ServerMessage::AdvertiseServices);
     assert_eq!(
@@ -1116,7 +1423,9 @@ async fn test_services() {
     );
 
     // New client sees both services immediately.
-    let mut client2 = WebSocketClient::connect(addr).await;
+    let mut client2 = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("failed to connect");
     expect_recv!(client2, ServerMessage::ServerInfo);
     let msg = expect_recv!(client2, ServerMessage::AdvertiseServices);
     assert_eq!(msg.services.len(), 2);
@@ -1180,8 +1489,8 @@ async fn test_fetch_asset() {
     let server = create_server(
         &ctx,
         ServerOptions {
-            capabilities: Some(HashSet::from([Capability::Assets])),
-            fetch_asset_handler: Some(Box::new(BlockingAssetHandlerFn(Arc::new(
+            capabilities: Some(IndexSet::from([Capability::Assets])),
+            fetch_asset_handler: Some(Arc::new(BlockingAssetHandlerFn(Arc::new(
                 |_client, uri: String| {
                     if uri.ends_with("error") {
                         Err("test error")
@@ -1200,7 +1509,9 @@ async fn test_fetch_asset() {
         .await
         .expect("Failed to start server");
 
-    let mut client = WebSocketClient::connect(addr).await;
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("failed to connect");
     expect_recv!(client, ServerMessage::ServerInfo);
 
     #[derive(Debug)]
@@ -1246,7 +1557,7 @@ async fn test_update_connection_graph() {
     let server = create_server(
         &ctx,
         ServerOptions {
-            capabilities: Some(HashSet::from([Capability::ConnectionGraph])),
+            capabilities: Some(IndexSet::from([Capability::ConnectionGraph])),
             listener: Some(recording_listener.clone()),
             ..Default::default()
         },
@@ -1268,7 +1579,9 @@ async fn test_update_connection_graph() {
     assert_eq!(recording_listener.take_connection_graph_unsubscribe(), 0);
 
     // Connect a client and subscribe to graph updates.
-    let mut c1 = WebSocketClient::connect(addr).await;
+    let mut c1 = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("failed to connect");
     c1.send(&SubscribeConnectionGraph {}).await.unwrap();
 
     // There should be a server listener callback, since this is the first subscriber.
@@ -1289,7 +1602,9 @@ async fn test_update_connection_graph() {
     );
 
     // Connect a second client and subscribe to graph updates.
-    let mut c2 = WebSocketClient::connect(addr).await;
+    let mut c2 = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("failed to connect");
     c2.send(&SubscribeConnectionGraph {}).await.unwrap();
 
     // Second client also gets the complete initial state.
@@ -1311,7 +1626,7 @@ async fn test_update_connection_graph() {
 
     // Close the client. No unsubscribe callback because c1 is still subscribed. Since the server
     // processes the client disconnect asynchronously, just sleep a little while.
-    c2.close().await;
+    c2.close().await.expect("Failed to close");
     tokio::time::sleep(Duration::from_millis(10)).await;
     assert_eq!(recording_listener.take_connection_graph_unsubscribe(), 0);
 
@@ -1361,11 +1676,13 @@ async fn test_slow_client() {
         .await
         .expect("Failed to start server");
 
-    let mut client = WebSocketClient::connect(addr).await;
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("failed to connect");
 
     // Publish more status messages than the client can handle
     for i in 0..50 {
-        let status = Status::error(format!("msg{}", i));
+        let status = Status::error(format!("msg{i}"));
         server.publish_status(status);
     }
 
@@ -1395,7 +1712,7 @@ async fn test_broadcast_time() {
     let server = create_server(
         &ctx,
         ServerOptions {
-            capabilities: Some(HashSet::from([Capability::Time])),
+            capabilities: Some(IndexSet::from([Capability::Time])),
             ..Default::default()
         },
     );
@@ -1404,10 +1721,577 @@ async fn test_broadcast_time() {
         .await
         .expect("Failed to start server");
 
-    let mut client = WebSocketClient::connect(addr).await;
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("failed to connect");
     expect_recv!(client, ServerMessage::ServerInfo);
 
     server.broadcast_time(42);
     let msg = expect_recv!(client, ServerMessage::Time);
     assert_eq!(msg.timestamp, 42);
+}
+
+struct RecordingPlaybackControlListener {
+    playback_request: Mutex<Option<PlaybackControlRequest>>,
+}
+
+impl RecordingPlaybackControlListener {
+    fn new() -> Self {
+        Self {
+            playback_request: Mutex::new(None),
+        }
+    }
+
+    fn get_request(&self) -> Option<PlaybackControlRequest> {
+        if let Ok(request) = self.playback_request.lock() {
+            request.clone()
+        } else {
+            None
+        }
+    }
+
+    fn set_request(&self, updated: PlaybackControlRequest) {
+        if let Ok(mut request) = self.playback_request.lock() {
+            *request = Some(updated);
+        }
+    }
+}
+
+impl RecordingPlaybackControlListener {
+    fn handle_request(&self, request: &PlaybackControlRequest) -> PlaybackState {
+        let status = match request.playback_command {
+            PlaybackCommand::Play => PlaybackStatus::Playing,
+            PlaybackCommand::Pause => PlaybackStatus::Paused,
+        };
+
+        PlaybackState {
+            status,
+            current_time: request.seek_time.unwrap_or(0),
+            playback_speed: request.playback_speed,
+            did_seek: false,
+            request_id: Some(request.request_id.clone()),
+        }
+    }
+}
+
+impl ServerListener for RecordingPlaybackControlListener {
+    fn on_playback_control_request(
+        &self,
+        request: PlaybackControlRequest,
+    ) -> Option<PlaybackState> {
+        let response = self.handle_request(&request);
+        self.set_request(request);
+        Some(response)
+    }
+}
+
+#[traced_test]
+#[tokio::test]
+async fn test_on_playback_control_request() {
+    let listener = Arc::new(RecordingPlaybackControlListener::new());
+
+    let ctx = Context::new();
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            capabilities: Some(IndexSet::from([Capability::PlaybackControl])),
+            playback_time_range: Some((123_456_789, 234_567_890)),
+            listener: Some(listener.clone()),
+            ..Default::default()
+        },
+    );
+    let addr = server
+        .start("127.0.0.1", 0)
+        .await
+        .expect("Failed to start server");
+
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
+    expect_recv!(client, ServerMessage::ServerInfo);
+
+    let request_id = "some-id".to_string();
+
+    let playback_request = PlaybackControlRequest {
+        playback_command: PlaybackCommand::Play,
+        playback_speed: 1.5,
+        seek_time: Some(123_456_789),
+        request_id: request_id.clone(),
+    };
+
+    client
+        .send(&playback_request)
+        .await
+        .expect("Failed to send playback control request");
+
+    assert_eventually(|| listener.get_request().is_some()).await;
+
+    let stored_request = listener
+        .get_request()
+        .expect("Playback control request was not recorded");
+    assert_eq!(stored_request, playback_request);
+
+    // Assert that the client receives a message
+    let playback_state = expect_recv!(client, ServerMessage::PlaybackState);
+    assert_eq!(playback_state.status, PlaybackStatus::Playing);
+    assert_eq!(playback_state.playback_speed, 1.5);
+    assert_eq!(playback_state.current_time, 123_456_789);
+    assert_eq!(playback_state.request_id, Some(request_id));
+
+    let _ = server.stop();
+}
+
+#[tokio::test]
+async fn test_channel_filter() {
+    struct Filter;
+    impl SinkChannelFilter for Filter {
+        fn should_subscribe(&self, channel: &ChannelDescriptor) -> bool {
+            channel.topic() == "/1"
+        }
+    }
+
+    let ctx = Context::new();
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            channel_filter: Some(Arc::new(Filter)),
+            ..Default::default()
+        },
+    );
+    let addr = server
+        .start("127.0.0.1", 0)
+        .await
+        .expect("Failed to start server");
+
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("failed to connect");
+    expect_recv!(client, ServerMessage::ServerInfo);
+
+    let ch1 = new_channel("/1", &ctx);
+    let ch2 = new_channel("/2", &ctx);
+
+    let msg = expect_recv!(client, ServerMessage::Advertise);
+    let len = msg.channels.len();
+    assert_eq!(len, 1);
+
+    client
+        .send(&Subscribe::new([Subscription {
+            id: 1,
+            channel_id: ch1.id().into(),
+        }]))
+        .await
+        .expect("Failed to subscribe");
+
+    // Allow the server to process the subscriptions
+    assert_eventually(|| dbg!(ch1.num_sinks()) == 1).await;
+
+    // Channel 2 is filtered, unadvertised, and can't be subscribed to.
+    client
+        .send(&Subscribe::new([Subscription {
+            id: 2,
+            channel_id: ch2.id().into(),
+        }]))
+        .await
+        .expect("Failed to subscribe");
+    assert_eq!(
+        expect_recv!(client, ServerMessage::Status),
+        Status::error(format!("Unknown channel ID: {}", ch2.id()))
+    );
+
+    // Client receives message from channel 1, but not 2.
+    ch1.log(b"{}");
+    expect_recv!(client, ServerMessage::MessageData);
+
+    ch2.log(b"{}");
+    let result = client.recv().await;
+    assert!(matches!(result, Err(WebSocketClientError::Timeout(_))));
+}
+
+#[tokio::test]
+async fn test_server_info_metadata_sent_to_client() {
+    let ctx = Context::new();
+
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            server_info: Some(hashmap! {
+                "key1".into() => "val1".into(),
+                "key2".into() => "val2".into(),
+            }),
+            ..Default::default()
+        },
+    );
+    let addr = server
+        .start("127.0.0.1", 0)
+        .await
+        .expect("Failed to start server");
+
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
+
+    let msg = expect_recv!(client, ServerMessage::ServerInfo);
+
+    assert_eq!(
+        msg.metadata,
+        hashmap! {
+            "fg-library".into() => get_library_version(),
+            "key1".into() => "val1".into(),
+            "key2".into() => "val2".into(),
+        }
+    );
+
+    let _ = server.stop();
+}
+
+#[tokio::test]
+async fn test_server_info_with_playback_control() {
+    let ctx = Context::new();
+    let options = ServerOptions {
+        playback_time_range: Some((123, 456)),
+        ..Default::default()
+    };
+
+    let server = create_server(&ctx, options);
+    let addr = server
+        .start("127.0.0.1", 0)
+        .await
+        .expect("Failed to start server");
+
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
+
+    let msg = expect_recv!(client, ServerMessage::ServerInfo);
+
+    assert_eq!(
+        msg.data_start_time,
+        Some(SerializedTimestamp { sec: 0, nsec: 123 })
+    );
+    assert_eq!(
+        msg.data_end_time,
+        Some(SerializedTimestamp { sec: 0, nsec: 456 })
+    );
+
+    // By starting the server with a set playback_time_range, it should enable the PlaybackControl
+    // capability
+    assert!(
+        msg.capabilities
+            .contains(&ServerInfoCapability::PlaybackControl)
+    );
+
+    let _ = server.stop();
+}
+
+#[tokio::test]
+async fn test_broadcast_playback_state() {
+    let ctx = Context::new();
+    let options = ServerOptions {
+        playback_time_range: Some((123, 456)),
+        ..Default::default()
+    };
+
+    let server = create_server(&ctx, options);
+    let addr = server
+        .start("127.0.0.1", 0)
+        .await
+        .expect("Failed to start server");
+
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
+
+    expect_recv!(client, ServerMessage::ServerInfo);
+
+    let msg = PlaybackState {
+        status: PlaybackStatus::Playing,
+        current_time: 250,
+        playback_speed: 1.0,
+        did_seek: true,
+        request_id: None,
+    };
+
+    server.broadcast_playback_state(msg);
+
+    let received = expect_recv!(client, ServerMessage::PlaybackState);
+    assert_eq!(received.status, PlaybackStatus::Playing);
+    assert_eq!(received.current_time, 250);
+    assert_eq!(received.playback_speed, 1.0);
+    assert_eq!(received.request_id, None);
+}
+
+#[tokio::test]
+#[should_panic]
+async fn test_playback_control_without_time_range() {
+    let ctx = Context::new();
+    let options = ServerOptions {
+        capabilities: Some(IndexSet::from([Capability::PlaybackControl])),
+        playback_time_range: None,
+        ..Default::default()
+    };
+
+    create_server(&ctx, options);
+}
+
+#[traced_test]
+#[tokio::test]
+async fn test_parameter_handler_get_responds_with_values() {
+    let parameters = vec![Parameter::float64("foo", 1.0)];
+    let handler = Arc::new(RecordingParameterHandler::new());
+    handler.set_get_behavior(RecordingGetBehavior::Respond(parameters.clone()));
+
+    let ctx = Context::new();
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            capabilities: Some(IndexSet::from([Capability::Parameters])),
+            parameter_handler: Some(handler.clone()),
+            ..Default::default()
+        },
+    );
+    let addr = server
+        .start("127.0.0.1", 0)
+        .await
+        .expect("Failed to start server");
+
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
+    expect_recv!(client, ServerMessage::ServerInfo);
+
+    client
+        .send(&GetParameters::new(["foo", "bar"]).with_id("req-1"))
+        .await
+        .expect("Failed to send get parameters");
+
+    let msg = expect_recv!(client, ServerMessage::ParameterValues);
+    assert_eq!(msg.id, Some("req-1".into()));
+    assert_eq!(msg.parameters, parameters);
+
+    let captured = handler.take_parameters_get().pop().unwrap();
+    assert_eq!(captured.param_names, vec!["foo", "bar"]);
+    assert_eq!(captured.request_id, Some("req-1".to_string()));
+
+    let _ = server.stop();
+}
+
+#[traced_test]
+#[tokio::test]
+async fn test_parameter_handler_get_drop_sends_error_status() {
+    let handler = Arc::new(RecordingParameterHandler::new());
+    handler.set_get_behavior(RecordingGetBehavior::DropResponder);
+
+    let ctx = Context::new();
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            capabilities: Some(IndexSet::from([Capability::Parameters])),
+            parameter_handler: Some(handler.clone()),
+            ..Default::default()
+        },
+    );
+    let addr = server
+        .start("127.0.0.1", 0)
+        .await
+        .expect("Failed to start server");
+
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
+    expect_recv!(client, ServerMessage::ServerInfo);
+
+    client
+        .send(&GetParameters::new(["foo"]).with_id("req-1"))
+        .await
+        .expect("Failed to send get parameters");
+
+    let status = expect_recv!(client, ServerMessage::Status);
+    assert_eq!(
+        status.level,
+        super::ws_protocol::server::status::Level::Error
+    );
+    assert!(status.message.contains("failed to send a response"));
+
+    let _ = server.stop();
+}
+
+#[traced_test]
+#[tokio::test]
+async fn test_parameter_handler_set_echoes() {
+    let handler = Arc::new(RecordingParameterHandler::new());
+
+    let ctx = Context::new();
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            capabilities: Some(IndexSet::from([Capability::Parameters])),
+            parameter_handler: Some(handler.clone()),
+            ..Default::default()
+        },
+    );
+    let addr = server
+        .start("127.0.0.1", 0)
+        .await
+        .expect("Failed to start server");
+
+    let mut setter = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect setter");
+    expect_recv!(setter, ServerMessage::ServerInfo);
+
+    let parameters = vec![Parameter::float64("foo", 2.0)];
+    setter
+        .send(&SetParameters::new(parameters.clone()).with_id("set-1"))
+        .await
+        .expect("Failed to send set parameters");
+
+    // Setter receives an echoed ParameterValues with the request_id (RecordingSetBehavior::Echo).
+    let echo = expect_recv!(setter, ServerMessage::ParameterValues);
+    assert_eq!(echo.id, Some("set-1".into()));
+    assert_eq!(echo.parameters, parameters);
+
+    let captured = handler.take_parameters_set().pop().unwrap();
+    assert_eq!(captured.request_id, Some("set-1".to_string()));
+    assert_eq!(captured.parameters, parameters);
+
+    let _ = server.stop();
+}
+
+#[traced_test]
+#[tokio::test]
+async fn test_parameter_handler_set_no_echo_without_request_id() {
+    let handler = Arc::new(RecordingParameterHandler::new());
+
+    let ctx = Context::new();
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            capabilities: Some(IndexSet::from([Capability::Parameters])),
+            parameter_handler: Some(handler.clone()),
+            ..Default::default()
+        },
+    );
+    let addr = server
+        .start("127.0.0.1", 0)
+        .await
+        .expect("Failed to start server");
+
+    let mut setter = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect setter");
+    expect_recv!(setter, ServerMessage::ServerInfo);
+
+    setter
+        .send(&SetParameters::new(vec![Parameter::float64("foo", 2.0)]))
+        .await
+        .expect("Failed to send set parameters");
+
+    assert_eventually(|| dbg!(handler.parameters_set_len()) == 1).await;
+
+    // No echo expected because the request had no request_id.
+    server.stop().unwrap().wait().await;
+    expect_recv_close!(setter);
+}
+
+#[traced_test]
+#[tokio::test]
+async fn test_parameter_handler_set_drop_sends_error_status() {
+    let handler = Arc::new(RecordingParameterHandler::new());
+    handler.set_set_behavior(RecordingSetBehavior::DropResponder);
+
+    let ctx = Context::new();
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            capabilities: Some(IndexSet::from([Capability::Parameters])),
+            parameter_handler: Some(handler.clone()),
+            ..Default::default()
+        },
+    );
+    let addr = server
+        .start("127.0.0.1", 0)
+        .await
+        .expect("Failed to start server");
+
+    let mut setter = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect setter");
+    expect_recv!(setter, ServerMessage::ServerInfo);
+
+    setter
+        .send(&SetParameters::new(vec![Parameter::float64("foo", 2.0)]).with_id("set-1"))
+        .await
+        .expect("Failed to send set parameters");
+
+    let status = expect_recv!(setter, ServerMessage::Status);
+    assert_eq!(
+        status.level,
+        super::ws_protocol::server::status::Level::Error
+    );
+    assert!(status.message.contains("failed to send a response"));
+
+    let _ = server.stop();
+}
+
+#[traced_test]
+#[tokio::test]
+async fn test_parameter_handler_takes_precedence_over_listener() {
+    // Both registered. Handler should win for get/set; listener still receives sub/unsub.
+    let listener = Arc::new(RecordingServerListener::new());
+    let handler = Arc::new(RecordingParameterHandler::new());
+    handler.set_get_behavior(RecordingGetBehavior::Respond(vec![Parameter::float64(
+        "foo", 1.0,
+    )]));
+
+    let ctx = Context::new();
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            capabilities: Some(IndexSet::from([Capability::Parameters])),
+            listener: Some(listener.clone()),
+            parameter_handler: Some(handler.clone()),
+            ..Default::default()
+        },
+    );
+    let addr = server
+        .start("127.0.0.1", 0)
+        .await
+        .expect("Failed to start server");
+
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
+    expect_recv!(client, ServerMessage::ServerInfo);
+
+    client
+        .send(&SubscribeParameterUpdates::new(["foo"]))
+        .await
+        .expect("Failed to send subscribe");
+    client
+        .send(&GetParameters::new(["foo"]).with_id("g1"))
+        .await
+        .expect("Failed to send get");
+    client
+        .send(&SetParameters::new(vec![Parameter::float64("foo", 3.0)]).with_id("s1"))
+        .await
+        .expect("Failed to send set");
+    client
+        .send(&UnsubscribeParameterUpdates::new(["foo"]))
+        .await
+        .expect("Failed to send unsubscribe");
+
+    assert_eventually(|| {
+        dbg!(handler.parameters_get_len()) >= 1
+            && dbg!(handler.parameters_set_len()) >= 1
+            && dbg!(listener.parameters_subscribe_len()) >= 1
+            && dbg!(listener.parameters_unsubscribe_len()) >= 1
+    })
+    .await;
+
+    // Listener get/set methods were never invoked.
+    assert_eq!(listener.take_parameters_get().len(), 0);
+    assert_eq!(listener.take_parameters_set().len(), 0);
+
+    let _ = server.stop();
 }

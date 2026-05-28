@@ -1,0 +1,116 @@
+#include <foxglove/context.hpp>
+#include <foxglove/error.hpp>
+#include <foxglove/mcap.hpp>
+#include <foxglove/messages.hpp>
+
+#include <chrono>
+#include <cmath>
+#include <iostream>
+
+void logToChannels(
+  foxglove::messages::SceneUpdateChannel& scene_update_channel,
+  foxglove::messages::FrameTransformChannel& frame_transform_channel, int counter
+) {
+  // Create a SceneUpdate message for the box
+  foxglove::messages::SceneUpdate scene_update;
+  foxglove::messages::SceneEntity entity;
+  entity.frame_id = "box";
+  entity.id = "box_1";
+  entity.lifetime = foxglove::messages::Duration{10, 10000000};
+
+  // Create a cube primitive
+  foxglove::messages::CubePrimitive cube;
+  foxglove::messages::Pose pose;
+  foxglove::messages::Vector3 position;
+  position.x = 0.0;
+  position.y = 0.0;
+  position.z = 3.0;
+  pose.position = position;
+
+  foxglove::messages::Quaternion orientation;
+  double yaw = -0.1 * counter;
+  orientation.x = 0.0;
+  orientation.y = 0.0;
+  orientation.z = std::sin(yaw / 2.0);
+  orientation.w = std::cos(yaw / 2.0);
+  pose.orientation = orientation;
+  cube.pose = pose;
+
+  // Set cube size
+  foxglove::messages::Vector3 size;
+  size.x = 1.0;
+  size.y = 1.0;
+  size.z = 1.0;
+  cube.size = size;
+
+  // Set cube color (red)
+  foxglove::messages::Color color;
+  color.r = 1.0;
+  color.g = 0.0;
+  color.b = 0.0;
+  color.a = 1.0;
+  cube.color = color;
+
+  entity.cubes.push_back(cube);
+  scene_update.entities.push_back(entity);
+  scene_update_channel.log(scene_update);
+
+  // Create a FrameTransform message
+  foxglove::messages::FrameTransform transform;
+  transform.parent_frame_id = "world";
+  transform.child_frame_id = "box";
+
+  foxglove::messages::Quaternion rotation;
+  double yaw2 = 0.1 * counter;
+  double roll = 1.0;
+  rotation.x = std::sin(roll / 2.0);
+  rotation.y = 0.0;
+  rotation.z = std::sin(yaw2 / 2.0);
+  rotation.w = std::cos(yaw2 / 2.0);
+  transform.rotation = rotation;
+
+  frame_transform_channel.log(transform);
+}
+
+// NOLINTNEXTLINE(bugprone-exception-escape)
+int main() {
+  foxglove::McapWriterOptions options = {};
+  options.path = "test.mcap";
+  options.truncate = true;
+  auto writer_result = foxglove::McapWriter::create(options);
+  if (!writer_result.has_value()) {
+    std::cerr << "Failed to create writer: " << foxglove::strerror(writer_result.error()) << '\n';
+    return 1;
+  }
+  auto writer = std::move(writer_result.value());
+
+  auto scene_update_result = foxglove::messages::SceneUpdateChannel::create("/boxes");
+  if (!scene_update_result.has_value()) {
+    std::cerr << "Failed to create scene update channel: "
+              << foxglove::strerror(scene_update_result.error()) << '\n';
+    return 1;
+  }
+  foxglove::messages::SceneUpdateChannel scene_update_channel =
+    std::move(scene_update_result.value());
+
+  auto frame_transform_result = foxglove::messages::FrameTransformChannel::create("/tf");
+  if (!frame_transform_result.has_value()) {
+    std::cerr << "Failed to create frame transform channel: "
+              << foxglove::strerror(frame_transform_result.error()) << '\n';
+    return 1;
+  }
+  foxglove::messages::FrameTransformChannel frame_transform_channel =
+    std::move(frame_transform_result.value());
+
+  for (int i = 0; i < 100; ++i) {
+    logToChannels(scene_update_channel, frame_transform_channel, i);
+  }
+
+  // Optional, if you want to check for or handle errors
+  foxglove::FoxgloveError err = writer.close();
+  if (err != foxglove::FoxgloveError::Ok) {
+    std::cerr << "Failed to close writer: " << foxglove::strerror(err) << '\n';
+    return 1;
+  }
+  return 0;
+}

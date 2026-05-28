@@ -5,6 +5,7 @@ import path from "path";
 import semver from "semver";
 
 const versionRegex = /^version\s*=\s*"([^"]*)"/m;
+const deriveVersionRegex = /^(?<Prefix>foxglove_derive\s=\s.+version\s*=\s*)"([^"]*)"/m;
 
 async function main() {
   const newVersionV = process.argv[2];
@@ -25,7 +26,8 @@ async function main() {
   // Find all Cargo.toml files in the workspace
   const workspaceRoot = path.resolve(__dirname, "..");
   const cargoFiles = await glob("**/Cargo.toml", {
-    ignore: ["**/target/**", "**/node_modules/**", "cpp/build/**"],
+    // foxglove_data_loader is versioned separately
+    ignore: ["**/target/**", "**/node_modules/**", "cpp/build/**", "rust/foxglove_data_loader/**"],
     cwd: workspaceRoot,
     absolute: true,
   });
@@ -37,8 +39,21 @@ async function main() {
     console.log(`Checking ${cargoFile}...`);
     const content = await readFile(cargoFile, "utf8");
 
+    // Bump the foxglove_derive dependency to match. Do this before checking the package version,
+    // which inherits from the workspace.
+    if (deriveVersionRegex.test(content)) {
+      const updatedContent = content.replace(deriveVersionRegex, `$<Prefix>"${newVersion}"`);
+      if (content === updatedContent) {
+        console.error(`  ❌ foxglove_derive could not be updated to "${newVersion}"`);
+        success = false;
+      } else {
+        await writeFile(cargoFile, updatedContent);
+        console.log(`  ✅ Updated foxglove_derive in ${cargoFile} to ${newVersion}`);
+      }
+    }
+
     if (!versionRegex.test(content)) {
-      console.log(`  ℹ️ Skipped, does not contain version field`);
+      console.log(`  ℹ️ Skipped Cargo version update; does not contain version field`);
       continue;
     }
 
@@ -101,6 +116,23 @@ async function main() {
     }
     await writeFile(module, updatedContent);
     console.log(`  ✅ Updated version in ${module} to ${newVersion}`);
+  }
+
+  // update version in C++ CMakeLists.txt
+  console.log("\nUpdating version in C++ CMakeLists.txt...");
+  const cmakeFile = path.join(workspaceRoot, "cpp/CMakeLists.txt");
+  {
+    const content = await readFile(cmakeFile, "utf8");
+    const updatedContent = content.replace(
+      /project\(foxglove-sdk VERSION [^)]+\)/m,
+      `project(foxglove-sdk VERSION ${newVersion})`,
+    );
+    if (!updatedContent.includes(newVersion)) {
+      console.error(`❌ Failed to update version in ${cmakeFile}`);
+      process.exit(1);
+    }
+    await writeFile(cmakeFile, updatedContent);
+    console.log(`  ✅ Updated version in ${cmakeFile} to ${newVersion}`);
   }
 
   console.log("\n✅ Success!");

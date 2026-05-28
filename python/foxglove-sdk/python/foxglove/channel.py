@@ -1,15 +1,17 @@
+from __future__ import annotations
+
 import hashlib
 import json
 from base64 import b64encode
-from typing import Any, Dict, Optional, Union, cast
+from typing import Any, cast
 
 from . import Context
 from . import _foxglove_py as _foxglove
 from . import channels as _channels
-from . import schemas as _schemas
+from . import messages as _messages
 
-JsonSchema = Dict[str, Any]
-JsonMessage = Dict[str, Any]
+JsonSchema = dict[str, Any]
+JsonMessage = dict[str, Any]
 
 
 class Channel:
@@ -17,35 +19,33 @@ class Channel:
     A channel that can be used to log binary messages or JSON messages.
     """
 
-    __slots__ = ["base", "message_encoding"]
+    __slots__ = ["base"]
     base: _foxglove.BaseChannel
-    message_encoding: str
 
     def __init__(
         self,
         topic: str,
         *,
-        schema: Union[JsonSchema, _foxglove.Schema, None] = None,
-        message_encoding: Optional[str] = None,
-        context: Optional[Context] = None,
-    ):
+        schema: JsonSchema | _foxglove.Schema | None = None,
+        message_encoding: str | None = None,
+        context: Context | None = None,
+        metadata: dict[str, str] | None = None,
+    ) -> None:
         """
         Create a new channel for logging messages on a topic.
 
         :param topic: The topic name. You should choose a unique topic name per channel.
-        :param message_encoding: The message encoding. Optional if
-            :py:param:`schema` is a dictionary, in which case the message
-            encoding is presumed to be "json".
-        :param schema: A definition of your schema. Pass a :py:class:`Schema`
-            for full control. If a dictionary is passed, it will be treated as a
-            JSON schema.
+        :param message_encoding: The message encoding. Optional if :any:`schema` is a
+            dictionary, in which case the message encoding is presumed to be "json".
+        :param schema: A definition of your schema. Pass a :py:class:`Schema` for full control. If a
+            dictionary is passed, it will be treated as a JSON schema.
+        :param metadata: A dictionary of key/value strings to add to the channel. A type error is
+            raised if any key or value is not a string.
 
         If both message_encoding and schema are None, then the channel will use JSON encoding, and
         allow any dict to be logged.
         """
         message_encoding, schema = _normalize_schema(message_encoding, schema)
-
-        self.message_encoding = message_encoding
 
         if context is not None:
             self.base = context._create_channel(
@@ -56,6 +56,7 @@ class Channel:
                 topic,
                 message_encoding,
                 schema,
+                metadata,
             )
 
         _channels_by_id[self.base.id()] = self
@@ -71,15 +72,43 @@ class Channel:
         """The topic name of the channel"""
         return self.base.topic()
 
-    def schema_name(self) -> Optional[str]:
+    @property
+    def message_encoding(self) -> str:
+        """The message encoding for the channel"""
+        return self.base.message_encoding
+
+    def metadata(self) -> dict[str, str]:
+        """
+        Returns a copy of the channel's metadata.
+
+        Note that changes made to the returned dictionary will not be applied to
+        the channel's metadata.
+        """
+        return self.base.metadata()
+
+    def schema(self) -> _foxglove.Schema | None:
+        """
+        Returns a copy of the channel's metadata.
+
+        Note that changes made to the returned object will not be applied to
+        the channel's schema.
+        """
+        return self.base.schema()
+
+    def schema_name(self) -> str | None:
         """The name of the schema for the channel"""
         return self.base.schema_name()
 
+    def has_sinks(self) -> bool:
+        """Returns true if at least one sink is subscribed to this channel"""
+        return self.base.has_sinks()
+
     def log(
         self,
-        msg: Union[JsonMessage, list[Any], bytes, str],
+        msg: JsonMessage | list[Any] | bytes | str,
         *,
-        log_time: Optional[int] = None,
+        log_time: int | None = None,
+        sink_id: int | None = None,
     ) -> None:
         """
         Log a message on the channel.
@@ -95,7 +124,7 @@ class Channel:
             msg = msg.encode("utf-8")
 
         if isinstance(msg, bytes):
-            return self.base.log(msg, log_time)
+            return self.base.log(msg, log_time, sink_id)
 
         raise TypeError(f"Unsupported message type: {type(msg)}")
 
@@ -111,19 +140,20 @@ class Channel:
         self.base.close()
 
 
-_channels_by_id: Dict[int, Channel] = {}
+_channels_by_id: dict[int, Channel] = {}
 
 
 def log(
     topic: str,
-    message: Union[JsonMessage, list[Any], bytes, str, _schemas.FoxgloveSchema],
+    message: JsonMessage | list[Any] | bytes | str | _messages.FoxgloveMessage,
     *,
-    log_time: Optional[int] = None,
+    log_time: int | None = None,
+    sink_id: int | None = None,
 ) -> None:
     """Log a message on a topic.
 
     Creates a new channel the first time called for a given topic.
-    For Foxglove types in the schemas module, this creates a typed channel
+    For Foxglove types in the messages module, this creates a typed channel
     (see :py:mod:`foxglove.channels` for supported types).
     For bytes and str, this creates a simple schemaless channel and logs the bytes as-is.
     For dict and list, this creates a schemaless json channel.
@@ -154,7 +184,7 @@ def log(
                 channel = channel_cls(topic)
         if channel is None:
             raise ValueError(
-                f"No Foxglove schema channel found for message type {schema_name}"
+                f"No Foxglove channel found for message type {schema_name}"
             )
 
         channel_id = channel.base.id() if hasattr(channel, "base") else channel.id()
@@ -164,13 +194,14 @@ def log(
     channel.log(
         cast(Any, message),
         log_time=log_time,
+        sink_id=sink_id,
     )
 
 
 def _normalize_schema(
-    message_encoding: Optional[str],
-    schema: Union[JsonSchema, _foxglove.Schema, None] = None,
-) -> tuple[str, Optional[_foxglove.Schema]]:
+    message_encoding: str | None,
+    schema: JsonSchema | _foxglove.Schema | None = None,
+) -> tuple[str, _foxglove.Schema | None]:
     if isinstance(schema, _foxglove.Schema):
         if message_encoding is None:
             raise ValueError("message encoding is required")

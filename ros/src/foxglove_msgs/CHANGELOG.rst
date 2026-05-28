@@ -1,0 +1,110 @@
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Changelog for package foxglove_msgs
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+3.3.0 (2026-04-30)
+------------------
+* Breaking: Remove Velocity3 schema; LocationFix.velocity now uses Vector3
+* Add Odometry schema
+
+3.2.6 (2026-04-02)
+------------------
+* Add CompressedPointCloud schema
+* Add heading and velocity to LocationFix
+* Add NV12 encoding documentation to RawImage schema
+
+3.2.5 (2026-03-22)
+------------------
+* Version bump for foxglove_bridge 3.2.5 release
+
+3.2.4 (2026-01-22)
+------------------
+* Clarify direction on FrameTransform
+* Contributors: Roman Shtylman
+
+3.2.3 (2026-01-12)
+------------------
+* Fixes to documentation and schema descriptions
+* Contributors: Jacob Bandes-Storch, jesse-foxglove
+
+3.2.2 (2025-10-24)
+------------------
+* Update documentation for various schemas
+* Contributors: James Smith, Jeff Rouleau
+
+3.2.1 (2025-09-26)
+------------------
+* No changes to foxglove_msgs
+
+3.2.0 (2025-09-22)
+------------------
+* Add RawAudio schema
+* Add generated schema types for C++
+* Add Kannala-Brandt distortion model to CameraCalibration
+* Remove ImageMarkerArray schema
+
+3.1.0 (2025-02-11)
+------------------
+* Remove invalid generated schemas from package
+
+3.0.1 (2024-12-10)
+------------------
+* Updating distortion model description
+* Update ImageAnnotation schemas' coordinate fields with comment specifying the coordinate space
+* Update RawImage schema with endianness
+* Update CompressedVideo format strings
+
+3.0.0 (2023-10-31)
+------------------
+* Add a frame_id field to LocationFix
+* Update RawImage encodings
+* Add CompressedVideo schema
+* Improve doc on PointAnnotation field outline_color
+
+2.2.0 (2023-04-18)
+------------------
+* Add TextAnnotation
+* add FrameTransforms Message
+* Remove "all float64s" comment from PointCloud schema
+* Add units to PointsAnnotation and CircleAnnotation
+* Update descriptions for PointsAnnotationType and LineType
+* Elaborate on required fields for PointCloud and Grid messages
+
+2.1.1 (2022-11-18)
+------------------
+* Fix typo in CubePrimitive comments
+
+2.1.0 (2022-11-18)
+------------------
+* Add frame_id to RawImage, CompressedImage, and CameraCalibration
+* Add new SceneEntity and Primitive types
+* Updated documentation for several types and fields
+
+2.0.0 (2022-07-15)
+------------------
+* Consolidate Transform and FrameTransform
+* Contributors: Adrian Macneil
+
+1.2.2 (2022-06-13)
+------------------
+* Fix CMake build accessing parent directory
+* Contributors: Jacob Bandes-Storch
+
+1.2.1 (2022-06-03)
+------------------
+* Fix CMake install share directory
+* Contributors: Jacob Bandes-Storch
+
+1.2.0 (2022-05-17)
+------------------
+* Add new Foxglove message types to foxglove_msgs
+* Contributors: Jacob Bandes-Storch
+
+1.1.0 (2022-04-19)
+------------------
+* Provide foxglove_msgs for ROS1 and ROS2
+* Contributors: Daisuke Nishimatsu, John Hurliman, wep21
+
+1.0.0 (2021-05-26)
+-------------------
+* Initial release with foxglove_msgs/ImageMarkerArray message

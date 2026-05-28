@@ -1,21 +1,49 @@
+from enum import Enum
 from pathlib import Path
-from typing import Any, List, Optional, Tuple
+from typing import Any, BinaryIO, Callable, Protocol
+
+from foxglove import AnyNativeParameterValue, AnyParameterValue, AssetHandler
+
+class McapWritable(Protocol):
+    """A writable and seekable file-like object.
+
+    This protocol defines the minimal interface required for writing MCAP data.
+    """
+
+    def write(self, data: bytes | bytearray) -> int:
+        """Write data and return the number of bytes written."""
+        ...
+
+    def seek(self, offset: int, whence: int = 0) -> int:
+        """Seek to position and return the new absolute position."""
+        ...
+
+    def flush(self) -> None:
+        """Flush any buffered data."""
+        ...
 
 from .mcap import MCAPWriteOptions, MCAPWriter
-from .websocket import AssetHandler, Capability, Service, WebSocketServer
+from .remote_access import Capability as RemoteAccessCapability
+from .remote_access import (
+    QosProfile,
+    RemoteAccessConnectionStatus,
+    RemoteAccessGateway,
+)
+from .websocket import Capability as WebSocketCapability
+from .websocket import WebSocketServer
 
 class BaseChannel:
     """
     A channel for logging messages.
     """
 
-    def __new__(
-        cls,
+    def __init__(
+        self,
         topic: str,
         message_encoding: str,
-        schema: Optional["Schema"] = None,
-        metadata: Optional[List[Tuple[str, str]]] = None,
-    ) -> "BaseChannel": ...
+        schema: "Schema" | None = None,
+        metadata: dict[str, str] | None = None,
+    ) -> None: ...
     def id(self) -> int:
         """The unique ID of the channel"""
         ...
@@ -24,20 +52,50 @@ class BaseChannel:
         """The topic name of the channel"""
         ...
 
-    def schema_name(self) -> Optional[str]:
+    @property
+    def message_encoding(self) -> str:
+        """The message encoding for the channel"""
+        ...
+
+    def metadata(self) -> dict[str, str]:
+        """
+        Returns a copy of the channel's metadata.
+
+        Note that changes made to the returned dictionary will not be applied to
+        the channel's metadata.
+        """
+        ...
+
+    def schema(self) -> "Schema" | None:
+        """
+        Returns a copy of the channel's schema.
+
+        Note that changes made to the returned object will not be applied to
+        the channel's schema.
+        """
+        ...
+
+    def schema_name(self) -> str | None:
         """The name of the schema for the channel"""
+        ...
+
+    def has_sinks(self) -> bool:
+        """Returns true if at least one sink is subscribed to this channel"""
         ...
 
     def log(
         self,
         msg: bytes,
-        log_time: Optional[int] = None,
+        log_time: int | None = None,
+        sink_id: int | None = None,
     ) -> None:
         """
         Log a message to the channel.
 
         :param msg: The message to log.
         :param log_time: The optional time the message was logged.
+        :param sink_id: The sink ID to log the message to. If not provided, the message will be
+            sent to all sinks.
         """
         ...
 
@@ -52,13 +110,13 @@ class Schema:
     encoding: str
     data: bytes
 
-    def __new__(
-        cls,
+    def __init__(
+        self,
         *,
         name: str,
         encoding: str,
         data: bytes,
-    ) -> "Schema": ...
+    ) -> None: ...
 
 class Context:
     """
@@ -70,33 +128,314 @@ class Context:
     channel constructor and to :py:func:`open_mcap` or :py:func:`start_server`.
     """
 
-    def __new__(cls) -> "Context": ...
+    def __init__(self) -> None: ...
     def _create_channel(
         self,
         topic: str,
         message_encoding: str,
-        schema: Optional["Schema"] = None,
-        metadata: Optional[List[Tuple[str, str]]] = None,
+        schema: Schema | None = None,
+        metadata: list[tuple[str, str]] | None = None,
     ) -> "BaseChannel":
         """
         Instead of calling this method, pass a context to a channel constructor.
         """
         ...
 
+    @staticmethod
+    def default() -> "Context":
+        """
+        Returns the default context.
+        """
+        ...
+
+class ChannelDescriptor:
+    """
+    Information about a channel
+    """
+
+    id: int
+    topic: str
+    message_encoding: str
+    metadata: dict[str, str]
+    schema: "Schema" | None
+
+SinkChannelFilter = Callable[[ChannelDescriptor], bool]
+
+class ConnectionGraph:
+    """
+    A graph of connections between clients.
+    """
+
+    def __init__(self) -> None: ...
+    def set_published_topic(self, topic: str, publisher_ids: list[str]) -> None:
+        """
+        Set a published topic and its associated publisher IDs. Overwrites any existing topic with
+        the same name.
+
+        :param topic: The topic name.
+        :param publisher_ids: The set of publisher IDs.
+        """
+        ...
+
+    def set_subscribed_topic(self, topic: str, subscriber_ids: list[str]) -> None:
+        """
+        Set a subscribed topic and its associated subscriber IDs. Overwrites any existing topic with
+        the same name.
+
+        :param topic: The topic name.
+        :param subscriber_ids: The set of subscriber IDs.
+        """
+        ...
+
+    def set_advertised_service(self, service: str, provider_ids: list[str]) -> None:
+        """
+        Set an advertised service and its associated provider IDs. Overwrites any existing service
+        with the same name.
+
+        :param service: The service name.
+        :param provider_ids: The set of provider IDs.
+        """
+        ...
+
+class MessageSchema:
+    """
+    A service request or response schema.
+    """
+
+    encoding: str
+    schema: Schema
+
+    def __init__(
+        self,
+        *,
+        encoding: str,
+        schema: Schema,
+    ) -> None: ...
+
+class Parameter:
+    """
+    A parameter which can be sent to a client.
+
+    :param name: The parameter name.
+    :type name: str
+    :param value: Optional value, represented as a native python object, or a ParameterValue.
+    :type value: None|bool|int|float|str|bytes|list|dict|ParameterValue
+    :param type: Optional parameter type. This is automatically derived when passing a native
+                 python object as the value.
+    :type type: ParameterType|None
+    """
+
+    name: str
+    type: ParameterType | None
+    value: AnyParameterValue | None
+
+    def __init__(
+        self,
+        name: str,
+        *,
+        value: AnyNativeParameterValue | None = None,
+        type: ParameterType | None = None,
+    ) -> None: ...
+    def get_value(self) -> AnyNativeParameterValue | None:
+        """Returns the parameter value as a native python object."""
+        ...
+
+class ParameterType(Enum):
+    """
+    An optional type hint for a :py:class:`Parameter`, used to disambiguate values whose
+    intended type cannot be inferred from the wire representation alone.
+
+    A parameter's type is typically derived directly from its value: integers, booleans,
+    strings, dicts, and homogeneous arrays of these are unambiguous on the wire. This enum
+    only enumerates the cases that need an explicit hint:
+
+    - :py:attr:`ParameterType.ByteArray`: a byte array is transmitted as a base64-encoded
+      string, so without a type hint it would be indistinguishable from an ordinary string.
+    - :py:attr:`ParameterType.Float64`: a whole-valued float (e.g. ``1.0``) may be
+      indistinguishable from an integer on the wire; the hint preserves the intended
+      floating-point type.
+    - :py:attr:`ParameterType.Float64Array`: same rationale as ``Float64``, for arrays.
+
+    Parameters of other types (integer, bool, string, dict, arrays of these) leave
+    :py:attr:`Parameter.type` set to ``None``.
+    """
+
+    ByteArray = ...
+    """A byte array, transmitted on the wire as a base64-encoded string. The type hint
+    distinguishes it from an ordinary string value."""
+
+    Float64 = ...
+    """A floating-point value that can be represented as a ``float64``. Used to preserve the
+    floating-point type for whole-valued numbers that would otherwise round-trip as integers."""
+
+    Float64Array = ...
+    """An array of floating-point values that can be represented as ``float64``s. Used to
+    preserve the floating-point type for arrays of whole-valued numbers."""
+
+class ParameterValue:
+    """
+    A parameter value.
+    """
+
+    class Integer:
+        """An integer value."""
+
+        def __init__(self, value: int) -> None: ...
+
+    class Bool:
+        """A boolean value."""
+
+        def __init__(self, value: bool) -> None: ...
+
+    class Float64:
+        """A floating-point value."""
+
+        def __init__(self, value: float) -> None: ...
+
+    class String:
+        """
+        A string value.
+
+        For parameters of type :py:attr:`ParameterType.ByteArray`, this is a
+        base64 encoding of the byte array.
+        """
+
+        def __init__(self, value: str) -> None: ...
+
+    class Array:
+        """An array of parameter values."""
+
+        def __init__(self, value: list[AnyParameterValue]) -> None: ...
+
+    class Dict:
+        """An associative map of parameter values."""
+
+        def __init__(self, value: dict[str, AnyParameterValue]) -> None: ...
+
+class Service:
+    """
+    A service.
+    """
+
+    name: str
+    schema: ServiceSchema
+    handler: Callable[[ServiceRequest], bytes]
+
+    def __init__(
+        self,
+        name: str,
+        *,
+        schema: ServiceSchema,
+        handler: Callable[[ServiceRequest], bytes],
+    ): ...
+
+class ServiceRequest:
+    """
+    A service request.
+    """
+
+    service_name: str
+    client_id: int
+    call_id: int
+    encoding: str
+    payload: bytes
+
+class ServiceSchema:
+    """
+    A service schema.
+    """
+
+    name: str
+    request: MessageSchema | None
+    response: MessageSchema | None
+
+    def __init__(
+        self,
+        name: str,
+        *,
+        request: MessageSchema | None = None,
+        response: MessageSchema | None = None,
+    ): ...
+
+class StatusLevel(Enum):
+    """A status message severity level"""
+
+    Info = ...
+    Warning = ...
+    Error = ...
+
+def start_gateway(
+    *,
+    name: str | None = None,
+    device_token: str | None = None,
+    capabilities: list[RemoteAccessCapability] | None = None,
+    listener: Any = None,
+    supported_encodings: list[str] | None = None,
+    services: list[Service] | None = None,
+    context: Context | None = None,
+    channel_filter: SinkChannelFilter | None = None,
+    qos_classifier: Callable[[ChannelDescriptor], QosProfile] | None = None,
+    message_backlog_size: int | None = None,
+    foxglove_api_url: str | None = None,
+    foxglove_api_timeout: float | None = None,
+) -> RemoteAccessGateway:
+    """
+    Start a remote access gateway for live visualization and teleop in Foxglove.
+    """
+    ...
+
 def start_server(
     *,
-    name: Optional[str] = None,
-    host: Optional[str] = "127.0.0.1",
-    port: Optional[int] = 8765,
-    capabilities: Optional[List[Capability]] = None,
+    name: str | None = None,
+    host: str | None = "127.0.0.1",
+    port: int | None = 8765,
+    capabilities: list[WebSocketCapability] | None = None,
     server_listener: Any = None,
-    supported_encodings: Optional[List[str]] = None,
-    services: Optional[List["Service"]] = None,
-    asset_handler: Optional["AssetHandler"] = None,
-    context: Optional["Context"] = None,
+    supported_encodings: list[str] | None = None,
+    services: list[Service] | None = None,
+    asset_handler: AssetHandler | None = None,
+    context: Context | None = None,
+    session_id: str | None = None,
+    channel_filter: SinkChannelFilter | None = None,
+    playback_time_range: tuple[int, int] | None = None,
+    message_backlog_size: int | None = None,
 ) -> WebSocketServer:
     """
-    Start a websocket server for live visualization.
+    Start a WebSocket server for live visualization.
+    """
+    ...
+
+class SystemInfoPublisher:
+    """
+    A handle to a running system info publisher.
+
+    The publisher is started by :py:func:`foxglove.start_sysinfo_publisher` and runs in
+    the background until :py:meth:`stop` is called.
+    The caller is responsible for calling stop() when done; dropping the handle does not stop the background task.
+    """
+
+    def stop(self) -> None:
+        """
+        Stop the publisher. Subsequent calls to ``stop`` are no-ops.
+        """
+        ...
+
+def start_sysinfo_publisher(
+    *,
+    topic: str | None = None,
+    refresh_interval: float | None = None,
+    context: Context | None = None,
+) -> SystemInfoPublisher:
+    """
+    Start the system info publisher.
+
+    Periodically publishes process and system statistics (memory, CPU, OS info) to a channel.
+
+    The caller is responsible for calling stop() on the returned handle when done; dropping the handle does not stop the background task.
+
+    :param topic: Channel topic name. Defaults to ``/sysinfo``.
+    :param refresh_interval: How often to publish, in seconds. Defaults to ``0.5``. Clamped to a minimum of 0.2.
+    :param context: The context on which the publisher creates its channel. Defaults to the global default context.
     """
     ...
 
@@ -114,26 +453,33 @@ def disable_logging() -> None:
 
 def shutdown() -> None:
     """
-    Shutdown the running websocket server.
+    Shutdown the running WebSocket server.
     """
     ...
 
 def open_mcap(
-    path: str | Path,
+    path: str | Path | BinaryIO | McapWritable,
     *,
     allow_overwrite: bool = False,
-    context: Optional["Context"] = None,
-    writer_options: Optional[MCAPWriteOptions] = None,
+    context: Context | None = None,
+    channel_filter: SinkChannelFilter | None = None,
+    writer_options: MCAPWriteOptions | None = None,
 ) -> MCAPWriter:
     """
-    Creates a new MCAP file for recording.
+    Open an MCAP writer for recording.
+
+    If a path is provided, the file will be created and must not already exist (unless
+    allow_overwrite is True). If a file-like object is provided, it must support write(),
+    seek(), and flush() methods; the allow_overwrite parameter is ignored.
 
     If a context is provided, the MCAP file will be associated with that context. Otherwise, the
     global context will be used.
+
+    You must close the writer with close() or the with statement to ensure the file is correctly finished.
     """
     ...
 
-def get_channel_for_topic(topic: str) -> Optional[BaseChannel]:
+def get_channel_for_topic(topic: str) -> BaseChannel | None:
     """
     Get a previously-registered channel.
     """

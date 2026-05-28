@@ -1,12 +1,31 @@
 [package]
 name = "foxglove-sdk-python"
-version = "0.7.1"
-edition = "2021"
+version.workspace = true
+edition.workspace = true
 publish = false
 
 [lib]
 name = "foxglove_py"
 crate-type = ["cdylib"]
+
+# Exactly one of `aws-lc-rs` or `ring` must be enabled to select the rustls crypto
+# backend used by `remote-access`. `aws-lc-rs` is the default; `ring` exists as an
+# escape hatch for targets where building aws-lc-sys is painful. The two are
+# mutually exclusive: enabling both is a compile error in foxglove. To use `ring`,
+# set `--no-default-features` and select it explicitly.
+[features]
+default = ["aws-lc-rs"]
+remote-access = ["foxglove/remote-access"]
+aws-lc-rs = ["foxglove/aws-lc-rs"]
+ring = ["foxglove/ring"]
+# Opts into a build-time check that NVENC hardware acceleration for video
+# encoding will be available. Only meaningful in combination with
+# `remote-access`. See foxglove crate docs for details.
+require-cuda = ["foxglove/require-cuda"]
+
+# The full set of supported features, with opinionated choices for mutually-
+# exclusive feature sets.
+full = ["aws-lc-rs", "remote-access"]
 
 [lints]
 workspace = true
@@ -14,16 +33,29 @@ workspace = true
 [dependencies]
 base64 = "0.22.1"
 bytes.workspace = true
-foxglove = { path = "../../rust/foxglove" }
 log.workspace = true
 prost-types = "0.13"
-pyo3 = "0.24.1"
+pyo3 = { version = "0.25.1", features = ["abi3-py310"] }
 pyo3-log = "0.12.3"
 thiserror.workspace = true
+tracing.workspace = true
+
+[target.'cfg(target_family = "wasm")'.dependencies]
+foxglove = { path = "../../rust/foxglove", default-features = false, features = ["lz4", "zstd"] }
+
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
 tokio-tungstenite.workspace = true
 tokio-util.workspace = true
 tokio.workspace = true
-tracing.workspace = true
+foxglove = { path = "../../rust/foxglove", default-features = false, features = [
+  "lz4",
+  "sysinfo",
+  "websocket",
+  "zstd",
+] }
 
 [build-dependencies]
 walkdir = "2.5.0"
+
+[dev-dependencies]
+maplit = "1.0.2"

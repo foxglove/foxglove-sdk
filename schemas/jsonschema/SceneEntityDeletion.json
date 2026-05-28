@@ -40,5 +40,10 @@
       "type": "string",
       "description": "Identifier which must match if `type` is `MATCHING_ID`."
     }
-  }
+  },
+  "required": [
+    "timestamp",
+    "type",
+    "id"
+  ]
 }

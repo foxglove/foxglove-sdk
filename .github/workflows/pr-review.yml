@@ -1,0 +1,16 @@
+name: PR Review
+
+on:
+  pull_request: {}
+
+jobs:
+  review:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: write
+      id-token: write
+    uses: foxglove/actions/.github/workflows/review.yml@main
+    secrets:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}

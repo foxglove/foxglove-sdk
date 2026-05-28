@@ -20,5 +20,11 @@
       "type": "number",
       "description": "w value"
     }
-  }
+  },
+  "required": [
+    "x",
+    "y",
+    "z",
+    "w"
+  ]
 }

@@ -1,4 +1,51 @@
+/// This file is the source of truth for all generated Foxglove schemas.
+/// It is used to generate the JSON schema, FlatBuffer, Protobuf,and TypeScript definitions.
+///
+/// Edit this file and run `make generate` to regenerate all the various schema files.
+
 import { FoxgloveEnumSchema, FoxgloveMessageSchema } from "./types";
+
+const Duration: FoxgloveMessageSchema = {
+  type: "message",
+  name: "Duration",
+  description: "A duration of time, composed of seconds and nanoseconds",
+  rosEquivalent: "std_msgs/Duration",
+  ros2Equivalent: "builtin_interfaces/Duration",
+  protoEquivalent: "google.protobuf.Duration",
+  fields: [
+    {
+      name: "sec",
+      type: { type: "primitive", name: "int32" },
+      description: "The number of seconds in the duration",
+    },
+    {
+      name: "nsec",
+      type: { type: "primitive", name: "uint32" },
+      description: "The number of nanoseconds in the positive direction",
+    },
+  ],
+};
+
+const Timestamp: FoxgloveMessageSchema = {
+  type: "message",
+  name: "Timestamp",
+  description: "A timestamp composed of seconds and nanoseconds",
+  rosEquivalent: "std_msgs/Time",
+  ros2Equivalent: "builtin_interfaces/Time",
+  protoEquivalent: "google.protobuf.Timestamp",
+  fields: [
+    {
+      name: "sec",
+      type: { type: "primitive", name: "uint32" },
+      description: "The number of seconds since a user-defined epoch",
+    },
+    {
+      name: "nsec",
+      type: { type: "primitive", name: "uint32" },
+      description: "The number of nanoseconds since the sec value",
+    },
+  ],
+};
 
 const RawAudio: FoxgloveMessageSchema = {
   type: "message",
@@ -7,7 +54,7 @@ const RawAudio: FoxgloveMessageSchema = {
   fields: [
     {
       name: "timestamp",
-      type: { type: "primitive", name: "time" },
+      type: { type: "nested", schema: Timestamp },
       description: "Timestamp of the start of the audio block",
     },
     {
@@ -40,7 +87,7 @@ const CompressedAudio: FoxgloveMessageSchema = {
   fields: [
     {
       name: "timestamp",
-      type: { type: "primitive", name: "time" },
+      type: { type: "nested", schema: Timestamp },
       description: "Timestamp of the start of the audio chunk",
     },
     {
@@ -106,14 +153,12 @@ const Vector2: FoxgloveMessageSchema = {
     {
       name: "x",
       type: { type: "primitive", name: "float64" },
-      description: "x coordinate length",
-      defaultValue: 1.0,
+      description: "x component",
     },
     {
       name: "y",
       type: { type: "primitive", name: "float64" },
-      description: "y coordinate length",
-      defaultValue: 1.0,
+      description: "y component",
     },
   ],
 };
@@ -123,24 +168,22 @@ const Vector3: FoxgloveMessageSchema = {
   name: "Vector3",
   description: "A vector in 3D space that represents a direction only",
   rosEquivalent: "geometry_msgs/Vector3",
+  ros2Equivalent: "geometry_msgs/Vector3",
   fields: [
     {
       name: "x",
       type: { type: "primitive", name: "float64" },
-      description: "x coordinate length",
-      defaultValue: 1.0,
+      description: "x component",
     },
     {
       name: "y",
       type: { type: "primitive", name: "float64" },
-      description: "y coordinate length",
-      defaultValue: 1.0,
+      description: "y component",
     },
     {
       name: "z",
       type: { type: "primitive", name: "float64" },
-      description: "z coordinate length",
-      defaultValue: 1.0,
+      description: "z component",
     },
   ],
 };
@@ -168,6 +211,7 @@ const Point3: FoxgloveMessageSchema = {
   name: "Point3",
   description: "A point representing a position in 3D space",
   rosEquivalent: "geometry_msgs/Point",
+  ros2Equivalent: "geometry_msgs/Point",
   fields: [
     {
       name: "x",
@@ -187,11 +231,37 @@ const Point3: FoxgloveMessageSchema = {
   ],
 };
 
+const Point3InFrame: FoxgloveMessageSchema = {
+  type: "message",
+  name: "Point3InFrame",
+  description: "A timestamped point for a position in 3D space",
+  rosEquivalent: "geometry_msgs/PointStamped",
+  ros2Equivalent: "geometry_msgs/PointStamped",
+  fields: [
+    {
+      name: "timestamp",
+      type: { type: "nested", schema: Timestamp },
+      description: "Timestamp of point",
+    },
+    {
+      name: "frame_id",
+      type: { type: "primitive", name: "string" },
+      description: "Frame of reference for point position",
+    },
+    {
+      name: "point",
+      type: { type: "nested", schema: Point3 },
+      description: "Point in 3D space",
+    },
+  ],
+};
+
 const Quaternion: FoxgloveMessageSchema = {
   type: "message",
   name: "Quaternion",
   description: "A [quaternion](https://eater.net/quaternions) representing a rotation in 3D space",
   rosEquivalent: "geometry_msgs/Quaternion",
+  ros2Equivalent: "geometry_msgs/Quaternion",
   fields: [
     {
       name: "x",
@@ -222,6 +292,7 @@ const Pose: FoxgloveMessageSchema = {
   name: "Pose",
   description: "A position and orientation for an object or reference frame in 3D space",
   rosEquivalent: "geometry_msgs/Pose",
+  ros2Equivalent: "geometry_msgs/Pose",
   fields: [
     {
       name: "position",
@@ -278,7 +349,7 @@ const SceneEntityDeletion: FoxgloveMessageSchema = {
   fields: [
     {
       name: "timestamp",
-      type: { type: "primitive", name: "time" },
+      type: { type: "nested", schema: Timestamp },
       description:
         "Timestamp of the deletion. Only matching entities earlier than this timestamp will be deleted.",
     },
@@ -468,15 +539,13 @@ const LinePrimitive: FoxgloveMessageSchema = {
     {
       name: "color",
       type: { type: "nested", schema: Color },
-      description:
-        "Solid color to use for the whole line. One of `color` or `colors` must be provided.",
+      description: "Solid color to use for the whole line. Ignored if `colors` is non-empty.",
     },
     {
       name: "colors",
       type: { type: "nested", schema: Color },
       array: true,
-      description:
-        "Per-point colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided.",
+      description: "Per-point colors (if non-empty, must have the same length as `points`).",
     },
     {
       name: "indices",
@@ -549,15 +618,13 @@ const TriangleListPrimitive: FoxgloveMessageSchema = {
     {
       name: "color",
       type: { type: "nested", schema: Color },
-      description:
-        "Solid color to use for the whole shape. One of `color` or `colors` must be provided.",
+      description: "Solid color to use for the whole shape. Ignored if `colors` is non-empty.",
     },
     {
       name: "colors",
       type: { type: "nested", schema: Color },
       array: true,
-      description:
-        "Per-vertex colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided.",
+      description: "Per-vertex colors (if specified, must have the same length as `points`).",
     },
     {
       name: "indices",
@@ -599,7 +666,7 @@ const ModelPrimitive: FoxgloveMessageSchema = {
     {
       name: "url",
       type: { type: "primitive", name: "string" },
-      description: "URL pointing to model file. One of `url` or `data` should be provided.",
+      description: "URL pointing to model file. One of `url` or `data` should be non-empty.",
     },
     {
       name: "media_type",
@@ -611,7 +678,7 @@ const ModelPrimitive: FoxgloveMessageSchema = {
       name: "data",
       type: { type: "primitive", name: "bytes" },
       description:
-        "Embedded model. One of `url` or `data` should be provided. If `data` is provided, `media_type` must be set to indicate the type of the data.",
+        "Embedded model. One of `url` or `data` should be non-empty. If `data` is non-empty, `media_type` must be set to indicate the type of the data.",
     },
   ],
 };
@@ -624,7 +691,7 @@ const SceneEntity: FoxgloveMessageSchema = {
   fields: [
     {
       name: "timestamp",
-      type: { type: "primitive", name: "time" },
+      type: { type: "nested", schema: Timestamp },
       description: "Timestamp of the entity",
     },
     {
@@ -640,7 +707,7 @@ const SceneEntity: FoxgloveMessageSchema = {
     },
     {
       name: "lifetime",
-      type: { type: "primitive", name: "duration" },
+      type: { type: "nested", schema: Duration },
       description:
         "Length of time (relative to `timestamp`) after which the entity should be automatically removed. Zero value indicates the entity should remain visible until it is replaced or deleted.",
     },
@@ -735,7 +802,7 @@ const CameraCalibration: FoxgloveMessageSchema = {
   fields: [
     {
       name: "timestamp",
-      type: { type: "primitive", name: "time" },
+      type: { type: "nested", schema: Timestamp },
       description: "Timestamp of calibration data",
     },
     {
@@ -759,7 +826,7 @@ const CameraCalibration: FoxgloveMessageSchema = {
       name: "distortion_model",
       type: { type: "primitive", name: "string" },
       description:
-        "Name of distortion model\n\nSupported parameters: `plumb_bob` (k1, k2, p1, p2, k3) and `rational_polynomial` (k1, k2, p1, p2, k3, k4, k5, k6). Distortion models are based on [OpenCV's](https://docs.opencv.org/2.4/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html) [pinhole camera model](https://en.wikipedia.org/wiki/Distortion_%28optics%29#Software_correction). This is the same [implementation used by ROS](http://docs.ros.org/en/diamondback/api/image_geometry/html/c++/pinhole__camera__model_8cpp_source.html)",
+        "Name of distortion model\n\nSupported parameters: `plumb_bob` (k1, k2, p1, p2, k3), `rational_polynomial` (k1, k2, p1, p2, k3, k4, k5, k6), and `kannala_brandt` (k1, k2, k3, k4), and `fisheye62` (k0, k1, k2, k3, p0, p1, crit_theta [optional]). `plumb_bob` and `rational_polynomial` models are based on the pinhole model [OpenCV's](https://docs.opencv.org/4.11.0/d9/d0c/group__calib3d.html) [pinhole camera model](https://en.wikipedia.org/wiki/Distortion_%28optics%29#Software_correction). The `kannala_brandt` model matches the [OpenvCV fisheye](https://docs.opencv.org/4.11.0/db/d58/group__calib3d__fisheye.html) model. The `fisheye62` model matches the [Project Aria's Fisheye62 Model](https://facebookresearch.github.io/projectaria_tools/docs/tech_insights/camera_intrinsic_models).",
     },
     {
       name: "D",
@@ -782,6 +849,8 @@ Projects 3D points in the camera coordinate frame to 2D pixel coordinates using 
 K = [ 0 fy cy]
     [ 0  0  1]
 \`\`\`
+
+**Uncalibrated cameras:** Following ROS conventions for [CameraInfo](https://docs.ros.org/en/noetic/api/sensor_msgs/html/msg/CameraInfo.html), Foxglove also treats K[0] == 0.0 as indicating an uncalibrated camera, and calibration data will be ignored.
 `,
     },
     {
@@ -810,7 +879,7 @@ It projects 3D points in the camera coordinate frame to 2D pixel coordinates usi
 
 For monocular cameras, Tx = Ty = 0. Normally, monocular cameras will also have R = the identity and P[1:3,1:3] = K.
 
-For a stereo pair, the fourth column [Tx Ty 0]' is related to the position of the optical center of the second camera in the first camera's frame. We assume Tz = 0 so both cameras are in the same stereo image plane. The first camera always has Tx = Ty = 0. For the right (second) camera of a horizontal stereo pair, Ty = 0 and Tx = -fx' * B, where B is the baseline between the cameras.
+Foxglove currently does not support displaying stereo images, so Tx and Ty are ignored.
 
 Given a 3D point [X Y Z]', the projection (x, y) of the point onto the rectified image is given by:
 
@@ -833,7 +902,7 @@ const CompressedImage: FoxgloveMessageSchema = {
   fields: [
     {
       name: "timestamp",
-      type: { type: "primitive", name: "time" },
+      type: { type: "nested", schema: Timestamp },
       description: "Timestamp of image",
     },
     {
@@ -863,7 +932,7 @@ const CompressedVideo: FoxgloveMessageSchema = {
   fields: [
     {
       name: "timestamp",
-      type: { type: "primitive", name: "time" },
+      type: { type: "nested", schema: Timestamp },
       description: "Timestamp of video frame",
     },
     {
@@ -915,7 +984,7 @@ const RawImage: FoxgloveMessageSchema = {
   fields: [
     {
       name: "timestamp",
-      type: { type: "primitive", name: "time" },
+      type: { type: "nested", schema: Timestamp },
       description: "Timestamp of image",
     },
     {
@@ -928,28 +997,91 @@ const RawImage: FoxgloveMessageSchema = {
     {
       name: "width",
       type: { type: "primitive", name: "uint32" },
-      description: "Image width",
+      description: "Image width in pixels",
     },
     {
       name: "height",
       type: { type: "primitive", name: "uint32" },
-      description: "Image height",
+      description: "Image height in pixels",
     },
     {
       name: "encoding",
       type: { type: "primitive", name: "string" },
       description:
-        "Encoding of the raw image data\n\nSupported values: `8UC1`, `8UC3`, `16UC1` (little endian), `32FC1` (little endian), `bayer_bggr8`, `bayer_gbrg8`, `bayer_grbg8`, `bayer_rggb8`, `bgr8`, `bgra8`, `mono8`, `mono16`, `rgb8`, `rgba8`, `uyvy` or `yuv422`, `yuyv` or `yuv422_yuy2`",
+        "Encoding of the raw image data. See the `data` field description for supported values.",
     },
     {
       name: "step",
       type: { type: "primitive", name: "uint32" },
-      description: "Byte length of a single row",
+      description:
+        "Byte length of a single row. This is usually some multiple of `width` depending on the encoding, but can be greater to incorporate padding.",
     },
     {
       name: "data",
       type: { type: "primitive", name: "bytes" },
-      description: "Raw image data",
+      description: `Raw image data.
+
+For each \`encoding\` value, the \`data\` field contains image pixel data serialized as follows:
+
+- \`yuv422\` or \`uyvy\`:
+  - Pixel colors are decomposed into [Y'UV](https://en.wikipedia.org/wiki/Y%E2%80%B2UV) channels.
+  - Pixel channel values are represented as unsigned 8-bit integers.
+  - U and V values are shared between horizontal pairs of pixels. Each pair of output pixels is serialized as [U, Y1, V, Y2].
+  - \`step\` must be greater than or equal to \`width\` * 2.
+- \`yuv422_yuy2\` or  \`yuyv\`:
+  - Pixel colors are decomposed into [Y'UV](https://en.wikipedia.org/wiki/Y%E2%80%B2UV) channels.
+  - Pixel channel values are represented as unsigned 8-bit integers.
+  - U and V values are shared between horizontal pairs of pixels. Each pair of output pixels is encoded as [Y1, U, Y2, V].
+  - \`step\` must be greater than or equal to \`width\` * 2.
+- \`nv12\`:
+  - Pixel colors are decomposed into [Y'UV](https://en.wikipedia.org/wiki/Y%E2%80%B2UV) channels using 4:2:0 chroma subsampling. The data is stored in [NV12](https://www.kernel.org/doc/html/v4.10/media/uapi/v4l/pixfmt-nv12.html) semi-planar layout with two contiguous planes: a Y (luma) plane followed by an interleaved UV (chroma) plane.
+  - All channel values are represented as unsigned 8-bit integers.
+  - Both planes use \`step\` as their row stride.
+  - The Y plane contains one luma value per pixel (\`step\` * \`height\` bytes).
+  - The UV plane contains interleaved U, V chroma pairs, subsampled by a factor of 2 in both dimensions (\`width\`/2 pairs per row, \`height\`/2 rows, \`step\` * \`height\`/2 bytes). Each U, V pair is shared by a 2x2 block of pixels.
+  - \`width\` and \`height\` must be even.
+  - \`step\` must be greater than or equal to \`width\`.
+  - Total \`data\` length is \`step\` * \`height\` * 3/2 bytes.
+- \`rgb8\`:
+  - Pixel colors are decomposed into Red, Green, and Blue channels.
+  - Pixel channel values are represented as unsigned 8-bit integers.
+  - Each output pixel is serialized as [R, G, B].
+  - \`step\` must be greater than or equal to \`width\` * 3.
+- \`rgba8\`:
+  - Pixel colors are decomposed into Red, Green, Blue, and Alpha channels.
+  - Pixel channel values are represented as unsigned 8-bit integers.
+  - Each output pixel is serialized as [R, G, B, Alpha].
+  - \`step\` must be greater than or equal to \`width\` * 4.
+- \`bgr8\` or \`8UC3\`:
+  - Pixel colors are decomposed into Blue, Green, and Red channels.
+  - Pixel channel values are represented as unsigned 8-bit integers.
+  - Each output pixel is serialized as [B, G, R].
+  - \`step\` must be greater than or equal to \`width\` * 3.
+- \`bgra8\`:
+  - Pixel colors are decomposed into Blue, Green, Red, and Alpha channels.
+  - Pixel channel values are represented as unsigned 8-bit integers.
+  - Each output pixel is encoded as [B, G, R, Alpha].
+  - \`step\` must be greater than or equal to \`width\` * 4.
+- \`32FC1\`:
+  - Pixel brightness is represented as a single-channel, 32-bit little-endian IEEE 754 floating-point value, ranging from 0.0 (black) to 1.0 (white).
+  - \`step\` must be greater than or equal to \`width\` * 4.
+- \`bayer_rggb8\`, \`bayer_bggr8\`, \`bayer_gbrg8\`, or \`bayer_grbg8\`:
+  - Pixel colors are decomposed into Red, Blue and Green channels.
+  - Pixel channel values are represented as unsigned 8-bit integers, and serialized in a 2x2 bayer filter pattern.
+  - The order of the four letters after \`bayer_\` determine the layout, so for \`bayer_wxyz8\` the pattern is:
+  \`\`\`text
+  w | x
+  - + -
+  y | z
+  \`\`\`
+  - \`step\` must be greater than or equal to \`width\`.
+- \`mono8\` or \`8UC1\`:
+  - Pixel brightness is represented as unsigned 8-bit integers.
+  - \`step\` must be greater than or equal to \`width\`.
+- \`mono16\` or \`16UC1\`:
+  - Pixel brightness is represented as 16-bit unsigned little-endian integers. Rendering of these values is controlled in [Image panel color mode settings](https://docs.foxglove.dev/docs/visualization/panels/image#general).
+  - \`step\` must be greater than or equal to \`width\` * 2.
+`,
     },
   ],
 };
@@ -957,11 +1089,12 @@ const RawImage: FoxgloveMessageSchema = {
 const FrameTransform: FoxgloveMessageSchema = {
   type: "message",
   name: "FrameTransform",
-  description: "A transform between two reference frames in 3D space",
+  description:
+    "A transform between two reference frames in 3D space. The transform defines the position and orientation of a child frame within a parent frame. Translation moves the origin of the child frame relative to the parent origin. The rotation changes the orientation of the child frame around its origin.\n\nExamples:\n\n- With translation (x=1, y=0, z=0) and identity rotation (x=0, y=0, z=0, w=1), a point at (x=0, y=0, z=0) in the child frame maps to (x=1, y=0, z=0) in the parent frame.\n\n- With translation (x=1, y=2, z=0) and a 90-degree rotation around the z-axis (x=0, y=0, z=0.707, w=0.707), a point at (x=1, y=0, z=0) in the child frame maps to (x=-1, y=3, z=0) in the parent frame.",
   fields: [
     {
       name: "timestamp",
-      type: { type: "primitive", name: "time" },
+      type: { type: "nested", schema: Timestamp },
       description: "Timestamp of transform",
     },
     {
@@ -977,12 +1110,14 @@ const FrameTransform: FoxgloveMessageSchema = {
     {
       name: "translation",
       type: { type: "nested", schema: Vector3 },
-      description: "Translation component of the transform",
+      description:
+        "Translation component of the transform, representing the position of the child frame's origin in the parent frame.",
     },
     {
       name: "rotation",
       type: { type: "nested", schema: Quaternion },
-      description: "Rotation component of the transform",
+      description:
+        "Rotation component of the transform, representing the orientation of the child frame in the parent frame",
     },
   ],
 };
@@ -1008,7 +1143,7 @@ const PoseInFrame: FoxgloveMessageSchema = {
   fields: [
     {
       name: "timestamp",
-      type: { type: "primitive", name: "time" },
+      type: { type: "nested", schema: Timestamp },
       description: "Timestamp of pose",
     },
     {
@@ -1031,7 +1166,7 @@ const PosesInFrame: FoxgloveMessageSchema = {
   fields: [
     {
       name: "timestamp",
-      type: { type: "primitive", name: "time" },
+      type: { type: "nested", schema: Timestamp },
       description: "Timestamp of pose",
     },
     {
@@ -1068,15 +1203,15 @@ const NumericType: FoxgloveEnumSchema = {
   parentSchemaName: "PackedElementField",
   protobufEnumName: "NumericType",
   values: [
-    { name: "UNKNOWN", value: 0 },
-    { name: "UINT8", value: 1 },
-    { name: "INT8", value: 2 },
-    { name: "UINT16", value: 3 },
-    { name: "INT16", value: 4 },
-    { name: "UINT32", value: 5 },
-    { name: "INT32", value: 6 },
-    { name: "FLOAT32", value: 7 },
-    { name: "FLOAT64", value: 8 },
+    { name: "UNKNOWN", value: 0, description: "Unknown numeric type" },
+    { name: "UINT8", value: 1, description: "Unsigned 8-bit integer" },
+    { name: "INT8", value: 2, description: "Signed 8-bit integer" },
+    { name: "UINT16", value: 3, description: "Unsigned 16-bit integer" },
+    { name: "INT16", value: 4, description: "Signed 16-bit integer" },
+    { name: "UINT32", value: 5, description: "Unsigned 32-bit integer" },
+    { name: "INT32", value: 6, description: "Signed 32-bit integer" },
+    { name: "FLOAT32", value: 7, description: "32-bit floating-point number" },
+    { name: "FLOAT64", value: 8, description: "64-bit floating-point number" },
   ],
 };
 
@@ -1103,6 +1238,42 @@ const PackedElementField: FoxgloveMessageSchema = {
   ],
 };
 
+const CompressedPointCloud: FoxgloveMessageSchema = {
+  type: "message",
+  name: "CompressedPointCloud",
+  description:
+    "A compressed point cloud. A decoder for `format` must decompress `data`, using metadata stored in the compressed payload to recover point positions and any additional per-point attributes. The decoded point cloud must include at least 2 coordinate fields from `x`, `y`, and `z`; `red`, `green`, `blue`, and `alpha` are optional for customizing each point's color.",
+  fields: [
+    {
+      name: "timestamp",
+      type: { type: "nested", schema: Timestamp },
+      description: "Timestamp of point cloud",
+    },
+    {
+      name: "frame_id",
+      type: { type: "primitive", name: "string" },
+      description: "Frame of reference",
+    },
+    {
+      name: "pose",
+      type: { type: "nested", schema: Pose },
+      description: "The origin of the point cloud relative to the frame of reference",
+    },
+    {
+      name: "data",
+      type: { type: "primitive", name: "bytes" },
+      description:
+        "Compressed point cloud data for exactly one point cloud, including any format-specific metadata needed to describe the decoded point attributes.",
+    },
+    {
+      name: "format",
+      type: { type: "primitive", name: "string" },
+      description:
+        "Point cloud compression format.\n\nSupported values: `draco` ([Google Draco](https://google.github.io/draco/)).",
+    },
+  ],
+};
+
 const Grid: FoxgloveMessageSchema = {
   type: "message",
   name: "Grid",
@@ -1110,7 +1281,7 @@ const Grid: FoxgloveMessageSchema = {
   fields: [
     {
       name: "timestamp",
-      type: { type: "primitive", name: "time" },
+      type: { type: "nested", schema: Timestamp },
       description: "Timestamp of grid",
     },
     {
@@ -1149,12 +1320,80 @@ const Grid: FoxgloveMessageSchema = {
       type: { type: "nested", schema: PackedElementField },
       array: true,
       description:
+        'Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid\'s color.\nTo enable RGB color visualization in the [3D panel](https://docs.foxglove.dev/docs/visualization/panels/3d#rgba-separate-fields-color-mode), include **all four** of these fields in your `fields` array:\n\n- `red` - Red channel value\n- `green` - Green channel value\n- `blue` - Blue channel value\n- `alpha` - Alpha/transparency channel value\n\n**note:** All four fields must be present with these exact names for RGB visualization to work. The order of fields doesn\'t matter, but the names must match exactly.\n\nRecommended type: `UINT8` (0-255 range) for standard 8-bit color channels.\n\nExample field definitions:\n\n**RGB color only:**\n\n```javascript\nfields: [\n { name: "red", offset: 0, type: NumericType.UINT8 },\n { name: "green", offset: 1, type: NumericType.UINT8 },\n { name: "blue", offset: 2, type: NumericType.UINT8 },\n { name: "alpha", offset: 3, type: NumericType.UINT8 },\n];\n```\n\n**RGB color with elevation (for 3D terrain visualization):**\n\n```javascript\nfields: [\n { name: "red", offset: 0, type: NumericType.UINT8 },\n { name: "green", offset: 1, type: NumericType.UINT8 },\n { name: "blue", offset: 2, type: NumericType.UINT8 },\n { name: "alpha", offset: 3, type: NumericType.UINT8 },\n { name: "elevation", offset: 4, type: NumericType.FLOAT32 },\n];\n```\n\nWhen these fields are present, the 3D panel will offer additional "Color Mode" options including "RGBA (separate fields)" to visualize the RGB data directly. For elevation visualization, set the "Elevation field" to your elevation layer name.',
+    },
+    {
+      name: "data",
+      type: { type: "primitive", name: "bytes" },
+      description:
+        "Grid cell data, interpreted using `fields`, in row-major (y-major) order.\nFor the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:\n\n- y = i / row_stride * cell_size.y\n- x = (i % row_stride) / cell_stride * cell_size.x",
+    },
+  ],
+};
+
+const VoxelGrid: FoxgloveMessageSchema = {
+  type: "message",
+  name: "VoxelGrid",
+  description: "A 3D grid of data",
+  fields: [
+    {
+      name: "timestamp",
+      type: { type: "nested", schema: Timestamp },
+      description: "Timestamp of grid",
+    },
+    {
+      name: "frame_id",
+      type: { type: "primitive", name: "string" },
+      description: "Frame of reference",
+    },
+    {
+      name: "pose",
+      type: { type: "nested", schema: Pose },
+      description:
+        "Origin of the grid’s lower-front-left corner in the reference frame. The grid’s pose is defined relative to this corner, so an untransformed grid with an identity orientation has this corner at the origin.",
+    },
+    {
+      name: "row_count",
+      type: { type: "primitive", name: "uint32" },
+      description: "Number of grid rows",
+    },
+    {
+      name: "column_count",
+      type: { type: "primitive", name: "uint32" },
+      description: "Number of grid columns",
+    },
+    {
+      name: "cell_size",
+      type: { type: "nested", schema: Vector3 },
+      description: "Size of single grid cell along x, y, and z axes, relative to `pose`",
+    },
+    {
+      name: "slice_stride",
+      type: { type: "primitive", name: "uint32" },
+      description: "Number of bytes between depth slices in `data`",
+    },
+    {
+      name: "row_stride",
+      type: { type: "primitive", name: "uint32" },
+      description: "Number of bytes between rows in `data`",
+    },
+    {
+      name: "cell_stride",
+      type: { type: "primitive", name: "uint32" },
+      description: "Number of bytes between cells within a row in `data`",
+    },
+    {
+      name: "fields",
+      type: { type: "nested", schema: PackedElementField },
+      array: true,
+      description:
         "Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.",
     },
     {
       name: "data",
       type: { type: "primitive", name: "bytes" },
-      description: "Grid cell data, interpreted using `fields`, in row-major (y-major) order",
+      description:
+        "Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.\nFor the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:\n\n- z = i / slice_stride * cell_size.z\n- y = (i % slice_stride) / row_stride * cell_size.y\n- x = (i % row_stride) / cell_stride * cell_size.x",
     },
   ],
 };
@@ -1166,7 +1405,7 @@ const CircleAnnotation: FoxgloveMessageSchema = {
   fields: [
     {
       name: "timestamp",
-      type: { type: "primitive", name: "time" },
+      type: { type: "nested", schema: Timestamp },
       description: "Timestamp of circle",
     },
     {
@@ -1195,6 +1434,14 @@ const CircleAnnotation: FoxgloveMessageSchema = {
       type: { type: "nested", schema: Color },
       description: "Outline color",
     },
+    {
+      name: "metadata",
+      type: { type: "nested", schema: KeyValuePair },
+      array: true,
+      description:
+        "Additional user-provided metadata associated with this annotation. Keys must be unique.",
+      optional: true,
+    },
   ],
 };
 
@@ -1205,7 +1452,7 @@ const PointsAnnotationType: FoxgloveEnumSchema = {
   parentSchemaName: "PointsAnnotation",
   protobufEnumName: "Type",
   values: [
-    { name: "UNKNOWN", value: 0 },
+    { name: "UNKNOWN", value: 0, description: "Unknown points annotation type" },
     { name: "POINTS", value: 1, description: "Individual points: 0, 1, 2, ..." },
     { name: "LINE_LOOP", value: 2, description: "Closed polygon: 0-1, 1-2, ..., (n-1)-n, n-0" },
     {
@@ -1224,7 +1471,7 @@ const PointsAnnotation: FoxgloveMessageSchema = {
   fields: [
     {
       name: "timestamp",
-      type: { type: "primitive", name: "time" },
+      type: { type: "nested", schema: Timestamp },
       description: "Timestamp of annotation",
     },
     {
@@ -1261,6 +1508,14 @@ const PointsAnnotation: FoxgloveMessageSchema = {
       type: { type: "primitive", name: "float64" },
       description: "Stroke thickness in pixels",
     },
+    {
+      name: "metadata",
+      type: { type: "nested", schema: KeyValuePair },
+      array: true,
+      description:
+        "Additional user-provided metadata associated with this annotation. Keys must be unique.",
+      optional: true,
+    },
   ],
 };
 
@@ -1271,7 +1526,7 @@ const TextAnnotation: FoxgloveMessageSchema = {
   fields: [
     {
       name: "timestamp",
-      type: { type: "primitive", name: "time" },
+      type: { type: "nested", schema: Timestamp },
       description: "Timestamp of annotation",
     },
     {
@@ -1301,6 +1556,14 @@ const TextAnnotation: FoxgloveMessageSchema = {
       type: { type: "nested", schema: Color },
       description: "Background fill color",
     },
+    {
+      name: "metadata",
+      type: { type: "nested", schema: KeyValuePair },
+      array: true,
+      description:
+        "Additional user-provided metadata associated with this annotation. Keys must be unique.",
+      optional: true,
+    },
   ],
 };
 
@@ -1310,22 +1573,47 @@ const ImageAnnotations: FoxgloveMessageSchema = {
   description: "Array of annotations for a 2D image",
   fields: [
     {
+      name: "timestamp",
+      type: { type: "nested", schema: Timestamp },
+      description:
+        "Timestamp of the image annotations. When set, individual annotation timestamps will be ignored.",
+      optional: true,
+      protobufFieldNumber: 5,
+      flatbuffersFieldNumber: 4,
+    },
+    {
       name: "circles",
       type: { type: "nested", schema: CircleAnnotation },
       description: "Circle annotations",
       array: true,
+      protobufFieldNumber: 1,
+      flatbuffersFieldNumber: 0,
     },
     {
       name: "points",
       type: { type: "nested", schema: PointsAnnotation },
       description: "Points annotations",
       array: true,
+      protobufFieldNumber: 2,
+      flatbuffersFieldNumber: 1,
     },
     {
       name: "texts",
       type: { type: "nested", schema: TextAnnotation },
       description: "Text annotations",
       array: true,
+      protobufFieldNumber: 3,
+      flatbuffersFieldNumber: 2,
+    },
+    {
+      name: "metadata",
+      type: { type: "nested", schema: KeyValuePair },
+      description:
+        "Additional user-provided metadata associated with the image annotations. Keys must be unique within this object. Per-annotation metadata takes precedence over these values.",
+      array: true,
+      optional: true,
+      protobufFieldNumber: 4,
+      flatbuffersFieldNumber: 3,
     },
   ],
 };
@@ -1337,10 +1625,14 @@ const PositionCovarianceType: FoxgloveEnumSchema = {
   parentSchemaName: "LocationFix",
   protobufEnumName: "PositionCovarianceType",
   values: [
-    { name: "UNKNOWN", value: 0 },
-    { name: "APPROXIMATED", value: 1 },
-    { name: "DIAGONAL_KNOWN", value: 2 },
-    { name: "KNOWN", value: 3 },
+    { name: "UNKNOWN", value: 0, description: "Unknown position covariance type" },
+    { name: "APPROXIMATED", value: 1, description: "Position covariance is approximated" },
+    {
+      name: "DIAGONAL_KNOWN",
+      value: 2,
+      description: "Position covariance is per-axis, so put it along the diagonal",
+    },
+    { name: "KNOWN", value: 3, description: "Position covariance of the fix is known" },
   ],
 };
 
@@ -1351,7 +1643,7 @@ const LocationFix: FoxgloveMessageSchema = {
   fields: [
     {
       name: "timestamp",
-      type: { type: "primitive", name: "time" },
+      type: { type: "nested", schema: Timestamp },
       description: "Timestamp of the message",
       protobufFieldNumber: 6,
     },
@@ -1395,6 +1687,118 @@ const LocationFix: FoxgloveMessageSchema = {
         "If `position_covariance` is available, `position_covariance_type` must be set to indicate the type of covariance.",
       protobufFieldNumber: 5,
     },
+    {
+      name: "heading",
+      type: { type: "primitive", name: "float64" },
+      description: "Heading (yaw angle), in radians, measured clockwise from north",
+      protobufFieldNumber: 10,
+      flatbuffersFieldNumber: 9,
+      optional: true,
+    },
+    {
+      name: "velocity",
+      type: { type: "nested", schema: Vector3 },
+      description: "Velocity in local East-North-Up (ENU) frame in m/s",
+      protobufFieldNumber: 11,
+      flatbuffersFieldNumber: 10,
+      optional: true,
+    },
+    {
+      name: "color",
+      type: { type: "nested", schema: Color },
+      description: "Color used to visualize the location",
+      protobufFieldNumber: 8,
+      optional: true,
+    },
+    {
+      name: "metadata",
+      type: { type: "nested", schema: KeyValuePair },
+      array: true,
+      description:
+        "Additional user-provided metadata associated with the location fix. Keys must be unique.",
+      protobufFieldNumber: 9,
+      optional: true,
+    },
+  ],
+};
+
+const LocationFixes: FoxgloveMessageSchema = {
+  type: "message",
+  name: "LocationFixes",
+  description: "A group of LocationFix messages",
+  fields: [
+    {
+      name: "fixes",
+      type: { type: "nested", schema: LocationFix },
+      array: true,
+      description: "An array of location fixes",
+    },
+  ],
+};
+
+const Odometry: FoxgloveMessageSchema = {
+  type: "message",
+  name: "Odometry",
+  description:
+    "An estimate of position, orientation, and velocity for an object or reference frame in 3D space",
+  fields: [
+    {
+      name: "timestamp",
+      type: { type: "nested", schema: Timestamp },
+      description: "Timestamp of the message",
+    },
+    {
+      name: "frame_id",
+      type: { type: "primitive", name: "string" },
+      description: "Reference coordinate frame (e.g. `map` or `odom`)",
+    },
+    {
+      name: "body_frame_id",
+      type: { type: "primitive", name: "string" },
+      description:
+        "Coordinate frame of the body whose motion is being estimated (e.g. `base_link`)",
+    },
+    {
+      name: "pose",
+      type: { type: "nested", schema: Pose },
+      description: "Position and orientation of body_frame_id in frame_id",
+    },
+    {
+      name: "linear_velocity",
+      type: { type: "nested", schema: Vector3 },
+      description: "Linear velocity in m/s in body_frame_id",
+      optional: true,
+    },
+    {
+      name: "angular_velocity",
+      type: { type: "nested", schema: Vector3 },
+      description: "Angular velocity in rad/s in body_frame_id",
+      optional: true,
+    },
+    {
+      name: "pose_covariance",
+      type: { type: "primitive", name: "float64" },
+      description:
+        "Row-major 6x6 covariance matrix (x, y, z, rotation about x, rotation about y, rotation about z). Set to zero if unknown.",
+      array: 36,
+      optional: true,
+    },
+    {
+      name: "velocity_covariance",
+      type: { type: "primitive", name: "float64" },
+      description:
+        "Row-major 6x6 covariance matrix (vx, vy, vz, angular rate about x, angular rate about y, angular rate about z). Set to zero if unknown.",
+      array: 36,
+      optional: true,
+    },
+    {
+      name: "metadata",
+      type: { type: "nested", schema: KeyValuePair },
+      array: true,
+      description:
+        "Additional user-provided metadata associated with the odometry message. Keys must be unique.",
+      optional: true,
+    },
   ],
 };
 
@@ -1405,12 +1809,12 @@ const LogLevel: FoxgloveEnumSchema = {
   parentSchemaName: "Log",
   protobufEnumName: "Level",
   values: [
-    { name: "UNKNOWN", value: 0 },
-    { name: "DEBUG", value: 1 },
-    { name: "INFO", value: 2 },
-    { name: "WARNING", value: 3 },
-    { name: "ERROR", value: 4 },
-    { name: "FATAL", value: 5 },
+    { name: "UNKNOWN", value: 0, description: "Unknown log level" },
+    { name: "DEBUG", value: 1, description: "Debug log level" },
+    { name: "INFO", value: 2, description: "Info log level" },
+    { name: "WARNING", value: 3, description: "Warning log level" },
+    { name: "ERROR", value: 4, description: "Error log level" },
+    { name: "FATAL", value: 5, description: "Fatal log level" },
   ],
 };
 
@@ -1421,7 +1825,7 @@ const Log: FoxgloveMessageSchema = {
   fields: [
     {
       name: "timestamp",
-      type: { type: "primitive", name: "time" },
+      type: { type: "nested", schema: Timestamp },
       description: "Timestamp of log message",
     },
     {
@@ -1460,7 +1864,7 @@ const PointCloud: FoxgloveMessageSchema = {
   fields: [
     {
       name: "timestamp",
-      type: { type: "primitive", name: "time" },
+      type: { type: "nested", schema: Timestamp },
       description: "Timestamp of point cloud",
     },
     {
@@ -1500,7 +1904,7 @@ const LaserScan: FoxgloveMessageSchema = {
   fields: [
     {
       name: "timestamp",
-      type: { type: "primitive", name: "time" },
+      type: { type: "nested", schema: Timestamp },
       description: "Timestamp of scan",
     },
     {
@@ -1540,6 +1944,63 @@ const LaserScan: FoxgloveMessageSchema = {
   ],
 };
 
+const JointState: FoxgloveMessageSchema = {
+  type: "message",
+  name: "JointState",
+  description: "The state of a single joint (revolute or prismatic).",
+  fields: [
+    {
+      name: "name",
+      type: { type: "primitive", name: "string" },
+      description: "Joint name",
+    },
+    {
+      name: "position",
+      type: { type: "primitive", name: "float64" },
+      description: "Joint position. Radians for revolute joints, meters for prismatic joints.",
+      optional: true,
+    },
+    {
+      name: "velocity",
+      type: { type: "primitive", name: "float64" },
+      description: "Joint velocity. Rad/s for revolute joints, m/s for prismatic joints.",
+      optional: true,
+    },
+    {
+      name: "acceleration",
+      type: { type: "primitive", name: "float64" },
+      description: "Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints.",
+      optional: true,
+    },
+    {
+      name: "effort",
+      type: { type: "primitive", name: "float64" },
+      description:
+        "Joint effort (force or torque). Nm for revolute joints, N for prismatic joints.",
+      optional: true,
+    },
+  ],
+};
+
+const JointStates: FoxgloveMessageSchema = {
+  type: "message",
+  name: "JointStates",
+  description: "The state of a set of joints at a given time.",
+  fields: [
+    {
+      name: "timestamp",
+      type: { type: "nested", schema: Timestamp },
+      description: "Timestamp of the joint states",
+    },
+    {
+      name: "joints",
+      type: { type: "nested", schema: JointState },
+      description: "Joint states",
+      array: true,
+    },
+  ],
+};
+
 export const foxgloveMessageSchemas = {
   ArrowPrimitive,
   CameraCalibration,
@@ -1547,26 +2008,34 @@ export const foxgloveMessageSchemas = {
   Color,
   CompressedAudio,
   CompressedImage,
+  CompressedPointCloud,
   CompressedVideo,
   CylinderPrimitive,
   CubePrimitive,
+  Duration,
   FrameTransform,
   FrameTransforms,
   GeoJSON,
   Grid,
+  VoxelGrid,
   ImageAnnotations,
+  JointState,
+  JointStates,
   KeyValuePair,
   LaserScan,
   LinePrimitive,
   LocationFix,
+  LocationFixes,
   Log,
   SceneEntityDeletion,
   SceneEntity,
   SceneUpdate,
   ModelPrimitive,
+  Odometry,
   PackedElementField,
   Point2,
   Point3,
+  Point3InFrame,
   PointCloud,
   PointsAnnotation,
   Pose,
@@ -1578,6 +2047,7 @@ export const foxgloveMessageSchemas = {
   SpherePrimitive,
   TextAnnotation,
   TextPrimitive,
+  Timestamp,
   TriangleListPrimitive,
   Vector2,
   Vector3,

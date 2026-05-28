@@ -9,4 +9,13 @@ fn main() {
 
     println!("cargo:rerun-if-changed=cbindgen.toml");
     println!("cargo:rerun-if-changed=src/");
+
+    // Embed a soname so that consumers record "libfoxglove.so" as the NEEDED
+    // entry rather than the build-time absolute path.
+    let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap();
+    if target_os == "linux" {
+        println!("cargo:rustc-cdylib-link-arg=-Wl,-soname,libfoxglove.so");
+    } else if target_os == "macos" {
+        println!("cargo:rustc-cdylib-link-arg=-Wl,-install_name,@rpath/libfoxglove.dylib");
+    }
 }

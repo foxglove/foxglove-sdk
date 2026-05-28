@@ -4,6 +4,12 @@ See [Foxglove Schemas documentation](https://docs.foxglove.dev/docs/visualizatio
 
 All schemas are generated from [schemas.ts](/internal/schemas.ts).
 
+## Optional fields
+
+Optional message fields may be omitted. When omitted, the consumer (e.g. a Foxglove panel) determines the behavior.
+
+If the IDL does not support optional fields (e.g. ROS) you must specify a value for the field.
+
 ## Contents
 
 - [enum LineType](#enum-linetype)
@@ -18,23 +24,30 @@ All schemas are generated from [schemas.ts](/internal/schemas.ts).
 - [Color](#color)
 - [CompressedAudio](#compressedaudio)
 - [CompressedImage](#compressedimage)
+- [CompressedPointCloud](#compressedpointcloud)
 - [CompressedVideo](#compressedvideo)
 - [CubePrimitive](#cubeprimitive)
 - [CylinderPrimitive](#cylinderprimitive)
+- [Duration](#duration)
 - [FrameTransform](#frametransform)
 - [FrameTransforms](#frametransforms)
 - [GeoJSON](#geojson)
 - [Grid](#grid)
 - [ImageAnnotations](#imageannotations)
+- [JointState](#jointstate)
+- [JointStates](#jointstates)
 - [KeyValuePair](#keyvaluepair)
 - [LaserScan](#laserscan)
 - [LinePrimitive](#lineprimitive)
 - [LocationFix](#locationfix)
+- [LocationFixes](#locationfixes)
 - [Log](#log)
 - [ModelPrimitive](#modelprimitive)
+- [Odometry](#odometry)
 - [PackedElementField](#packedelementfield)
 - [Point2](#point2)
 - [Point3](#point3)
+- [Point3InFrame](#point3inframe)
 - [PointCloud](#pointcloud)
 - [PointsAnnotation](#pointsannotation)
 - [Pose](#pose)
@@ -49,9 +62,11 @@ All schemas are generated from [schemas.ts](/internal/schemas.ts).
 - [SpherePrimitive](#sphereprimitive)
 - [TextAnnotation](#textannotation)
 - [TextPrimitive](#textprimitive)
+- [Timestamp](#timestamp)
 - [TriangleListPrimitive](#trianglelistprimitive)
 - [Vector2](#vector2)
 - [Vector3](#vector3)
+- [VoxelGrid](#voxelgrid)
 
 ----
 
@@ -73,12 +88,12 @@ Log level
 
 name | value | description
 ---- | ----- | -----------
-`UNKNOWN` | 0 | 
-`DEBUG` | 1 | 
-`INFO` | 2 | 
-`WARNING` | 3 | 
-`ERROR` | 4 | 
-`FATAL` | 5 | 
+`UNKNOWN` | 0 | Unknown log level
+`DEBUG` | 1 | Debug log level
+`INFO` | 2 | Info log level
+`WARNING` | 3 | Warning log level
+`ERROR` | 4 | Error log level
+`FATAL` | 5 | Fatal log level
 
 
 
@@ -88,15 +103,15 @@ Numeric type
 
 name | value | description
 ---- | ----- | -----------
-`UNKNOWN` | 0 | 
-`UINT8` | 1 | 
-`INT8` | 2 | 
-`UINT16` | 3 | 
-`INT16` | 4 | 
-`UINT32` | 5 | 
-`INT32` | 6 | 
-`FLOAT32` | 7 | 
-`FLOAT64` | 8 | 
+`UNKNOWN` | 0 | Unknown numeric type
+`UINT8` | 1 | Unsigned 8-bit integer
+`INT8` | 2 | Signed 8-bit integer
+`UINT16` | 3 | Unsigned 16-bit integer
+`INT16` | 4 | Signed 16-bit integer
+`UINT32` | 5 | Unsigned 32-bit integer
+`INT32` | 6 | Signed 32-bit integer
+`FLOAT32` | 7 | 32-bit floating-point number
+`FLOAT64` | 8 | 64-bit floating-point number
 
 
 
@@ -106,7 +121,7 @@ Type of points annotation
 
 name | value | description
 ---- | ----- | -----------
-`UNKNOWN` | 0 | 
+`UNKNOWN` | 0 | Unknown points annotation type
 `POINTS` | 1 | Individual points: 0, 1, 2, ...
 `LINE_LOOP` | 2 | Closed polygon: 0-1, 1-2, ..., (n-1)-n, n-0
 `LINE_STRIP` | 3 | Connected line segments: 0-1, 1-2, ..., (n-1)-n
@@ -120,10 +135,10 @@ Type of position covariance
 
 name | value | description
 ---- | ----- | -----------
-`UNKNOWN` | 0 | 
-`APPROXIMATED` | 1 | 
-`DIAGONAL_KNOWN` | 2 | 
-`KNOWN` | 3 | 
+`UNKNOWN` | 0 | Unknown position covariance type
+`APPROXIMATED` | 1 | Position covariance is approximated
+`DIAGONAL_KNOWN` | 2 | Position covariance is per-axis, so put it along the diagonal
+`KNOWN` | 3 | Position covariance of the fix is known
 
 
 
@@ -242,7 +257,7 @@ Camera calibration parameters
 <td><code>timestamp</code></td>
 <td>
 
-time
+[Timestamp](#timestamp)
 
 </td>
 <td>
@@ -301,7 +316,7 @@ string
 
 Name of distortion model
 
-Supported parameters: `plumb_bob` (k1, k2, p1, p2, k3) and `rational_polynomial` (k1, k2, p1, p2, k3, k4, k5, k6). Distortion models are based on [OpenCV's](https://docs.opencv.org/2.4/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html) [pinhole camera model](https://en.wikipedia.org/wiki/Distortion_%28optics%29#Software_correction). This is the same [implementation used by ROS](http://docs.ros.org/en/diamondback/api/image_geometry/html/c++/pinhole__camera__model_8cpp_source.html)
+Supported parameters: `plumb_bob` (k1, k2, p1, p2, k3), `rational_polynomial` (k1, k2, p1, p2, k3, k4, k5, k6), and `kannala_brandt` (k1, k2, k3, k4), and `fisheye62` (k0, k1, k2, k3, p0, p1, crit_theta [optional]). `plumb_bob` and `rational_polynomial` models are based on the pinhole model [OpenCV's](https://docs.opencv.org/4.11.0/d9/d0c/group__calib3d.html) [pinhole camera model](https://en.wikipedia.org/wiki/Distortion_%28optics%29#Software_correction). The `kannala_brandt` model matches the [OpenvCV fisheye](https://docs.opencv.org/4.11.0/db/d58/group__calib3d__fisheye.html) model. The `fisheye62` model matches the [Project Aria's Fisheye62 Model](https://facebookresearch.github.io/projectaria_tools/docs/tech_insights/camera_intrinsic_models).
 
 </td>
 </tr>
@@ -338,6 +353,8 @@ Projects 3D points in the camera coordinate frame to 2D pixel coordinates using 
 K = [ 0 fy cy]
     [ 0  0  1]
 ```
+
+**Uncalibrated cameras:** Following ROS conventions for [CameraInfo](https://docs.ros.org/en/noetic/api/sensor_msgs/html/msg/CameraInfo.html), Foxglove also treats K[0] == 0.0 as indicating an uncalibrated camera, and calibration data will be ignored.
 
 
 </td>
@@ -380,7 +397,7 @@ It projects 3D points in the camera coordinate frame to 2D pixel coordinates usi
 
 For monocular cameras, Tx = Ty = 0. Normally, monocular cameras will also have R = the identity and P[1:3,1:3] = K.
 
-For a stereo pair, the fourth column [Tx Ty 0]' is related to the position of the optical center of the second camera in the first camera's frame. We assume Tz = 0 so both cameras are in the same stereo image plane. The first camera always has Tx = Ty = 0. For the right (second) camera of a horizontal stereo pair, Ty = 0 and Tx = -fx' * B, where B is the baseline between the cameras.
+Foxglove currently does not support displaying stereo images, so Tx and Ty are ignored.
 
 Given a 3D point [X Y Z]', the projection (x, y) of the point onto the rectified image is given by:
 
@@ -411,7 +428,7 @@ A circle annotation on a 2D image
 <td><code>timestamp</code></td>
 <td>
 
-time
+[Timestamp](#timestamp)
 
 </td>
 <td>
@@ -483,6 +500,19 @@ Fill color
 <td>
 
 Outline color
+
+</td>
+</tr>
+<tr>
+<td><code>metadata</code> (optional)</td>
+<td>
+
+[KeyValuePair](#keyvaluepair)[]
+
+</td>
+<td>
+
+Additional user-provided metadata associated with this annotation. Keys must be unique.
 
 </td>
 </tr>
@@ -566,7 +596,7 @@ A single chunk of a compressed audio bitstream
 <td><code>timestamp</code></td>
 <td>
 
-time
+[Timestamp](#timestamp)
 
 </td>
 <td>
@@ -627,7 +657,7 @@ A compressed image
 <td><code>timestamp</code></td>
 <td>
 
-time
+[Timestamp](#timestamp)
 
 </td>
 <td>
@@ -679,6 +709,85 @@ Supported values: `jpeg`, `png`, `webp`, `avif`
 </tr>
 </table>
 
+## CompressedPointCloud
+
+A compressed point cloud. A decoder for `format` must decompress `data`, using metadata stored in the compressed payload to recover point positions and any additional per-point attributes. The decoded point cloud must include at least 2 coordinate fields from `x`, `y`, and `z`; `red`, `green`, `blue`, and `alpha` are optional for customizing each point's color.
+
+<table>
+  <tr>
+    <th>field</th>
+    <th>type</th>
+    <th>description</th>
+  </tr>
+<tr>
+<td><code>timestamp</code></td>
+<td>
+
+[Timestamp](#timestamp)
+
+</td>
+<td>
+
+Timestamp of point cloud
+
+</td>
+</tr>
+<tr>
+<td><code>frame_id</code></td>
+<td>
+
+string
+
+</td>
+<td>
+
+Frame of reference
+
+</td>
+</tr>
+<tr>
+<td><code>pose</code></td>
+<td>
+
+[Pose](#pose)
+
+</td>
+<td>
+
+The origin of the point cloud relative to the frame of reference
+
+</td>
+</tr>
+<tr>
+<td><code>data</code></td>
+<td>
+
+bytes
+
+</td>
+<td>
+
+Compressed point cloud data for exactly one point cloud, including any format-specific metadata needed to describe the decoded point attributes.
+
+</td>
+</tr>
+<tr>
+<td><code>format</code></td>
+<td>
+
+string
+
+</td>
+<td>
+
+Point cloud compression format.
+
+Supported values: `draco` ([Google Draco](https://google.github.io/draco/)).
+
+</td>
+</tr>
+</table>
+
 ## CompressedVideo
 
 A single frame of a compressed video bitstream
@@ -693,7 +802,7 @@ A single frame of a compressed video bitstream
 <td><code>timestamp</code></td>
 <td>
 
-time
+[Timestamp](#timestamp)
 
 </td>
 <td>
@@ -899,9 +1008,53 @@ Color of the cylinder
 </tr>
 </table>
 
+## Duration
+
+A duration of time, composed of seconds and nanoseconds
+
+<table>
+  <tr>
+    <th>field</th>
+    <th>type</th>
+    <th>description</th>
+  </tr>
+<tr>
+<td><code>sec</code></td>
+<td>
+
+int32
+
+</td>
+<td>
+
+The number of seconds in the duration
+
+</td>
+</tr>
+<tr>
+<td><code>nsec</code></td>
+<td>
+
+uint32
+
+</td>
+<td>
+
+The number of nanoseconds in the positive direction
+
+</td>
+</tr>
+</table>
+
 ## FrameTransform
 
-A transform between two reference frames in 3D space
+A transform between two reference frames in 3D space. The transform defines the position and orientation of a child frame within a parent frame. Translation moves the origin of the child frame relative to the parent origin. The rotation changes the orientation of the child frame around its origin.
+
+Examples:
+
+- With translation (x=1, y=0, z=0) and identity rotation (x=0, y=0, z=0, w=1), a point at (x=0, y=0, z=0) in the child frame maps to (x=1, y=0, z=0) in the parent frame.
+
+- With translation (x=1, y=2, z=0) and a 90-degree rotation around the z-axis (x=0, y=0, z=0.707, w=0.707), a point at (x=1, y=0, z=0) in the child frame maps to (x=-1, y=3, z=0) in the parent frame.
 
 <table>
   <tr>
@@ -913,7 +1066,7 @@ A transform between two reference frames in 3D space
 <td><code>timestamp</code></td>
 <td>
 
-time
+[Timestamp](#timestamp)
 
 </td>
 <td>
@@ -957,7 +1110,7 @@ Name of the child frame
 </td>
 <td>
 
-Translation component of the transform
+Translation component of the transform, representing the position of the child frame's origin in the parent frame.
 
 </td>
 </tr>
@@ -970,7 +1123,7 @@ Translation component of the transform
 </td>
 <td>
 
-Rotation component of the transform
+Rotation component of the transform, representing the orientation of the child frame in the parent frame
 
 </td>
 </tr>
@@ -1040,7 +1193,7 @@ A 2D grid of data
 <td><code>timestamp</code></td>
 <td>
 
-time
+[Timestamp](#timestamp)
 
 </td>
 <td>
@@ -1137,6 +1290,43 @@ Number of bytes between cells within a row in `data`
 <td>
 
 Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
+To enable RGB color visualization in the [3D panel](https://docs.foxglove.dev/docs/visualization/panels/3d#rgba-separate-fields-color-mode), include **all four** of these fields in your `fields` array:
+
+- `red` - Red channel value
+- `green` - Green channel value
+- `blue` - Blue channel value
+- `alpha` - Alpha/transparency channel value
+
+**note:** All four fields must be present with these exact names for RGB visualization to work. The order of fields doesn't matter, but the names must match exactly.
+
+Recommended type: `UINT8` (0-255 range) for standard 8-bit color channels.
+
+Example field definitions:
+
+**RGB color only:**
+
+```javascript
+fields: [
+ { name: "red", offset: 0, type: NumericType.UINT8 },
+ { name: "green", offset: 1, type: NumericType.UINT8 },
+ { name: "blue", offset: 2, type: NumericType.UINT8 },
+ { name: "alpha", offset: 3, type: NumericType.UINT8 },
+];
+```
+
+**RGB color with elevation (for 3D terrain visualization):**
+
+```javascript
+fields: [
+ { name: "red", offset: 0, type: NumericType.UINT8 },
+ { name: "green", offset: 1, type: NumericType.UINT8 },
+ { name: "blue", offset: 2, type: NumericType.UINT8 },
+ { name: "alpha", offset: 3, type: NumericType.UINT8 },
+ { name: "elevation", offset: 4, type: NumericType.FLOAT32 },
+];
+```
+
+When these fields are present, the 3D panel will offer additional "Color Mode" options including "RGBA (separate fields)" to visualize the RGB data directly. For elevation visualization, set the "Elevation field" to your elevation layer name.
 
 </td>
 </tr>
@@ -1149,7 +1339,11 @@ bytes
 </td>
 <td>
 
-Grid cell data, interpreted using `fields`, in row-major (y-major) order
+Grid cell data, interpreted using `fields`, in row-major (y-major) order.
+For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
+
+- y = i / row_stride * cell_size.y
+- x = (i % row_stride) / cell_stride * cell_size.x
 
 </td>
 </tr>
@@ -1165,6 +1359,19 @@ Array of annotations for a 2D image
     <th>type</th>
     <th>description</th>
   </tr>
+<tr>
+<td><code>timestamp</code> (optional)</td>
+<td>
+
+[Timestamp](#timestamp)
+
+</td>
+<td>
+
+Timestamp of the image annotations. When set, individual annotation timestamps will be ignored.
+
+</td>
+</tr>
 <tr>
 <td><code>circles</code></td>
 <td>
@@ -1201,6 +1408,134 @@ Points annotations
 <td>
 
 Text annotations
+
+</td>
+</tr>
+<tr>
+<td><code>metadata</code> (optional)</td>
+<td>
+
+[KeyValuePair](#keyvaluepair)[]
+
+</td>
+<td>
+
+Additional user-provided metadata associated with the image annotations. Keys must be unique within this object. Per-annotation metadata takes precedence over these values.
+
+</td>
+</tr>
+</table>
+
+## JointState
+
+The state of a single joint (revolute or prismatic).
+
+<table>
+  <tr>
+    <th>field</th>
+    <th>type</th>
+    <th>description</th>
+  </tr>
+<tr>
+<td><code>name</code></td>
+<td>
+
+string
+
+</td>
+<td>
+
+Joint name
+
+</td>
+</tr>
+<tr>
+<td><code>position</code> (optional)</td>
+<td>
+
+float64
+
+</td>
+<td>
+
+Joint position. Radians for revolute joints, meters for prismatic joints.
+
+</td>
+</tr>
+<tr>
+<td><code>velocity</code> (optional)</td>
+<td>
+
+float64
+
+</td>
+<td>
+
+Joint velocity. Rad/s for revolute joints, m/s for prismatic joints.
+
+</td>
+</tr>
+<tr>
+<td><code>acceleration</code> (optional)</td>
+<td>
+
+float64
+
+</td>
+<td>
+
+Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints.
+
+</td>
+</tr>
+<tr>
+<td><code>effort</code> (optional)</td>
+<td>
+
+float64
+
+</td>
+<td>
+
+Joint effort (force or torque). Nm for revolute joints, N for prismatic joints.
+
+</td>
+</tr>
+</table>
+
+## JointStates
+
+The state of a set of joints at a given time.
+
+<table>
+  <tr>
+    <th>field</th>
+    <th>type</th>
+    <th>description</th>
+  </tr>
+<tr>
+<td><code>timestamp</code></td>
+<td>
+
+[Timestamp](#timestamp)
+
+</td>
+<td>
+
+Timestamp of the joint states
+
+</td>
+</tr>
+<tr>
+<td><code>joints</code></td>
+<td>
+
+[JointState](#jointstate)[]
+
+</td>
+<td>
+
+Joint states
 
 </td>
 </tr>
@@ -1258,7 +1593,7 @@ A single scan from a planar laser range-finder
 <td><code>timestamp</code></td>
 <td>
 
-time
+[Timestamp](#timestamp)
 
 </td>
 <td>
@@ -1431,7 +1766,7 @@ Points along the line
 </td>
 <td>
 
-Solid color to use for the whole line. One of `color` or `colors` must be provided.
+Solid color to use for the whole line. Ignored if `colors` is non-empty.
 
 </td>
 </tr>
@@ -1444,7 +1779,7 @@ Solid color to use for the whole line. One of `color` or `colors` must be provid
 </td>
 <td>
 
-Per-point colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided.
+Per-point colors (if non-empty, must have the same length as `points`).
 
 </td>
 </tr>
@@ -1479,7 +1814,7 @@ A navigation satellite fix for any Global Navigation Satellite System
 <td><code>timestamp</code></td>
 <td>
 
-time
+[Timestamp](#timestamp)
 
 </td>
 <td>
@@ -1566,6 +1901,83 @@ If `position_covariance` is available, `position_covariance_type` must be set to
 
 </td>
 </tr>
+<tr>
+<td><code>heading</code> (optional)</td>
+<td>
+
+float64
+
+</td>
+<td>
+
+Heading (yaw angle), in radians, measured clockwise from north
+
+</td>
+</tr>
+<tr>
+<td><code>velocity</code> (optional)</td>
+<td>
+
+[Vector3](#vector3)
+
+</td>
+<td>
+
+Velocity in local East-North-Up (ENU) frame in m/s
+
+</td>
+</tr>
+<tr>
+<td><code>color</code> (optional)</td>
+<td>
+
+[Color](#color)
+
+</td>
+<td>
+
+Color used to visualize the location
+
+</td>
+</tr>
+<tr>
+<td><code>metadata</code> (optional)</td>
+<td>
+
+[KeyValuePair](#keyvaluepair)[]
+
+</td>
+<td>
+
+Additional user-provided metadata associated with the location fix. Keys must be unique.
+
+</td>
+</tr>
+</table>
+
+## LocationFixes
+
+A group of LocationFix messages
+
+<table>
+  <tr>
+    <th>field</th>
+    <th>type</th>
+    <th>description</th>
+  </tr>
+<tr>
+<td><code>fixes</code></td>
+<td>
+
+[LocationFix](#locationfix)[]
+
+</td>
+<td>
+
+An array of location fixes
+
+</td>
+</tr>
 </table>
 
 ## Log
@@ -1582,7 +1994,7 @@ A log message
 <td><code>timestamp</code></td>
 <td>
 
-time
+[Timestamp](#timestamp)
 
 </td>
 <td>
@@ -1729,7 +2141,7 @@ string
 </td>
 <td>
 
-URL pointing to model file. One of `url` or `data` should be provided.
+URL pointing to model file. One of `url` or `data` should be non-empty.
 
 </td>
 </tr>
@@ -1755,7 +2167,136 @@ bytes
 </td>
 <td>
 
-Embedded model. One of `url` or `data` should be provided. If `data` is provided, `media_type` must be set to indicate the type of the data.
+Embedded model. One of `url` or `data` should be non-empty. If `data` is non-empty, `media_type` must be set to indicate the type of the data.
+
+</td>
+</tr>
+</table>
+
+## Odometry
+
+An estimate of position, orientation, and velocity for an object or reference frame in 3D space
+
+<table>
+  <tr>
+    <th>field</th>
+    <th>type</th>
+    <th>description</th>
+  </tr>
+<tr>
+<td><code>timestamp</code></td>
+<td>
+
+[Timestamp](#timestamp)
+
+</td>
+<td>
+
+Timestamp of the message
+
+</td>
+</tr>
+<tr>
+<td><code>frame_id</code></td>
+<td>
+
+string
+
+</td>
+<td>
+
+Reference coordinate frame (e.g. `map` or `odom`)
+
+</td>
+</tr>
+<tr>
+<td><code>body_frame_id</code></td>
+<td>
+
+string
+
+</td>
+<td>
+
+Coordinate frame of the body whose motion is being estimated (e.g. `base_link`)
+
+</td>
+</tr>
+<tr>
+<td><code>pose</code></td>
+<td>
+
+[Pose](#pose)
+
+</td>
+<td>
+
+Position and orientation of body_frame_id in frame_id
+
+</td>
+</tr>
+<tr>
+<td><code>linear_velocity</code> (optional)</td>
+<td>
+
+[Vector3](#vector3)
+
+</td>
+<td>
+
+Linear velocity in m/s in body_frame_id
+
+</td>
+</tr>
+<tr>
+<td><code>angular_velocity</code> (optional)</td>
+<td>
+
+[Vector3](#vector3)
+
+</td>
+<td>
+
+Angular velocity in rad/s in body_frame_id
+
+</td>
+</tr>
+<tr>
+<td><code>pose_covariance</code> (optional)</td>
+<td>
+
+float64[36]
+
+</td>
+<td>
+
+Row-major 6x6 covariance matrix (x, y, z, rotation about x, rotation about y, rotation about z). Set to zero if unknown.
+
+</td>
+</tr>
+<tr>
+<td><code>velocity_covariance</code> (optional)</td>
+<td>
+
+float64[36]
+
+</td>
+<td>
+
+Row-major 6x6 covariance matrix (vx, vy, vz, angular rate about x, angular rate about y, angular rate about z). Set to zero if unknown.
+
+</td>
+</tr>
+<tr>
+<td><code>metadata</code> (optional)</td>
+<td>
+
+[KeyValuePair](#keyvaluepair)[]
+
+</td>
+<td>
+
+Additional user-provided metadata associated with the odometry message. Keys must be unique.
 
 </td>
 </tr>
@@ -1901,6 +2442,57 @@ z coordinate position
 </tr>
 </table>
 
+## Point3InFrame
+
+A timestamped point for a position in 3D space
+
+<table>
+  <tr>
+    <th>field</th>
+    <th>type</th>
+    <th>description</th>
+  </tr>
+<tr>
+<td><code>timestamp</code></td>
+<td>
+
+[Timestamp](#timestamp)
+
+</td>
+<td>
+
+Timestamp of point
+
+</td>
+</tr>
+<tr>
+<td><code>frame_id</code></td>
+<td>
+
+string
+
+</td>
+<td>
+
+Frame of reference for point position
+
+</td>
+</tr>
+<tr>
+<td><code>point</code></td>
+<td>
+
+[Point3](#point3)
+
+</td>
+<td>
+
+Point in 3D space
+
+</td>
+</tr>
+</table>
+
 ## PointCloud
 
 A collection of N-dimensional points, which may contain additional fields with information like normals, intensity, etc.
@@ -1915,7 +2507,7 @@ A collection of N-dimensional points, which may contain additional fields with i
 <td><code>timestamp</code></td>
 <td>
 
-time
+[Timestamp](#timestamp)
 
 </td>
 <td>
@@ -2005,7 +2597,7 @@ An array of points on a 2D image
 <td><code>timestamp</code></td>
 <td>
 
-time
+[Timestamp](#timestamp)
 
 </td>
 <td>
@@ -2093,6 +2685,19 @@ Stroke thickness in pixels
 
 </td>
 </tr>
+<tr>
+<td><code>metadata</code> (optional)</td>
+<td>
+
+[KeyValuePair](#keyvaluepair)[]
+
+</td>
+<td>
+
+Additional user-provided metadata associated with this annotation. Keys must be unique.
+
+</td>
+</tr>
 </table>
 
 ## Pose
@@ -2147,7 +2752,7 @@ A timestamped pose for an object or reference frame in 3D space
 <td><code>timestamp</code></td>
 <td>
 
-time
+[Timestamp](#timestamp)
 
 </td>
 <td>
@@ -2198,7 +2803,7 @@ An array of timestamped poses for an object or reference frame in 3D space
 <td><code>timestamp</code></td>
 <td>
 
-time
+[Timestamp](#timestamp)
 
 </td>
 <td>
@@ -2313,7 +2918,7 @@ A single block of an audio bitstream
 <td><code>timestamp</code></td>
 <td>
 
-time
+[Timestamp](#timestamp)
 
 </td>
 <td>
@@ -2390,7 +2995,7 @@ A raw image
 <td><code>timestamp</code></td>
 <td>
 
-time
+[Timestamp](#timestamp)
 
 </td>
 <td>
@@ -2421,7 +3026,7 @@ uint32
 </td>
 <td>
 
-Image width
+Image width in pixels
 
 </td>
 </tr>
@@ -2434,7 +3039,7 @@ uint32
 </td>
 <td>
 
-Image height
+Image height in pixels
 
 </td>
 </tr>
@@ -2447,9 +3052,7 @@ string
 </td>
 <td>
 
-Encoding of the raw image data
-
-Supported values: `8UC1`, `8UC3`, `16UC1` (little endian), `32FC1` (little endian), `bayer_bggr8`, `bayer_gbrg8`, `bayer_grbg8`, `bayer_rggb8`, `bgr8`, `bgra8`, `mono8`, `mono16`, `rgb8`, `rgba8`, `uyvy` or `yuv422`, `yuyv` or `yuv422_yuy2`
+Encoding of the raw image data. See the `data` field description for supported values.
 
 </td>
 </tr>
@@ -2462,7 +3065,7 @@ uint32
 </td>
 <td>
 
-Byte length of a single row
+Byte length of a single row. This is usually some multiple of `width` depending on the encoding, but can be greater to incorporate padding.
 
 </td>
 </tr>
@@ -2475,7 +3078,69 @@ bytes
 </td>
 <td>
 
-Raw image data
+Raw image data.
+
+For each `encoding` value, the `data` field contains image pixel data serialized as follows:
+
+- `yuv422` or `uyvy`:
+  - Pixel colors are decomposed into [Y'UV](https://en.wikipedia.org/wiki/Y%E2%80%B2UV) channels.
+  - Pixel channel values are represented as unsigned 8-bit integers.
+  - U and V values are shared between horizontal pairs of pixels. Each pair of output pixels is serialized as [U, Y1, V, Y2].
+  - `step` must be greater than or equal to `width` * 2.
+- `yuv422_yuy2` or  `yuyv`:
+  - Pixel colors are decomposed into [Y'UV](https://en.wikipedia.org/wiki/Y%E2%80%B2UV) channels.
+  - Pixel channel values are represented as unsigned 8-bit integers.
+  - U and V values are shared between horizontal pairs of pixels. Each pair of output pixels is encoded as [Y1, U, Y2, V].
+  - `step` must be greater than or equal to `width` * 2.
+- `nv12`:
+  - Pixel colors are decomposed into [Y'UV](https://en.wikipedia.org/wiki/Y%E2%80%B2UV) channels using 4:2:0 chroma subsampling. The data is stored in [NV12](https://www.kernel.org/doc/html/v4.10/media/uapi/v4l/pixfmt-nv12.html) semi-planar layout with two contiguous planes: a Y (luma) plane followed by an interleaved UV (chroma) plane.
+  - All channel values are represented as unsigned 8-bit integers.
+  - Both planes use `step` as their row stride.
+  - The Y plane contains one luma value per pixel (`step` * `height` bytes).
+  - The UV plane contains interleaved U, V chroma pairs, subsampled by a factor of 2 in both dimensions (`width`/2 pairs per row, `height`/2 rows, `step` * `height`/2 bytes). Each U, V pair is shared by a 2x2 block of pixels.
+  - `width` and `height` must be even.
+  - `step` must be greater than or equal to `width`.
+  - Total `data` length is `step` * `height` * 3/2 bytes.
+- `rgb8`:
+  - Pixel colors are decomposed into Red, Green, and Blue channels.
+  - Pixel channel values are represented as unsigned 8-bit integers.
+  - Each output pixel is serialized as [R, G, B].
+  - `step` must be greater than or equal to `width` * 3.
+- `rgba8`:
+  - Pixel colors are decomposed into Red, Green, Blue, and Alpha channels.
+  - Pixel channel values are represented as unsigned 8-bit integers.
+  - Each output pixel is serialized as [R, G, B, Alpha].
+  - `step` must be greater than or equal to `width` * 4.
+- `bgr8` or `8UC3`:
+  - Pixel colors are decomposed into Blue, Green, and Red channels.
+  - Pixel channel values are represented as unsigned 8-bit integers.
+  - Each output pixel is serialized as [B, G, R].
+  - `step` must be greater than or equal to `width` * 3.
+- `bgra8`:
+  - Pixel colors are decomposed into Blue, Green, Red, and Alpha channels.
+  - Pixel channel values are represented as unsigned 8-bit integers.
+  - Each output pixel is encoded as [B, G, R, Alpha].
+  - `step` must be greater than or equal to `width` * 4.
+- `32FC1`:
+  - Pixel brightness is represented as a single-channel, 32-bit little-endian IEEE 754 floating-point value, ranging from 0.0 (black) to 1.0 (white).
+  - `step` must be greater than or equal to `width` * 4.
+- `bayer_rggb8`, `bayer_bggr8`, `bayer_gbrg8`, or `bayer_grbg8`:
+  - Pixel colors are decomposed into Red, Blue and Green channels.
+  - Pixel channel values are represented as unsigned 8-bit integers, and serialized in a 2x2 bayer filter pattern.
+  - The order of the four letters after `bayer_` determine the layout, so for `bayer_wxyz8` the pattern is:
+  ```text
+  w | x
+  - + -
+  y | z
+  ```
+  - `step` must be greater than or equal to `width`.
+- `mono8` or `8UC1`:
+  - Pixel brightness is represented as unsigned 8-bit integers.
+  - `step` must be greater than or equal to `width`.
+- `mono16` or `16UC1`:
+  - Pixel brightness is represented as 16-bit unsigned little-endian integers. Rendering of these values is controlled in [Image panel color mode settings](https://docs.foxglove.dev/docs/visualization/panels/image#general).
+  - `step` must be greater than or equal to `width` * 2.
+
 
 </td>
 </tr>
@@ -2495,7 +3160,7 @@ A visual element in a 3D scene. An entity may be composed of multiple primitives
 <td><code>timestamp</code></td>
 <td>
 
-time
+[Timestamp](#timestamp)
 
 </td>
 <td>
@@ -2534,7 +3199,7 @@ Identifier for the entity. A entity will replace any prior entity on the same to
 <td><code>lifetime</code></td>
 <td>
 
-duration
+[Duration](#duration)
 
 </td>
 <td>
@@ -2689,7 +3354,7 @@ Command to remove previously published entities
 <td><code>timestamp</code></td>
 <td>
 
-time
+[Timestamp](#timestamp)
 
 </td>
 <td>
@@ -2829,7 +3494,7 @@ A text label on a 2D image
 <td><code>timestamp</code></td>
 <td>
 
-time
+[Timestamp](#timestamp)
 
 </td>
 <td>
@@ -2901,6 +3566,19 @@ Text color
 <td>
 
 Background fill color
+
+</td>
+</tr>
+<tr>
+<td><code>metadata</code> (optional)</td>
+<td>
+
+[KeyValuePair](#keyvaluepair)[]
+
+</td>
+<td>
+
+Additional user-provided metadata associated with this annotation. Keys must be unique.
 
 </td>
 </tr>
@@ -2996,6 +3674,44 @@ Text
 </tr>
 </table>
 
+## Timestamp
+
+A timestamp composed of seconds and nanoseconds
+
+<table>
+  <tr>
+    <th>field</th>
+    <th>type</th>
+    <th>description</th>
+  </tr>
+<tr>
+<td><code>sec</code></td>
+<td>
+
+uint32
+
+</td>
+<td>
+
+The number of seconds since a user-defined epoch
+
+</td>
+</tr>
+<tr>
+<td><code>nsec</code></td>
+<td>
+
+uint32
+
+</td>
+<td>
+
+The number of nanoseconds since the sec value
+
+</td>
+</tr>
+</table>
+
 ## TriangleListPrimitive
 
 A primitive representing a set of triangles or a surface tiled by triangles
@@ -3041,7 +3757,7 @@ Vertices to use for triangles, interpreted as a list of triples (0-1-2, 3-4-5, .
 </td>
 <td>
 
-Solid color to use for the whole shape. One of `color` or `colors` must be provided.
+Solid color to use for the whole shape. Ignored if `colors` is non-empty.
 
 </td>
 </tr>
@@ -3054,7 +3770,7 @@ Solid color to use for the whole shape. One of `color` or `colors` must be provi
 </td>
 <td>
 
-Per-vertex colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided.
+Per-vertex colors (if specified, must have the same length as `points`).
 
 </td>
 </tr>
@@ -3094,7 +3810,7 @@ float64
 </td>
 <td>
 
-x coordinate length
+x component
 
 </td>
 </tr>
@@ -3107,7 +3823,7 @@ float64
 </td>
 <td>
 
-y coordinate length
+y component
 
 </td>
 </tr>
@@ -3132,7 +3848,7 @@ float64
 </td>
 <td>
 
-x coordinate length
+x component
 
 </td>
 </tr>
@@ -3145,7 +3861,7 @@ float64
 </td>
 <td>
 
-y coordinate length
+y component
 
 </td>
 </tr>
@@ -3158,7 +3874,167 @@ float64
 </td>
 <td>
 
-z coordinate length
+z component
+
+</td>
+</tr>
+</table>
+
+## VoxelGrid
+
+A 3D grid of data
+
+<table>
+  <tr>
+    <th>field</th>
+    <th>type</th>
+    <th>description</th>
+  </tr>
+<tr>
+<td><code>timestamp</code></td>
+<td>
+
+[Timestamp](#timestamp)
+
+</td>
+<td>
+
+Timestamp of grid
+
+</td>
+</tr>
+<tr>
+<td><code>frame_id</code></td>
+<td>
+
+string
+
+</td>
+<td>
+
+Frame of reference
+
+</td>
+</tr>
+<tr>
+<td><code>pose</code></td>
+<td>
+
+[Pose](#pose)
+
+</td>
+<td>
+
+Origin of the grid’s lower-front-left corner in the reference frame. The grid’s pose is defined relative to this corner, so an untransformed grid with an identity orientation has this corner at the origin.
+
+</td>
+</tr>
+<tr>
+<td><code>row_count</code></td>
+<td>
+
+uint32
+
+</td>
+<td>
+
+Number of grid rows
+
+</td>
+</tr>
+<tr>
+<td><code>column_count</code></td>
+<td>
+
+uint32
+
+</td>
+<td>
+
+Number of grid columns
+
+</td>
+</tr>
+<tr>
+<td><code>cell_size</code></td>
+<td>
+
+[Vector3](#vector3)
+
+</td>
+<td>
+
+Size of single grid cell along x, y, and z axes, relative to `pose`
+
+</td>
+</tr>
+<tr>
+<td><code>slice_stride</code></td>
+<td>
+
+uint32
+
+</td>
+<td>
+
+Number of bytes between depth slices in `data`
+
+</td>
+</tr>
+<tr>
+<td><code>row_stride</code></td>
+<td>
+
+uint32
+
+</td>
+<td>
+
+Number of bytes between rows in `data`
+
+</td>
+</tr>
+<tr>
+<td><code>cell_stride</code></td>
+<td>
+
+uint32
+
+</td>
+<td>
+
+Number of bytes between cells within a row in `data`
+
+</td>
+</tr>
+<tr>
+<td><code>fields</code></td>
+<td>
+
+[PackedElementField](#packedelementfield)[]
+
+</td>
+<td>
+
+Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
+
+</td>
+</tr>
+<tr>
+<td><code>data</code></td>
+<td>
+
+bytes
+
+</td>
+<td>
+
+Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.
+For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
+
+- z = i / slice_stride * cell_size.z
+- y = (i % slice_stride) / row_stride * cell_size.y
+- x = (i % row_stride) / cell_stride * cell_size.x
 
 </td>
 </tr>

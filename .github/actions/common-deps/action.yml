@@ -1,14 +1,19 @@
 name: Install common dependencies
 
+inputs:
+  python-version:
+    description: Python version to install
+    required: false
+    default: "3.10"
+
 runs:
   using: composite
   steps:
-    - uses: actions/setup-python@v5
+    - uses: actions/setup-python@v6
       with:
-        python-version: "3.9"
+        python-version: ${{ inputs.python-version }}
 
-    - shell: bash
-      run: python -m pip install poetry
+    - uses: astral-sh/setup-uv@v6
 
     # disable man-db to speed up apt install
     - shell: bash
@@ -21,4 +26,6 @@ runs:
       run: |
         sudo apt-get install -y --no-install-recommends \
           libprotobuf-dev \
-          protobuf-compiler
+          protobuf-compiler \
+          libglib2.0-dev \
+          libva-dev

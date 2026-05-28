@@ -1,6 +1,7 @@
+use std::collections::BTreeMap;
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use clap::{Parser, ValueEnum};
 use foxglove::{LazyChannel, McapCompression, McapWriteOptions, McapWriter};
@@ -41,13 +42,20 @@ impl From<CompressionArg> for Option<McapCompression> {
     }
 }
 
-#[derive(Debug, serde::Serialize, schemars::JsonSchema)]
+#[derive(Debug, foxglove::Encode)]
 struct Message {
     msg: String,
     count: u32,
 }
 
+#[derive(Debug, serde::Serialize, schemars::JsonSchema)]
+struct JsonMessage {
+    msg: String,
+    count: u32,
+}
+
 static MSG_CHANNEL: LazyChannel<Message> = LazyChannel::new("/msg");
+static JSON_CHANNEL: LazyChannel<JsonMessage> = LazyChannel::new("/json");
 
 fn log_until(fps: u8, stop: Arc<AtomicBool>) {
     let mut count: u32 = 0;
@@ -55,6 +63,10 @@ fn log_until(fps: u8, stop: Arc<AtomicBool>) {
     while !stop.load(Ordering::Relaxed) {
         MSG_CHANNEL.log(&Message {
             msg: "Hello, world!".to_string(),
+            count,
+        });
+        JSON_CHANNEL.log(&JsonMessage {
+            msg: "Hello, JSON!".to_string(),
             count,
         });
         std::thread::sleep(duration);
@@ -88,6 +100,14 @@ fn main() {
     let writer = McapWriter::with_options(options)
         .create_new_buffered_file(&args.path)
         .expect("Failed to start mcap writer");
+
+    // If you want to add some MCAP metadata: https://mcap.dev/spec#metadata-op0x0c
+    let mut metadata = BTreeMap::new();
+    metadata.insert("os".to_string(), std::env::consts::OS.to_string());
+    metadata.insert("arch".to_string(), std::env::consts::ARCH.to_string());
+    writer
+        .write_metadata("platform", metadata)
+        .expect("Failed to write metadata");
 
     log_until(args.fps, done);
     writer.close().expect("Failed to flush mcap file");

@@ -1,0 +1,18 @@
+[project]
+name = "ws-playback-control-mcap"
+version = "0.0.0"
+description = "Example of streaming an MCAP file with playback control over a WebSocket connection"
+authors = [{ name = "Foxglove", email = "support@foxglove.dev" }]
+requires-python = ">=3.10"
+readme = "README.md"
+
+dependencies = [
+    "foxglove-sdk>=0.18.0",
+    "mcap>=1.2",
+]
+
+[dependency-groups]
+dev = ["mypy>=1,<2"]
+
+[tool.uv]
+package = false

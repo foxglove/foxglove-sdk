@@ -13,7 +13,7 @@ impl ChannelPlaceholder {
 
     pub unsafe fn log<T: Encode>(channel_ptr: *mut Self, msg: &T, metadata: PartialMetadata) {
         // Safety: we're restoring the Arc<RawChannel> we leaked into_raw in new()
-        let channel_arc = Arc::from_raw(channel_ptr as *mut RawChannel);
+        let channel_arc = unsafe { Arc::from_raw(channel_ptr as *mut RawChannel) };
         // We can safely create a Channel from any Arc<RawChannel>
         let channel = ManuallyDrop::new(Channel::<T>::from_raw_channel(channel_arc));
         channel.log_with_meta(msg, metadata);
@@ -41,38 +41,36 @@ pub fn create_channel<T: Encode>(
 
 /// Log a message for a topic to the default Context.
 ///
-/// $topic: string literal topic name
-/// $msg: expression to log, must implement Encode trait
+/// - `$topic`: string literal topic name
+/// - `$msg`: expression to log, must implement the [Encode] trait
 ///
 /// Optional keyword arguments:
-/// - log_time: timestamp when the message was logged. See [`PartialMetadata`].
+/// - `log_time`: timestamp when the message was logged. It can be a u64 (nanoseconds since epoch),
+///   a foxglove [`Timestamp`][crate::messages::Timestamp], a [`SystemTime`][std::time::SystemTime],
+///   or anything else that implements [`ToUnixNanos`][crate::ToUnixNanos].
 ///
 /// If a channel for the topic already exists in the default Context, it will be used.
 /// Otherwise, a new channel will be created. Either way, the channel is never removed
 /// from the Context. Panics if the existing channel schema or message_encoding
-/// is incompatible with $msg.
+/// is incompatible with `$msg`.
 ///
-/// The type of message to log! should be consistent for each call site to log!.
+/// The type of message to `log!` should be consistent for each call site to `log!`.
 /// This is usually true in Rust, but it's possible in a function generic on the message type,
-/// to pass different message types in the same call site for log!, for the same underlying
+/// to pass different message types in the same call site for `log!`, for the same underlying
 /// channel with no error at compile time or runtime. The schema will still be the schema the
 /// channel was first created with, and the messages won't match the schema,
 /// and will not behave well in the Foxglove app. You should avoid doing this.
 ///
-/// Panics if a channel can't be created for $msg.
+/// Panics if a channel can't be created for `$msg`.
 #[macro_export]
 macro_rules! log {
-    ($topic:literal, $msg:expr $(,)? ) => {{
-        $crate::log_with_meta!($topic, $msg, $crate::PartialMetadata::default())
-    }};
+    ($topic:literal, $msg:expr $(,)? ) => {{ $crate::log_with_meta!($topic, $msg, $crate::PartialMetadata::default()) }};
 
     ($topic:literal, $msg:expr, log_time = $log_time:expr $(,)? ) => {{
         $crate::log_with_meta!(
             $topic,
             $msg,
-            $crate::PartialMetadata {
-                log_time: Some($log_time),
-            }
+            $crate::PartialMetadata::with_log_time($log_time)
         )
     }};
 }
@@ -81,7 +79,7 @@ macro_rules! log {
 ///
 /// $topic: string literal topic name
 /// $msg: expression to log, must implement Encode trait
-/// $metadata: PartialMetadata struct
+/// $metadata: [`PartialMetadata`] struct.
 #[doc(hidden)]
 #[macro_export]
 macro_rules! log_with_meta {
@@ -104,9 +102,9 @@ mod tests {
     use bytes::BufMut;
     use tracing_test::traced_test;
 
+    use crate::messages::{Color, LaserScan, Log, Timestamp};
     use crate::nanoseconds_since_epoch;
-    use crate::schemas::{Color, LaserScan, Log};
-    use crate::{testutil::RecordingSink, Context};
+    use crate::{Context, testutil::RecordingSink};
     use crate::{FoxgloveError, Schema};
 
     use super::*;
@@ -127,7 +125,7 @@ mod tests {
         Context::get_default().add_sink(sink.clone());
 
         let mut log_messages = Vec::new();
-        for line in 1..=2 {
+        for line in 1..=3 {
             let msg = Log {
                 timestamp: None,
                 level: 1,
@@ -139,28 +137,34 @@ mod tests {
             log_messages.push(msg);
         }
 
+        let timestamp = Timestamp::now();
+
         log!("foo", log_messages[0], log_time = 123);
         log!("foo", log_messages[1]);
+        log!("foo", log_messages[2], log_time = timestamp);
         log!("foo", Color::default());
 
         let messages = sink.take_messages();
-        assert_eq!(messages.len(), 3);
+        assert_eq!(messages.len(), 4);
         assert_eq!(messages[0].msg, serialize(&log_messages[0]));
         assert_eq!(messages[0].metadata.log_time, 123);
 
         assert_eq!(messages[1].msg, serialize(&log_messages[1]));
         assert!(messages[1].metadata.log_time >= now);
 
-        assert_eq!(messages[2].msg, serialize(&Color::default()));
-        assert!(messages[2].metadata.log_time >= now);
+        assert_eq!(messages[2].msg, serialize(&log_messages[2]));
+        assert_eq!(messages[2].metadata.log_time, timestamp.total_nanos());
 
-        // Even though there are two log! callsites, which each construct separate channels, the
-        // channels were exactly the same, and we properly deduped the second one when it was
-        // registered to the context.
+        assert_eq!(messages[3].msg, serialize(&Color::default()));
+        assert!(messages[3].metadata.log_time >= now);
+
+        // Even though there are four log! callsites, which each construct separate channels, the
+        // channels were exactly the same, and we properly deduped them when they were registered to the context.
         assert_eq!(messages[0].channel_id, messages[1].channel_id);
+        assert_eq!(messages[0].channel_id, messages[2].channel_id);
 
-        // The third callsite used a different schema, and so it is a distinct channel.
-        assert_ne!(messages[0].channel_id, messages[2].channel_id);
+        // The final callsite used a different schema, and so it is a distinct channel.
+        assert_ne!(messages[0].channel_id, messages[3].channel_id);
     }
 
     #[test]

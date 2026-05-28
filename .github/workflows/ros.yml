@@ -1,0 +1,106 @@
+name: ROS
+
+on:
+  push:
+    branches: [main]
+    tags: ["**"]
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      should_run: ${{ github.event_name != 'pull_request' || steps.paths.outputs.ros == 'true' || contains(github.event.pull_request.labels.*.name, 'ci:ros') }}
+    steps:
+      - uses: dorny/paths-filter@v4
+        if: github.event_name == 'pull_request'
+        id: paths
+        with:
+          filters: |
+            ros:
+              - 'c/**'
+              - 'cpp/**'
+              - 'ros/**'
+              - 'Dockerfile.ros'
+              - '.github/workflows/ros.yml'
+
+  build-cpp-dist:
+    needs: changes
+    if: needs.changes.outputs.should_run == 'true'
+    # Pinned to 22.04 so libfoxglove.a is compatible with ROS Humble (glibc 2.35)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libglib2.0-dev libva-dev libwebsockets-dev \
+            nvidia-cuda-dev
+          echo "CC=gcc" >> $GITHUB_ENV
+          echo "CXX=g++" >> $GITHUB_ENV
+          echo "CUDA_HOME=/usr" >> $GITHUB_ENV
+
+      - name: Build C++ SDK
+        run: make -f Container.mk FOXGLOVE_REQUIRE_CUDA=ON build-cpp-dist
+
+      - name: Upload SDK artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: cpp-sdk
+          path: cpp/dist
+          retention-days: 1
+
+  ros:
+    needs: [changes, build-cpp-dist]
+    if: needs.changes.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        ros_distribution:
+          - humble
+          - jazzy
+          - kilted
+          # rolling temporarily disabled while upstream changes land; re-enable when stable
+    name: "ros (${{ matrix.ros_distribution }})"
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Download C++ SDK artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: cpp-sdk
+          path: cpp/dist
+
+      - name: Run make lint
+        run: make lint
+        working-directory: ros
+
+      - name: Run make docker-build
+        run: |
+          make \
+            FOXGLOVE_CPP_SDK_DIR=/sdk/cpp/dist \
+            ${{ matrix.ros_distribution == 'rolling' && 'EXTRA_DOCKER_ARGS="--build-arg USE_ROS_TESTING=true"' || '' }} \
+            docker-build-${{ matrix.ros_distribution }}
+        working-directory: ros
+
+      - name: Run make docker-test
+        run: make GTEST_REPEAT=50 docker-test-${{ matrix.ros_distribution }}
+        working-directory: ros
+
+  # Gate job for branch protection. Always posts a status so that the required
+  # check passes even when the ros matrix is skipped. Configure your required
+  # status check to reference this job ("ROS / ros-status") instead of the
+  # individual matrix jobs.
+  ros-status:
+    name: ros-status
+    needs: [changes, build-cpp-dist, ros]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1

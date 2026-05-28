@@ -3,9 +3,9 @@
 
 /** A vector in 2D space that represents a direction only */
 export type Vector2 = {
-  /** x coordinate length */
+  /** x component */
   x: number;
 
-  /** y coordinate length */
+  /** y component */
   y: number;
 };

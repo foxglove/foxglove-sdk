@@ -9,11 +9,11 @@ use std::time::Duration;
 use parking_lot::Mutex;
 use tracing::warn;
 
-use super::ChannelId;
+use super::{ChannelDescriptor, ChannelId};
 use crate::log_sink_set::LogSinkSet;
 use crate::sink::SmallSinkVec;
 use crate::throttler::Throttler;
-use crate::{nanoseconds_since_epoch, Context, Metadata, PartialMetadata, Schema};
+use crate::{Context, Metadata, PartialMetadata, Schema, SinkId, nanoseconds_since_epoch};
 
 /// Interval for throttled warnings.
 static WARN_THROTTLER_INTERVAL: Duration = Duration::from_secs(10);
@@ -34,12 +34,8 @@ static WARN_THROTTLER_INTERVAL: Duration = Duration::from_secs(10);
 ///
 /// You should choose a unique topic name per channel for compatibility with the Foxglove app.
 pub struct RawChannel {
-    id: ChannelId,
+    descriptor: ChannelDescriptor,
     context: Weak<Context>,
-    topic: String,
-    message_encoding: String,
-    schema: Option<Schema>,
-    metadata: BTreeMap<String, String>,
     sinks: LogSinkSet,
     closed: AtomicBool,
     warn_throttler: Mutex<Throttler>,
@@ -54,49 +50,52 @@ impl RawChannel {
         metadata: BTreeMap<String, String>,
     ) -> Arc<Self> {
         Arc::new(Self {
-            id: ChannelId::next(),
+            descriptor: ChannelDescriptor::new(
+                ChannelId::next(),
+                topic,
+                message_encoding,
+                metadata,
+                schema,
+            ),
             context: Arc::downgrade(context),
-            topic,
-            message_encoding,
-            schema,
-            metadata,
             sinks: LogSinkSet::new(),
             closed: AtomicBool::new(false),
             warn_throttler: Mutex::new(Throttler::new(WARN_THROTTLER_INTERVAL)),
         })
     }
 
+    pub(crate) fn descriptor(&self) -> &ChannelDescriptor {
+        &self.descriptor
+    }
+
     /// Returns the channel ID.
     pub fn id(&self) -> ChannelId {
-        self.id
+        self.descriptor.id()
     }
 
     /// Returns the channel topic.
     pub fn topic(&self) -> &str {
-        &self.topic
+        self.descriptor.topic()
     }
 
     /// Returns the channel schema.
     pub fn schema(&self) -> Option<&Schema> {
-        self.schema.as_ref()
+        self.descriptor.schema()
     }
 
     /// Returns the message encoding for this channel.
     pub fn message_encoding(&self) -> &str {
-        &self.message_encoding
+        self.descriptor.message_encoding()
     }
 
     /// Returns the metadata for this channel.
     pub fn metadata(&self) -> &BTreeMap<String, String> {
-        &self.metadata
+        self.descriptor.metadata()
     }
 
     /// Returns true if one channel is substantially the same as the other.
     pub(crate) fn matches(&self, other: &Self) -> bool {
-        self.topic == other.topic
-            && self.message_encoding == other.message_encoding
-            && self.schema == other.schema
-            && self.metadata == other.metadata
+        self.descriptor.matches(&other.descriptor)
     }
 
     /// Closes the channel, removing it from the context.
@@ -108,7 +107,7 @@ impl RawChannel {
     pub fn close(&self) {
         if !self.is_closed() {
             if let Some(ctx) = self.context.upgrade() {
-                ctx.remove_channel(self.id);
+                ctx.remove_channel(self.descriptor.id());
             }
         }
     }
@@ -148,7 +147,7 @@ impl RawChannel {
     }
 
     /// Returns the count of sinks subscribed to this channel.
-    #[cfg(test)]
+    #[cfg(all(test, feature = "websocket"))]
     pub(crate) fn num_sinks(&self) -> usize {
         self.sinks.len()
     }
@@ -161,25 +160,62 @@ impl RawChannel {
         self.log_with_meta(msg, PartialMetadata::default());
     }
 
+    /// Logs a message to a specific sink.
+    ///
+    /// If a sink ID is provided, only that sink will receive the message.
+    /// Otherwise, the message will be sent to all subscribed sinks.
+    ///
+    /// The buffering behavior depends on the log sink; see [`McapWriter`][crate::McapWriter] and
+    /// [`WebSocketServer`][crate::WebSocketServer] for details.
+    pub fn log_to_sink(&self, msg: &[u8], sink_id: Option<SinkId>) {
+        self.log_with_meta_to_sink(msg, PartialMetadata::default(), sink_id);
+    }
+
     /// Logs a message with additional metadata.
     ///
     /// The buffering behavior depends on the log sink; see [`McapWriter`][crate::McapWriter] and
     /// [`WebSocketServer`][crate::WebSocketServer] for details.
     pub fn log_with_meta(&self, msg: &[u8], opts: PartialMetadata) {
+        self.log_with_meta_to_sink(msg, opts, None);
+    }
+
+    /// Logs a message with additional metadata to a specific sink.
+    ///
+    /// If a sink ID is provided, only that sink will receive the message.
+    /// Otherwise, the message will be sent to all subscribed sinks.
+    ///
+    /// The buffering behavior depends on the log sink; see [`McapWriter`][crate::McapWriter] and
+    /// [`WebSocketServer`][crate::WebSocketServer] for details.
+    pub fn log_with_meta_to_sink(
+        &self,
+        msg: &[u8],
+        opts: PartialMetadata,
+        sink_id: Option<SinkId>,
+    ) {
         if self.has_sinks() {
-            self.log_to_sinks(msg, opts);
+            self.log_to_sinks(msg, opts, sink_id);
         } else {
             self.log_warn_if_closed();
         }
     }
 
     /// Logs a message with additional metadata.
-    pub(crate) fn log_to_sinks(&self, msg: &[u8], opts: PartialMetadata) {
+    pub(crate) fn log_to_sinks(&self, msg: &[u8], opts: PartialMetadata, sink_id: Option<SinkId>) {
         let metadata = Metadata {
             log_time: opts.log_time.unwrap_or_else(nanoseconds_since_epoch),
         };
 
-        self.sinks.for_each(|sink| sink.log(self, msg, &metadata));
+        match sink_id {
+            Some(id) => {
+                self.sinks.for_each_filtered(
+                    |sink| sink.id() == id,
+                    |sink| sink.log(self, msg, &metadata),
+                );
+            }
+            None => {
+                self.sinks.for_each(|sink| sink.log(self, msg, &metadata));
+            }
+        }
     }
 }
 
@@ -196,11 +232,11 @@ impl Eq for RawChannel {}
 impl std::fmt::Debug for RawChannel {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Channel")
-            .field("id", &self.id)
-            .field("topic", &self.topic)
-            .field("message_encoding", &self.message_encoding)
-            .field("schema", &self.schema)
-            .field("metadata", &self.metadata)
+            .field("id", &self.descriptor.id())
+            .field("topic", &self.descriptor.topic())
+            .field("message_encoding", &self.descriptor.message_encoding())
+            .field("schema", &self.descriptor.schema())
+            .field("metadata", &self.descriptor.metadata())
             .finish_non_exhaustive()
     }
 }

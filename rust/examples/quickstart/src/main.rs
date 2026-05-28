@@ -1,16 +1,16 @@
 use std::ops::Add;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::SystemTime;
 
-use foxglove::schemas::{Color, CubePrimitive, SceneEntity, SceneUpdate, Vector3};
+use foxglove::messages::{Color, CubePrimitive, SceneEntity, SceneUpdate, Vector3};
 use foxglove::{LazyChannel, LazyRawChannel, McapWriter};
 
 const FILE_NAME: &str = "quickstart-rust.mcap";
 
 // Our example logs data on a couple of different topics, so we'll create a
 // channel for each. We can use a channel like Channel<SceneUpdate> to log
-// Foxglove schemas, or a generic RawChannel to log custom data.
+// Foxglove message types, or a generic RawChannel to log custom data.
 static SCENE: LazyChannel<SceneUpdate> = LazyChannel::new("/scene");
 static SIZE: LazyRawChannel = LazyRawChannel::new("/size", "json");
 

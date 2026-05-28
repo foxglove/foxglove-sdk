@@ -16,5 +16,10 @@
       "type": "number",
       "description": "z coordinate position"
     }
-  }
+  },
+  "required": [
+    "x",
+    "y",
+    "z"
+  ]
 }

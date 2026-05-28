@@ -1,0 +1,8 @@
+syntax = "proto3";
+
+package fruit;
+
+message Apple {
+    optional string color = 1;
+    optional int32 diameter = 2;
+}

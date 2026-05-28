@@ -1,0 +1,7 @@
+---
+source: rust/foxglove/src/protocol/common/client/subscribe_connection_graph.rs
+expression: "SubscribeConnectionGraph {}"
+---
+{
+  "op": "subscribeConnectionGraph"
+}

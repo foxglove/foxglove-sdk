@@ -2,21 +2,40 @@ use errors::PyFoxgloveError;
 use foxglove::McapWriteOptions;
 use foxglove::{ChannelBuilder, Context, McapWriter, PartialMetadata, RawChannel, Schema};
 use generated::channels;
-use generated::schemas;
+use generated::messages;
 use log::LevelFilter;
-use mcap::{PyMcapWriteOptions, PyMcapWriter};
+use logging::init_logging;
+use mcap::{PyFileLikeWriter, PyMcapWriteOptions, PyMcapWriter, WriterInner};
 use pyo3::prelude::*;
+use pyo3::types::PyDict;
+use sink_channel_filter::{PyChannelDescriptor, PySinkChannelFilter};
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::BufWriter;
+use std::num::NonZeroU64;
 use std::path::PathBuf;
-use std::sync::Arc;
+
+#[cfg(feature = "remote-access")]
+use remote_access::start_gateway;
+use std::sync::{Arc, OnceLock};
+#[cfg(not(target_family = "wasm"))]
+use system_info::{PySystemInfoPublisher, start_sysinfo_publisher};
+#[cfg(not(target_family = "wasm"))]
 use websocket::start_server;
 
 mod errors;
 mod generated;
+mod logging;
 mod mcap;
+#[cfg(feature = "remote-access")]
+mod remote_access;
+#[cfg(not(target_family = "wasm"))]
+mod remote_common;
 mod schemas_wkt;
+mod sink_channel_filter;
+#[cfg(not(target_family = "wasm"))]
+mod system_info;
+#[cfg(not(target_family = "wasm"))]
 mod websocket;
 
 /// A Schema is a description of the data format of messages or service calls.
@@ -27,8 +46,8 @@ mod websocket;
 /// :type encoding: str
 /// :param data: Schema data.
 /// :type data: bytes
-#[pyclass(name = "Schema", module = "foxglove", get_all, set_all)]
-#[derive(Clone)]
+#[pyclass(name = "Schema", module = "foxglove", get_all, set_all, eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct PySchema {
     /// The name of the schema.
     name: String,
@@ -57,6 +76,12 @@ impl From<PySchema> for foxglove::Schema {
     }
 }
 
+impl From<foxglove::Schema> for PySchema {
+    fn from(value: foxglove::Schema) -> Self {
+        Self::new(value.name, value.encoding, value.data.into_owned())
+    }
+}
+
 #[pyclass(module = "foxglove")]
 struct BaseChannel(Arc<RawChannel>);
 
@@ -67,25 +92,37 @@ impl BaseChannel {
         signature = (topic, message_encoding, schema=None, metadata=None)
     )]
     fn new(
+        py: Python<'_>,
         topic: &str,
         message_encoding: &str,
         schema: Option<PySchema>,
         metadata: Option<BTreeMap<String, String>>,
     ) -> PyResult<Self> {
-        let channel = ChannelBuilder::new(topic)
-            .message_encoding(message_encoding)
-            .schema(schema.map(Schema::from))
-            .metadata(metadata.unwrap_or_default())
-            .build_raw()
+        // Release the GIL before calling build_raw(), which may invoke
+        // PySinkChannelFilter::should_subscribe() on registered sinks. That callback needs to
+        // re-acquire the GIL via Python::with_gil(); if we still hold it here, we deadlock.
+        let topic = topic.to_owned();
+        let message_encoding = message_encoding.to_owned();
+        let schema = schema.map(Schema::from);
+        let metadata = metadata.unwrap_or_default();
+        let channel = py
+            .allow_threads(move || {
+                ChannelBuilder::new(&topic)
+                    .message_encoding(&message_encoding)
+                    .schema(schema)
+                    .metadata(metadata)
+                    .build_raw()
+            })
             .map_err(PyFoxgloveError::from)?;
 
         Ok(BaseChannel(channel))
     }
 
-    #[pyo3(signature = (msg, log_time=None))]
-    fn log(&self, msg: &[u8], log_time: Option<u64>) -> PyResult<()> {
+    #[pyo3(signature = (msg, log_time=None, sink_id=None))]
+    fn log(&self, msg: &[u8], log_time: Option<u64>, sink_id: Option<u64>) -> PyResult<()> {
         let metadata = PartialMetadata { log_time };
-        self.0.log_with_meta(msg, metadata);
+        let sink_id = sink_id.and_then(NonZeroU64::new).map(foxglove::SinkId::new);
+        self.0.log_with_meta_to_sink(msg, metadata, sink_id);
         Ok(())
     }
 
@@ -97,8 +134,29 @@ impl BaseChannel {
         self.0.topic()
     }
 
+    #[getter]
+    fn message_encoding(&self) -> &str {
+        self.0.message_encoding()
+    }
+
+    fn metadata(&self, py: Python<'_>) -> PyResult<PyObject> {
+        let dict = PyDict::new(py);
+        for (key, value) in self.0.metadata() {
+            dict.set_item(key, value)?;
+        }
+        Ok(dict.into())
+    }
+
+    fn schema(&self) -> Option<PySchema> {
+        self.0.schema().cloned().map(PySchema::from)
+    }
+
     fn schema_name(&self) -> Option<&str> {
         Some(self.0.schema()?.name.as_str())
+    }
+
+    fn has_sinks(&self) -> bool {
+        self.0.has_sinks()
     }
 
     fn close(&mut self) {
@@ -122,9 +180,16 @@ impl PyContext {
         Self(foxglove::Context::new())
     }
 
+    /// Returns the default context.
     #[staticmethod]
-    fn default() -> Self {
-        Self(foxglove::Context::get_default())
+    fn default(py: Python) -> Py<Self> {
+        static DEFAULT_CONTEXT: OnceLock<Py<PyContext>> = OnceLock::new();
+        DEFAULT_CONTEXT
+            .get_or_init(|| {
+                let inner = foxglove::Context::get_default();
+                Py::new(py, PyContext(inner)).unwrap()
+            })
+            .clone_ref(py)
     }
 
     /// Create a new channel for logging messages on a topic.
@@ -134,46 +199,76 @@ impl PyContext {
     #[pyo3(signature = (topic, *, message_encoding, schema=None, metadata=None))]
     fn _create_channel(
         &self,
+        py: Python<'_>,
         topic: &str,
         message_encoding: &str,
         schema: Option<PySchema>,
         metadata: Option<BTreeMap<String, String>>,
     ) -> PyResult<BaseChannel> {
-        let channel = self
-            .0
-            .channel_builder(topic)
-            .message_encoding(message_encoding)
-            .schema(schema.map(Schema::from))
-            .metadata(metadata.unwrap_or_default())
-            .build_raw()
+        // Release the GIL before calling build_raw(), which may invoke
+        // PySinkChannelFilter::should_subscribe() on registered sinks. That callback needs to
+        // re-acquire the GIL via Python::with_gil(); if we still hold it here, we deadlock.
+        let context = self.0.clone();
+        let topic = topic.to_owned();
+        let message_encoding = message_encoding.to_owned();
+        let schema = schema.map(Schema::from);
+        let metadata = metadata.unwrap_or_default();
+        let channel = py
+            .allow_threads(move || {
+                context
+                    .channel_builder(&topic)
+                    .message_encoding(&message_encoding)
+                    .schema(schema)
+                    .metadata(metadata)
+                    .build_raw()
+            })
             .map_err(PyFoxgloveError::from)?;
         Ok(BaseChannel(channel))
     }
 }
 
-/// Open a new mcap file for recording.
+/// Accepts either a file path (str/Path) or a file-like object.
+#[derive(FromPyObject)]
+enum PathOrFileLike {
+    #[pyo3(transparent)]
+    Path(PathBuf),
+    #[pyo3(transparent)]
+    FileLike(Py<PyAny>),
+}
+
+/// Open an MCAP writer for recording.
 ///
-/// :param path: The path to the MCAP file. This file will be created and must not already exist.
-/// :type path: str | Path
+/// :param path: The destination to write the MCAP to. If it is a path, the file will be created and must not already exist
+///     unless `allow_overwrite` is `True`. If it is a file-like object, it must support `write()`, `seek()`, and `flush()` methods.
+/// :type path: str | Path | BinaryIO
 /// :param allow_overwrite: Set this flag in order to overwrite an existing file at this path.
+///     Ignored when a file-like object is provided.
 /// :type allow_overwrite: Optional[bool]
 /// :param context: The context to use for logging. If None, the global context is used.
 /// :type context: :py:class:`Context`
+/// :param channel_filter: A `Callable` that determines whether a channel should be logged to. Return
+///     `True` to log the channel, or `False` to skip it. By default, all channels will be logged.
+/// :type channel_filter: Optional[Callable[[ChannelDescriptor], bool]]
 /// :param writer_options: Options for the MCAP writer.
 /// :type writer_options: :py:class:`mcap.MCAPWriteOptions`
 /// :rtype: :py:class:`mcap.MCAPWriter`
 #[pyfunction]
-#[pyo3(signature = (path, *, allow_overwrite = false, context = None, writer_options = None))]
+#[pyo3(signature = (path, *, allow_overwrite = false, context = None, channel_filter = None, writer_options = None))]
 fn open_mcap(
-    path: PathBuf,
+    py: Python<'_>,
+    path: PathOrFileLike,
     allow_overwrite: bool,
     context: Option<PyRef<PyContext>>,
+    channel_filter: Option<Py<PyAny>>,
     writer_options: Option<PyMcapWriteOptions>,
 ) -> PyResult<PyMcapWriter> {
-    let file = if allow_overwrite {
-        File::create(path)?
-    } else {
-        File::create_new(path)?
+    let file = match path {
+        PathOrFileLike::Path(path) => WriterInner::File(if allow_overwrite {
+            File::create(path)?
+        } else {
+            File::create_new(path)?
+        }),
+        PathOrFileLike::FileLike(obj) => WriterInner::FileLike(PyFileLikeWriter(obj)),
     };
 
     let options = writer_options.map_or_else(McapWriteOptions::default, |opts| opts.into());
@@ -183,7 +278,18 @@ fn open_mcap(
     } else {
         McapWriter::with_options(options)
     };
-    let handle = handle.create(writer).map_err(PyFoxgloveError::from)?;
+    let handle = if let Some(channel_filter) = channel_filter {
+        handle.channel_filter(Arc::new(PySinkChannelFilter(channel_filter)))
+    } else {
+        handle
+    };
+
+    // Release the GIL before calling create(), which calls context.add_sink() and may invoke
+    // PySinkChannelFilter::should_subscribe() on existing channels. That callback needs to
+    // re-acquire the GIL via Python::with_gil(); if we still hold it here, we deadlock.
+    let handle = py
+        .allow_threads(move || handle.create(writer))
+        .map_err(PyFoxgloveError::from)?;
     Ok(PyMcapWriter(Some(handle)))
 }
 
@@ -219,7 +325,8 @@ fn disable_logging() -> PyResult<()> {
 
 // Not public. Registered as an atexit handler.
 #[pyfunction]
-fn shutdown(py: Python<'_>) {
+fn shutdown(#[allow(unused_variables)] py: Python<'_>) {
+    #[cfg(not(target_family = "wasm"))]
     py.allow_threads(foxglove::shutdown_runtime);
 }
 
@@ -228,20 +335,45 @@ fn shutdown(py: Python<'_>) {
 #[pymodule]
 fn _foxglove_py(m: &Bound<'_, PyModule>) -> PyResult<()> {
     foxglove::library_version::set_sdk_language("python");
-    pyo3_log::init();
+    init_logging();
     m.add_function(wrap_pyfunction!(enable_logging, m)?)?;
     m.add_function(wrap_pyfunction!(disable_logging, m)?)?;
     m.add_function(wrap_pyfunction!(shutdown, m)?)?;
     m.add_function(wrap_pyfunction!(open_mcap, m)?)?;
+    #[cfg(not(target_family = "wasm"))]
     m.add_function(wrap_pyfunction!(start_server, m)?)?;
+    #[cfg(not(target_family = "wasm"))]
+    m.add_function(wrap_pyfunction!(start_sysinfo_publisher, m)?)?;
+    #[cfg(not(target_family = "wasm"))]
+    m.add_class::<PySystemInfoPublisher>()?;
+    #[cfg(feature = "remote-access")]
+    m.add_function(wrap_pyfunction!(start_gateway, m)?)?;
     m.add_function(wrap_pyfunction!(get_channel_for_topic, m)?)?;
     m.add_class::<BaseChannel>()?;
     m.add_class::<PySchema>()?;
     m.add_class::<PyContext>()?;
+    m.add_class::<PySinkChannelFilter>()?;
+    m.add_class::<PyChannelDescriptor>()?;
+    // Shared types used by both websocket and remote_access.
+    #[cfg(not(target_family = "wasm"))]
+    {
+        m.add_class::<remote_common::PyConnectionGraph>()?;
+        m.add_class::<remote_common::PyMessageSchema>()?;
+        m.add_class::<remote_common::PyParameter>()?;
+        m.add_class::<remote_common::PyParameterType>()?;
+        m.add_class::<remote_common::PyParameterValue>()?;
+        m.add_class::<remote_common::PyService>()?;
+        m.add_class::<remote_common::PyServiceRequest>()?;
+        m.add_class::<remote_common::PyServiceSchema>()?;
+        m.add_class::<remote_common::PyStatusLevel>()?;
+    }
     // Register nested modules.
-    schemas::register_submodule(m)?;
+    messages::register_submodule(m)?;
     channels::register_submodule(m)?;
     mcap::register_submodule(m)?;
+    #[cfg(not(target_family = "wasm"))]
     websocket::register_submodule(m)?;
+    #[cfg(feature = "remote-access")]
+    remote_access::register_submodule(m)?;
     Ok(())
 }

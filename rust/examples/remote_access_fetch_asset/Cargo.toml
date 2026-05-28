@@ -1,0 +1,13 @@
+[package]
+name = "example_remote_access_fetch_asset"
+edition = "2024"
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+foxglove = { path = "../../foxglove", features = ["remote-access"] }
+tokio = { version = "1.47", features = ["full"] }
+env_logger = "0.11.5"
+log = "0.4"

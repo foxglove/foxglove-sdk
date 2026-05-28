@@ -1,6 +1,6 @@
 #include <foxglove/channel.hpp>
 #include <foxglove/foxglove.hpp>
-#include <foxglove/server.hpp>
+#include <foxglove/websocket.hpp>
 
 #include <atomic>
 #include <chrono>
@@ -21,7 +21,7 @@ using namespace std::chrono_literals;
 static std::function<void()> sigint_handler;
 
 // NOLINTNEXTLINE(bugprone-exception-escape)
-int main(int argc, const char* argv[]) {
+int main() {
   std::signal(SIGINT, [](int) {
     if (sigint_handler) {
       sigint_handler();

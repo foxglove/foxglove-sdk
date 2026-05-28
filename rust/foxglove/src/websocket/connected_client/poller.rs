@@ -1,21 +1,22 @@
 use futures_util::{SinkExt, StreamExt};
 use tokio::net::TcpStream;
 use tokio::sync::oneshot;
-use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::WebSocketStream;
+use tokio_tungstenite::tungstenite::Message;
 
 use crate::websocket::Status;
+use crate::websocket::streams::ServerStream;
 
 use super::{ConnectedClient, ShutdownReason};
 
 /// A poller for a connected client.
 ///
 /// The poller is responsible for:
-/// - Sending messages (from `data_plane` and `control_plane`) to the websocket.
-/// - Receiving messages from the websocket and invoking [`ConnectedClient::handle_message`].
-/// - Waiting for a shutdown signal, and closing the websocket.
+/// - Sending messages (from `data_plane` and `control_plane`) to the WebSocket.
+/// - Receiving messages from the WebSocket and invoking [`ConnectedClient::handle_message`].
+/// - Waiting for a shutdown signal, and closing the WebSocket.
 pub(super) struct Poller {
-    websocket: WebSocketStream<TcpStream>,
+    websocket: WebSocketStream<ServerStream<TcpStream>>,
     data_plane_rx: flume::Receiver<Message>,
     control_plane_rx: flume::Receiver<Message>,
     shutdown_rx: oneshot::Receiver<ShutdownReason>,
@@ -24,7 +25,7 @@ pub(super) struct Poller {
 impl Poller {
     /// Creates a new poller.
     pub fn new(
-        websocket: WebSocketStream<TcpStream>,
+        websocket: WebSocketStream<ServerStream<TcpStream>>,
         data_plane_rx: flume::Receiver<Message>,
         control_plane_rx: flume::Receiver<Message>,
         shutdown_rx: oneshot::Receiver<ShutdownReason>,
@@ -37,12 +38,12 @@ impl Poller {
         }
     }
 
-    /// Runs the main poll loop for a websocket connection.
+    /// Runs the main poll loop for a WebSocket connection.
     pub async fn run(self, client: &ConnectedClient) {
         let addr = client.addr();
         let (mut ws_tx, mut ws_rx) = self.websocket.split();
 
-        // Handle messages received from the websocket.
+        // Handle messages received from the WebSocket.
         let ws_rx_loop = async {
             while let Some(msg) = ws_rx.next().await {
                 match msg {
@@ -55,7 +56,7 @@ impl Poller {
             ShutdownReason::ClientDisconnected
         };
 
-        // Send messages from queues to the websocket.
+        // Send messages from queues to the WebSocket.
         let ws_tx_loop = async {
             while let Ok(msg) = tokio::select! {
                 msg = self.control_plane_rx.recv_async() => msg,

@@ -1,0 +1,8 @@
+---
+source: rust/foxglove/src/protocol/common/parameter.rs
+expression: "Parameter::string(\"string\", \"howdy\")"
+---
+{
+  "name": "string",
+  "value": "howdy"
+}

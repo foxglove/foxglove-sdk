@@ -1,0 +1,38 @@
+
+i
+foxglove/Color.protofoxglove"?
+Color
+r (Rr
+g (Rg
+b (Rb
+a (Rabproto3
+s
+foxglove/Quaternion.protofoxglove"D
+
+Quaternion
+x (Rx
+y (Ry
+z (Rz
+w (Rwbproto3
+_
+foxglove/Vector3.protofoxglove"3
+Vector3
+x (Rx
+y (Ry
+z (Rzbproto3
+É
+foxglove/Pose.protofoxglovefoxglove/Quaternion.protofoxglove/Vector3.proto"m
+Pose-
+position (2.foxglove.Vector3Rposition6
+orientation (2.foxglove.QuaternionRorientationbproto3
+ç
+foxglove/ModelPrimitive.protofoxglovefoxglove/Color.protofoxglove/Pose.protofoxglove/Vector3.proto"ð
+ModelPrimitive"
+pose (2.foxglove.PoseRpose'
+scale (2.foxglove.Vector3Rscale%
+color (2.foxglove.ColorRcolor%
+override_color (RoverrideColor
+url (	Rurl
+
+media_type (	R	mediaType
+data (Rdatabproto3

@@ -13,10 +13,10 @@ export type TriangleListPrimitive = {
   /** Vertices to use for triangles, interpreted as a list of triples (0-1-2, 3-4-5, ...) */
   points: Point3[];
 
-  /** Solid color to use for the whole shape. One of `color` or `colors` must be provided. */
+  /** Solid color to use for the whole shape. Ignored if `colors` is non-empty. */
   color: Color;
 
-  /** Per-vertex colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided. */
+  /** Per-vertex colors (if specified, must have the same length as `points`). */
   colors: Color[];
 
   /**

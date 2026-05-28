@@ -1,0 +1,102 @@
+import type { RenderProps } from "@anywidget/types";
+import { FoxgloveViewer } from "@foxglove/embed";
+import type { Layout, OpaqueLayoutData, SelectLayoutParams } from "@foxglove/embed";
+
+// Specifies attributes defined with traitlets in ../python/foxglove/notebook/widget.py
+interface WidgetModel {
+  width: number | "full";
+  height: number;
+  src?: string;
+  _layout?: string;
+  _opaque_layout?: OpaqueLayoutData;
+}
+
+const DEFAULT_NOTEBOOK_LAYOUT_STORAGE_KEY = "foxglove-notebook-default-layout";
+
+type MessageToPython = { type: "ready" } | { type: "error"; message: string };
+type MessageFromPython = { type: "update-data" };
+
+function createSelectLayoutParams(layoutJson: string | undefined): SelectLayoutParams {
+  // Even if no layout is provided, we want to always provide our storageKey and force=true so that
+  // the embed doesn't fall back to its default caching behavior.
+  return {
+    storageKey: DEFAULT_NOTEBOOK_LAYOUT_STORAGE_KEY,
+    force: true,
+    layout: layoutJson ? (JSON.parse(layoutJson) as Layout) : undefined,
+  };
+}
+
+function createOpaqueSelectLayoutParams(opaqueLayout: OpaqueLayoutData): SelectLayoutParams {
+  // Even if no layout is provided, we want to always provide our storageKey and force=true so that
+  // the embed doesn't fall back to its default caching behavior.
+  return {
+    storageKey: DEFAULT_NOTEBOOK_LAYOUT_STORAGE_KEY,
+    force: true,
+    opaqueLayout,
+  };
+}
+
+function render({ model, el }: RenderProps<WidgetModel>): void {
+  const parent = document.createElement("div");
+
+  const initialLayoutJson = model.get("_layout");
+  const initialOpaqueLayout = model.get("_opaque_layout");
+
+  const viewer = new FoxgloveViewer({
+    parent,
+    embeddedViewer: "Python",
+    src: model.get("src"),
+    orgSlug: undefined,
+    initialLayoutParams:
+      initialOpaqueLayout != undefined
+        ? createOpaqueSelectLayoutParams(initialOpaqueLayout)
+        : createSelectLayoutParams(initialLayoutJson),
+  });
+
+  viewer.addEventListener("error", (event) => {
+    model.send({ type: "error", message: event.detail } satisfies MessageToPython);
+  });
+
+  viewer.addEventListener("ready", () => {
+    model.send({ type: "ready" } satisfies MessageToPython);
+  });
+
+  model.on("msg:custom", (msg: MessageFromPython, buffers: DataView<ArrayBuffer>[]) => {
+    // Only one message is supported currently, however let's keep the if clause to be explicit
+    // and avoid future pitfalls
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    if (msg.type === "update-data") {
+      const files = buffers.map((buffer, i) => new File([buffer.buffer], `data-${i}.mcap`));
+      viewer.setDataSource({
+        type: "file",
+        file: files,
+      });
+    }
+  });
+
+  parent.style.width = model.get("width") === "full" ? "100%" : `${model.get("width")}px`;
+  parent.style.height = `${model.get("height")}px`;
+
+  model.on("change:width", () => {
+    parent.style.width = model.get("width") === "full" ? "100%" : `${model.get("width")}px`;
+  });
+
+  model.on("change:height", () => {
+    parent.style.height = `${model.get("height")}px`;
+  });
+
+  model.on("change:_layout", () => {
+    const layoutJson = model.get("_layout");
+    const selectParams = createSelectLayoutParams(layoutJson);
+    viewer.selectLayout(selectParams);
+  });
+
+  model.on("change:_opaque_layout", () => {
+    const opaqueLayoutJson = model.get("_opaque_layout");
+    viewer.selectLayout(createOpaqueSelectLayoutParams(opaqueLayoutJson));
+  });
+
+  el.appendChild(parent);
+}
+
+export default { render };

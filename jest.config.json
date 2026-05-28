@@ -1,6 +1,12 @@
 {
   "testMatch": ["<rootDir>/**/*.test.ts"],
-  "testPathIgnorePatterns": ["<rootDir>/rust"],
+  "testPathIgnorePatterns": [
+    "<rootDir>/cpp",
+    "<rootDir>/rust",
+    "<rootDir>/.cargo",
+    "<rootDir>/.uv_cache",
+    "<rootDir>/.venv"
+  ],
   "transform": {
     "^.+\\.ts$": [
       "ts-jest",

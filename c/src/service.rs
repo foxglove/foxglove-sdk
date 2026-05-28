@@ -24,7 +24,7 @@ impl FoxgloveServiceResponder {
     }
 }
 
-/// A websocket service request message.
+/// A WebSocket service request message.
 #[repr(C)]
 pub struct FoxgloveServiceRequest {
     /// The service name.
@@ -74,7 +74,7 @@ impl FoxgloveService {
     }
 }
 
-/// A schema describing either a websocket service request or response.
+/// A schema describing either a WebSocket service request or response.
 #[repr(C)]
 pub struct FoxgloveServiceMessageSchema {
     /// The message encoding.
@@ -86,7 +86,7 @@ impl FoxgloveServiceMessageSchema {
     /// Converts a service message schema to native types.
     ///
     /// # Safety
-    /// - `encoding` must be a valid pointer to a UTF-8 string.
+    /// - `encoding` must be a valid UTF-8 string.
     /// - `schema` must meet the safety requirements of [`FoxgloveSchema::to_native`].
     unsafe fn to_native(&self) -> Result<(String, foxglove::Schema), foxglove::FoxgloveError> {
         let encoding = unsafe { self.encoding.as_utf8_str() }?;
@@ -95,7 +95,7 @@ impl FoxgloveServiceMessageSchema {
     }
 }
 
-/// A websocket service schema.
+/// A WebSocket service schema.
 #[repr(C)]
 pub struct FoxgloveServiceSchema<'a> {
     /// Service schema name.
@@ -109,7 +109,7 @@ impl FoxgloveServiceSchema<'_> {
     /// Converts a service schema to the native type.
     ///
     /// # Safety
-    /// - `name` must be a valid pointer to a UTF-8 string.
+    /// - `name` must be a valid UTF-8 string.
     /// - `request` and `response` must each be either NULL , or a pointer to a struct that meets
     ///   the safety requirements of [`FoxgloveServiceMessageSchema::to_native`].
     unsafe fn to_native(&self) -> Result<ServiceSchema, foxglove::FoxgloveError> {
@@ -146,13 +146,13 @@ impl Handler for ServiceHandler {
         // SAFETY: It's the callback implementation's responsibility to ensure that this callback
         // function pointer remains valid for the lifetime of the service, as described in the
         // safety requirements of `foxglove_service_create`.
-        unsafe { (self.callback)(self.callback_context, &c_request, c_responder) };
+        unsafe { (self.callback)(self.callback_context, &raw const c_request, c_responder) };
     }
 }
 
-/// Creates a new websocket service.
+/// Creates a new WebSocket service.
 ///
-/// The service must be registered with a websocket server using `foxglove_server_add_service`, or
+/// The service must be registered with a WebSocket server using `foxglove_server_add_service`, or
 /// freed with `foxglove_service_free`.
 ///
 /// The callback is invoked from the client's main poll loop and must not block. If blocking or
@@ -170,7 +170,7 @@ impl Handler for ServiceHandler {
 ///
 /// # Safety
 /// - `service` must be a valid pointer.
-/// - `name` must be a valid pointer to a UTF-8 string.
+/// - `name` must be a valid UTF-8 string.
 /// - `schema` must be NULL, or a valid pointer to a service schema.
 /// - `callback` must be a valid pointer to a service callback function, which must remain valid
 ///   until the service is either unregistered or freed.
@@ -215,11 +215,11 @@ pub unsafe extern "C" fn foxglove_service_create(
     FoxgloveError::Ok
 }
 
-/// Frees a service that was never registered to a websocket server.
+/// Frees a service that was never registered to a WebSocket server.
 ///
 /// # Safety
 /// - `service` must be a valid pointer to a service allocated by `foxglove_service_create`. The
-///   service MUST NOT have been previously registered with a websocket server.
+///   service MUST NOT have been previously registered with a WebSocket server.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_service_free(service: *mut FoxgloveService) {
     if !service.is_null() {
@@ -232,7 +232,7 @@ pub unsafe extern "C" fn foxglove_service_free(service: *mut FoxgloveService) {
 /// # Safety
 /// - `responder` must be a pointer to a `foxglove_service_responder` obtained via the
 ///   `foxglove_service.handler` callback.
-/// - `encoding` must be a pointer to a valid UTF-8 string. This value is copied by this function.
+/// - `encoding` must be a valid UTF-8 string. This value is copied by this function.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_service_set_response_encoding(
     responder: Option<&mut FoxgloveServiceResponder>,
@@ -272,7 +272,7 @@ pub unsafe extern "C" fn foxglove_service_respond_ok(
 /// - `responder` must be a pointer to a `foxglove_service_responder` obtained via the
 ///   `foxglove_service.handler` callback. This value is moved into this function, and must not
 ///   accessed afterwards.
-/// - `message` must be a pointer to a valid UTF-8 string. This value is copied by this function.
+/// - `message` must be a valid UTF-8 string. This value is copied by this function.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_service_respond_error(
     responder: *mut FoxgloveServiceResponder,

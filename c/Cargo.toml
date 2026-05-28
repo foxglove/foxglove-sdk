@@ -1,27 +1,60 @@
 [package]
 name = "foxglove_c"
-version = "0.7.1"
-edition = "2021"
+version.workspace = true
+edition.workspace = true
 publish = false
 
 [lib]
 name = "foxglove"
 crate-type = ["staticlib", "cdylib"]
 
+# The `remote_access` feature gates `mod gateway` in src/lib.rs. It can be enabled via
+# the Container.mk option FOXGLOVE_REMOTE_ACCESS, which passes this feature to corrosion.
+# Likewise FOXGLOVE_REQUIRE_CUDA enables the require-cuda feature, which will error
+# if cuda.h is not found: https://docs.rs/foxglove/latest/foxglove/#nvenc-hardware-acceleration
+#
+# Exactly one of `aws-lc-rs` or `ring` must be enabled to select the rustls crypto
+# backend used by `websocket-tls` and `remote-access`. `aws-lc-rs` is the default;
+# `ring` exists as an escape hatch for targets where building aws-lc-sys is painful
+# (e.g. the iOS simulator). The two are mutually exclusive: enabling both is a
+# compile error in foxglove. To use `ring`, set `--no-default-features` and select
+# it explicitly.
+[features]
+default = ["aws-lc-rs"]
+remote-access = ["foxglove/remote-access"]
+require-cuda = ["foxglove/require-cuda"]
+aws-lc-rs = ["foxglove/aws-lc-rs"]
+ring = ["foxglove/ring"]
+
+# The full set of supported features, with opinionated choices for mutually-
+# exclusive feature sets.
+full = ["aws-lc-rs", "remote-access"]
+
 [lints]
 workspace = true
 
 [dependencies]
+tracing.workspace = true
+
+[target.'cfg(target_family = "wasm")'.dependencies]
+foxglove = { path = "../rust/foxglove", default-features = false }
+
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+foxglove = { path = "../rust/foxglove", default-features = false, features = [
+  "lz4",
+  "sysinfo",
+  "websocket",
+  "websocket-tls",
+  "zstd",
+] }
 base64 = "0.22.1"
 bitflags = "2.9.0"
 env_logger = "0.11.5"
-foxglove = { path = "../rust/foxglove", features = ["unstable"] }
 log.workspace = true
 mcap.workspace = true
-tracing.workspace = true
 
 [build-dependencies]
-cbindgen = "0.28.0"
+cbindgen = "0.29.0"
 
 [dev-dependencies]
 maplit = "1.0.2"

@@ -5,54 +5,143 @@ on:
     branches: [main]
     tags: ["**"]
   pull_request:
-    branches: ["*"]
+    types: [opened, synchronize, reopened, labeled]
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      wheels: ${{ github.event_name != 'pull_request' || steps.paths.outputs.wheels == 'true' || contains(github.event.pull_request.labels.*.name, 'ci:python') }}
+    steps:
+      - uses: dorny/paths-filter@v4
+        if: github.event_name == 'pull_request'
+        id: paths
+        with:
+          filters: |
+            wheels:
+              - 'python/**'
+              - '.github/workflows/python.yml'
+
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
-          python-version: "3.9"
+          python-version: "3.10"
 
-      - run: pipx install poetry
-      - run: poetry check --strict
-      - run: poetry install
-      - run: poetry run black . --check
-      - run: poetry run isort . --check
-      - run: poetry run flake8 .
+      - uses: astral-sh/setup-uv@v7
+      - run: make -f Container.mk lint-python
 
   lint-and-test-sdk:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: python/foxglove-sdk
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions-rust-lang/setup-rust-toolchain@v1
 
       - name: Install common dependencies
         uses: ./.github/actions/common-deps
 
-      - run: pipx install poetry
-      - run: poetry check --strict
-      - run: poetry install
-      - run: poetry run maturin develop
-      - run: poetry run mypy .
-      - run: poetry run pytest --with-benchmarks
+      - run: corepack enable
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: yarn
+
+      - run: make -f Container.mk test-python
+
+  playground-wasm:
+    runs-on: ubuntu-latest
+    needs: [sdist]
+    steps:
+      - name: Download sdist
+        uses: actions/download-artifact@v8
+        with:
+          name: wheels-sdist
+      - name: Unpack sdist
+        run: tar xzf foxglove_sdk-*.tar.gz --strip-components 1
+
+      - uses: astral-sh/setup-uv@v7
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          # Use an older rust toolchain to avoid emscripten build error "Unknown option '--enable-bulk-memory-opt'"
+          # similar to https://github.com/godotengine/godot/issues/100841
+          toolchain: 1.86.0
+          target: wasm32-unknown-emscripten
+
+      - name: Set up Emscripten
+        run: |
+          git clone https://github.com/emscripten-core/emsdk.git
+          # Use an older emscripten version to avoid errors with building Rust packages https://github.com/pyodide/pyodide/pull/5646#issuecomment-3215934664
+          ./emsdk/emsdk install 3.1.58
+          ./emsdk/emsdk activate 3.1.58
+          echo "$(pwd)/emsdk" >> $GITHUB_PATH
+          echo "$(pwd)/emsdk/upstream/emscripten" >> $GITHUB_PATH
+
+      - name: Build wheel
+        # Maturin's PEP 517 backend doesn't support cross-compilation, so we run `maturin
+        # build` directly, as we do when building wheels with `PyO3/maturin-action`.
+        run: uv run maturin build --release --out dist --target wasm32-unknown-emscripten -i python3.12
+        env:
+          CFLAGS: "-fPIC"
+          RUSTC_BOOTSTRAP: "1"
+          MATURIN_NO_MISSING_BUILD_BACKEND_WARNING: 1
+
+      - name: Upload wheel
+        uses: actions/upload-artifact@v7
+        with:
+          name: playground-wasm
+          path: dist
+
+  playground:
+    runs-on: ubuntu-latest
+    needs: [playground-wasm]
+    defaults:
+      run:
+        working-directory: playground
+    permissions:
+      deployments: write
+    steps:
+      - uses: actions/checkout@v6
+      - run: corepack enable
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: yarn
+      - name: Download wheel
+        uses: actions/download-artifact@v8
+        with:
+          name: playground-wasm
+          path: playground/public
+      - run: yarn install
+      - run: yarn build
+      - uses: cloudflare/pages-action@v1.5.0
+        # Only run if not a fork, and not a dependabot PR, since we do not have
+        # access to secrets in these environments.
+        if: ${{ !github.event.pull_request.head.repo.fork && github.actor != 'dependabot[bot]' }}
+        id: deploy
+        with:
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          gitHubToken: ${{ secrets.FOXGLOVEBOT_GITHUB_TOKEN }}
+          wranglerVersion: "3"
+          branch: ${{ github.head_ref || github.ref_name }}
+          projectName: foxglove-sdk-playground
+          directory: playground/dist
 
   schemas:
     runs-on: ubuntu-latest
     permissions:
       id-token: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
-          python-version: "3.9"
+          python-version: "3.10"
 
       - uses: arduino/setup-protoc@v3
         with:
@@ -67,11 +156,7 @@ jobs:
           rm Linux.flatc.binary.clang++-12.zip
           sudo mv flatc /usr/local/bin
 
-      - run: pipx install poetry
-      - run: poetry install
-
-      - run: make install
-        working-directory: python
+      - uses: astral-sh/setup-uv@v7
 
       - run: make build
         working-directory: python
@@ -93,143 +178,264 @@ jobs:
 
   linux:
     runs-on: ${{ matrix.platform.runner }}
+    needs: [changes, sdist]
+    if: needs.changes.outputs.wheels == 'true'
     strategy:
       matrix:
         platform:
+          # x86_64 and aarch64 get two wheel variants:
+          #   manylinux_2_28 with remote-access (glibc >= 2.28)
+          #   manylinux auto without remote-access (older glibc)
+          # pip selects the most specific compatible wheel automatically.
+          #
+          # pyo3/extension-module must be specified explicitly alongside remote-access
+          # because maturin's --features flag replaces (rather than adds to) the
+          # features listed in pyproject.toml.
           - runner: ubuntu-22.04
             target: x86_64
+            manylinux: "2_28"
+            extra-args: --features pyo3/extension-module,remote-access,require-cuda
+            before-script: |
+              if command -v apt-get; then
+                apt-get update
+                apt-get install -y libva-dev nvidia-cuda-dev
+                ln -snf /usr /usr/local/cuda
+              elif command -v yum; then
+                yum install -y libva-devel yum-utils
+                arch=$(uname -m)
+                case "$arch" in
+                  aarch64) cuda_arch=sbsa ;;
+                  *) cuda_arch="$arch" ;;
+                esac
+                yum-config-manager --add-repo "https://developer.download.nvidia.com/compute/cuda/repos/rhel8/${cuda_arch}/cuda-rhel8.repo"
+                yum install -y cuda-cudart-devel-12-6 cuda-driver-devel-12-6
+                ln -snf /usr/local/cuda-12.6 /usr/local/cuda
+              else
+                echo "No supported package manager found"
+                exit 1
+              fi
+            artifact-suffix: "-2_28"
           - runner: ubuntu-22.04
-            target: x86
-          - runner: ubuntu-22.04
+            target: x86_64
+            manylinux: auto
+            artifact-suffix: ""
+          - runner: ubuntu-22.04-arm
             target: aarch64
+            manylinux: "2_28"
+            extra-args: --features pyo3/extension-module,remote-access,require-cuda
+            before-script: |
+              if command -v apt-get; then
+                apt-get update
+                apt-get install -y libva-dev nvidia-cuda-dev
+                ln -snf /usr /usr/local/cuda
+              elif command -v yum; then
+                yum install -y libva-devel yum-utils
+                arch=$(uname -m)
+                case "$arch" in
+                  aarch64) cuda_arch=sbsa ;;
+                  *) cuda_arch="$arch" ;;
+                esac
+                yum-config-manager --add-repo "https://developer.download.nvidia.com/compute/cuda/repos/rhel8/${cuda_arch}/cuda-rhel8.repo"
+                yum install -y cuda-cudart-devel-12-6 cuda-driver-devel-12-6
+                ln -snf /usr/local/cuda-12.6 /usr/local/cuda
+              else
+                echo "No supported package manager found"
+                exit 1
+              fi
+            artifact-suffix: "-2_28"
+          - runner: ubuntu-22.04-arm
+            target: aarch64
+            manylinux: auto
+            artifact-suffix: ""
           - runner: ubuntu-22.04
             target: armv7
-          - runner: ubuntu-22.04
-            target: s390x
-          - runner: ubuntu-22.04
-            target: ppc64le
+            manylinux: auto
+            artifact-suffix: ""
     steps:
-      - uses: actions/checkout@v4
-      # rustfmt is used on generated rust schemas for the SDK
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - uses: actions/setup-python@v6
         with:
-          components: rustfmt
-      - uses: actions/setup-python@v5
+          python-version: "3.10"
+      - name: Download sdist
+        uses: actions/download-artifact@v8
         with:
-          python-version: "3.9"
+          name: wheels-sdist
+      - name: Unpack sdist
+        run: tar xzf foxglove_sdk-*.tar.gz --strip-components 1
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
-          working-directory: python/foxglove-sdk
-          args: --release --out dist --find-interpreter
+          args: --release --out dist -i python3.10 ${{ matrix.platform.extra-args }}
           sccache: "false"
-          manylinux: auto
+          manylinux: ${{ matrix.platform.manylinux }}
+          before-script-linux: ${{ matrix.platform.before-script }}
+          docker-options: "--env MATURIN_NO_MISSING_BUILD_BACKEND_WARNING=1"
       - name: Upload wheels
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
-          name: wheels-linux-${{ matrix.platform.target }}
-          path: python/foxglove-sdk/dist
+          name: wheels-linux-${{ matrix.platform.target }}${{ matrix.platform.artifact-suffix }}
+          path: dist
 
   musllinux:
     runs-on: ${{ matrix.platform.runner }}
+    needs: [changes, sdist]
+    if: needs.changes.outputs.wheels == 'true'
     strategy:
       matrix:
         platform:
           - runner: ubuntu-22.04
             target: x86_64
-          - runner: ubuntu-22.04
-            target: x86
           - runner: ubuntu-22.04
             target: aarch64
           - runner: ubuntu-22.04
             target: armv7
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
-          python-version: "3.9"
+          python-version: "3.10"
+      - name: Download sdist
+        uses: actions/download-artifact@v8
+        with:
+          name: wheels-sdist
+      - name: Unpack sdist
+        run: tar xzf foxglove_sdk-*.tar.gz --strip-components 1
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
-          working-directory: python/foxglove-sdk
-          args: --release --out dist --find-interpreter
+          args: --release --out dist -i python3.10
           sccache: "false"
           manylinux: musllinux_1_2
+          docker-options: "--env MATURIN_NO_MISSING_BUILD_BACKEND_WARNING=1"
       - name: Upload wheels
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: wheels-musllinux-${{ matrix.platform.target }}
-          path: python/foxglove-sdk/dist
+          path: dist
 
   windows:
     runs-on: ${{ matrix.platform.runner }}
+    needs: [changes, sdist]
+    if: needs.changes.outputs.wheels == 'true'
     strategy:
       matrix:
         platform:
           - runner: windows-latest
-            target: x64
+            target: x86_64
+            extra-args: --features pyo3/extension-module,remote-access
           - runner: windows-latest
             target: x86
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
+        if: ${{ matrix.platform.target == 'x86_64' }}
         with:
-          python-version: "3.9"
-          architecture: ${{ matrix.platform.target }}
+          python-version: "3.10"
+
+      # The windows-latest image doesn't have 32-bit pythons.
+      - uses: actions/setup-python@v6
+        if: ${{ matrix.platform.target == 'x86' }}
+        with:
+          architecture: x86
+          python-version: "3.10"
+
+      - name: Install NASM
+        if: ${{ matrix.platform.target == 'x86_64' }}
+        uses: ilammy/setup-nasm@v1
+
+      - name: Download sdist
+        uses: actions/download-artifact@v8
+        with:
+          name: wheels-sdist
+      - name: Unpack sdist
+        shell: bash
+        run: tar xzf foxglove_sdk-*.tar.gz --strip-components 1
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
-          working-directory: python/foxglove-sdk
-          args: --release --out dist --find-interpreter
+          args: --release --out dist -i python3.10 ${{ matrix.platform.extra-args }}
           sccache: "false"
+          docker-options: "--env MATURIN_NO_MISSING_BUILD_BACKEND_WARNING=1"
+        env:
+          RUSTFLAGS: ${{ matrix.platform.target == 'x86_64' && '-C target-feature=+crt-static' || '' }}
       - name: Upload wheels
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: wheels-windows-${{ matrix.platform.target }}
-          path: python/foxglove-sdk/dist
+          path: dist
 
   macos:
     runs-on: ${{ matrix.platform.runner }}
+    needs: [changes, sdist]
+    if: needs.changes.outputs.wheels == 'true'
     strategy:
       matrix:
         platform:
-          - runner: macos-13
-            target: x86_64
-          - runner: macos-14
+          - runner: macos-15
             target: aarch64
+            extra-args: --features pyo3/extension-module,remote-access
+          - runner: macos-15-intel
+            target: x86_64
+            extra-args: --features pyo3/extension-module,remote-access
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
-          python-version: "3.9"
+          python-version: "3.10"
+      - name: Download sdist
+        uses: actions/download-artifact@v8
+        with:
+          name: wheels-sdist
+      - name: Unpack sdist
+        run: tar xzf foxglove_sdk-*.tar.gz --strip-components 1
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
-          working-directory: python/foxglove-sdk
-          args: --release --out dist --find-interpreter
+          args: --release --out dist -i python3.10 ${{ matrix.platform.extra-args }}
           sccache: "false"
+          docker-options: "--env MATURIN_NO_MISSING_BUILD_BACKEND_WARNING=1"
       - name: Upload wheels
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: wheels-macos-${{ matrix.platform.target }}
-          path: python/foxglove-sdk/dist
+          path: dist
 
   sdist:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Build sdist
-        uses: PyO3/maturin-action@v1
+      - uses: actions/checkout@v6
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - uses: astral-sh/setup-uv@v7
+      - run: corepack enable
+      - uses: actions/setup-node@v6
         with:
-          command: sdist
-          args: --out dist
-          working-directory: python/foxglove-sdk
+          node-version: 22
+          cache: yarn
+      - name: Build sdist
+        run: uv build --sdist
+        working-directory: python/foxglove-sdk
+      - name: Verify notebook widget asset in sdist
+        run: |
+          python - <<'PY'
+          import glob
+          import sys
+          import tarfile
+
+          paths = glob.glob("dist/foxglove_sdk-*.tar.gz")
+          if not paths:
+              sys.exit("No sdist artifact found to validate in dist/")
+
+          tar_path = paths[0]
+          expected_suffix = "python/foxglove/notebook/static/widget.js"
+          with tarfile.open(tar_path, "r:gz") as tar:
+              names = tar.getnames()
+
+          if not any(name.endswith(expected_suffix) for name in names):
+              sys.exit(f"Missing {expected_suffix} in {tar_path}")
+          PY
+        working-directory: python/foxglove-sdk
       - name: Upload sdist
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: wheels-sdist
           path: python/foxglove-sdk/dist
@@ -246,12 +452,12 @@ jobs:
       contents: write
       attestations: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: python/foxglove-sdk
-      - run: find python/foxglove-sdk/wheels*
+      - run: find python/foxglove-sdk/wheels-*
       - name: Generate artifact attestation
-        uses: actions/attest-build-provenance@v1
+        uses: actions/attest-build-provenance@v4
         with:
           subject-path: "python/foxglove-sdk/wheels-*/*"
       - name: Publish to PyPI
@@ -266,26 +472,30 @@ jobs:
     needs: [lint-and-test-sdk]
     permissions:
       contents: write
-    defaults:
-      run:
-        working-directory: python/foxglove-sdk
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions-rust-lang/setup-rust-toolchain@v1
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
-          python-version: "3.9"
+          python-version: "3.10"
+      - uses: astral-sh/setup-uv@v7
       - run: corepack enable
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: yarn
-
-      - run: pipx install poetry
-      - run: pipx ensurepath
-      - run: poetry check --strict
-      - run: poetry install
-      - run: poetry run maturin develop
-
       - run: yarn install
       - run: yarn run-python-sdk-examples
+
+  # Gate job for branch protection. Always posts a status so that the required
+  # check passes even when the other jobs are skipped. Configure your required
+  # status check to reference this job ("Python / python-status") instead of the
+  # individual matrix jobs.
+  python-status:
+    name: python-status
+    needs: [changes, lint, lint-and-test-sdk, schemas, sdist, linux, musllinux, windows, macos, playground-wasm, playground, test-sdk-examples]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1

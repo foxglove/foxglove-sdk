@@ -1,6 +1,6 @@
 [package]
-name = "example-quickstart"
-edition = "2021"
+name = "example_quickstart"
+edition = "2024"
 publish = false
 
 [lints]

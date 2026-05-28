@@ -2,7 +2,7 @@ use std::ffi::c_void;
 
 use foxglove::websocket::{AssetHandler, AssetResponder};
 
-use crate::{bytes::FoxgloveBytes, FoxgloveString};
+use crate::{FoxgloveString, bytes::FoxgloveBytes};
 
 pub struct FoxgloveFetchAssetResponder(AssetResponder);
 impl FoxgloveFetchAssetResponder {
@@ -49,23 +49,25 @@ impl FetchAssetHandler {
 }
 unsafe impl Send for FetchAssetHandler {}
 unsafe impl Sync for FetchAssetHandler {}
+
 impl AssetHandler for FetchAssetHandler {
     fn fetch(&self, uri: String, responder: AssetResponder) {
         let c_uri = FoxgloveString::from(&uri);
         let c_responder = FoxgloveFetchAssetResponder(responder).into_raw();
         // SAFETY: It's the callback implementation's responsibility to ensure that this callback
-        // function pointer remains valid for the lifetime of the websocket server, as described in
-        // the safety requirements of `foxglove_server_options.fetch_asset`.
-        unsafe { (self.callback)(self.callback_context, &c_uri, c_responder) };
+        // function pointer remains valid for the lifetime of the server / gateway, as described
+        // in the safety requirements of `foxglove_server_options.fetch_asset` /
+        // `foxglove_gateway_options.fetch_asset`.
+        unsafe { (self.callback)(self.callback_context, &raw const c_uri, c_responder) };
     }
 }
 
 /// Completes a fetch asset request by sending asset data to the client.
 ///
 /// # Safety
-/// - `responder` must be a pointer to a `foxglove_fetch_asset_responder` obtained via the
-///   `foxglove_server_options.fetch_asset` callback. This value is moved into this
-///   function, and must not accessed afterwards.
+/// - `responder` must be a pointer to a `foxglove_fetch_asset_responder` obtained via a
+///   `fetch_asset` callback. This value is moved into this function, and must not be accessed
+///   afterwards.
 /// - `data` must be a pointer to the response data. This value is copied by this function.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_fetch_asset_respond_ok(
@@ -83,7 +85,7 @@ pub unsafe extern "C" fn foxglove_fetch_asset_respond_ok(
 /// - `responder` must be a pointer to a `foxglove_fetch_asset_responder` obtained via the
 ///   `foxglove_server_options.fetch_asset` callback. This value is moved into this
 ///   function, and must not accessed afterwards.
-/// - `message` must be a pointer to a valid UTF-8 string. This value is copied by this function.
+/// - `message` must be a valid UTF-8 string. This value is copied by this function.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_fetch_asset_respond_error(
     responder: *mut FoxgloveFetchAssetResponder,

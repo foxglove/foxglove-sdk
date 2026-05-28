@@ -41,12 +41,16 @@ enum class FoxgloveError : uint8_t {
   ConnectionGraphNotSupported,
   /// An I/O error.
   IoError,
-  /// An error related to MCAP encoding.
+  /// An error related to MCAP writing.
   McapError,
+  /// An error related to encoding.
+  EncodeError,
   /// The provided bufffer is too short.
   BufferTooShort,
   /// Failed to decode base64 data.
-  Base64DecodeError
+  Base64DecodeError,
+  /// A configuration error (e.g. missing required option).
+  ConfigurationError
 };
 
 /// @brief A result type for Foxglove operations.
@@ -59,7 +63,7 @@ enum class FoxgloveError : uint8_t {
 ///
 /// @tparam T The type of the success value returned by the operation.
 template<typename T>
-using FoxgloveResult = expected<T, FoxgloveError>;
+using FoxgloveResult = tl::expected<T, FoxgloveError>;
 
 /// @brief A string representation of a FoxgloveError.
 ///
@@ -109,6 +113,7 @@ private:
   std::ostringstream buffer_;
 };
 
+/// @private
 inline WarnStream warn() {
   return WarnStream{};
 }

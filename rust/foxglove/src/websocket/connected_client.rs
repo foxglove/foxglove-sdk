@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::collections::hash_map::Entry;
 use std::sync::Weak;
 use std::{collections::HashMap, net::SocketAddr, sync::Arc};
@@ -7,16 +8,18 @@ use flume::TrySendError;
 use send_lossy::SendLossyResult;
 use tokio::net::TcpStream;
 use tokio::sync::oneshot;
-use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::WebSocketStream;
+use tokio_tungstenite::tungstenite::Message;
 
+use crate::sink_channel_filter::SinkChannelFilter;
+use crate::websocket::PlaybackControlRequest;
+use crate::websocket::streams::ServerStream;
 use crate::{ChannelId, Context, FoxgloveError, Metadata, RawChannel, Sink, SinkId};
 
 use self::ws_protocol::server::{
     FetchAssetResponse, ParameterValues, ServiceCallFailure, Unadvertise,
 };
 
-use super::semaphore::Semaphore;
 use super::server::Server;
 use super::service::{self, CallId, ServiceId};
 use super::subscription::{Subscription, SubscriptionId};
@@ -24,9 +27,10 @@ use super::ws_protocol::client::ClientMessage;
 use super::ws_protocol::server::MessageData;
 use super::ws_protocol::{self, ParseError};
 use super::{
-    advertise, AssetResponder, Capability, Client, ClientChannel, ClientChannelId, ClientId,
-    Parameter, Status, StatusLevel,
+    AnyClient, AssetResponder, Capability, Client, ClientChannel, ClientChannelId, ClientId,
+    GetParametersResponder, Parameter, SetParametersResponder, Status, StatusLevel, advertise,
 };
+use crate::remote_common::semaphore::Semaphore;
 
 mod poller;
 mod send_lossy;
@@ -37,6 +41,7 @@ const MAX_SEND_RETRIES: usize = 10;
 const ADVERTISE_CHANNEL_BATCH_SIZE: usize = 100;
 const DEFAULT_SERVICE_CALLS_PER_CLIENT: usize = 32;
 const DEFAULT_FETCH_ASSET_CALLS_PER_CLIENT: usize = 32;
+const DEFAULT_PARAMETER_CALLS_PER_CLIENT: usize = 32;
 
 /// A reason for shutting down a client connection.
 #[derive(Debug, Clone, Copy)]
@@ -49,12 +54,13 @@ pub(super) enum ShutdownReason {
     ControlPlaneQueueFull,
 }
 
-/// A connected client session with the websocket server.
+/// A connected client session with the WebSocket server.
 pub(super) struct ConnectedClient {
     id: ClientId,
     addr: SocketAddr,
     weak_self: Weak<Self>,
     sink_id: SinkId,
+    channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     context: Weak<Context>,
     poller: parking_lot::Mutex<Option<Poller>>,
     /// A cache of channels for `on_subscribe` and `on_unsubscribe` callbacks.
@@ -64,6 +70,9 @@ pub(super) struct ConnectedClient {
     control_plane_tx: flume::Sender<Message>,
     service_call_sem: Semaphore,
     fetch_asset_sem: Semaphore,
+    /// Caps the number of in-flight parameter handler invocations (get + set combined) per
+    /// client. Subscribe / unsubscribe are bookkeeping-only and not gated.
+    parameter_sem: Semaphore,
     /// Subscriptions from this client
     subscriptions: parking_lot::Mutex<BiHashMap<ChannelId, SubscriptionId>>,
     /// Channels advertised by this client
@@ -103,7 +112,18 @@ impl Sink for ConnectedClient {
     }
 
     fn add_channels(&self, channels: &[&Arc<RawChannel>]) -> Option<Vec<ChannelId>> {
-        for channels in channels.chunks(ADVERTISE_CHANNEL_BATCH_SIZE) {
+        let filtered_channels = channels
+            .iter()
+            .filter(|channel| {
+                let Some(filter) = self.channel_filter.as_ref() else {
+                    return true;
+                };
+                filter.should_subscribe(channel.descriptor())
+            })
+            .copied()
+            .collect::<Vec<_>>();
+
+        for channels in filtered_channels.chunks(ADVERTISE_CHANNEL_BATCH_SIZE) {
             self.advertise_channels(channels);
         }
         // Clients subscribe asynchronously.
@@ -111,7 +131,19 @@ impl Sink for ConnectedClient {
     }
 
     fn remove_channel(&self, channel: &RawChannel) {
+        let had_subscription = self
+            .subscriptions
+            .lock()
+            .remove_by_left(&channel.id())
+            .is_some();
         self.unadvertise_channel(channel.id());
+        // Fire on_unsubscribe after the channel has been unadvertised.
+        if had_subscription {
+            let server = self.server.upgrade();
+            if let Some(handler) = server.as_ref().and_then(|s| s.listener()) {
+                handler.on_unsubscribe(Client::new(self), channel.into());
+            }
+        }
     }
 
     fn auto_subscribe(&self) -> bool {
@@ -124,9 +156,10 @@ impl ConnectedClient {
     pub fn new(
         context: &Weak<Context>,
         server: &Weak<Server>,
-        websocket: WebSocketStream<TcpStream>,
+        websocket: WebSocketStream<ServerStream<TcpStream>>,
         addr: SocketAddr,
         message_backlog_size: usize,
+        channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     ) -> Arc<Self> {
         let (data_plane_tx, data_plane_rx) = flume::bounded(message_backlog_size);
         let (control_plane_tx, control_plane_rx) = flume::bounded(message_backlog_size);
@@ -137,6 +170,7 @@ impl ConnectedClient {
             weak_self: weak_self.clone(),
             sink_id: SinkId::next(),
             context: context.clone(),
+            channel_filter,
             poller: parking_lot::Mutex::new(Some(Poller::new(
                 websocket,
                 data_plane_rx.clone(),
@@ -149,6 +183,7 @@ impl ConnectedClient {
             control_plane_tx,
             service_call_sem: Semaphore::new(DEFAULT_SERVICE_CALLS_PER_CLIENT),
             fetch_asset_sem: Semaphore::new(DEFAULT_FETCH_ASSET_CALLS_PER_CLIENT),
+            parameter_sem: Semaphore::new(DEFAULT_PARAMETER_CALLS_PER_CLIENT),
             subscriptions: parking_lot::Mutex::default(),
             advertised_channels: parking_lot::Mutex::default(),
             server: server.clone(),
@@ -207,7 +242,7 @@ impl ConnectedClient {
                 return;
             }
             Err(ParseError::UnhandledMessageType) => {
-                tracing::debug!("Unhandled websocket message: {message:?}");
+                tracing::debug!("Unhandled WebSocket message: {message:?}");
                 return;
             }
             Err(err) => {
@@ -246,6 +281,9 @@ impl ConnectedClient {
             ClientMessage::UnsubscribeConnectionGraph => {
                 self.on_connection_graph_unsubscribe(server)
             }
+            ClientMessage::PlaybackControlRequest(msg) => {
+                self.on_playback_control_request(server, msg)
+            }
         }
     }
 
@@ -282,8 +320,8 @@ impl ConnectedClient {
         let client_channel = {
             let advertised_channels = self.advertised_channels.lock();
             let Some(channel) = advertised_channels.get(&channel_id) else {
-                tracing::error!("Received message for unknown channel: {}", channel_id);
-                self.send_error(format!("Unknown channel ID: {}", channel_id));
+                tracing::error!("Received message for unknown channel: {channel_id}");
+                self.send_error(format!("Unknown channel ID: {channel_id}"));
                 // Do not forward to server listener
                 return;
             };
@@ -312,8 +350,7 @@ impl ConnectedClient {
                     // Remove the channel ID from the list so we don't invoke the on_client_unadvertise callback
                     channel_ids.swap_remove(i);
                     self.send_warning(format!(
-                        "Client is not advertising channel: {}; ignoring unadvertisement",
-                        id
+                        "Client is not advertising channel: {id}; ignoring unadvertisement"
                     ));
                     continue;
                 };
@@ -456,14 +493,15 @@ impl ConnectedClient {
             );
             channel_ids.push(channel.id());
 
+            // Propagate client subscription requests to the context.
+            if let Some(context) = self.context.upgrade() {
+                context.subscribe_channels(self.sink_id, &[channel.id()]);
+            }
+
+            // Call the on_subscribe callback if one is registered
             if let Some(handler) = server.listener() {
                 handler.on_subscribe(Client::new(self), channel.as_ref().into());
             }
-        }
-
-        // Propagate client subscription requests to the context.
-        if let Some(context) = self.context.upgrade() {
-            context.subscribe_channels(self.sink_id, &channel_ids);
         }
     }
 
@@ -478,14 +516,23 @@ impl ConnectedClient {
             return;
         }
 
+        // ParameterHandler takes precedence over the deprecated ServerListener callbacks.
+        if let Some(handler) = server.parameter_handler() {
+            let Some(guard) = self.parameter_sem.try_acquire() else {
+                self.send_error("Too many concurrent parameter requests".to_string());
+                return;
+            };
+            let client = AnyClient::from_websocket(Client::new(self));
+            let responder = GetParametersResponder::new(client.clone(), request_id.clone(), guard);
+            handler.get(client, param_names, request_id, responder);
+            return;
+        }
+
+        #[allow(deprecated)]
         if let Some(handler) = server.listener() {
             let parameters =
                 handler.on_get_parameters(Client::new(self), param_names, request_id.as_deref());
-            let mut msg = ParameterValues::new(parameters);
-            if let Some(id) = request_id {
-                msg = msg.with_id(id);
-            }
-            self.send_control_msg(&msg);
+            self.update_parameters(parameters, request_id);
         }
     }
 
@@ -500,13 +547,27 @@ impl ConnectedClient {
             return;
         }
 
+        // ParameterHandler takes precedence over the deprecated ServerListener callbacks.
+        if let Some(handler) = server.parameter_handler() {
+            let Some(guard) = self.parameter_sem.try_acquire() else {
+                self.send_error("Too many concurrent parameter requests".to_string());
+                return;
+            };
+            let client = AnyClient::from_websocket(Client::new(self));
+            let responder = SetParametersResponder::new(client.clone(), request_id.clone(), guard);
+            handler.set(client, parameters, request_id, responder);
+            return;
+        }
+
+        #[allow(deprecated)]
         let updated_parameters = if let Some(handler) = server.listener() {
             let updated =
                 handler.on_set_parameters(Client::new(self), parameters, request_id.as_deref());
+
             // Send all the updated_parameters back to the client if request_id is provided.
             // This is the behavior of the reference Python server implementation.
-            if let Some(id) = request_id {
-                self.send_control_msg(&ParameterValues::new(updated.clone()).with_id(id));
+            if request_id.is_some() {
+                self.update_parameters(updated.clone(), request_id);
             }
             updated
         } else {
@@ -518,8 +579,14 @@ impl ConnectedClient {
         server.publish_parameter_values(updated_parameters);
     }
 
-    pub fn update_parameters(&self, parameters: Vec<Parameter>) {
-        self.send_control_msg(&ParameterValues::new(parameters));
+    pub fn update_parameters(&self, parameters: Vec<Parameter>, request_id: Option<String>) {
+        // Filter out parameters that are not set
+        let mut msg = ParameterValues::new(parameters.into_iter().filter(|p| p.value.is_some()));
+        if let Some(id) = request_id {
+            msg = msg.with_id(id);
+        }
+
+        self.send_control_msg(&msg);
     }
 
     fn on_parameters_subscribe(&self, server: Arc<Server>, names: Vec<String>) {
@@ -573,9 +640,9 @@ impl ConnectedClient {
         // Prepare the responder and the request. No failures past this point. If the responder is
         // dropped without sending a response, it will send a generic "internal server error" back
         // to the client.
-        let responder = service::Responder::new(
+        let responder = service::new_responder(
             self.arc(),
-            service.id(),
+            service_id,
             call_id,
             service.response_encoding().unwrap_or(&req.encoding),
             guard,
@@ -613,7 +680,11 @@ impl ConnectedClient {
         };
 
         if let Some(handler) = server.fetch_asset_handler() {
-            let asset_responder = AssetResponder::new(Client::new(self), request_id, guard);
+            let asset_responder = AssetResponder::new(
+                AnyClient::from_websocket(Client::new(self)),
+                request_id,
+                guard,
+            );
             handler.fetch(uri, asset_responder);
         } else {
             tracing::error!("Server advertised the Assets capability without providing a handler");
@@ -647,6 +718,40 @@ impl ConnectedClient {
             tracing::debug!(
                 "Client {} is already unsubscribed from connection graph updates",
                 self.addr
+            );
+        }
+    }
+
+    fn on_playback_control_request(&self, server: Arc<Server>, msg: PlaybackControlRequest) {
+        if !server.has_capability(Capability::PlaybackControl) {
+            self.send_error("Server does not support playback control capability".to_string());
+            return;
+        }
+
+        if let Some(handler) = server.listener() {
+            let request_id = msg.request_id.clone();
+            let Some(mut playback_state) = handler.on_playback_control_request(msg) else {
+                tracing::error!(
+                    "No playback state sent in response to playback control request ID {}",
+                    request_id
+                );
+                self.send_error(
+                    "Server did not send playback state in response to playback control request"
+                        .to_string(),
+                );
+                return;
+            };
+
+            // Force the request id in the playback state to match that of the request. Since this
+            // playback state is being instantiated in the request listener, it's the only valid
+            // value for this field, and it eases the burden on server implementors to not have to
+            // worry about explicitly setting this.
+            playback_state.request_id = Some(request_id);
+            server.broadcast_playback_state(playback_state);
+        } else {
+            self.send_error(
+                "Server advertised playback control capability but didn't provide a listener"
+                    .to_string(),
             );
         }
     }
@@ -692,25 +797,34 @@ impl ConnectedClient {
             return;
         }
 
-        self.channels
-            .write()
-            .extend(channels.iter().map(|&c| (c.id(), c.clone())));
-
         if self.send_control_msg(&message) {
-            for channel in channels {
+            let advertised_ids = message
+                .channels
+                .iter()
+                .map(|c| c.id)
+                .collect::<HashSet<_>>();
+            let mut advertised_channels = self.channels.write();
+            for &channel in channels {
+                if !advertised_ids.contains(&channel.id().into()) {
+                    continue;
+                }
+
                 tracing::debug!(
                     "Advertised channel {} with id {} to client {}",
                     channel.topic(),
                     channel.id(),
                     self.addr
                 );
+                advertised_channels.insert(channel.id(), channel.clone());
             }
         }
     }
 
     /// Unadvertises a channel to the client.
     fn unadvertise_channel(&self, channel_id: ChannelId) {
-        self.channels.write().remove(&channel_id);
+        if self.channels.write().remove(&channel_id).is_none() {
+            return;
+        }
 
         let message = Unadvertise::new([channel_id.into()]);
 

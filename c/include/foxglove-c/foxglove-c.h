@@ -20,21 +20,71 @@
 #endif
 
 
+#if !defined(__wasm__)
+/**
+ * Sentinel value for `compression_threads` indicating the default behavior
+ * of using the number of physical CPUs.
+ */
+#define FOXGLOVE_MCAP_COMPRESSION_THREADS_DEFAULT UINT32_MAX
+#endif
+
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
+ * Allow clients to advertise channels to send data messages to the server.
+ */
+#define FOXGLOVE_GATEWAY_CAPABILITY_CLIENT_PUBLISH (1 << 0)
+#endif
+
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
+ * Allow clients to get, set, and subscribe to parameter updates.
+ */
+#define FOXGLOVE_GATEWAY_CAPABILITY_PARAMETERS (1 << 1)
+#endif
+
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
+ * Allow clients to call services.
+ */
+#define FOXGLOVE_GATEWAY_CAPABILITY_SERVICES (1 << 2)
+#endif
+
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
+ * Allow clients to subscribe to connection graph updates.
+ */
+#define FOXGLOVE_GATEWAY_CAPABILITY_CONNECTION_GRAPH (1 << 3)
+#endif
+
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
+ * Allow clients to request assets.
+ */
+#define FOXGLOVE_GATEWAY_CAPABILITY_ASSETS (1 << 4)
+#endif
+
+#if !defined(__wasm__)
 /**
  * Allow clients to advertise channels to send data messages to the server.
  */
 #define FOXGLOVE_SERVER_CAPABILITY_CLIENT_PUBLISH (1 << 0)
+#endif
 
+#if !defined(__wasm__)
 /**
- * Allow clients to subscribe and make connection graph updates
+ * Allow clients to subscribe to connection graph updates
  */
 #define FOXGLOVE_SERVER_CAPABILITY_CONNECTION_GRAPH (1 << 1)
+#endif
 
+#if !defined(__wasm__)
 /**
  * Allow clients to get & set parameters.
  */
 #define FOXGLOVE_SERVER_CAPABILITY_PARAMETERS (1 << 2)
+#endif
 
+#if !defined(__wasm__)
 /**
  * Inform clients about the latest server time.
  *
@@ -43,17 +93,70 @@
  * same time source.
  */
 #define FOXGLOVE_SERVER_CAPABILITY_TIME (1 << 3)
+#endif
 
+#if !defined(__wasm__)
 /**
  * Allow clients to call services.
  */
 #define FOXGLOVE_SERVER_CAPABILITY_SERVICES (1 << 4)
+#endif
 
+#if !defined(__wasm__)
 /**
  * Allow clients to request assets. If you supply an asset handler to the server, this capability
  * will be advertised automatically.
  */
 #define FOXGLOVE_SERVER_CAPABILITY_ASSETS (1 << 5)
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Indicates that the server is capable of responding to playback control requests from controls
+ * in the Foxglove app. This requires the server to specify the `data_start_time` and
+ * `data_end_time` fields in `foxglove_server_options`.
+ */
+#define FOXGLOVE_SERVER_CAPABILITY_PLAYBACK_CONTROL (1 << 6)
+#endif
+
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
+ * The status of the remote access gateway connection.
+ */
+enum foxglove_connection_status
+#ifdef __cplusplus
+  : uint8_t
+#endif // __cplusplus
+ {
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+  /**
+   * The gateway is attempting to establish or re-establish a connection.
+   */
+  FOXGLOVE_CONNECTION_STATUS_CONNECTING = 0,
+#endif
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+  /**
+   * The gateway is connected and handling events.
+   */
+  FOXGLOVE_CONNECTION_STATUS_CONNECTED = 1,
+#endif
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+  /**
+   * The gateway is shutting down. Listener callbacks may still be in progress.
+   */
+  FOXGLOVE_CONNECTION_STATUS_SHUTTING_DOWN = 2,
+#endif
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+  /**
+   * The gateway has been shut down. No further listener callbacks will be invoked.
+   */
+  FOXGLOVE_CONNECTION_STATUS_SHUTDOWN = 3,
+#endif
+};
+#ifndef __cplusplus
+typedef uint8_t foxglove_connection_status;
+#endif // __cplusplus
+#endif
 
 enum foxglove_error
 #ifdef __cplusplus
@@ -75,41 +178,117 @@ enum foxglove_error
   FOXGLOVE_ERROR_CONNECTION_GRAPH_NOT_SUPPORTED,
   FOXGLOVE_ERROR_IO_ERROR,
   FOXGLOVE_ERROR_MCAP_ERROR,
+  FOXGLOVE_ERROR_ENCODE_ERROR,
   FOXGLOVE_ERROR_BUFFER_TOO_SHORT,
   FOXGLOVE_ERROR_BASE64_DECODE_ERROR,
+  FOXGLOVE_ERROR_CONFIGURATION_ERROR,
 };
 #ifndef __cplusplus
 typedef uint8_t foxglove_error;
 #endif // __cplusplus
 
+enum foxglove_line_type
+#ifdef __cplusplus
+  : int32_t
+#endif // __cplusplus
+ {
+  FOXGLOVE_LINE_TYPE_LINE_STRIP = 0,
+  FOXGLOVE_LINE_TYPE_LINE_LOOP = 1,
+  FOXGLOVE_LINE_TYPE_LINE_LIST = 2,
+};
+#ifndef __cplusplus
+typedef int32_t foxglove_line_type;
+#endif // __cplusplus
+
 enum foxglove_log_level
+#ifdef __cplusplus
+  : int32_t
+#endif // __cplusplus
+ {
+  FOXGLOVE_LOG_LEVEL_UNKNOWN = 0,
+  FOXGLOVE_LOG_LEVEL_DEBUG = 1,
+  FOXGLOVE_LOG_LEVEL_INFO = 2,
+  FOXGLOVE_LOG_LEVEL_WARNING = 3,
+  FOXGLOVE_LOG_LEVEL_ERROR = 4,
+  FOXGLOVE_LOG_LEVEL_FATAL = 5,
+};
+#ifndef __cplusplus
+typedef int32_t foxglove_log_level;
+#endif // __cplusplus
+
+#if !defined(__wasm__)
+/**
+ * Logging level for the Foxglove SDK.
+ *
+ * Used with `foxglove_set_log_level`.
+ */
+enum foxglove_logging_level
 #ifdef __cplusplus
   : uint8_t
 #endif // __cplusplus
  {
-  FOXGLOVE_LOG_LEVEL_OFF = 0,
-  FOXGLOVE_LOG_LEVEL_DEBUG = 1,
-  FOXGLOVE_LOG_LEVEL_INFO = 2,
-  FOXGLOVE_LOG_LEVEL_WARN = 3,
-  FOXGLOVE_LOG_LEVEL_ERROR = 4,
+#if !defined(__wasm__)
+  FOXGLOVE_LOGGING_LEVEL_OFF = 0,
+#endif
+#if !defined(__wasm__)
+  FOXGLOVE_LOGGING_LEVEL_DEBUG = 1,
+#endif
+#if !defined(__wasm__)
+  FOXGLOVE_LOGGING_LEVEL_INFO = 2,
+#endif
+#if !defined(__wasm__)
+  FOXGLOVE_LOGGING_LEVEL_WARN = 3,
+#endif
+#if !defined(__wasm__)
+  FOXGLOVE_LOGGING_LEVEL_ERROR = 4,
+#endif
 };
 #ifndef __cplusplus
-typedef uint8_t foxglove_log_level;
+typedef uint8_t foxglove_logging_level;
 #endif // __cplusplus
+#endif
 
+#if !defined(__wasm__)
 enum foxglove_mcap_compression
 #ifdef __cplusplus
   : uint8_t
 #endif // __cplusplus
  {
+#if !defined(__wasm__)
   FOXGLOVE_MCAP_COMPRESSION_NONE,
+#endif
+#if !defined(__wasm__)
   FOXGLOVE_MCAP_COMPRESSION_ZSTD,
+#endif
+#if !defined(__wasm__)
   FOXGLOVE_MCAP_COMPRESSION_LZ4,
+#endif
 };
 #ifndef __cplusplus
 typedef uint8_t foxglove_mcap_compression;
 #endif // __cplusplus
+#endif
 
+enum foxglove_numeric_type
+#ifdef __cplusplus
+  : int32_t
+#endif // __cplusplus
+ {
+  FOXGLOVE_NUMERIC_TYPE_UNKNOWN = 0,
+  FOXGLOVE_NUMERIC_TYPE_UINT8 = 1,
+  FOXGLOVE_NUMERIC_TYPE_INT8 = 2,
+  FOXGLOVE_NUMERIC_TYPE_UINT16 = 3,
+  FOXGLOVE_NUMERIC_TYPE_INT16 = 4,
+  FOXGLOVE_NUMERIC_TYPE_UINT32 = 5,
+  FOXGLOVE_NUMERIC_TYPE_INT32 = 6,
+  FOXGLOVE_NUMERIC_TYPE_FLOAT32 = 7,
+  FOXGLOVE_NUMERIC_TYPE_FLOAT64 = 8,
+};
+#ifndef __cplusplus
+typedef int32_t foxglove_numeric_type;
+#endif // __cplusplus
+
+#if !defined(__wasm__)
 /**
  * A parameter type.
  *
@@ -121,27 +300,37 @@ enum foxglove_parameter_type
   : uint8_t
 #endif // __cplusplus
  {
+#if !defined(__wasm__)
   /**
    * The parameter value can be inferred from the inner parameter value tag.
    */
   FOXGLOVE_PARAMETER_TYPE_NONE,
+#endif
+#if !defined(__wasm__)
   /**
    * An array of bytes.
    */
   FOXGLOVE_PARAMETER_TYPE_BYTE_ARRAY,
+#endif
+#if !defined(__wasm__)
   /**
    * A decimal or integer value that can be represented as a `float64`.
    */
   FOXGLOVE_PARAMETER_TYPE_FLOAT64,
+#endif
+#if !defined(__wasm__)
   /**
    * An array of decimal or integer values that can be represented as `float64`s.
    */
   FOXGLOVE_PARAMETER_TYPE_FLOAT64_ARRAY,
+#endif
 };
 #ifndef __cplusplus
 typedef uint8_t foxglove_parameter_type;
 #endif // __cplusplus
+#endif
 
+#if !defined(__wasm__)
 /**
  * A variant discriminator for `FoxgloveParameterValueData`.
  */
@@ -150,16 +339,99 @@ enum foxglove_parameter_value_tag
   : uint8_t
 #endif // __cplusplus
  {
-  FOXGLOVE_PARAMETER_VALUE_TAG_NUMBER,
+#if !defined(__wasm__)
+  FOXGLOVE_PARAMETER_VALUE_TAG_FLOAT64,
+#endif
+#if !defined(__wasm__)
+  FOXGLOVE_PARAMETER_VALUE_TAG_INTEGER,
+#endif
+#if !defined(__wasm__)
   FOXGLOVE_PARAMETER_VALUE_TAG_BOOLEAN,
+#endif
+#if !defined(__wasm__)
   FOXGLOVE_PARAMETER_VALUE_TAG_STRING,
+#endif
+#if !defined(__wasm__)
   FOXGLOVE_PARAMETER_VALUE_TAG_ARRAY,
+#endif
+#if !defined(__wasm__)
   FOXGLOVE_PARAMETER_VALUE_TAG_DICT,
+#endif
 };
 #ifndef __cplusplus
 typedef uint8_t foxglove_parameter_value_tag;
 #endif // __cplusplus
+#endif
 
+enum foxglove_points_annotation_type
+#ifdef __cplusplus
+  : int32_t
+#endif // __cplusplus
+ {
+  FOXGLOVE_POINTS_ANNOTATION_TYPE_UNKNOWN = 0,
+  FOXGLOVE_POINTS_ANNOTATION_TYPE_POINTS = 1,
+  FOXGLOVE_POINTS_ANNOTATION_TYPE_LINE_LOOP = 2,
+  FOXGLOVE_POINTS_ANNOTATION_TYPE_LINE_STRIP = 3,
+  FOXGLOVE_POINTS_ANNOTATION_TYPE_LINE_LIST = 4,
+};
+#ifndef __cplusplus
+typedef int32_t foxglove_points_annotation_type;
+#endif // __cplusplus
+
+enum foxglove_position_covariance_type
+#ifdef __cplusplus
+  : int32_t
+#endif // __cplusplus
+ {
+  FOXGLOVE_POSITION_COVARIANCE_TYPE_UNKNOWN = 0,
+  FOXGLOVE_POSITION_COVARIANCE_TYPE_APPROXIMATED = 1,
+  FOXGLOVE_POSITION_COVARIANCE_TYPE_DIAGONAL_KNOWN = 2,
+  FOXGLOVE_POSITION_COVARIANCE_TYPE_KNOWN = 3,
+};
+#ifndef __cplusplus
+typedef int32_t foxglove_position_covariance_type;
+#endif // __cplusplus
+
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
+ * The reliability policy for a channel's data delivery.
+ */
+enum foxglove_reliability
+#ifdef __cplusplus
+  : uint8_t
+#endif // __cplusplus
+ {
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+  /**
+   * Data is sent over unreliable data tracks. This is the default.
+   */
+  FOXGLOVE_RELIABILITY_LOSSY = 0,
+#endif
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+  /**
+   * Data is sent over the reliable control channel (ordered, guaranteed delivery).
+   */
+  FOXGLOVE_RELIABILITY_RELIABLE = 1,
+#endif
+};
+#ifndef __cplusplus
+typedef uint8_t foxglove_reliability;
+#endif // __cplusplus
+#endif
+
+enum foxglove_scene_entity_deletion_type
+#ifdef __cplusplus
+  : int32_t
+#endif // __cplusplus
+ {
+  FOXGLOVE_SCENE_ENTITY_DELETION_TYPE_MATCHING_ID = 0,
+  FOXGLOVE_SCENE_ENTITY_DELETION_TYPE_ALL = 1,
+};
+#ifndef __cplusplus
+typedef int32_t foxglove_scene_entity_deletion_type;
+#endif // __cplusplus
+
+#if !defined(__wasm__)
 /**
  * Level indicator for a server status message.
  */
@@ -168,29 +440,104 @@ enum foxglove_server_status_level
   : uint8_t
 #endif // __cplusplus
  {
+#if !defined(__wasm__)
   FOXGLOVE_SERVER_STATUS_LEVEL_INFO,
+#endif
+#if !defined(__wasm__)
   FOXGLOVE_SERVER_STATUS_LEVEL_WARNING,
+#endif
+#if !defined(__wasm__)
   FOXGLOVE_SERVER_STATUS_LEVEL_ERROR,
+#endif
 };
 #ifndef __cplusplus
 typedef uint8_t foxglove_server_status_level;
 #endif // __cplusplus
+#endif
 
+#if !defined(__wasm__)
 typedef struct foxglove_channel foxglove_channel;
+#endif
 
+#if !defined(__wasm__)
+typedef struct foxglove_channel_descriptor foxglove_channel_descriptor;
+#endif
+
+#if !defined(__wasm__)
 typedef struct foxglove_connection_graph foxglove_connection_graph;
+#endif
 
+#if !defined(__wasm__)
 typedef struct foxglove_context foxglove_context;
+#endif
 
+#if !defined(__wasm__)
 typedef struct foxglove_fetch_asset_responder foxglove_fetch_asset_responder;
+#endif
 
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+typedef struct foxglove_gateway foxglove_gateway;
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Responder for a `getParameters` request from a client.
+ *
+ * Obtained via the `get` callback of `foxglove_parameter_handler`. The implementation **must**
+ * complete the request by calling `foxglove_get_parameters_responder_respond` exactly once (pass
+ * an empty array if no values are available). It is safe to invoke that function synchronously
+ * from the context of the callback. See `foxglove_get_parameters_responder_drop` for the
+ * drop-without-responding contract.
+ */
+typedef struct foxglove_get_parameters_responder foxglove_get_parameters_responder;
+#endif
+
+#if !defined(__wasm__)
 typedef struct foxglove_mcap_writer foxglove_mcap_writer;
+#endif
 
+#if !defined(__wasm__)
 typedef struct foxglove_service foxglove_service;
+#endif
 
+#if !defined(__wasm__)
 typedef struct foxglove_service_responder foxglove_service_responder;
+#endif
 
+#if !defined(__wasm__)
+/**
+ * Responder for a `setParameters` request from a client.
+ *
+ * Obtained via the `set` callback of `foxglove_parameter_handler`. The implementation **must**
+ * complete the request by calling `foxglove_set_parameters_responder_respond` exactly once with
+ * the values that were actually applied (pass an empty array if the request could not be
+ * handled). It is safe to invoke that function synchronously from the context of the callback.
+ * See `foxglove_set_parameters_responder_drop` for the drop-without-responding contract.
+ *
+ * When the request carried a `request_id`, the values passed to `respond` are echoed back to the
+ * requesting client; otherwise the responder does nothing on the wire. The responder does not
+ * notify other parameter subscribers, so the implementer is responsible for broadcasting applied
+ * updates to subscribers on each sink (for example, via `foxglove_server_publish_parameter_values`
+ * and `foxglove_gateway_publish_parameter_values`).
+ */
+typedef struct foxglove_set_parameters_responder foxglove_set_parameters_responder;
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Opaque handle to a running system info publisher.
+ *
+ * The handle is created by [`foxglove_system_info_publisher_start`]. It is freed by
+ * [`foxglove_system_info_publisher_stop`] (which aborts the background task) or by
+ * [`foxglove_system_info_publisher_detach`] (which leaves the background task
+ * running until the process exits).
+ */
+typedef struct foxglove_system_info_publisher foxglove_system_info_publisher;
+#endif
+
+#if !defined(__wasm__)
 typedef struct foxglove_websocket_server foxglove_websocket_server;
+#endif
 
 /**
  * A string with associated length.
@@ -206,16 +553,1729 @@ typedef struct foxglove_string {
   size_t len;
 } foxglove_string;
 
-typedef struct foxglove_client_channel {
-  uint32_t id;
-  const char *topic;
-  const char *encoding;
-  const char *schema_name;
-  const char *schema_encoding;
-  const void *schema;
-  size_t schema_len;
-} foxglove_client_channel;
+/**
+ * A vector in 3D space that represents a direction only
+ */
+typedef struct foxglove_vector3 {
+  /**
+   * x component
+   */
+  double x;
+  /**
+   * y component
+   */
+  double y;
+  /**
+   * z component
+   */
+  double z;
+} foxglove_vector3;
 
+/**
+ * A [quaternion](https://eater.net/quaternions) representing a rotation in 3D space
+ */
+typedef struct foxglove_quaternion {
+  /**
+   * x value
+   */
+  double x;
+  /**
+   * y value
+   */
+  double y;
+  /**
+   * z value
+   */
+  double z;
+  /**
+   * w value
+   */
+  double w;
+} foxglove_quaternion;
+
+/**
+ * A position and orientation for an object or reference frame in 3D space
+ */
+typedef struct foxglove_pose {
+  /**
+   * Point denoting position in 3D space
+   */
+  const struct foxglove_vector3 *position;
+  /**
+   * Quaternion denoting orientation in 3D space
+   */
+  const struct foxglove_quaternion *orientation;
+} foxglove_pose;
+
+/**
+ * A color in RGBA format
+ */
+typedef struct foxglove_color {
+  /**
+   * Red value between 0 and 1
+   */
+  double r;
+  /**
+   * Green value between 0 and 1
+   */
+  double g;
+  /**
+   * Blue value between 0 and 1
+   */
+  double b;
+  /**
+   * Alpha value between 0 and 1
+   */
+  double a;
+} foxglove_color;
+
+/**
+ * A primitive representing an arrow
+ */
+typedef struct foxglove_arrow_primitive {
+  /**
+   * Position of the arrow's tail and orientation of the arrow. Identity orientation means the arrow points in the +x direction.
+   */
+  const struct foxglove_pose *pose;
+  /**
+   * Length of the arrow shaft
+   */
+  double shaft_length;
+  /**
+   * Diameter of the arrow shaft
+   */
+  double shaft_diameter;
+  /**
+   * Length of the arrow head
+   */
+  double head_length;
+  /**
+   * Diameter of the arrow head
+   */
+  double head_diameter;
+  /**
+   * Color of the arrow
+   */
+  const struct foxglove_color *color;
+} foxglove_arrow_primitive;
+
+#if !defined(__wasm__)
+typedef uint64_t FoxgloveSinkId;
+#endif
+
+/**
+ * A Schema is a description of the data format of messages in a channel.
+ *
+ * It allows Foxglove to validate messages and provide richer visualizations.
+ * See the [MCAP spec](https://mcap.dev/spec#schema-op0x03) for more information.
+ */
+typedef struct foxglove_schema {
+  struct foxglove_string name;
+  struct foxglove_string encoding;
+  const uint8_t *data;
+  size_t data_len;
+} foxglove_schema;
+
+/**
+ * A timestamp, represented as an offset from a user-defined epoch.
+ */
+typedef struct foxglove_timestamp {
+  /**
+   * Seconds since epoch.
+   */
+  uint32_t sec;
+  /**
+   * Additional nanoseconds since epoch.
+   */
+  uint32_t nsec;
+} foxglove_timestamp;
+
+/**
+ * Camera calibration parameters
+ */
+typedef struct foxglove_camera_calibration {
+  /**
+   * Timestamp of calibration data
+   */
+  const struct foxglove_timestamp *timestamp;
+  /**
+   * Frame of reference for the camera. The origin of the frame is the optical center of the camera. +x points to the right in the image, +y points down, and +z points into the plane of the image.
+   */
+  struct foxglove_string frame_id;
+  /**
+   * Image width
+   */
+  uint32_t width;
+  /**
+   * Image height
+   */
+  uint32_t height;
+  /**
+   * Name of distortion model
+   *
+   * Supported parameters: `plumb_bob` (k1, k2, p1, p2, k3), `rational_polynomial` (k1, k2, p1, p2, k3, k4, k5, k6), and `kannala_brandt` (k1, k2, k3, k4), and `fisheye62` (k0, k1, k2, k3, p0, p1, crit_theta [optional]). `plumb_bob` and `rational_polynomial` models are based on the pinhole model [OpenCV's](https://docs.opencv.org/4.11.0/d9/d0c/group__calib3d.html) [pinhole camera model](https://en.wikipedia.org/wiki/Distortion_%28optics%29#Software_correction). The `kannala_brandt` model matches the [OpenvCV fisheye](https://docs.opencv.org/4.11.0/db/d58/group__calib3d__fisheye.html) model. The `fisheye62` model matches the [Project Aria's Fisheye62 Model](https://facebookresearch.github.io/projectaria_tools/docs/tech_insights/camera_intrinsic_models).
+   */
+  struct foxglove_string distortion_model;
+  /**
+   * Distortion parameters
+   */
+  const double *d;
+  size_t d_count;
+  /**
+   * Intrinsic camera matrix (3x3 row-major matrix)
+   *
+   * A 3x3 row-major matrix for the raw (distorted) image.
+   *
+   * Projects 3D points in the camera coordinate frame to 2D pixel coordinates using the focal lengths (fx, fy) and principal point (cx, cy).
+   *
+   * ```
+   *     [fx  0 cx]
+   * K = [ 0 fy cy]
+   *     [ 0  0  1]
+   * ```
+   *
+   * **Uncalibrated cameras:** Following ROS conventions for [CameraInfo](https://docs.ros.org/en/noetic/api/sensor_msgs/html/msg/CameraInfo.html), Foxglove also treats K[0] == 0.0 as indicating an uncalibrated camera, and calibration data will be ignored.
+   *
+   */
+  double k[9];
+  /**
+   * Rectification matrix (stereo cameras only, 3x3 row-major matrix)
+   *
+   * A rotation matrix aligning the camera coordinate system to the ideal stereo image plane so that epipolar lines in both stereo images are parallel.
+   */
+  double r[9];
+  /**
+   * Projection/camera matrix (3x4 row-major matrix)
+   *
+   * ```
+   *     [fx'  0  cx' Tx]
+   * P = [ 0  fy' cy' Ty]
+   *     [ 0   0   1   0]
+   * ```
+   *
+   * By convention, this matrix specifies the intrinsic (camera) matrix of the processed (rectified) image. That is, the left 3x3 portion is the normal camera intrinsic matrix for the rectified image.
+   *
+   * It projects 3D points in the camera coordinate frame to 2D pixel coordinates using the focal lengths (fx', fy') and principal point (cx', cy') - these may differ from the values in K.
+   *
+   * For monocular cameras, Tx = Ty = 0. Normally, monocular cameras will also have R = the identity and P[1:3,1:3] = K.
+   *
+   * Foxglove currently does not support displaying stereo images, so Tx and Ty are ignored.
+   *
+   * Given a 3D point [X Y Z]', the projection (x, y) of the point onto the rectified image is given by:
+   *
+   * ```
+   * [u v w]' = P * [X Y Z 1]'
+   *        x = u / w
+   *        y = v / w
+   * ```
+   *
+   * This holds for both images of a stereo pair.
+   *
+   */
+  double p[12];
+} foxglove_camera_calibration;
+
+/**
+ * A point representing a position in 2D space
+ */
+typedef struct foxglove_point2 {
+  /**
+   * x coordinate position
+   */
+  double x;
+  /**
+   * y coordinate position
+   */
+  double y;
+} foxglove_point2;
+
+/**
+ * A key with its associated value
+ */
+typedef struct foxglove_key_value_pair {
+  /**
+   * Key
+   */
+  struct foxglove_string key;
+  /**
+   * Value
+   */
+  struct foxglove_string value;
+} foxglove_key_value_pair;
+
+/**
+ * A circle annotation on a 2D image
+ */
+typedef struct foxglove_circle_annotation {
+  /**
+   * Timestamp of circle
+   */
+  const struct foxglove_timestamp *timestamp;
+  /**
+   * Center of the circle in 2D image coordinates (pixels).
+   * The coordinate uses the top-left corner of the top-left pixel of the image as the origin.
+   */
+  const struct foxglove_point2 *position;
+  /**
+   * Circle diameter in pixels
+   */
+  double diameter;
+  /**
+   * Line thickness in pixels
+   */
+  double thickness;
+  /**
+   * Fill color
+   */
+  const struct foxglove_color *fill_color;
+  /**
+   * Outline color
+   */
+  const struct foxglove_color *outline_color;
+  /**
+   * Additional user-provided metadata associated with this annotation. Keys must be unique.
+   */
+  const struct foxglove_key_value_pair *metadata;
+  size_t metadata_count;
+} foxglove_circle_annotation;
+
+/**
+ * A single chunk of a compressed audio bitstream
+ */
+typedef struct foxglove_compressed_audio {
+  /**
+   * Timestamp of the start of the audio chunk
+   */
+  const struct foxglove_timestamp *timestamp;
+  /**
+   * Audio format. Both 'opus' and 'mp4a.40.2' are currently supported.
+   */
+  struct foxglove_string format;
+  /**
+   * Compressed audio data
+   *
+   * Specifically, the requirements for different `format` values are:
+   *
+   * - `opus`
+   *   - Each message should contain a complete raw Opus packet, without Ogg, WebM, or other container framing, as described in https://datatracker.ietf.org/doc/html/rfc6716#section-3.
+   * - `mp4a.40.2`
+   *   - Each message should contain a complete MPEG-4 AAC LC ADTS frame, including the ADTS header, as described in section 1.A.3.2 of ISO/IEC 14496-3:2019.
+   *
+   * Any combination of sample rate and number of channels allowed by the respective audio format is supported.
+   *
+   */
+  const unsigned char *data;
+  size_t data_len;
+} foxglove_compressed_audio;
+
+/**
+ * A compressed image
+ */
+typedef struct foxglove_compressed_image {
+  /**
+   * Timestamp of image
+   */
+  const struct foxglove_timestamp *timestamp;
+  /**
+   * Frame of reference for the image. The origin of the frame is the optical center of the camera. +x points to the right in the image, +y points down, and +z points into the plane of the image.
+   */
+  struct foxglove_string frame_id;
+  /**
+   * Compressed image data
+   */
+  const unsigned char *data;
+  size_t data_len;
+  /**
+   * Image format
+   *
+   * Supported values: `jpeg`, `png`, `webp`, `avif`
+   */
+  struct foxglove_string format;
+} foxglove_compressed_image;
+
+/**
+ * A compressed point cloud. A decoder for `format` must decompress `data`, using metadata stored in the compressed payload to recover point positions and any additional per-point attributes. The decoded point cloud must include at least 2 coordinate fields from `x`, `y`, and `z`; `red`, `green`, `blue`, and `alpha` are optional for customizing each point's color.
+ */
+typedef struct foxglove_compressed_point_cloud {
+  /**
+   * Timestamp of point cloud
+   */
+  const struct foxglove_timestamp *timestamp;
+  /**
+   * Frame of reference
+   */
+  struct foxglove_string frame_id;
+  /**
+   * The origin of the point cloud relative to the frame of reference
+   */
+  const struct foxglove_pose *pose;
+  /**
+   * Compressed point cloud data for exactly one point cloud, including any format-specific metadata needed to describe the decoded point attributes.
+   */
+  const unsigned char *data;
+  size_t data_len;
+  /**
+   * Point cloud compression format.
+   *
+   * Supported values: `draco` ([Google Draco](https://google.github.io/draco/)).
+   */
+  struct foxglove_string format;
+} foxglove_compressed_point_cloud;
+
+/**
+ * A single frame of a compressed video bitstream
+ */
+typedef struct foxglove_compressed_video {
+  /**
+   * Timestamp of video frame
+   */
+  const struct foxglove_timestamp *timestamp;
+  /**
+   * Frame of reference for the video.
+   *
+   * The origin of the frame is the optical center of the camera. +x points to the right in the video, +y points down, and +z points into the plane of the video.
+   */
+  struct foxglove_string frame_id;
+  /**
+   * Compressed video frame data.
+   *
+   * For packet-based video codecs this data must begin and end on packet boundaries (no partial packets), and must contain enough video packets to decode exactly one image (either a keyframe or delta frame). Note: Foxglove does not support video streams that include B frames because they require lookahead.
+   *
+   * Specifically, the requirements for different `format` values are:
+   *
+   * - `h264`
+   *   - Use Annex B formatted data
+   *   - Each CompressedVideo message should contain enough NAL units to decode exactly one video frame
+   *   - Each message containing a key frame (IDR) must also include a SPS NAL unit
+   *
+   * - `h265` (HEVC)
+   *   - Use Annex B formatted data
+   *   - Each CompressedVideo message should contain enough NAL units to decode exactly one video frame
+   *   - Each message containing a key frame (IRAP) must also include relevant VPS/SPS/PPS NAL units
+   *
+   * - `vp9`
+   *   - Each CompressedVideo message should contain exactly one video frame
+   *
+   * - `av1`
+   *   - Use the "Low overhead bitstream format" (section 5.2)
+   *   - Each CompressedVideo message should contain enough OBUs to decode exactly one video frame
+   *   - Each message containing a key frame must also include a Sequence Header OBU
+   */
+  const unsigned char *data;
+  size_t data_len;
+  /**
+   * Video format.
+   *
+   * Supported values: `h264`, `h265`, `vp9`, `av1`.
+   *
+   * Note: compressed video support is subject to hardware limitations and patent licensing, so not all encodings may be supported on all platforms. See more about [H.265 support](https://caniuse.com/hevc), [VP9 support](https://caniuse.com/webm), and [AV1 support](https://caniuse.com/av1).
+   */
+  struct foxglove_string format;
+} foxglove_compressed_video;
+
+/**
+ * A primitive representing a cylinder, elliptic cylinder, or truncated cone
+ */
+typedef struct foxglove_cylinder_primitive {
+  /**
+   * Position of the center of the cylinder and orientation of the cylinder. The flat face(s) are perpendicular to the z-axis.
+   */
+  const struct foxglove_pose *pose;
+  /**
+   * Size of the cylinder's bounding box
+   */
+  const struct foxglove_vector3 *size;
+  /**
+   * 0-1, ratio of the diameter of the cylinder's bottom face (min z) to the bottom of the bounding box
+   */
+  double bottom_scale;
+  /**
+   * 0-1, ratio of the diameter of the cylinder's top face (max z) to the top of the bounding box
+   */
+  double top_scale;
+  /**
+   * Color of the cylinder
+   */
+  const struct foxglove_color *color;
+} foxglove_cylinder_primitive;
+
+/**
+ * A primitive representing a cube or rectangular prism
+ */
+typedef struct foxglove_cube_primitive {
+  /**
+   * Position of the center of the cube and orientation of the cube
+   */
+  const struct foxglove_pose *pose;
+  /**
+   * Size of the cube along each axis
+   */
+  const struct foxglove_vector3 *size;
+  /**
+   * Color of the cube
+   */
+  const struct foxglove_color *color;
+} foxglove_cube_primitive;
+
+/**
+ * A transform between two reference frames in 3D space. The transform defines the position and orientation of a child frame within a parent frame. Translation moves the origin of the child frame relative to the parent origin. The rotation changes the orientation of the child frame around its origin.
+ *
+ * Examples:
+ *
+ * - With translation (x=1, y=0, z=0) and identity rotation (x=0, y=0, z=0, w=1), a point at (x=0, y=0, z=0) in the child frame maps to (x=1, y=0, z=0) in the parent frame.
+ *
+ * - With translation (x=1, y=2, z=0) and a 90-degree rotation around the z-axis (x=0, y=0, z=0.707, w=0.707), a point at (x=1, y=0, z=0) in the child frame maps to (x=-1, y=3, z=0) in the parent frame.
+ */
+typedef struct foxglove_frame_transform {
+  /**
+   * Timestamp of transform
+   */
+  const struct foxglove_timestamp *timestamp;
+  /**
+   * Name of the parent frame
+   */
+  struct foxglove_string parent_frame_id;
+  /**
+   * Name of the child frame
+   */
+  struct foxglove_string child_frame_id;
+  /**
+   * Translation component of the transform, representing the position of the child frame's origin in the parent frame.
+   */
+  const struct foxglove_vector3 *translation;
+  /**
+   * Rotation component of the transform, representing the orientation of the child frame in the parent frame
+   */
+  const struct foxglove_quaternion *rotation;
+} foxglove_frame_transform;
+
+/**
+ * An array of FrameTransform messages
+ */
+typedef struct foxglove_frame_transforms {
+  /**
+   * Array of transforms
+   */
+  const struct foxglove_frame_transform *transforms;
+  size_t transforms_count;
+} foxglove_frame_transforms;
+
+/**
+ * GeoJSON data for annotating maps
+ */
+typedef struct foxglove_geo_json {
+  /**
+   * GeoJSON data encoded as a UTF-8 string
+   */
+  struct foxglove_string geojson;
+} foxglove_geo_json;
+
+/**
+ * A vector in 2D space that represents a direction only
+ */
+typedef struct foxglove_vector2 {
+  /**
+   * x component
+   */
+  double x;
+  /**
+   * y component
+   */
+  double y;
+} foxglove_vector2;
+
+/**
+ * A field present within each element in a byte array of packed elements.
+ */
+typedef struct foxglove_packed_element_field {
+  /**
+   * Name of the field
+   */
+  struct foxglove_string name;
+  /**
+   * Byte offset from start of data buffer
+   */
+  uint32_t offset;
+  /**
+   * Type of data in the field. Integers are stored using little-endian byte order.
+   */
+  foxglove_numeric_type type;
+} foxglove_packed_element_field;
+
+/**
+ * A 2D grid of data
+ */
+typedef struct foxglove_grid {
+  /**
+   * Timestamp of grid
+   */
+  const struct foxglove_timestamp *timestamp;
+  /**
+   * Frame of reference
+   */
+  struct foxglove_string frame_id;
+  /**
+   * Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane relative to this origin
+   */
+  const struct foxglove_pose *pose;
+  /**
+   * Number of grid columns
+   */
+  uint32_t column_count;
+  /**
+   * Size of single grid cell along x and y axes, relative to `pose`
+   */
+  const struct foxglove_vector2 *cell_size;
+  /**
+   * Number of bytes between rows in `data`
+   */
+  uint32_t row_stride;
+  /**
+   * Number of bytes between cells within a row in `data`
+   */
+  uint32_t cell_stride;
+  /**
+   * Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
+   * To enable RGB color visualization in the [3D panel](https://docs.foxglove.dev/docs/visualization/panels/3d#rgba-separate-fields-color-mode), include **all four** of these fields in your `fields` array:
+   *
+   * - `red` - Red channel value
+   * - `green` - Green channel value
+   * - `blue` - Blue channel value
+   * - `alpha` - Alpha/transparency channel value
+   *
+   * **note:** All four fields must be present with these exact names for RGB visualization to work. The order of fields doesn't matter, but the names must match exactly.
+   *
+   * Recommended type: `UINT8` (0-255 range) for standard 8-bit color channels.
+   *
+   * Example field definitions:
+   *
+   * **RGB color only:**
+   *
+   * ```javascript
+   * fields: [
+   *  { name: "red", offset: 0, type: NumericType.UINT8 },
+   *  { name: "green", offset: 1, type: NumericType.UINT8 },
+   *  { name: "blue", offset: 2, type: NumericType.UINT8 },
+   *  { name: "alpha", offset: 3, type: NumericType.UINT8 },
+   * ];
+   * ```
+   *
+   * **RGB color with elevation (for 3D terrain visualization):**
+   *
+   * ```javascript
+   * fields: [
+   *  { name: "red", offset: 0, type: NumericType.UINT8 },
+   *  { name: "green", offset: 1, type: NumericType.UINT8 },
+   *  { name: "blue", offset: 2, type: NumericType.UINT8 },
+   *  { name: "alpha", offset: 3, type: NumericType.UINT8 },
+   *  { name: "elevation", offset: 4, type: NumericType.FLOAT32 },
+   * ];
+   * ```
+   *
+   * When these fields are present, the 3D panel will offer additional "Color Mode" options including "RGBA (separate fields)" to visualize the RGB data directly. For elevation visualization, set the "Elevation field" to your elevation layer name.
+   */
+  const struct foxglove_packed_element_field *fields;
+  size_t fields_count;
+  /**
+   * Grid cell data, interpreted using `fields`, in row-major (y-major) order.
+   * For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
+   *
+   * - y = i / row_stride * cell_size.y
+   * - x = (i % row_stride) / cell_stride * cell_size.x
+   */
+  const unsigned char *data;
+  size_t data_len;
+} foxglove_grid;
+
+/**
+ * A 3D grid of data
+ */
+typedef struct foxglove_voxel_grid {
+  /**
+   * Timestamp of grid
+   */
+  const struct foxglove_timestamp *timestamp;
+  /**
+   * Frame of reference
+   */
+  struct foxglove_string frame_id;
+  /**
+   * Origin of the grid’s lower-front-left corner in the reference frame. The grid’s pose is defined relative to this corner, so an untransformed grid with an identity orientation has this corner at the origin.
+   */
+  const struct foxglove_pose *pose;
+  /**
+   * Number of grid rows
+   */
+  uint32_t row_count;
+  /**
+   * Number of grid columns
+   */
+  uint32_t column_count;
+  /**
+   * Size of single grid cell along x, y, and z axes, relative to `pose`
+   */
+  const struct foxglove_vector3 *cell_size;
+  /**
+   * Number of bytes between depth slices in `data`
+   */
+  uint32_t slice_stride;
+  /**
+   * Number of bytes between rows in `data`
+   */
+  uint32_t row_stride;
+  /**
+   * Number of bytes between cells within a row in `data`
+   */
+  uint32_t cell_stride;
+  /**
+   * Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
+   */
+  const struct foxglove_packed_element_field *fields;
+  size_t fields_count;
+  /**
+   * Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.
+   * For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
+   *
+   * - z = i / slice_stride * cell_size.z
+   * - y = (i % slice_stride) / row_stride * cell_size.y
+   * - x = (i % row_stride) / cell_stride * cell_size.x
+   */
+  const unsigned char *data;
+  size_t data_len;
+} foxglove_voxel_grid;
+
+/**
+ * An array of points on a 2D image
+ */
+typedef struct foxglove_points_annotation {
+  /**
+   * Timestamp of annotation
+   */
+  const struct foxglove_timestamp *timestamp;
+  /**
+   * Type of points annotation to draw
+   */
+  foxglove_points_annotation_type type;
+  /**
+   * Points in 2D image coordinates (pixels).
+   * These coordinates use the top-left corner of the top-left pixel of the image as the origin.
+   */
+  const struct foxglove_point2 *points;
+  size_t points_count;
+  /**
+   * Outline color
+   */
+  const struct foxglove_color *outline_color;
+  /**
+   * Per-point colors, if `type` is `POINTS`, or per-segment stroke colors, if `type` is `LINE_LIST`, `LINE_STRIP` or `LINE_LOOP`.
+   */
+  const struct foxglove_color *outline_colors;
+  size_t outline_colors_count;
+  /**
+   * Fill color
+   */
+  const struct foxglove_color *fill_color;
+  /**
+   * Stroke thickness in pixels
+   */
+  double thickness;
+  /**
+   * Additional user-provided metadata associated with this annotation. Keys must be unique.
+   */
+  const struct foxglove_key_value_pair *metadata;
+  size_t metadata_count;
+} foxglove_points_annotation;
+
+/**
+ * A text label on a 2D image
+ */
+typedef struct foxglove_text_annotation {
+  /**
+   * Timestamp of annotation
+   */
+  const struct foxglove_timestamp *timestamp;
+  /**
+   * Bottom-left origin of the text label in 2D image coordinates (pixels).
+   * The coordinate uses the top-left corner of the top-left pixel of the image as the origin.
+   */
+  const struct foxglove_point2 *position;
+  /**
+   * Text to display
+   */
+  struct foxglove_string text;
+  /**
+   * Font size in pixels
+   */
+  double font_size;
+  /**
+   * Text color
+   */
+  const struct foxglove_color *text_color;
+  /**
+   * Background fill color
+   */
+  const struct foxglove_color *background_color;
+  /**
+   * Additional user-provided metadata associated with this annotation. Keys must be unique.
+   */
+  const struct foxglove_key_value_pair *metadata;
+  size_t metadata_count;
+} foxglove_text_annotation;
+
+/**
+ * Array of annotations for a 2D image
+ */
+typedef struct foxglove_image_annotations {
+  /**
+   * Timestamp of the image annotations. When set, individual annotation timestamps will be ignored.
+   */
+  const struct foxglove_timestamp *timestamp;
+  /**
+   * Circle annotations
+   */
+  const struct foxglove_circle_annotation *circles;
+  size_t circles_count;
+  /**
+   * Points annotations
+   */
+  const struct foxglove_points_annotation *points;
+  size_t points_count;
+  /**
+   * Text annotations
+   */
+  const struct foxglove_text_annotation *texts;
+  size_t texts_count;
+  /**
+   * Additional user-provided metadata associated with the image annotations. Keys must be unique within this object. Per-annotation metadata takes precedence over these values.
+   */
+  const struct foxglove_key_value_pair *metadata;
+  size_t metadata_count;
+} foxglove_image_annotations;
+
+/**
+ * The state of a single joint (revolute or prismatic).
+ */
+typedef struct foxglove_joint_state {
+  /**
+   * Joint name
+   */
+  struct foxglove_string name;
+  /**
+   * Joint position. Radians for revolute joints, meters for prismatic joints.
+   */
+  const double *position;
+  /**
+   * Joint velocity. Rad/s for revolute joints, m/s for prismatic joints.
+   */
+  const double *velocity;
+  /**
+   * Joint acceleration. Rad/s² for revolute joints, m/s² for prismatic joints.
+   */
+  const double *acceleration;
+  /**
+   * Joint effort (force or torque). Nm for revolute joints, N for prismatic joints.
+   */
+  const double *effort;
+} foxglove_joint_state;
+
+/**
+ * The state of a set of joints at a given time.
+ */
+typedef struct foxglove_joint_states {
+  /**
+   * Timestamp of the joint states
+   */
+  const struct foxglove_timestamp *timestamp;
+  /**
+   * Joint states
+   */
+  const struct foxglove_joint_state *joints;
+  size_t joints_count;
+} foxglove_joint_states;
+
+/**
+ * A single scan from a planar laser range-finder
+ */
+typedef struct foxglove_laser_scan {
+  /**
+   * Timestamp of scan
+   */
+  const struct foxglove_timestamp *timestamp;
+  /**
+   * Frame of reference
+   */
+  struct foxglove_string frame_id;
+  /**
+   * Origin of scan relative to frame of reference; points are positioned in the x-y plane relative to this origin; angles are interpreted as counterclockwise rotations around the z axis with 0 rad being in the +x direction
+   */
+  const struct foxglove_pose *pose;
+  /**
+   * Bearing of first point, in radians
+   */
+  double start_angle;
+  /**
+   * Bearing of last point, in radians
+   */
+  double end_angle;
+  /**
+   * Distance of detections from origin; assumed to be at equally-spaced angles between `start_angle` and `end_angle`
+   */
+  const double *ranges;
+  size_t ranges_count;
+  /**
+   * Intensity of detections
+   */
+  const double *intensities;
+  size_t intensities_count;
+} foxglove_laser_scan;
+
+/**
+ * A point representing a position in 3D space
+ */
+typedef struct foxglove_point3 {
+  /**
+   * x coordinate position
+   */
+  double x;
+  /**
+   * y coordinate position
+   */
+  double y;
+  /**
+   * z coordinate position
+   */
+  double z;
+} foxglove_point3;
+
+/**
+ * A primitive representing a series of points connected by lines
+ */
+typedef struct foxglove_line_primitive {
+  /**
+   * Drawing primitive to use for lines
+   */
+  foxglove_line_type type;
+  /**
+   * Origin of lines relative to reference frame
+   */
+  const struct foxglove_pose *pose;
+  /**
+   * Line thickness
+   */
+  double thickness;
+  /**
+   * Indicates whether `thickness` is a fixed size in screen pixels (true), or specified in world coordinates and scales with distance from the camera (false)
+   */
+  bool scale_invariant;
+  /**
+   * Points along the line
+   */
+  const struct foxglove_point3 *points;
+  size_t points_count;
+  /**
+   * Solid color to use for the whole line. Ignored if `colors` is non-empty.
+   */
+  const struct foxglove_color *color;
+  /**
+   * Per-point colors (if non-empty, must have the same length as `points`).
+   */
+  const struct foxglove_color *colors;
+  size_t colors_count;
+  /**
+   * Indices into the `points` and `colors` attribute arrays, which can be used to avoid duplicating attribute data.
+   *
+   * If omitted or empty, indexing will not be used. This default behavior is equivalent to specifying [0, 1, ..., N-1] for the indices (where N is the number of `points` provided).
+   */
+  const uint32_t *indices;
+  size_t indices_count;
+} foxglove_line_primitive;
+
+/**
+ * A navigation satellite fix for any Global Navigation Satellite System
+ */
+typedef struct foxglove_location_fix {
+  /**
+   * Timestamp of the message
+   */
+  const struct foxglove_timestamp *timestamp;
+  /**
+   * Frame for the sensor. Latitude and longitude readings are at the origin of the frame.
+   */
+  struct foxglove_string frame_id;
+  /**
+   * Latitude in degrees
+   */
+  double latitude;
+  /**
+   * Longitude in degrees
+   */
+  double longitude;
+  /**
+   * Altitude in meters
+   */
+  double altitude;
+  /**
+   * Position covariance (m^2) defined relative to a tangential plane through the reported position. The components are East, North, and Up (ENU), in row-major order.
+   */
+  double position_covariance[9];
+  /**
+   * If `position_covariance` is available, `position_covariance_type` must be set to indicate the type of covariance.
+   */
+  foxglove_position_covariance_type position_covariance_type;
+  /**
+   * Heading (yaw angle), in radians, measured clockwise from north
+   */
+  const double *heading;
+  /**
+   * Velocity in local East-North-Up (ENU) frame in m/s
+   */
+  const struct foxglove_vector3 *velocity;
+  /**
+   * Color used to visualize the location
+   */
+  const struct foxglove_color *color;
+  /**
+   * Additional user-provided metadata associated with the location fix. Keys must be unique.
+   */
+  const struct foxglove_key_value_pair *metadata;
+  size_t metadata_count;
+} foxglove_location_fix;
+
+/**
+ * A group of LocationFix messages
+ */
+typedef struct foxglove_location_fixes {
+  /**
+   * An array of location fixes
+   */
+  const struct foxglove_location_fix *fixes;
+  size_t fixes_count;
+} foxglove_location_fixes;
+
+/**
+ * A log message
+ */
+typedef struct foxglove_log {
+  /**
+   * Timestamp of log message
+   */
+  const struct foxglove_timestamp *timestamp;
+  /**
+   * Log level
+   */
+  foxglove_log_level level;
+  /**
+   * Log message
+   */
+  struct foxglove_string message;
+  /**
+   * Process or node name
+   */
+  struct foxglove_string name;
+  /**
+   * Filename
+   */
+  struct foxglove_string file;
+  /**
+   * Line number in the file
+   */
+  uint32_t line;
+} foxglove_log;
+
+/**
+ * Command to remove previously published entities
+ */
+typedef struct foxglove_scene_entity_deletion {
+  /**
+   * Timestamp of the deletion. Only matching entities earlier than this timestamp will be deleted.
+   */
+  const struct foxglove_timestamp *timestamp;
+  /**
+   * Type of deletion action to perform
+   */
+  foxglove_scene_entity_deletion_type type;
+  /**
+   * Identifier which must match if `type` is `MATCHING_ID`.
+   */
+  struct foxglove_string id;
+} foxglove_scene_entity_deletion;
+
+/**
+ * A signed, fixed-length span of time.
+ *
+ * The duration is represented by a count of seconds (which may be negative), and a count of
+ * fractional seconds at nanosecond resolution (which are always positive).
+ */
+typedef struct foxglove_duration {
+  /**
+   * Seconds offset.
+   */
+  int32_t sec;
+  /**
+   * Nanoseconds offset in the positive direction.
+   */
+  uint32_t nsec;
+} foxglove_duration;
+
+/**
+ * A primitive representing a sphere or ellipsoid
+ */
+typedef struct foxglove_sphere_primitive {
+  /**
+   * Position of the center of the sphere and orientation of the sphere
+   */
+  const struct foxglove_pose *pose;
+  /**
+   * Size (diameter) of the sphere along each axis
+   */
+  const struct foxglove_vector3 *size;
+  /**
+   * Color of the sphere
+   */
+  const struct foxglove_color *color;
+} foxglove_sphere_primitive;
+
+/**
+ * A primitive representing a set of triangles or a surface tiled by triangles
+ */
+typedef struct foxglove_triangle_list_primitive {
+  /**
+   * Origin of triangles relative to reference frame
+   */
+  const struct foxglove_pose *pose;
+  /**
+   * Vertices to use for triangles, interpreted as a list of triples (0-1-2, 3-4-5, ...)
+   */
+  const struct foxglove_point3 *points;
+  size_t points_count;
+  /**
+   * Solid color to use for the whole shape. Ignored if `colors` is non-empty.
+   */
+  const struct foxglove_color *color;
+  /**
+   * Per-vertex colors (if specified, must have the same length as `points`).
+   */
+  const struct foxglove_color *colors;
+  size_t colors_count;
+  /**
+   * Indices into the `points` and `colors` attribute arrays, which can be used to avoid duplicating attribute data.
+   *
+   * If omitted or empty, indexing will not be used. This default behavior is equivalent to specifying [0, 1, ..., N-1] for the indices (where N is the number of `points` provided).
+   */
+  const uint32_t *indices;
+  size_t indices_count;
+} foxglove_triangle_list_primitive;
+
+/**
+ * A primitive representing a text label
+ */
+typedef struct foxglove_text_primitive {
+  /**
+   * Position of the center of the text box and orientation of the text. Identity orientation means the text is oriented in the xy-plane and flows from -x to +x.
+   */
+  const struct foxglove_pose *pose;
+  /**
+   * Whether the text should respect `pose.orientation` (false) or always face the camera (true)
+   */
+  bool billboard;
+  /**
+   * Font size (height of one line of text)
+   */
+  double font_size;
+  /**
+   * Indicates whether `font_size` is a fixed size in screen pixels (true), or specified in world coordinates and scales with distance from the camera (false)
+   */
+  bool scale_invariant;
+  /**
+   * Color of the text
+   */
+  const struct foxglove_color *color;
+  /**
+   * Text
+   */
+  struct foxglove_string text;
+} foxglove_text_primitive;
+
+/**
+ * A primitive representing a 3D model file loaded from an external URL or embedded data
+ */
+typedef struct foxglove_model_primitive {
+  /**
+   * Origin of model relative to reference frame
+   */
+  const struct foxglove_pose *pose;
+  /**
+   * Scale factor to apply to the model along each axis
+   */
+  const struct foxglove_vector3 *scale;
+  /**
+   * Solid color to use for the whole model if `override_color` is true.
+   */
+  const struct foxglove_color *color;
+  /**
+   * Whether to use the color specified in `color` instead of any materials embedded in the original model.
+   */
+  bool override_color;
+  /**
+   * URL pointing to model file. One of `url` or `data` should be non-empty.
+   */
+  struct foxglove_string url;
+  /**
+   * [Media type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types) of embedded model (e.g. `model/gltf-binary`). Required if `data` is provided instead of `url`. Overrides the inferred media type if `url` is provided.
+   */
+  struct foxglove_string media_type;
+  /**
+   * Embedded model. One of `url` or `data` should be non-empty. If `data` is non-empty, `media_type` must be set to indicate the type of the data.
+   */
+  const unsigned char *data;
+  size_t data_len;
+} foxglove_model_primitive;
+
+/**
+ * A visual element in a 3D scene. An entity may be composed of multiple primitives which all share the same frame of reference.
+ */
+typedef struct foxglove_scene_entity {
+  /**
+   * Timestamp of the entity
+   */
+  const struct foxglove_timestamp *timestamp;
+  /**
+   * Frame of reference
+   */
+  struct foxglove_string frame_id;
+  /**
+   * Identifier for the entity. A entity will replace any prior entity on the same topic with the same `id`.
+   */
+  struct foxglove_string id;
+  /**
+   * Length of time (relative to `timestamp`) after which the entity should be automatically removed. Zero value indicates the entity should remain visible until it is replaced or deleted.
+   */
+  const struct foxglove_duration *lifetime;
+  /**
+   * Whether the entity should keep its location in the fixed frame (false) or follow the frame specified in `frame_id` as it moves relative to the fixed frame (true)
+   */
+  bool frame_locked;
+  /**
+   * Additional user-provided metadata associated with the entity. Keys must be unique.
+   */
+  const struct foxglove_key_value_pair *metadata;
+  size_t metadata_count;
+  /**
+   * Arrow primitives
+   */
+  const struct foxglove_arrow_primitive *arrows;
+  size_t arrows_count;
+  /**
+   * Cube primitives
+   */
+  const struct foxglove_cube_primitive *cubes;
+  size_t cubes_count;
+  /**
+   * Sphere primitives
+   */
+  const struct foxglove_sphere_primitive *spheres;
+  size_t spheres_count;
+  /**
+   * Cylinder primitives
+   */
+  const struct foxglove_cylinder_primitive *cylinders;
+  size_t cylinders_count;
+  /**
+   * Line primitives
+   */
+  const struct foxglove_line_primitive *lines;
+  size_t lines_count;
+  /**
+   * Triangle list primitives
+   */
+  const struct foxglove_triangle_list_primitive *triangles;
+  size_t triangles_count;
+  /**
+   * Text primitives
+   */
+  const struct foxglove_text_primitive *texts;
+  size_t texts_count;
+  /**
+   * Model primitives
+   */
+  const struct foxglove_model_primitive *models;
+  size_t models_count;
+} foxglove_scene_entity;
+
+/**
+ * An update to the entities displayed in a 3D scene
+ */
+typedef struct foxglove_scene_update {
+  /**
+   * Scene entities to delete
+   */
+  const struct foxglove_scene_entity_deletion *deletions;
+  size_t deletions_count;
+  /**
+   * Scene entities to add or replace
+   */
+  const struct foxglove_scene_entity *entities;
+  size_t entities_count;
+} foxglove_scene_update;
+
+/**
+ * An estimate of position, orientation, and velocity for an object or reference frame in 3D space
+ */
+typedef struct foxglove_odometry {
+  /**
+   * Timestamp of the message
+   */
+  const struct foxglove_timestamp *timestamp;
+  /**
+   * Reference coordinate frame (e.g. `map` or `odom`)
+   */
+  struct foxglove_string frame_id;
+  /**
+   * Coordinate frame of the body whose motion is being estimated (e.g. `base_link`)
+   */
+  struct foxglove_string body_frame_id;
+  /**
+   * Position and orientation of body_frame_id in frame_id
+   */
+  const struct foxglove_pose *pose;
+  /**
+   * Linear velocity in m/s in body_frame_id
+   */
+  const struct foxglove_vector3 *linear_velocity;
+  /**
+   * Angular velocity in rad/s in body_frame_id
+   */
+  const struct foxglove_vector3 *angular_velocity;
+  /**
+   * Row-major 6x6 covariance matrix (x, y, z, rotation about x, rotation about y, rotation about z). Set to zero if unknown.
+   */
+  double pose_covariance[36];
+  /**
+   * Row-major 6x6 covariance matrix (vx, vy, vz, angular rate about x, angular rate about y, angular rate about z). Set to zero if unknown.
+   */
+  double velocity_covariance[36];
+  /**
+   * Additional user-provided metadata associated with the odometry message. Keys must be unique.
+   */
+  const struct foxglove_key_value_pair *metadata;
+  size_t metadata_count;
+} foxglove_odometry;
+
+/**
+ * A timestamped point for a position in 3D space
+ */
+typedef struct foxglove_point3_in_frame {
+  /**
+   * Timestamp of point
+   */
+  const struct foxglove_timestamp *timestamp;
+  /**
+   * Frame of reference for point position
+   */
+  struct foxglove_string frame_id;
+  /**
+   * Point in 3D space
+   */
+  const struct foxglove_point3 *point;
+} foxglove_point3_in_frame;
+
+/**
+ * A collection of N-dimensional points, which may contain additional fields with information like normals, intensity, etc.
+ */
+typedef struct foxglove_point_cloud {
+  /**
+   * Timestamp of point cloud
+   */
+  const struct foxglove_timestamp *timestamp;
+  /**
+   * Frame of reference
+   */
+  struct foxglove_string frame_id;
+  /**
+   * The origin of the point cloud relative to the frame of reference
+   */
+  const struct foxglove_pose *pose;
+  /**
+   * Number of bytes between points in the `data`
+   */
+  uint32_t point_stride;
+  /**
+   * Fields in `data`. At least 2 coordinate fields from `x`, `y`, and `z` are required for each point's position; `red`, `green`, `blue`, and `alpha` are optional for customizing each point's color.
+   */
+  const struct foxglove_packed_element_field *fields;
+  size_t fields_count;
+  /**
+   * Point data, interpreted using `fields`
+   */
+  const unsigned char *data;
+  size_t data_len;
+} foxglove_point_cloud;
+
+/**
+ * A timestamped pose for an object or reference frame in 3D space
+ */
+typedef struct foxglove_pose_in_frame {
+  /**
+   * Timestamp of pose
+   */
+  const struct foxglove_timestamp *timestamp;
+  /**
+   * Frame of reference for pose position and orientation
+   */
+  struct foxglove_string frame_id;
+  /**
+   * Pose in 3D space
+   */
+  const struct foxglove_pose *pose;
+} foxglove_pose_in_frame;
+
+/**
+ * An array of timestamped poses for an object or reference frame in 3D space
+ */
+typedef struct foxglove_poses_in_frame {
+  /**
+   * Timestamp of pose
+   */
+  const struct foxglove_timestamp *timestamp;
+  /**
+   * Frame of reference for pose position and orientation
+   */
+  struct foxglove_string frame_id;
+  /**
+   * Poses in 3D space
+   */
+  const struct foxglove_pose *poses;
+  size_t poses_count;
+} foxglove_poses_in_frame;
+
+/**
+ * A single block of an audio bitstream
+ */
+typedef struct foxglove_raw_audio {
+  /**
+   * Timestamp of the start of the audio block
+   */
+  const struct foxglove_timestamp *timestamp;
+  /**
+   * Audio data. The samples in the data must be interleaved and little-endian
+   */
+  const unsigned char *data;
+  size_t data_len;
+  /**
+   * Audio format. Only 'pcm-s16' is currently supported
+   */
+  struct foxglove_string format;
+  /**
+   * Sample rate in Hz
+   */
+  uint32_t sample_rate;
+  /**
+   * Number of channels in the audio block
+   */
+  uint32_t number_of_channels;
+} foxglove_raw_audio;
+
+/**
+ * A raw image
+ */
+typedef struct foxglove_raw_image {
+  /**
+   * Timestamp of image
+   */
+  const struct foxglove_timestamp *timestamp;
+  /**
+   * Frame of reference for the image. The origin of the frame is the optical center of the camera. +x points to the right in the image, +y points down, and +z points into the plane of the image.
+   */
+  struct foxglove_string frame_id;
+  /**
+   * Image width in pixels
+   */
+  uint32_t width;
+  /**
+   * Image height in pixels
+   */
+  uint32_t height;
+  /**
+   * Encoding of the raw image data. See the `data` field description for supported values.
+   */
+  struct foxglove_string encoding;
+  /**
+   * Byte length of a single row. This is usually some multiple of `width` depending on the encoding, but can be greater to incorporate padding.
+   */
+  uint32_t step;
+  /**
+   * Raw image data.
+   *
+   * For each `encoding` value, the `data` field contains image pixel data serialized as follows:
+   *
+   * - `yuv422` or `uyvy`:
+   *   - Pixel colors are decomposed into [Y'UV](https://en.wikipedia.org/wiki/Y%E2%80%B2UV) channels.
+   *   - Pixel channel values are represented as unsigned 8-bit integers.
+   *   - U and V values are shared between horizontal pairs of pixels. Each pair of output pixels is serialized as [U, Y1, V, Y2].
+   *   - `step` must be greater than or equal to `width` * 2.
+   * - `yuv422_yuy2` or  `yuyv`:
+   *   - Pixel colors are decomposed into [Y'UV](https://en.wikipedia.org/wiki/Y%E2%80%B2UV) channels.
+   *   - Pixel channel values are represented as unsigned 8-bit integers.
+   *   - U and V values are shared between horizontal pairs of pixels. Each pair of output pixels is encoded as [Y1, U, Y2, V].
+   *   - `step` must be greater than or equal to `width` * 2.
+   * - `nv12`:
+   *   - Pixel colors are decomposed into [Y'UV](https://en.wikipedia.org/wiki/Y%E2%80%B2UV) channels using 4:2:0 chroma subsampling. The data is stored in [NV12](https://www.kernel.org/doc/html/v4.10/media/uapi/v4l/pixfmt-nv12.html) semi-planar layout with two contiguous planes: a Y (luma) plane followed by an interleaved UV (chroma) plane.
+   *   - All channel values are represented as unsigned 8-bit integers.
+   *   - Both planes use `step` as their row stride.
+   *   - The Y plane contains one luma value per pixel (`step` * `height` bytes).
+   *   - The UV plane contains interleaved U, V chroma pairs, subsampled by a factor of 2 in both dimensions (`width`/2 pairs per row, `height`/2 rows, `step` * `height`/2 bytes). Each U, V pair is shared by a 2x2 block of pixels.
+   *   - `width` and `height` must be even.
+   *   - `step` must be greater than or equal to `width`.
+   *   - Total `data` length is `step` * `height` * 3/2 bytes.
+   * - `rgb8`:
+   *   - Pixel colors are decomposed into Red, Green, and Blue channels.
+   *   - Pixel channel values are represented as unsigned 8-bit integers.
+   *   - Each output pixel is serialized as [R, G, B].
+   *   - `step` must be greater than or equal to `width` * 3.
+   * - `rgba8`:
+   *   - Pixel colors are decomposed into Red, Green, Blue, and Alpha channels.
+   *   - Pixel channel values are represented as unsigned 8-bit integers.
+   *   - Each output pixel is serialized as [R, G, B, Alpha].
+   *   - `step` must be greater than or equal to `width` * 4.
+   * - `bgr8` or `8UC3`:
+   *   - Pixel colors are decomposed into Blue, Green, and Red channels.
+   *   - Pixel channel values are represented as unsigned 8-bit integers.
+   *   - Each output pixel is serialized as [B, G, R].
+   *   - `step` must be greater than or equal to `width` * 3.
+   * - `bgra8`:
+   *   - Pixel colors are decomposed into Blue, Green, Red, and Alpha channels.
+   *   - Pixel channel values are represented as unsigned 8-bit integers.
+   *   - Each output pixel is encoded as [B, G, R, Alpha].
+   *   - `step` must be greater than or equal to `width` * 4.
+   * - `32FC1`:
+   *   - Pixel brightness is represented as a single-channel, 32-bit little-endian IEEE 754 floating-point value, ranging from 0.0 (black) to 1.0 (white).
+   *   - `step` must be greater than or equal to `width` * 4.
+   * - `bayer_rggb8`, `bayer_bggr8`, `bayer_gbrg8`, or `bayer_grbg8`:
+   *   - Pixel colors are decomposed into Red, Blue and Green channels.
+   *   - Pixel channel values are represented as unsigned 8-bit integers, and serialized in a 2x2 bayer filter pattern.
+   *   - The order of the four letters after `bayer_` determine the layout, so for `bayer_wxyz8` the pattern is:
+   *   ```text
+   *   w | x
+   *   - + -
+   *   y | z
+   *   ```
+   *   - `step` must be greater than or equal to `width`.
+   * - `mono8` or `8UC1`:
+   *   - Pixel brightness is represented as unsigned 8-bit integers.
+   *   - `step` must be greater than or equal to `width`.
+   * - `mono16` or `16UC1`:
+   *   - Pixel brightness is represented as 16-bit unsigned little-endian integers. Rendering of these values is controlled in [Image panel color mode settings](https://docs.foxglove.dev/docs/visualization/panels/image#general).
+   *   - `step` must be greater than or equal to `width` * 2.
+   *
+   */
+  const unsigned char *data;
+  size_t data_len;
+} foxglove_raw_image;
+
+#if !defined(__wasm__)
+/**
+ * Custom writer function pointers for MCAP writing.
+ * write_fn and flush_fn must be non-null. Seek_fn may be null iff `disable_seeking` is set to true.
+ * These function pointers may be called from multiple threads.
+ * These functions are called synchronously with respect to each other within the SDK, but these
+ * calls are not synchronized with other SDK function calls.
+ */
+typedef struct foxglove_custom_writer {
+  /**
+   * User-provided context pointer, passed to all callback functions
+   */
+  void *context;
+  /**
+   * Write function: write data to the custom destination
+   * Returns number of bytes written, or sets error on failure
+   */
+  size_t (*write_fn)(void *context, const uint8_t *data, size_t len, int32_t *error);
+  /**
+   * Flush function: ensure all buffered data is written
+   */
+  int32_t (*flush_fn)(void *context);
+  /**
+   * Seek function: change the current position in the stream
+   * whence: 0=SEEK_SET, 1=SEEK_CUR, 2=SEEK_END
+   */
+  int32_t (*seek_fn)(void *context, int64_t pos, int whence, uint64_t *new_pos);
+} foxglove_custom_writer;
+#endif
+
+#if !defined(__wasm__)
+typedef struct foxglove_mcap_options {
+  /**
+   * `context` can be null, or a valid pointer to a context created via `foxglove_context_new`.
+   * If it's null, the mcap file will be created with the default context.
+   */
+  const struct foxglove_context *context;
+  struct foxglove_string path;
+  bool truncate;
+  /**
+   * Custom writer for arbitrary destinations. If non-null, `path` is ignored.
+   */
+  const struct foxglove_custom_writer *custom_writer;
+  foxglove_mcap_compression compression;
+  struct foxglove_string profile;
+  /**
+   * chunk_size of 0 is treated as if it was omitted (None)
+   */
+  uint64_t chunk_size;
+  bool use_chunks;
+  bool disable_seeking;
+  bool emit_statistics;
+  bool emit_summary_offsets;
+  bool emit_message_indexes;
+  bool emit_chunk_indexes;
+  bool emit_attachment_indexes;
+  bool emit_metadata_indexes;
+  bool repeat_channels;
+  bool repeat_schemas;
+  /**
+   * Whether to calculate and include CRCs in the respective records.
+   */
+  bool calculate_chunk_crcs;
+  bool calculate_data_section_crc;
+  bool calculate_summary_section_crc;
+  bool calculate_attachment_crcs;
+  /**
+   * Compression level passed to the underlying compressor (zstd or lz4).
+   * A value of 0 instructs the compressor to use its default level.
+   */
+  uint32_t compression_level;
+  /**
+   * Number of threads for zstd compression. 0 disables multithreading.
+   * The default uses the number of physical CPUs.
+   */
+  uint32_t compression_threads;
+  /**
+   * Context provided to the `sink_channel_filter` callback.
+   */
+  const void *sink_channel_filter_context;
+  /**
+   * A filter for channels that can be used to subscribe to or unsubscribe from channels.
+   *
+   * This can be used to omit one or more channels from a sink, but still log all channels to another
+   * sink in the same context. Return false to disable logging of this channel.
+   *
+   * This method is invoked from the client's main poll loop and must not block.
+   *
+   * # Safety
+   * - If provided, the handler callback must be a pointer to the filter callback function,
+   *   and must remain valid until the MCAP sink is dropped.
+   */
+  bool (*sink_channel_filter)(const void *context, const struct foxglove_channel_descriptor *channel);
+} foxglove_mcap_options;
+#endif
+
+/**
+ * A key-value pair of strings.
+ */
+typedef struct foxglove_key_value {
+  /**
+   * The key
+   */
+  struct foxglove_string key;
+  /**
+   * The value
+   */
+  struct foxglove_string value;
+} foxglove_key_value;
+
+#if !defined(__wasm__)
+/**
+ * An MCAP attachment to store in an MCAP file.
+ *
+ * Attachments are arbitrary binary data that can be stored alongside messages.
+ * Common uses include storing configuration files, calibration data, or other
+ * reference material related to the recording.
+ */
+typedef struct foxglove_mcap_attachment {
+  /**
+   * Timestamp at which the attachment was recorded, in nanoseconds.
+   */
+  uint64_t log_time;
+  /**
+   * Timestamp at which the attachment was created, in nanoseconds.
+   * If not available, set to 0.
+   */
+  uint64_t create_time;
+  /**
+   * Name of the attachment, e.g. "config.json".
+   */
+  struct foxglove_string name;
+  /**
+   * Media type of the attachment, e.g. "application/json".
+   */
+  struct foxglove_string media_type;
+  /**
+   * Pointer to the attachment data.
+   */
+  const uint8_t *data;
+  /**
+   * Length of the attachment data in bytes.
+   */
+  size_t data_len;
+} foxglove_mcap_attachment;
+#endif
+
+/**
+ * A collection of metadata items for a channel.
+ */
+typedef struct foxglove_channel_metadata {
+  /**
+   * The items in the metadata collection.
+   */
+  const struct foxglove_key_value *items;
+  /**
+   * The number of items in the metadata collection.
+   */
+  size_t count;
+} foxglove_channel_metadata;
+
+#if !defined(__wasm__)
+/**
+ * An iterator over channel metadata key-value pairs.
+ */
+typedef struct foxglove_channel_metadata_iterator {
+  /**
+   * The channel with metadata to iterate
+   */
+  const struct foxglove_channel *channel;
+  /**
+   * Current index
+   */
+  size_t index;
+} foxglove_channel_metadata_iterator;
+#endif
+
+#if !defined(__wasm__)
+/**
+ * An iterator over a channel descriptor's metadata key-value pairs.
+ */
+typedef struct foxglove_channel_descriptor_metadata_iterator {
+  const struct foxglove_channel_descriptor *channel;
+  size_t index;
+} foxglove_channel_descriptor_metadata_iterator;
+#endif
+
+#if !defined(__wasm__)
+/**
+ * A byte array with associated length.
+ */
+typedef struct foxglove_bytes {
+  /**
+   * Pointer to data
+   */
+  const uint8_t *data;
+  /**
+   * Number of bytes
+   */
+  size_t len;
+} foxglove_bytes;
+#endif
+
+#if !defined(__wasm__)
 /**
  * An array of parameter values.
  *
@@ -235,7 +2295,9 @@ typedef struct foxglove_parameter_value_array {
    */
   size_t capacity;
 } foxglove_parameter_value_array;
+#endif
 
+#if !defined(__wasm__)
 /**
  * An dictionary entry for a parameter value.
  *
@@ -251,7 +2313,9 @@ typedef struct foxglove_parameter_value_dict_entry {
    */
   const struct foxglove_parameter_value *value;
 } foxglove_parameter_value_dict_entry;
+#endif
 
+#if !defined(__wasm__)
 /**
  * An dictionary of parameter values.
  *
@@ -271,20 +2335,25 @@ typedef struct foxglove_parameter_value_dict {
    */
   size_t capacity;
 } foxglove_parameter_value_dict;
+#endif
 
+#if !defined(__wasm__)
 /**
  * Storage for `FoxgloveParameterValue`.
  */
 typedef union foxglove_parameter_value_data {
-  double number;
+  double float64;
+  int64_t integer;
   bool boolean;
   struct foxglove_string string;
   struct foxglove_parameter_value_array array;
   struct foxglove_parameter_value_dict dict;
 } foxglove_parameter_value_data;
+#endif
 
+#if !defined(__wasm__)
 /**
- * A websocket parameter value.
+ * A WebSocket parameter value.
  *
  * Constructed with `foxglove_parameter_value_create_*`.
  */
@@ -298,9 +2367,11 @@ typedef struct foxglove_parameter_value {
    */
   union foxglove_parameter_value_data data;
 } foxglove_parameter_value;
+#endif
 
+#if !defined(__wasm__)
 /**
- * A websocket parameter.
+ * A WebSocket parameter.
  *
  * Constructed with `foxglove_parameter_create`.
  */
@@ -318,9 +2389,11 @@ typedef struct foxglove_parameter {
    */
   const struct foxglove_parameter_value *value;
 } foxglove_parameter;
+#endif
 
+#if !defined(__wasm__)
 /**
- * An array of websocket parameters.
+ * An array of WebSocket parameters.
  *
  * Constructed with `foxglove_parameter_array_create`.
  */
@@ -338,14 +2411,410 @@ typedef struct foxglove_parameter_array {
    */
   size_t capacity;
 } foxglove_parameter_array;
+#endif
 
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
+ * Callbacks for the remote access gateway.
+ *
+ * These methods are invoked from time-sensitive contexts and must not block.
+ */
+typedef struct foxglove_gateway_callbacks {
+  /**
+   * A user-defined value that will be passed to callback functions.
+   */
+  const void *context;
+  /**
+   * Callback invoked when the gateway connection status changes.
+   */
+  void (*on_connection_status_changed)(const void *context, foxglove_connection_status status);
+  /**
+   * Callback invoked when a client subscribes to a channel.
+   */
+  void (*on_subscribe)(const void *context,
+                       uint32_t client_id,
+                       const struct foxglove_channel_descriptor *channel);
+  /**
+   * Callback invoked when a client unsubscribes from a channel or disconnects.
+   * Also invoked when a subscribed channel is removed from the context.
+   */
+  void (*on_unsubscribe)(const void *context,
+                         uint32_t client_id,
+                         const struct foxglove_channel_descriptor *channel);
+  /**
+   * Callback invoked when a client message is received.
+   */
+  void (*on_message_data)(const void *context,
+                          uint32_t client_id,
+                          const struct foxglove_channel_descriptor *channel,
+                          const uint8_t *payload,
+                          size_t payload_len);
+  /**
+   * Callback invoked when a client advertises a client channel.
+   */
+  void (*on_client_advertise)(const void *context,
+                              uint32_t client_id,
+                              const struct foxglove_channel_descriptor *channel);
+  /**
+   * Callback invoked when a client unadvertises a client channel.
+   */
+  void (*on_client_unadvertise)(const void *context,
+                                uint32_t client_id,
+                                const struct foxglove_channel_descriptor *channel);
+  /**
+   * Callback invoked when a client requests parameters.
+   *
+   * Requires `FOXGLOVE_GATEWAY_CAPABILITY_PARAMETERS`.
+   *
+   * The `request_id` argument may be NULL.
+   *
+   * The `param_names` argument is guaranteed to be non-NULL. These arguments point to buffers
+   * that are valid and immutable for the duration of the call. If the callback wishes to store
+   * these values, they must be copied out.
+   *
+   * This function should return the named parameters, or all parameters if `param_names` is
+   * empty. The return value must be allocated with `foxglove_parameter_array_create`. Ownership
+   * of this value is transferred to the callee. A NULL return value is treated as empty.
+   *
+   * Deprecated: prefer `foxglove_gateway_options::parameter_handler`. If a
+   * `FoxgloveParameterHandler` is registered, it takes precedence and this callback is not
+   * invoked.
+   */
+  struct foxglove_parameter_array *(*on_get_parameters)(const void *context,
+                                                        uint32_t client_id,
+                                                        const struct foxglove_string *request_id,
+                                                        const struct foxglove_string *param_names,
+                                                        size_t param_names_len);
+  /**
+   * Callback invoked when a client sets parameters.
+   *
+   * Requires `FOXGLOVE_GATEWAY_CAPABILITY_PARAMETERS`.
+   *
+   * The `request_id` argument may be NULL.
+   *
+   * The `params` argument is guaranteed to be non-NULL. These arguments point to buffers that
+   * are valid and immutable for the duration of the call. If the callback wishes to store these
+   * values, they must be copied out.
+   *
+   * This function should return the updated parameters. The return value must be allocated with
+   * `foxglove_parameter_array_create`. Ownership is transferred to the callee. A NULL return
+   * value is treated as empty.
+   *
+   * Deprecated: prefer `foxglove_gateway_options::parameter_handler`. If a
+   * `FoxgloveParameterHandler` is registered, it takes precedence and this callback is not
+   * invoked.
+   */
+  struct foxglove_parameter_array *(*on_set_parameters)(const void *context,
+                                                        uint32_t client_id,
+                                                        const struct foxglove_string *request_id,
+                                                        const struct foxglove_parameter_array *params);
+  /**
+   * Callback invoked when a client subscribes to the named parameters for the first time.
+   *
+   * Requires `FOXGLOVE_GATEWAY_CAPABILITY_PARAMETERS`.
+   */
+  void (*on_parameters_subscribe)(const void *context,
+                                  const struct foxglove_string *param_names,
+                                  size_t param_names_len);
+  /**
+   * Callback invoked when the last client unsubscribes from the named parameters.
+   *
+   * Requires `FOXGLOVE_GATEWAY_CAPABILITY_PARAMETERS`.
+   */
+  void (*on_parameters_unsubscribe)(const void *context,
+                                    const struct foxglove_string *param_names,
+                                    size_t param_names_len);
+  /**
+   * Callback invoked when the first client subscribes to connection graph updates.
+   *
+   * Requires `FOXGLOVE_GATEWAY_CAPABILITY_CONNECTION_GRAPH`.
+   */
+  void (*on_connection_graph_subscribe)(const void *context);
+  /**
+   * Callback invoked when the last client unsubscribes from connection graph updates.
+   *
+   * Requires `FOXGLOVE_GATEWAY_CAPABILITY_CONNECTION_GRAPH`.
+   */
+  void (*on_connection_graph_unsubscribe)(const void *context);
+} foxglove_gateway_callbacks;
+#endif
+
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
+ * Capabilities for the remote access gateway. These are advertised to clients.
+ */
+typedef uint8_t foxglove_gateway_capability;
+#endif
+
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
+ * Quality-of-service profile for a channel.
+ */
+typedef struct foxglove_qos_profile {
+  foxglove_reliability reliability;
+} foxglove_qos_profile;
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Handler for client-initiated parameter operations.
+ *
+ * When supplied to `foxglove_server_options` or `foxglove_gateway_options`, the handler takes
+ * precedence over the deprecated `on_get_parameters` / `on_set_parameters` callbacks on
+ * `foxglove_server_callbacks` / `foxglove_gateway_callbacks`. Registering a handler also
+ * automatically advertises the `FOXGLOVE_SERVER_CAPABILITY_PARAMETERS` (or
+ * `FOXGLOVE_GATEWAY_CAPABILITY_PARAMETERS`) capability. Subscribe/unsubscribe notifications
+ * still go through the `on_parameters_subscribe` / `on_parameters_unsubscribe` callbacks on
+ * `foxglove_server_callbacks` / `foxglove_gateway_callbacks`; wire those up separately if you
+ * want to be notified.
+ *
+ * Both `get` and `set` are required: if a handler is supplied with either set to NULL,
+ * `foxglove_server_start` / `foxglove_gateway_start` returns `FOXGLOVE_ERROR_VALUE_ERROR`.
+ *
+ * These methods are invoked from time-sensitive contexts and must not block. If long-running
+ * behavior is required, the implementation should hand the responder off to another thread and
+ * return immediately.
+ */
+typedef struct foxglove_parameter_handler {
+  /**
+   * A user-defined value that will be passed to callback functions.
+   */
+  const void *context;
+  /**
+   * Callback invoked when a client requests parameters.
+   *
+   * Required: must not be NULL when this handler is registered.
+   *
+   * The `request_id` argument may be NULL.
+   *
+   * The `param_names` argument is guaranteed to be non-NULL. The buffer is valid for the
+   * duration of this call; if the callback wishes to store these values, it must copy them out.
+   *
+   * The implementation takes ownership of `responder`; see `FoxgloveGetParametersResponder`
+   * for the completion contract.
+   */
+  void (*get)(const void *context,
+              uint32_t client_id,
+              const struct foxglove_string *request_id,
+              const struct foxglove_string *param_names,
+              size_t param_names_len,
+              struct foxglove_get_parameters_responder *responder);
+  /**
+   * Callback invoked when a client sets parameters.
+   *
+   * Required: must not be NULL when this handler is registered.
+   *
+   * The `request_id` argument may be NULL.
+   *
+   * The `params` argument is guaranteed to be non-NULL. The buffer is valid for the duration of
+   * this call; if the callback wishes to store these values, it must copy them out.
+   *
+   * The implementation takes ownership of `responder`; see `FoxgloveSetParametersResponder`
+   * for the completion contract, the `request_id` echo behavior, and the implementer's
+   * responsibility to broadcast applied updates to other parameter subscribers.
+   */
+  void (*set)(const void *context,
+              uint32_t client_id,
+              const struct foxglove_string *request_id,
+              const struct foxglove_parameter_array *params,
+              struct foxglove_set_parameters_responder *responder);
+} foxglove_parameter_handler;
+#endif
+
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
+ * Options for creating a remote access gateway.
+ *
+ * # Safety
+ * - `context` can be null, or a valid pointer to a context created via `foxglove_context_new`.
+ * - `name` must be a valid UTF-8 string.
+ * - `device_token` must be a valid UTF-8 string, or empty to use the
+ *   `FOXGLOVE_DEVICE_TOKEN` environment variable.
+ * - If `supported_encodings` is supplied, all entries must contain valid UTF-8, and
+ *   `supported_encodings` must have length equal to `supported_encodings_count`.
+ * - If `server_info` is supplied, all entries must contain valid UTF-8, and `server_info` must
+ *   have length equal to `server_info_count`.
+ */
+typedef struct foxglove_gateway_options {
+  /**
+   * `context` can be null, or a valid pointer to a context created via `foxglove_context_new`.
+   * If it's null, the gateway will be created with the default context.
+   */
+  const struct foxglove_context *context;
+  struct foxglove_string name;
+  struct foxglove_string device_token;
+  const struct foxglove_gateway_callbacks *callbacks;
+  foxglove_gateway_capability capabilities;
+  const struct foxglove_string *supported_encodings;
+  size_t supported_encodings_count;
+  /**
+   * Optional information about the gateway, which is shared with clients via the ServerInfo
+   * message.
+   *
+   * # Safety
+   * - If provided, the `server_info` must be a valid pointer to an array of valid
+   *   `FoxgloveKeyValue`s with `server_info_count` elements.
+   */
+  const struct foxglove_key_value *server_info;
+  size_t server_info_count;
+  /**
+   * Context provided to the `sink_channel_filter` callback.
+   */
+  const void *sink_channel_filter_context;
+  /**
+   * A filter for channels.
+   *
+   * Return false to disable logging of this channel.
+   * This method is invoked from the client's main poll loop and must not block.
+   */
+  bool (*sink_channel_filter)(const void *context, const struct foxglove_channel_descriptor *channel);
+  /**
+   * Context provided to the `qos_classifier` callback.
+   */
+  const void *qos_classifier_context;
+  /**
+   * A QoS classifier for channels.
+   *
+   * Returns a [`FoxgloveQosProfile`] for the given channel, determining how data is delivered.
+   * If not set, all channels use the default lossy profile.
+   */
+  struct foxglove_qos_profile (*qos_classifier)(const void *context,
+                                                const struct foxglove_channel_descriptor *channel);
+  /**
+   * Context provided to the `fetch_asset` callback.
+   */
+  const void *fetch_asset_context;
+  /**
+   * Fetch an asset with the given URI and return it via the responder.
+   *
+   * This method is invoked from a time-sensitive context and must not block. If blocking or
+   * long-running behavior is required, the implementation should return immediately and handle
+   * the request asynchronously.
+   *
+   * The `uri` provided to the callback is only valid for the duration of the callback. If the
+   * implementation wishes to retain its data for a longer lifetime, it must copy data out of
+   * it.
+   *
+   * The `responder` provided to the callback represents an unfulfilled response. The
+   * implementation must eventually call either `foxglove_fetch_asset_respond_ok` or
+   * `foxglove_fetch_asset_respond_error`, exactly once, in order to complete the request. It is
+   * safe to invoke these completion functions synchronously from the context of the callback.
+   *
+   * If provided, the Assets capability will be advertised automatically.
+   *
+   * # Safety
+   * - If provided, the handler callback must be a pointer to the fetch asset callback function,
+   *   and must remain valid until the gateway is stopped.
+   */
+  void (*fetch_asset)(const void *context,
+                      const struct foxglove_string *uri,
+                      struct foxglove_fetch_asset_responder *responder);
+  /**
+   * Optional Foxglove API base URL override. Empty string uses the default.
+   */
+  struct foxglove_string foxglove_api_url;
+  /**
+   * Optional Foxglove API timeout in seconds.
+   */
+  const uint64_t *foxglove_api_timeout_secs;
+  /**
+   * Message backlog size override. A value of 0 means use the default (1024).
+   */
+  size_t message_backlog_size;
+  /**
+   * Optional parameter handler.
+   *
+   * When set, this handler takes precedence over the deprecated `on_get_parameters` /
+   * `on_set_parameters` callbacks on `foxglove_gateway_callbacks`. Registering a handler
+   * automatically enables the `FOXGLOVE_GATEWAY_CAPABILITY_PARAMETERS` capability.
+   *
+   * When provided, both `get` and `set` on the handler are required; otherwise
+   * `foxglove_gateway_start` returns `FOXGLOVE_ERROR_VALUE_ERROR`.
+   */
+  const struct foxglove_parameter_handler *parameter_handler;
+} foxglove_gateway_options;
+#endif
+
+#if !defined(__wasm__)
+typedef struct foxglove_client_metadata {
+  uint32_t id;
+  FoxgloveSinkId sink_id;
+} foxglove_client_metadata;
+#endif
+
+#if !defined(__wasm__)
+typedef struct foxglove_client_channel {
+  uint32_t id;
+  const char *topic;
+  const char *encoding;
+  const char *schema_name;
+  const char *schema_encoding;
+  const void *schema;
+  size_t schema_len;
+} foxglove_client_channel;
+#endif
+
+#if !defined(__wasm__)
+typedef struct foxglove_playback_control_request {
+  /**
+   * Playback command
+   */
+  uint8_t playback_command;
+  /**
+   * Playback speed
+   */
+  float playback_speed;
+  /**
+   * Seek playback time in nanoseconds (only set if a seek has been performed)
+   */
+  const uint64_t *seek_time;
+  /**
+   * Unique string identifier, used to indicate that a PlaybackState is in response to a particular request from the client.
+   * Should not be an empty string.
+   */
+  struct foxglove_string request_id;
+} foxglove_playback_control_request;
+#endif
+
+#if !defined(__wasm__)
+typedef struct foxglove_playback_state {
+  /**
+   * The status of server data playback
+   */
+  uint8_t status;
+  /**
+   * The current time of playback, in absolute nanoseconds
+   */
+  uint64_t current_time;
+  /**
+   * The speed of playback, as a factor of realtime
+   */
+  float playback_speed;
+  /**
+   * Whether a seek forward or backward in time triggered this message to be emitted
+   */
+  bool did_seek;
+  /**
+   * If this message is being emitted in response to a PlaybackControlRequest message, the
+   * request_id from that message. Set this to an empty string if the state of playback has been changed
+   * by any other condition.
+   */
+  struct foxglove_string request_id;
+} foxglove_playback_state;
+#endif
+
+#if !defined(__wasm__)
 typedef struct foxglove_server_callbacks {
   /**
    * A user-defined value that will be passed to callback functions
    */
   const void *context;
-  void (*on_subscribe)(const void *context, uint64_t channel_id);
-  void (*on_unsubscribe)(const void *context, uint64_t channel_id);
+  void (*on_subscribe)(const void *context,
+                       uint64_t channel_id,
+                       struct foxglove_client_metadata client);
+  void (*on_unsubscribe)(const void *context,
+                         uint64_t channel_id,
+                         struct foxglove_client_metadata client);
   void (*on_client_advertise)(const void *context,
                               uint32_t client_id,
                               const struct foxglove_client_channel *channel);
@@ -370,6 +2839,10 @@ typedef struct foxglove_server_callbacks {
    * empty. The return value must be allocated with `foxglove_parameter_array_create`. Ownership
    * of this value is transferred to the callee, who is responsible for freeing it. A NULL return
    * value is treated as an empty array.
+   *
+   * Deprecated: prefer `foxglove_server_options::parameter_handler`. If a
+   * `FoxgloveParameterHandler` is registered, it takes precedence and this callback is not
+   * invoked.
    */
   struct foxglove_parameter_array *(*on_get_parameters)(const void *context,
                                                         uint32_t client_id,
@@ -391,7 +2864,12 @@ typedef struct foxglove_server_callbacks {
    * `foxglove_parameter_array_create`. Ownership of this value is transferred to the callee, who
    * is responsible for freeing it. A NULL return value is treated as an empty array.
    *
-   * All clients subscribed to updates for the returned parameters will be notified.
+   * All clients subscribed to updates for the returned parameters will be notified. Note that if a
+   * returned parameter is unset, it will not be published to clients.
+   *
+   * Deprecated: prefer `foxglove_server_options::parameter_handler`. If a
+   * `FoxgloveParameterHandler` is registered, it takes precedence and this callback is not
+   * invoked.
    */
   struct foxglove_parameter_array *(*on_set_parameters)(const void *context,
                                                         uint32_t client_id,
@@ -423,10 +2901,29 @@ typedef struct foxglove_server_callbacks {
                                     size_t param_names_len);
   void (*on_connection_graph_subscribe)(const void *context);
   void (*on_connection_graph_unsubscribe)(const void *context);
+  void (*on_client_connect)(const void *context);
+  void (*on_client_disconnect)(const void *context);
+  /**
+   * Callback invoked when a client sends a playback control request message.
+   *
+   * Requires `FOXGLOVE_CAPABILITY_PLAYBACK_CONTROL`.
+   *
+   * `playback_control_request` is an input parameter and guaranteed to be non-NULL.
+   * `playback_state` is a non-NULL output pointer to a struct that has already been allocated.
+   * The caller should fill its fields with the appropriate state of playback, in response to
+   * the input playback control request.
+   */
+  void (*on_playback_control_request)(const void *context,
+                                      const struct foxglove_playback_control_request *playback_control_request,
+                                      struct foxglove_playback_state *playback_state);
 } foxglove_server_callbacks;
+#endif
 
+#if !defined(__wasm__)
 typedef uint8_t foxglove_server_capability;
+#endif
 
+#if !defined(__wasm__)
 typedef struct foxglove_server_options {
   /**
    * `context` can be null, or a valid pointer to a context created via `foxglove_context_new`.
@@ -440,6 +2937,15 @@ typedef struct foxglove_server_options {
   foxglove_server_capability capabilities;
   const struct foxglove_string *supported_encodings;
   size_t supported_encodings_count;
+  /**
+   * Optional information about the server, which is shared with clients.
+   *
+   * # Safety
+   * - If provided, the `server_info` must be a valid pointer to an array of valid
+   *   `FoxgloveKeyValue`s with `server_info_count` elements.
+   */
+  const struct foxglove_key_value *server_info;
+  size_t server_info_count;
   /**
    * Context provided to the `fetch_asset` callback.
    */
@@ -467,57 +2973,82 @@ typedef struct foxglove_server_options {
   void (*fetch_asset)(const void *context,
                       const struct foxglove_string *uri,
                       struct foxglove_fetch_asset_responder *responder);
+  /**
+   * TLS configuration: PEM-formatted x509 certificate for the server.
+   */
+  const uint8_t *tls_cert;
+  /**
+   * TLS configuration: Length of cert bytes
+   */
+  size_t tls_cert_len;
+  /**
+   * TLS configuration: PEM-formatted pkcs8 private key for the server.
+   */
+  const uint8_t *tls_key;
+  /**
+   * TLS configuration: Length of key bytes
+   */
+  size_t tls_key_len;
+  /**
+   * Context provided to the `sink_channel_filter` callback.
+   */
+  const void *sink_channel_filter_context;
+  /**
+   * A filter for channels that can be used to subscribe to or unsubscribe from channels.
+   *
+   * This can be used to omit one or more channels from a sink, but still log all channels to another
+   * sink in the same context. Return false to disable logging of this channel.
+   *
+   * This method is invoked from the client's main poll loop and must not block.
+   *
+   * # Safety
+   * - If provided, the handler callback must be a pointer to the filter callback function,
+   *   and must remain valid until the server is stopped.
+   */
+  bool (*sink_channel_filter)(const void *context, const struct foxglove_channel_descriptor *channel);
+  /**
+   * If the server is sending data from a fixed time range, and has the PlaybackControl capability,
+   * the start time of the data range.
+   */
+  const uint64_t *playback_start_time;
+  /**
+   * If the server is sending data from a fixed time range, and has the PlaybackControl capability,
+   * the end time of the data range.
+   */
+  const uint64_t *playback_end_time;
+  /**
+   * Optional session ID for the server.
+   *
+   * This allows the client to understand if the connection is a re-connection or if it is
+   * connecting to a new server instance. This can for example be a timestamp or a UUID.
+   *
+   * By default, the server will generate a session ID based on the current time.
+   *
+   * # Safety
+   * - If provided, the `session_id` must be a valid pointer to a null-terminated UTF-8 string.
+   */
+  const struct foxglove_string *session_id;
+  /**
+   * Message backlog size override. A value of 0 means use the default (1024).
+   */
+  size_t message_backlog_size;
+  /**
+   * Optional parameter handler.
+   *
+   * When set, this handler takes precedence over the deprecated `on_get_parameters` /
+   * `on_set_parameters` callbacks on `foxglove_server_callbacks`. Registering a handler
+   * automatically enables the `FOXGLOVE_SERVER_CAPABILITY_PARAMETERS` capability.
+   *
+   * When provided, both `get` and `set` on the handler are required; otherwise
+   * `foxglove_server_start` returns `FOXGLOVE_ERROR_VALUE_ERROR`.
+   */
+  const struct foxglove_parameter_handler *parameter_handler;
 } foxglove_server_options;
+#endif
 
-typedef struct foxglove_mcap_options {
-  /**
-   * `context` can be null, or a valid pointer to a context created via `foxglove_context_new`.
-   * If it's null, the mcap file will be created with the default context.
-   */
-  const struct foxglove_context *context;
-  struct foxglove_string path;
-  bool truncate;
-  foxglove_mcap_compression compression;
-  struct foxglove_string profile;
-  /**
-   * chunk_size of 0 is treated as if it was omitted (None)
-   */
-  uint64_t chunk_size;
-  bool use_chunks;
-  bool disable_seeking;
-  bool emit_statistics;
-  bool emit_summary_offsets;
-  bool emit_message_indexes;
-  bool emit_chunk_indexes;
-  bool emit_attachment_indexes;
-  bool emit_metadata_indexes;
-  bool repeat_channels;
-  bool repeat_schemas;
-} foxglove_mcap_options;
-
-typedef struct foxglove_schema {
-  struct foxglove_string name;
-  struct foxglove_string encoding;
-  const uint8_t *data;
-  size_t data_len;
-} foxglove_schema;
-
+#if !defined(__wasm__)
 /**
- * A byte array with associated length.
- */
-typedef struct foxglove_bytes {
-  /**
-   * Pointer to data
-   */
-  const uint8_t *data;
-  /**
-   * Number of bytes
-   */
-  size_t len;
-} foxglove_bytes;
-
-/**
- * A schema describing either a websocket service request or response.
+ * A schema describing either a WebSocket service request or response.
  */
 typedef struct foxglove_service_message_schema {
   /**
@@ -529,9 +3060,11 @@ typedef struct foxglove_service_message_schema {
    */
   struct foxglove_schema schema;
 } foxglove_service_message_schema;
+#endif
 
+#if !defined(__wasm__)
 /**
- * A websocket service schema.
+ * A WebSocket service schema.
  */
 typedef struct foxglove_service_schema {
   /**
@@ -547,9 +3080,11 @@ typedef struct foxglove_service_schema {
    */
   const struct foxglove_service_message_schema *response;
 } foxglove_service_schema;
+#endif
 
+#if !defined(__wasm__)
 /**
- * A websocket service request message.
+ * A WebSocket service request message.
  */
 typedef struct foxglove_service_request {
   /**
@@ -573,141 +3108,2246 @@ typedef struct foxglove_service_request {
    */
   struct foxglove_bytes payload;
 } foxglove_service_request;
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Options for [`foxglove_system_info_publisher_start`].
+ *
+ * All fields are optional. To use the default for any field, leave the field
+ * zero-initialized (e.g. by setting it via `memset` or `= {0}`).
+ *
+ * # Safety
+ * - `context`, when non-null, must be a valid pointer to a context created via
+ *   `foxglove_context_new`.
+ * - `topic`, when non-empty, must be a valid UTF-8 string.
+ */
+typedef struct foxglove_system_info_publisher_options {
+  /**
+   * Optional context to publish on. When null, the default global context is used.
+   */
+  const struct foxglove_context *context;
+  /**
+   * Optional channel topic name. If `data` is null or `len` is 0, defaults to `/sysinfo`.
+   */
+  struct foxglove_string topic;
+  /**
+   * Optional refresh interval, in milliseconds.
+   *
+   * When null or zero, defaults to 500 ms. Clamped to a minimum of 200 ms.
+   */
+  const uint64_t *refresh_interval_ms;
+} foxglove_system_info_publisher_options;
+#endif
 
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
 
+#if !defined(__wasm__)
 /**
- * Create and start a server.
- *
- * Resources must later be freed by calling `foxglove_server_stop`.
- *
- * `port` may be 0, in which case an available port will be automatically selected.
- *
- * Returns 0 on success, or returns a FoxgloveError code on error.
+ * For use by the C++ SDK. Identifies that wrapper as the source of logs.
+ */
+void foxglove_internal_register_cpp_wrapper(void);
+#endif
+
+/**
+ * Convert a `FoxgloveError` code to a C string.
+ */
+const char *foxglove_error_to_cstr(foxglove_error error);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
  *
  * # Safety
- * If `name` is supplied in options, it must contain valid UTF8.
- * If `host` is supplied in options, it must contain valid UTF8.
- * If `supported_encodings` is supplied in options, all `supported_encodings` must contain valid
- * UTF8, and `supported_encodings` must have length equal to `supported_encodings_count`.
+ * We're trusting the caller that the channel will only be used with this type T.
  */
-foxglove_error foxglove_server_start(const struct foxglove_server_options *FOXGLOVE_NONNULL options,
-                                     struct foxglove_websocket_server **server);
+foxglove_error foxglove_channel_create_arrow_primitive(struct foxglove_string topic,
+                                                       const struct foxglove_context *context,
+                                                       const struct foxglove_channel **channel);
 
+#if !defined(__wasm__)
 /**
- * Publishes the current server timestamp to all clients.
- *
- * Requires the `FOXGLOVE_CAPABILITY_TIME` capability.
- */
-foxglove_error foxglove_server_broadcast_time(const struct foxglove_websocket_server *server,
-                                              uint64_t timestamp_nanos);
-
-/**
- * Sets a new session ID and notifies all clients, causing them to reset their state.
- *
- * If `session_id` is not provided, generates a new one based on the current timestamp.
+ * Log a ArrowPrimitive message to a channel.
  *
  * # Safety
- * - `session_id` must either be NULL, or a valid pointer to a UTF-8 string.
+ * The channel must have been created for this type with foxglove_channel_create_arrow_primitive.
  */
-foxglove_error foxglove_server_clear_session(const struct foxglove_websocket_server *server,
-                                             const struct foxglove_string *session_id);
+foxglove_error foxglove_channel_log_arrow_primitive(const struct foxglove_channel *channel,
+                                                    const struct foxglove_arrow_primitive *msg,
+                                                    const uint64_t *log_time,
+                                                    FoxgloveSinkId sink_id);
+#endif
 
 /**
- * Adds a service to the server.
+ * Get the ArrowPrimitive schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_arrow_primitive_schema(void);
+
+/**
+ * Encode a ArrowPrimitive message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
  *
  * # Safety
- * - `server` must be a valid pointer to a server started with `foxglove_server_start`.
- * - `service` must be a valid pointer to a service allocated by `foxglove_service_create`. This
- *   value is moved into this function, and must not be accessed afterwards.
+ * ptr must be a valid pointer to a memory region at least len bytes long.
  */
-foxglove_error foxglove_server_add_service(const struct foxglove_websocket_server *server,
-                                           struct foxglove_service *service);
+foxglove_error foxglove_arrow_primitive_encode(const struct foxglove_arrow_primitive *msg,
+                                               uint8_t *ptr,
+                                               size_t len,
+                                               size_t *encoded_len);
 
 /**
- * Removes a service from the server.
+ * Create a new typed channel, and return an owned raw channel pointer to it.
  *
  * # Safety
- * - `server` must be a valid pointer to a server started with `foxglove_server_start`.
- * - `service_name` must be a valid pointer to a UTF-8 string.
+ * We're trusting the caller that the channel will only be used with this type T.
  */
-foxglove_error foxglove_server_remove_service(const struct foxglove_websocket_server *server,
-                                              struct foxglove_string service_name);
+foxglove_error foxglove_channel_create_camera_calibration(struct foxglove_string topic,
+                                                          const struct foxglove_context *context,
+                                                          const struct foxglove_channel **channel);
 
+#if !defined(__wasm__)
 /**
- * Get the port on which the server is listening.
- */
-uint16_t foxglove_server_get_port(struct foxglove_websocket_server *server);
-
-/**
- * Stop and shut down `server` and free the resources associated with it.
- */
-foxglove_error foxglove_server_stop(struct foxglove_websocket_server *server);
-
-/**
- * Publish parameter values to all subscribed clients.
+ * Log a CameraCalibration message to a channel.
  *
  * # Safety
- * - `params` must be a valid parameter to a value allocated by `foxglove_parameter_array_create`.
- *   This value is moved into this function, and must not be accessed afterwards.
+ * The channel must have been created for this type with foxglove_channel_create_camera_calibration.
  */
-foxglove_error foxglove_server_publish_parameter_values(struct foxglove_websocket_server *server,
-                                                        struct foxglove_parameter_array *params);
+foxglove_error foxglove_channel_log_camera_calibration(const struct foxglove_channel *channel,
+                                                       const struct foxglove_camera_calibration *msg,
+                                                       const uint64_t *log_time,
+                                                       FoxgloveSinkId sink_id);
+#endif
 
 /**
- * Publish a connection graph to the server.
+ * Get the CameraCalibration schema.
+ *
+ * All buffers in the returned schema are statically allocated.
  */
-foxglove_error foxglove_server_publish_connection_graph(struct foxglove_websocket_server *server,
-                                                        struct foxglove_connection_graph *graph);
+struct foxglove_schema foxglove_camera_calibration_schema(void);
 
 /**
- * Publishes a status message to all clients.
+ * Encode a CameraCalibration message as protobuf to the buffer provided.
  *
- * The server may send this message at any time. Client developers may use it for debugging
- * purposes, display it to the end user, or ignore it.
- *
- * The caller may optionally provide a message ID, which can be used in a subsequent call to
- * `foxglove_server_remove_status`.
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
  *
  * # Safety
- * - `message` must be a valid pointer to a UTF-8 string, which must remain valid for the duration
- *   of this call.
- * - `id` must either be NULL, or a valid pointer to a UTF-8 string, which must remain valid for
- *   the duration of this call.
+ * ptr must be a valid pointer to a memory region at least len bytes long.
  */
-foxglove_error foxglove_server_publish_status(struct foxglove_websocket_server *server,
-                                              foxglove_server_status_level level,
-                                              struct foxglove_string message,
-                                              const struct foxglove_string *id);
+foxglove_error foxglove_camera_calibration_encode(const struct foxglove_camera_calibration *msg,
+                                                  uint8_t *ptr,
+                                                  size_t len,
+                                                  size_t *encoded_len);
 
 /**
- * Removes status messages from all clients.
- *
- * Previously published status messages are referenced by ID.
+ * Create a new typed channel, and return an owned raw channel pointer to it.
  *
  * # Safety
- * - `ids` must be a valid pointer to an array of pointers to valid UTF-8 strings, all of which
- *   must remain valid for the duration of this call.
+ * We're trusting the caller that the channel will only be used with this type T.
  */
-foxglove_error foxglove_server_remove_status(struct foxglove_websocket_server *server,
-                                             const struct foxglove_string *ids,
-                                             size_t ids_count);
+foxglove_error foxglove_channel_create_circle_annotation(struct foxglove_string topic,
+                                                         const struct foxglove_context *context,
+                                                         const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a CircleAnnotation message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_circle_annotation.
+ */
+foxglove_error foxglove_channel_log_circle_annotation(const struct foxglove_channel *channel,
+                                                      const struct foxglove_circle_annotation *msg,
+                                                      const uint64_t *log_time,
+                                                      FoxgloveSinkId sink_id);
+#endif
 
 /**
- * Create or open an MCAP file for writing.
+ * Get the CircleAnnotation schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_circle_annotation_schema(void);
+
+/**
+ * Encode a CircleAnnotation message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_circle_annotation_encode(const struct foxglove_circle_annotation *msg,
+                                                 uint8_t *ptr,
+                                                 size_t len,
+                                                 size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_color(struct foxglove_string topic,
+                                             const struct foxglove_context *context,
+                                             const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a Color message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_color.
+ */
+foxglove_error foxglove_channel_log_color(const struct foxglove_channel *channel,
+                                          const struct foxglove_color *msg,
+                                          const uint64_t *log_time,
+                                          FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the Color schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_color_schema(void);
+
+/**
+ * Encode a Color message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_color_encode(const struct foxglove_color *msg,
+                                     uint8_t *ptr,
+                                     size_t len,
+                                     size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_compressed_audio(struct foxglove_string topic,
+                                                        const struct foxglove_context *context,
+                                                        const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a CompressedAudio message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_compressed_audio.
+ */
+foxglove_error foxglove_channel_log_compressed_audio(const struct foxglove_channel *channel,
+                                                     const struct foxglove_compressed_audio *msg,
+                                                     const uint64_t *log_time,
+                                                     FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the CompressedAudio schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_compressed_audio_schema(void);
+
+/**
+ * Encode a CompressedAudio message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_compressed_audio_encode(const struct foxglove_compressed_audio *msg,
+                                                uint8_t *ptr,
+                                                size_t len,
+                                                size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_compressed_image(struct foxglove_string topic,
+                                                        const struct foxglove_context *context,
+                                                        const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a CompressedImage message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_compressed_image.
+ */
+foxglove_error foxglove_channel_log_compressed_image(const struct foxglove_channel *channel,
+                                                     const struct foxglove_compressed_image *msg,
+                                                     const uint64_t *log_time,
+                                                     FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the CompressedImage schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_compressed_image_schema(void);
+
+/**
+ * Encode a CompressedImage message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_compressed_image_encode(const struct foxglove_compressed_image *msg,
+                                                uint8_t *ptr,
+                                                size_t len,
+                                                size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_compressed_point_cloud(struct foxglove_string topic,
+                                                              const struct foxglove_context *context,
+                                                              const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a CompressedPointCloud message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_compressed_point_cloud.
+ */
+foxglove_error foxglove_channel_log_compressed_point_cloud(const struct foxglove_channel *channel,
+                                                           const struct foxglove_compressed_point_cloud *msg,
+                                                           const uint64_t *log_time,
+                                                           FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the CompressedPointCloud schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_compressed_point_cloud_schema(void);
+
+/**
+ * Encode a CompressedPointCloud message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_compressed_point_cloud_encode(const struct foxglove_compressed_point_cloud *msg,
+                                                      uint8_t *ptr,
+                                                      size_t len,
+                                                      size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_compressed_video(struct foxglove_string topic,
+                                                        const struct foxglove_context *context,
+                                                        const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a CompressedVideo message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_compressed_video.
+ */
+foxglove_error foxglove_channel_log_compressed_video(const struct foxglove_channel *channel,
+                                                     const struct foxglove_compressed_video *msg,
+                                                     const uint64_t *log_time,
+                                                     FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the CompressedVideo schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_compressed_video_schema(void);
+
+/**
+ * Encode a CompressedVideo message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_compressed_video_encode(const struct foxglove_compressed_video *msg,
+                                                uint8_t *ptr,
+                                                size_t len,
+                                                size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_cylinder_primitive(struct foxglove_string topic,
+                                                          const struct foxglove_context *context,
+                                                          const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a CylinderPrimitive message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_cylinder_primitive.
+ */
+foxglove_error foxglove_channel_log_cylinder_primitive(const struct foxglove_channel *channel,
+                                                       const struct foxglove_cylinder_primitive *msg,
+                                                       const uint64_t *log_time,
+                                                       FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the CylinderPrimitive schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_cylinder_primitive_schema(void);
+
+/**
+ * Encode a CylinderPrimitive message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_cylinder_primitive_encode(const struct foxglove_cylinder_primitive *msg,
+                                                  uint8_t *ptr,
+                                                  size_t len,
+                                                  size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_cube_primitive(struct foxglove_string topic,
+                                                      const struct foxglove_context *context,
+                                                      const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a CubePrimitive message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_cube_primitive.
+ */
+foxglove_error foxglove_channel_log_cube_primitive(const struct foxglove_channel *channel,
+                                                   const struct foxglove_cube_primitive *msg,
+                                                   const uint64_t *log_time,
+                                                   FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the CubePrimitive schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_cube_primitive_schema(void);
+
+/**
+ * Encode a CubePrimitive message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_cube_primitive_encode(const struct foxglove_cube_primitive *msg,
+                                              uint8_t *ptr,
+                                              size_t len,
+                                              size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_frame_transform(struct foxglove_string topic,
+                                                       const struct foxglove_context *context,
+                                                       const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a FrameTransform message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_frame_transform.
+ */
+foxglove_error foxglove_channel_log_frame_transform(const struct foxglove_channel *channel,
+                                                    const struct foxglove_frame_transform *msg,
+                                                    const uint64_t *log_time,
+                                                    FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the FrameTransform schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_frame_transform_schema(void);
+
+/**
+ * Encode a FrameTransform message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_frame_transform_encode(const struct foxglove_frame_transform *msg,
+                                               uint8_t *ptr,
+                                               size_t len,
+                                               size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_frame_transforms(struct foxglove_string topic,
+                                                        const struct foxglove_context *context,
+                                                        const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a FrameTransforms message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_frame_transforms.
+ */
+foxglove_error foxglove_channel_log_frame_transforms(const struct foxglove_channel *channel,
+                                                     const struct foxglove_frame_transforms *msg,
+                                                     const uint64_t *log_time,
+                                                     FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the FrameTransforms schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_frame_transforms_schema(void);
+
+/**
+ * Encode a FrameTransforms message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_frame_transforms_encode(const struct foxglove_frame_transforms *msg,
+                                                uint8_t *ptr,
+                                                size_t len,
+                                                size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_geo_json(struct foxglove_string topic,
+                                                const struct foxglove_context *context,
+                                                const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a GeoJson message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_geo_json.
+ */
+foxglove_error foxglove_channel_log_geo_json(const struct foxglove_channel *channel,
+                                             const struct foxglove_geo_json *msg,
+                                             const uint64_t *log_time,
+                                             FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the GeoJson schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_geo_json_schema(void);
+
+/**
+ * Encode a GeoJson message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_geo_json_encode(const struct foxglove_geo_json *msg,
+                                        uint8_t *ptr,
+                                        size_t len,
+                                        size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_grid(struct foxglove_string topic,
+                                            const struct foxglove_context *context,
+                                            const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a Grid message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_grid.
+ */
+foxglove_error foxglove_channel_log_grid(const struct foxglove_channel *channel,
+                                         const struct foxglove_grid *msg,
+                                         const uint64_t *log_time,
+                                         FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the Grid schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_grid_schema(void);
+
+/**
+ * Encode a Grid message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_grid_encode(const struct foxglove_grid *msg,
+                                    uint8_t *ptr,
+                                    size_t len,
+                                    size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_voxel_grid(struct foxglove_string topic,
+                                                  const struct foxglove_context *context,
+                                                  const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a VoxelGrid message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_voxel_grid.
+ */
+foxglove_error foxglove_channel_log_voxel_grid(const struct foxglove_channel *channel,
+                                               const struct foxglove_voxel_grid *msg,
+                                               const uint64_t *log_time,
+                                               FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the VoxelGrid schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_voxel_grid_schema(void);
+
+/**
+ * Encode a VoxelGrid message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_voxel_grid_encode(const struct foxglove_voxel_grid *msg,
+                                          uint8_t *ptr,
+                                          size_t len,
+                                          size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_image_annotations(struct foxglove_string topic,
+                                                         const struct foxglove_context *context,
+                                                         const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a ImageAnnotations message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_image_annotations.
+ */
+foxglove_error foxglove_channel_log_image_annotations(const struct foxglove_channel *channel,
+                                                      const struct foxglove_image_annotations *msg,
+                                                      const uint64_t *log_time,
+                                                      FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the ImageAnnotations schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_image_annotations_schema(void);
+
+/**
+ * Encode a ImageAnnotations message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_image_annotations_encode(const struct foxglove_image_annotations *msg,
+                                                 uint8_t *ptr,
+                                                 size_t len,
+                                                 size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_joint_state(struct foxglove_string topic,
+                                                   const struct foxglove_context *context,
+                                                   const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a JointState message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_joint_state.
+ */
+foxglove_error foxglove_channel_log_joint_state(const struct foxglove_channel *channel,
+                                                const struct foxglove_joint_state *msg,
+                                                const uint64_t *log_time,
+                                                FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the JointState schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_joint_state_schema(void);
+
+/**
+ * Encode a JointState message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_joint_state_encode(const struct foxglove_joint_state *msg,
+                                           uint8_t *ptr,
+                                           size_t len,
+                                           size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_joint_states(struct foxglove_string topic,
+                                                    const struct foxglove_context *context,
+                                                    const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a JointStates message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_joint_states.
+ */
+foxglove_error foxglove_channel_log_joint_states(const struct foxglove_channel *channel,
+                                                 const struct foxglove_joint_states *msg,
+                                                 const uint64_t *log_time,
+                                                 FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the JointStates schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_joint_states_schema(void);
+
+/**
+ * Encode a JointStates message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_joint_states_encode(const struct foxglove_joint_states *msg,
+                                            uint8_t *ptr,
+                                            size_t len,
+                                            size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_key_value_pair(struct foxglove_string topic,
+                                                      const struct foxglove_context *context,
+                                                      const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a KeyValuePair message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_key_value_pair.
+ */
+foxglove_error foxglove_channel_log_key_value_pair(const struct foxglove_channel *channel,
+                                                   const struct foxglove_key_value_pair *msg,
+                                                   const uint64_t *log_time,
+                                                   FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the KeyValuePair schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_key_value_pair_schema(void);
+
+/**
+ * Encode a KeyValuePair message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_key_value_pair_encode(const struct foxglove_key_value_pair *msg,
+                                              uint8_t *ptr,
+                                              size_t len,
+                                              size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_laser_scan(struct foxglove_string topic,
+                                                  const struct foxglove_context *context,
+                                                  const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a LaserScan message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_laser_scan.
+ */
+foxglove_error foxglove_channel_log_laser_scan(const struct foxglove_channel *channel,
+                                               const struct foxglove_laser_scan *msg,
+                                               const uint64_t *log_time,
+                                               FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the LaserScan schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_laser_scan_schema(void);
+
+/**
+ * Encode a LaserScan message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_laser_scan_encode(const struct foxglove_laser_scan *msg,
+                                          uint8_t *ptr,
+                                          size_t len,
+                                          size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_line_primitive(struct foxglove_string topic,
+                                                      const struct foxglove_context *context,
+                                                      const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a LinePrimitive message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_line_primitive.
+ */
+foxglove_error foxglove_channel_log_line_primitive(const struct foxglove_channel *channel,
+                                                   const struct foxglove_line_primitive *msg,
+                                                   const uint64_t *log_time,
+                                                   FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the LinePrimitive schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_line_primitive_schema(void);
+
+/**
+ * Encode a LinePrimitive message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_line_primitive_encode(const struct foxglove_line_primitive *msg,
+                                              uint8_t *ptr,
+                                              size_t len,
+                                              size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_location_fix(struct foxglove_string topic,
+                                                    const struct foxglove_context *context,
+                                                    const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a LocationFix message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_location_fix.
+ */
+foxglove_error foxglove_channel_log_location_fix(const struct foxglove_channel *channel,
+                                                 const struct foxglove_location_fix *msg,
+                                                 const uint64_t *log_time,
+                                                 FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the LocationFix schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_location_fix_schema(void);
+
+/**
+ * Encode a LocationFix message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_location_fix_encode(const struct foxglove_location_fix *msg,
+                                            uint8_t *ptr,
+                                            size_t len,
+                                            size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_location_fixes(struct foxglove_string topic,
+                                                      const struct foxglove_context *context,
+                                                      const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a LocationFixes message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_location_fixes.
+ */
+foxglove_error foxglove_channel_log_location_fixes(const struct foxglove_channel *channel,
+                                                   const struct foxglove_location_fixes *msg,
+                                                   const uint64_t *log_time,
+                                                   FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the LocationFixes schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_location_fixes_schema(void);
+
+/**
+ * Encode a LocationFixes message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_location_fixes_encode(const struct foxglove_location_fixes *msg,
+                                              uint8_t *ptr,
+                                              size_t len,
+                                              size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_log(struct foxglove_string topic,
+                                           const struct foxglove_context *context,
+                                           const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a Log message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_log.
+ */
+foxglove_error foxglove_channel_log_log(const struct foxglove_channel *channel,
+                                        const struct foxglove_log *msg,
+                                        const uint64_t *log_time,
+                                        FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the Log schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_log_schema(void);
+
+/**
+ * Encode a Log message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_log_encode(const struct foxglove_log *msg,
+                                   uint8_t *ptr,
+                                   size_t len,
+                                   size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_scene_entity_deletion(struct foxglove_string topic,
+                                                             const struct foxglove_context *context,
+                                                             const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a SceneEntityDeletion message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_scene_entity_deletion.
+ */
+foxglove_error foxglove_channel_log_scene_entity_deletion(const struct foxglove_channel *channel,
+                                                          const struct foxglove_scene_entity_deletion *msg,
+                                                          const uint64_t *log_time,
+                                                          FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the SceneEntityDeletion schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_scene_entity_deletion_schema(void);
+
+/**
+ * Encode a SceneEntityDeletion message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_scene_entity_deletion_encode(const struct foxglove_scene_entity_deletion *msg,
+                                                     uint8_t *ptr,
+                                                     size_t len,
+                                                     size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_scene_entity(struct foxglove_string topic,
+                                                    const struct foxglove_context *context,
+                                                    const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a SceneEntity message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_scene_entity.
+ */
+foxglove_error foxglove_channel_log_scene_entity(const struct foxglove_channel *channel,
+                                                 const struct foxglove_scene_entity *msg,
+                                                 const uint64_t *log_time,
+                                                 FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the SceneEntity schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_scene_entity_schema(void);
+
+/**
+ * Encode a SceneEntity message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_scene_entity_encode(const struct foxglove_scene_entity *msg,
+                                            uint8_t *ptr,
+                                            size_t len,
+                                            size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_scene_update(struct foxglove_string topic,
+                                                    const struct foxglove_context *context,
+                                                    const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a SceneUpdate message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_scene_update.
+ */
+foxglove_error foxglove_channel_log_scene_update(const struct foxglove_channel *channel,
+                                                 const struct foxglove_scene_update *msg,
+                                                 const uint64_t *log_time,
+                                                 FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the SceneUpdate schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_scene_update_schema(void);
+
+/**
+ * Encode a SceneUpdate message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_scene_update_encode(const struct foxglove_scene_update *msg,
+                                            uint8_t *ptr,
+                                            size_t len,
+                                            size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_model_primitive(struct foxglove_string topic,
+                                                       const struct foxglove_context *context,
+                                                       const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a ModelPrimitive message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_model_primitive.
+ */
+foxglove_error foxglove_channel_log_model_primitive(const struct foxglove_channel *channel,
+                                                    const struct foxglove_model_primitive *msg,
+                                                    const uint64_t *log_time,
+                                                    FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the ModelPrimitive schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_model_primitive_schema(void);
+
+/**
+ * Encode a ModelPrimitive message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_model_primitive_encode(const struct foxglove_model_primitive *msg,
+                                               uint8_t *ptr,
+                                               size_t len,
+                                               size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_odometry(struct foxglove_string topic,
+                                                const struct foxglove_context *context,
+                                                const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a Odometry message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_odometry.
+ */
+foxglove_error foxglove_channel_log_odometry(const struct foxglove_channel *channel,
+                                             const struct foxglove_odometry *msg,
+                                             const uint64_t *log_time,
+                                             FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the Odometry schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_odometry_schema(void);
+
+/**
+ * Encode a Odometry message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_odometry_encode(const struct foxglove_odometry *msg,
+                                        uint8_t *ptr,
+                                        size_t len,
+                                        size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_packed_element_field(struct foxglove_string topic,
+                                                            const struct foxglove_context *context,
+                                                            const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a PackedElementField message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_packed_element_field.
+ */
+foxglove_error foxglove_channel_log_packed_element_field(const struct foxglove_channel *channel,
+                                                         const struct foxglove_packed_element_field *msg,
+                                                         const uint64_t *log_time,
+                                                         FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the PackedElementField schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_packed_element_field_schema(void);
+
+/**
+ * Encode a PackedElementField message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_packed_element_field_encode(const struct foxglove_packed_element_field *msg,
+                                                    uint8_t *ptr,
+                                                    size_t len,
+                                                    size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_point2(struct foxglove_string topic,
+                                              const struct foxglove_context *context,
+                                              const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a Point2 message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_point2.
+ */
+foxglove_error foxglove_channel_log_point2(const struct foxglove_channel *channel,
+                                           const struct foxglove_point2 *msg,
+                                           const uint64_t *log_time,
+                                           FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the Point2 schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_point2_schema(void);
+
+/**
+ * Encode a Point2 message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_point2_encode(const struct foxglove_point2 *msg,
+                                      uint8_t *ptr,
+                                      size_t len,
+                                      size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_point3(struct foxglove_string topic,
+                                              const struct foxglove_context *context,
+                                              const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a Point3 message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_point3.
+ */
+foxglove_error foxglove_channel_log_point3(const struct foxglove_channel *channel,
+                                           const struct foxglove_point3 *msg,
+                                           const uint64_t *log_time,
+                                           FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the Point3 schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_point3_schema(void);
+
+/**
+ * Encode a Point3 message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_point3_encode(const struct foxglove_point3 *msg,
+                                      uint8_t *ptr,
+                                      size_t len,
+                                      size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_point3_in_frame(struct foxglove_string topic,
+                                                       const struct foxglove_context *context,
+                                                       const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a Point3InFrame message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_point3_in_frame.
+ */
+foxglove_error foxglove_channel_log_point3_in_frame(const struct foxglove_channel *channel,
+                                                    const struct foxglove_point3_in_frame *msg,
+                                                    const uint64_t *log_time,
+                                                    FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the Point3InFrame schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_point3_in_frame_schema(void);
+
+/**
+ * Encode a Point3InFrame message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_point3_in_frame_encode(const struct foxglove_point3_in_frame *msg,
+                                               uint8_t *ptr,
+                                               size_t len,
+                                               size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_point_cloud(struct foxglove_string topic,
+                                                   const struct foxglove_context *context,
+                                                   const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a PointCloud message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_point_cloud.
+ */
+foxglove_error foxglove_channel_log_point_cloud(const struct foxglove_channel *channel,
+                                                const struct foxglove_point_cloud *msg,
+                                                const uint64_t *log_time,
+                                                FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the PointCloud schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_point_cloud_schema(void);
+
+/**
+ * Encode a PointCloud message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_point_cloud_encode(const struct foxglove_point_cloud *msg,
+                                           uint8_t *ptr,
+                                           size_t len,
+                                           size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_points_annotation(struct foxglove_string topic,
+                                                         const struct foxglove_context *context,
+                                                         const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a PointsAnnotation message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_points_annotation.
+ */
+foxglove_error foxglove_channel_log_points_annotation(const struct foxglove_channel *channel,
+                                                      const struct foxglove_points_annotation *msg,
+                                                      const uint64_t *log_time,
+                                                      FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the PointsAnnotation schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_points_annotation_schema(void);
+
+/**
+ * Encode a PointsAnnotation message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_points_annotation_encode(const struct foxglove_points_annotation *msg,
+                                                 uint8_t *ptr,
+                                                 size_t len,
+                                                 size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_pose(struct foxglove_string topic,
+                                            const struct foxglove_context *context,
+                                            const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a Pose message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_pose.
+ */
+foxglove_error foxglove_channel_log_pose(const struct foxglove_channel *channel,
+                                         const struct foxglove_pose *msg,
+                                         const uint64_t *log_time,
+                                         FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the Pose schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_pose_schema(void);
+
+/**
+ * Encode a Pose message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_pose_encode(const struct foxglove_pose *msg,
+                                    uint8_t *ptr,
+                                    size_t len,
+                                    size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_pose_in_frame(struct foxglove_string topic,
+                                                     const struct foxglove_context *context,
+                                                     const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a PoseInFrame message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_pose_in_frame.
+ */
+foxglove_error foxglove_channel_log_pose_in_frame(const struct foxglove_channel *channel,
+                                                  const struct foxglove_pose_in_frame *msg,
+                                                  const uint64_t *log_time,
+                                                  FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the PoseInFrame schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_pose_in_frame_schema(void);
+
+/**
+ * Encode a PoseInFrame message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_pose_in_frame_encode(const struct foxglove_pose_in_frame *msg,
+                                             uint8_t *ptr,
+                                             size_t len,
+                                             size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_poses_in_frame(struct foxglove_string topic,
+                                                      const struct foxglove_context *context,
+                                                      const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a PosesInFrame message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_poses_in_frame.
+ */
+foxglove_error foxglove_channel_log_poses_in_frame(const struct foxglove_channel *channel,
+                                                   const struct foxglove_poses_in_frame *msg,
+                                                   const uint64_t *log_time,
+                                                   FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the PosesInFrame schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_poses_in_frame_schema(void);
+
+/**
+ * Encode a PosesInFrame message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_poses_in_frame_encode(const struct foxglove_poses_in_frame *msg,
+                                              uint8_t *ptr,
+                                              size_t len,
+                                              size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_quaternion(struct foxglove_string topic,
+                                                  const struct foxglove_context *context,
+                                                  const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a Quaternion message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_quaternion.
+ */
+foxglove_error foxglove_channel_log_quaternion(const struct foxglove_channel *channel,
+                                               const struct foxglove_quaternion *msg,
+                                               const uint64_t *log_time,
+                                               FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the Quaternion schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_quaternion_schema(void);
+
+/**
+ * Encode a Quaternion message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_quaternion_encode(const struct foxglove_quaternion *msg,
+                                          uint8_t *ptr,
+                                          size_t len,
+                                          size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_raw_audio(struct foxglove_string topic,
+                                                 const struct foxglove_context *context,
+                                                 const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a RawAudio message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_raw_audio.
+ */
+foxglove_error foxglove_channel_log_raw_audio(const struct foxglove_channel *channel,
+                                              const struct foxglove_raw_audio *msg,
+                                              const uint64_t *log_time,
+                                              FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the RawAudio schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_raw_audio_schema(void);
+
+/**
+ * Encode a RawAudio message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_raw_audio_encode(const struct foxglove_raw_audio *msg,
+                                         uint8_t *ptr,
+                                         size_t len,
+                                         size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_raw_image(struct foxglove_string topic,
+                                                 const struct foxglove_context *context,
+                                                 const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a RawImage message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_raw_image.
+ */
+foxglove_error foxglove_channel_log_raw_image(const struct foxglove_channel *channel,
+                                              const struct foxglove_raw_image *msg,
+                                              const uint64_t *log_time,
+                                              FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the RawImage schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_raw_image_schema(void);
+
+/**
+ * Encode a RawImage message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_raw_image_encode(const struct foxglove_raw_image *msg,
+                                         uint8_t *ptr,
+                                         size_t len,
+                                         size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_sphere_primitive(struct foxglove_string topic,
+                                                        const struct foxglove_context *context,
+                                                        const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a SpherePrimitive message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_sphere_primitive.
+ */
+foxglove_error foxglove_channel_log_sphere_primitive(const struct foxglove_channel *channel,
+                                                     const struct foxglove_sphere_primitive *msg,
+                                                     const uint64_t *log_time,
+                                                     FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the SpherePrimitive schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_sphere_primitive_schema(void);
+
+/**
+ * Encode a SpherePrimitive message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_sphere_primitive_encode(const struct foxglove_sphere_primitive *msg,
+                                                uint8_t *ptr,
+                                                size_t len,
+                                                size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_text_annotation(struct foxglove_string topic,
+                                                       const struct foxglove_context *context,
+                                                       const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a TextAnnotation message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_text_annotation.
+ */
+foxglove_error foxglove_channel_log_text_annotation(const struct foxglove_channel *channel,
+                                                    const struct foxglove_text_annotation *msg,
+                                                    const uint64_t *log_time,
+                                                    FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the TextAnnotation schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_text_annotation_schema(void);
+
+/**
+ * Encode a TextAnnotation message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_text_annotation_encode(const struct foxglove_text_annotation *msg,
+                                               uint8_t *ptr,
+                                               size_t len,
+                                               size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_text_primitive(struct foxglove_string topic,
+                                                      const struct foxglove_context *context,
+                                                      const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a TextPrimitive message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_text_primitive.
+ */
+foxglove_error foxglove_channel_log_text_primitive(const struct foxglove_channel *channel,
+                                                   const struct foxglove_text_primitive *msg,
+                                                   const uint64_t *log_time,
+                                                   FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the TextPrimitive schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_text_primitive_schema(void);
+
+/**
+ * Encode a TextPrimitive message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_text_primitive_encode(const struct foxglove_text_primitive *msg,
+                                              uint8_t *ptr,
+                                              size_t len,
+                                              size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_triangle_list_primitive(struct foxglove_string topic,
+                                                               const struct foxglove_context *context,
+                                                               const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a TriangleListPrimitive message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_triangle_list_primitive.
+ */
+foxglove_error foxglove_channel_log_triangle_list_primitive(const struct foxglove_channel *channel,
+                                                            const struct foxglove_triangle_list_primitive *msg,
+                                                            const uint64_t *log_time,
+                                                            FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the TriangleListPrimitive schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_triangle_list_primitive_schema(void);
+
+/**
+ * Encode a TriangleListPrimitive message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_triangle_list_primitive_encode(const struct foxglove_triangle_list_primitive *msg,
+                                                       uint8_t *ptr,
+                                                       size_t len,
+                                                       size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_vector2(struct foxglove_string topic,
+                                               const struct foxglove_context *context,
+                                               const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a Vector2 message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_vector2.
+ */
+foxglove_error foxglove_channel_log_vector2(const struct foxglove_channel *channel,
+                                            const struct foxglove_vector2 *msg,
+                                            const uint64_t *log_time,
+                                            FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the Vector2 schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_vector2_schema(void);
+
+/**
+ * Encode a Vector2 message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_vector2_encode(const struct foxglove_vector2 *msg,
+                                       uint8_t *ptr,
+                                       size_t len,
+                                       size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_vector3(struct foxglove_string topic,
+                                               const struct foxglove_context *context,
+                                               const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a Vector3 message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_vector3.
+ */
+foxglove_error foxglove_channel_log_vector3(const struct foxglove_channel *channel,
+                                            const struct foxglove_vector3 *msg,
+                                            const uint64_t *log_time,
+                                            FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the Vector3 schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_vector3_schema(void);
+
+/**
+ * Encode a Vector3 message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_vector3_encode(const struct foxglove_vector3 *msg,
+                                       uint8_t *ptr,
+                                       size_t len,
+                                       size_t *encoded_len);
+
+#if !defined(__wasm__)
+/**
+ * Returns a `FoxgloveMcapOptions` with defaults matching `mcap::WriteOptions::default()`.
+ *
+ * The test `test_mcap_options_default_matches_write_options` verifies these stay in sync.
+ */
+struct foxglove_mcap_options foxglove_mcap_options_default(void);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Create or open an MCAP writer for writing to a file or custom destination.
  * Resources must later be freed with `foxglove_mcap_close`.
+ *
+ * If `custom_writer` is provided, the MCAP data will be written using the provided
+ * function pointers instead of to a file.
  *
  * Returns 0 on success, or returns a FoxgloveError code on error.
  *
  * # Safety
  * `path` and `profile` must contain valid UTF8. If `context` is non-null,
  * it must have been created by `foxglove_context_new`.
+ * If `custom_writer` is non-null, its function pointers must be valid and
+ * all `context` pointers must remain valid for the lifetime of the writer.
  */
 foxglove_error foxglove_mcap_open(const struct foxglove_mcap_options *FOXGLOVE_NONNULL options,
                                   struct foxglove_mcap_writer **writer);
+#endif
 
+#if !defined(__wasm__)
 /**
  * Close an MCAP file writer created via `foxglove_mcap_open`.
  *
@@ -717,7 +5357,65 @@ foxglove_error foxglove_mcap_open(const struct foxglove_mcap_options *FOXGLOVE_N
  * `writer` must be a valid pointer to a `FoxgloveMcapWriter` created via `foxglove_mcap_open`.
  */
 foxglove_error foxglove_mcap_close(struct foxglove_mcap_writer *writer);
+#endif
 
+#if !defined(__wasm__)
+/**
+ * Finishes the current chunk (if any) and flushes the underlying writer.
+ *
+ * Note that compression ratios tend to improve over the lifetime of a chunk, so flushing
+ * frequently with chunked output may reduce overall compression.
+ *
+ * Returns 0 on success, or returns a FoxgloveError code on error.
+ *
+ * # Safety
+ * `writer` must be a valid pointer to a `FoxgloveMcapWriter` created via `foxglove_mcap_open`.
+ */
+foxglove_error foxglove_mcap_flush(struct foxglove_mcap_writer *writer);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Write metadata to an MCAP file.
+ *
+ * Metadata consists of key-value string pairs associated with a name.
+ * If the metadata has no key-value pairs, this method does nothing.
+ *
+ * Returns 0 on success, or returns a FoxgloveError code on error.
+ *
+ * # Safety
+ * `writer` must be a valid pointer to a `FoxgloveMcapWriter` created via `foxglove_mcap_open`.
+ * `name` must be a valid UTF-8 string.
+ * `metadata` must be a valid pointer to an array of `foxglove_key_value` with length `metadata_len`.
+ */
+foxglove_error foxglove_mcap_write_metadata(struct foxglove_mcap_writer *writer,
+                                            const struct foxglove_string *FOXGLOVE_NONNULL name,
+                                            const struct foxglove_key_value *metadata,
+                                            size_t metadata_len);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Write an attachment to an MCAP file.
+ *
+ * Attachments are arbitrary binary data that can be stored alongside messages.
+ * Common uses include storing configuration files, calibration data, or other
+ * reference material related to the recording.
+ *
+ * Returns 0 on success, or returns a FoxgloveError code on error.
+ *
+ * # Safety
+ * `writer` must be a valid pointer to a `FoxgloveMcapWriter` created via `foxglove_mcap_open`.
+ * `attachment` must be a valid pointer to a `FoxgloveMcapAttachment`.
+ * The `name` and `media_type` fields of the attachment must be valid UTF-8 strings.
+ * The `data` field must be a valid pointer to an array of bytes with length `data_len`,
+ * or null if `data_len` is 0.
+ */
+foxglove_error foxglove_mcap_attach(struct foxglove_mcap_writer *writer,
+                                    const struct foxglove_mcap_attachment *FOXGLOVE_NONNULL attachment);
+#endif
+
+#if !defined(__wasm__)
 /**
  * Create a new channel. The channel must later be freed with `foxglove_channel_free`.
  *
@@ -728,15 +5426,38 @@ foxglove_error foxglove_mcap_close(struct foxglove_mcap_writer *writer);
  * `schema` is an optional pointer to a schema. The schema and the data it points to
  * need only remain alive for the duration of this function call (they will be copied).
  * `context` can be null, or a valid pointer to a context created via `foxglove_context_new`.
+ * `metadata` can be null, or a valid pointer to a collection of key/value pairs. If keys are
+ *     duplicated in the collection, the last value for each key will be used.
  * `channel` is an out **FoxgloveChannel pointer, which will be set to the created channel
  * if the function returns success.
  */
-foxglove_error foxglove_channel_create(struct foxglove_string topic,
-                                       struct foxglove_string message_encoding,
-                                       const struct foxglove_schema *schema,
-                                       const struct foxglove_context *context,
-                                       const struct foxglove_channel **channel);
+foxglove_error foxglove_raw_channel_create(struct foxglove_string topic,
+                                           struct foxglove_string message_encoding,
+                                           const struct foxglove_schema *schema,
+                                           const struct foxglove_context *context,
+                                           const struct foxglove_channel_metadata *metadata,
+                                           const struct foxglove_channel **channel);
+#endif
 
+#if !defined(__wasm__)
+/**
+ * Close a channel.
+ *
+ * You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
+ * dynamically, such as the WebSocketServer.
+ *
+ * Attempts to log on a closed channel will elicit a throttled warning message.
+ *
+ * Note this *does not* free the channel.
+ *
+ * # Safety
+ * `channel` must be a valid pointer to a `foxglove_channel` created via `foxglove_channel_create`.
+ * If channel is null, this does nothing.
+ */
+void foxglove_channel_close(const struct foxglove_channel *channel);
+#endif
+
+#if !defined(__wasm__)
 /**
  * Free a channel created via `foxglove_channel_create`.
  *
@@ -745,37 +5466,147 @@ foxglove_error foxglove_channel_create(struct foxglove_string topic,
  * If channel is null, this does nothing.
  */
 void foxglove_channel_free(const struct foxglove_channel *channel);
+#endif
 
+#if !defined(__wasm__)
 /**
  * Get the ID of a channel.
  *
  * # Safety
  * `channel` must be a valid pointer to a `foxglove_channel` created via `foxglove_channel_create`.
  *
- * If the passed channel is null, an invalid id of 0 is returned.
+ * If the passed channel is null, an invalid ID of 0 is returned.
  */
 uint64_t foxglove_channel_get_id(const struct foxglove_channel *channel);
+#endif
 
+#if !defined(__wasm__)
+/**
+ * Get the topic of a channel.
+ *
+ * # Safety
+ * `channel` must be a valid pointer to a `foxglove_channel` created via `foxglove_channel_create`.
+ *
+ * If the passed channel is null, an empty value is returned.
+ *
+ * The returned value is valid only for the lifetime of the channel.
+ */
+struct foxglove_string foxglove_channel_get_topic(const struct foxglove_channel *channel);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Get the message_encoding of a channel.
+ *
+ * # Safety
+ * `channel` must be a valid pointer to a `foxglove_channel` created via `foxglove_channel_create`.
+ *
+ * If the passed channel is null, an empty value is returned.
+ *
+ * The returned value is valid only for the lifetime of the channel.
+ */
+struct foxglove_string foxglove_channel_get_message_encoding(const struct foxglove_channel *channel);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Get the schema of a channel.
+ *
+ * If the passed channel is null or has no schema, returns `FoxgloveError::ValueError`.
+ *
+ * # Safety
+ * `channel` must be a valid pointer to a `foxglove_channel` created via `foxglove_channel_create`.
+ * `schema` must be a valid pointer to a `FoxgloveSchema` struct that will be filled in.
+ *
+ * The returned value is valid only for the lifetime of the channel.
+ */
+foxglove_error foxglove_channel_get_schema(const struct foxglove_channel *channel,
+                                           struct foxglove_schema *schema);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Find out if any sinks have been added to a channel.
+ *
+ * # Safety
+ * `channel` must be a valid pointer to a `foxglove_channel` created via `foxglove_channel_create`.
+ *
+ * If the passed channel is null, false is returned.
+ */
+bool foxglove_channel_has_sinks(const struct foxglove_channel *channel);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Create an iterator over a channel's metadata.
+ *
+ * You must later free the iterator using foxglove_channel_metadata_iter_free.
+ *
+ * Iterate items using foxglove_channel_metadata_iter_next.
+ *
+ * # Safety
+ * `channel` must be a valid pointer to a `foxglove_channel` created via `foxglove_channel_create`.
+ * The channel must remain valid for the lifetime of the iterator.
+ */
+struct foxglove_channel_metadata_iterator *foxglove_channel_metadata_iter_create(const struct foxglove_channel *channel);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Get the next key-value pair from the metadata iterator.
+ *
+ * Returns true if a pair was found and stored in `key_value`, false if the iterator is exhausted.
+ *
+ * # Safety
+ * `iter` must be a valid pointer to a `FoxgloveChannelMetadataIterator` created via
+ * `foxglove_channel_metadata_iter_create`.
+ * `key_value` must be a valid pointer to a `FoxgloveKeyValue` that will be filled in.
+ * The channel itself must still be valid.
+ */
+bool foxglove_channel_metadata_iter_next(struct foxglove_channel_metadata_iterator *iter,
+                                         struct foxglove_key_value *key_value);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Free a metadata iterator created via `foxglove_channel_metadata_iter_create`.
+ *
+ * # Safety
+ * `iter` must be a valid pointer to a `FoxgloveChannelMetadataIterator` created via
+ * `foxglove_channel_metadata_iter_create`.
+ */
+void foxglove_channel_metadata_iter_free(struct foxglove_channel_metadata_iterator *iter);
+#endif
+
+#if !defined(__wasm__)
 /**
  * Log a message on a channel.
  *
- * # Safety
- * `data` must be non-null, and the range `[data, data + data_len)` must contain initialized data
- * contained within a single allocated object.
+ * Zero-length messages are supported: pass `data_len == 0` with either a null `data` pointer
+ * or any non-null pointer. The contents of `data` are not read when `data_len == 0`.
  *
- * `log_time` may be null or may point to a valid value.
+ * # Safety
+ * If `data_len > 0`, `data` must be non-null and the range `[data, data + data_len)` must
+ * contain initialized data contained within a single allocated object.
+ *
+ * `log_time` Some(nanoseconds since epoch timestamp) or None to use the current time.
  */
 foxglove_error foxglove_channel_log(const struct foxglove_channel *channel,
                                     const uint8_t *data,
                                     size_t data_len,
-                                    const uint64_t *log_time);
+                                    const uint64_t *log_time,
+                                    FoxgloveSinkId sink_id);
+#endif
 
+#if !defined(__wasm__)
 /**
  * Create a new context. This never fails.
  * You must pass this to `foxglove_context_free` when done with it.
  */
 const struct foxglove_context *foxglove_context_new(void);
+#endif
 
+#if !defined(__wasm__)
 /**
  * Free a context created via `foxglove_context_new` or `foxglove_context_free`.
  *
@@ -783,17 +5614,110 @@ const struct foxglove_context *foxglove_context_new(void);
  * `context` must be a valid pointer to a context created via `foxglove_context_new`.
  */
 void foxglove_context_free(const struct foxglove_context *context);
+#endif
 
+#if !defined(__wasm__)
 /**
- * For use by the C++ SDK. Identifies that wrapper as the source of logs.
+ * Get the ID of a channel descriptor.
+ *
+ * # Safety
+ * `channel` must be a valid pointer to a `foxglove_channel_descriptor`.
+ *
+ * If the passed channel is null, 0 is returned.
  */
-void foxglove_internal_register_cpp_wrapper(void);
+uint64_t foxglove_channel_descriptor_get_id(const struct foxglove_channel_descriptor *channel);
+#endif
 
+#if !defined(__wasm__)
 /**
- * Convert a `FoxgloveError` code to a C string.
+ * Get the topic of a channel descriptor.
+ *
+ * # Safety
+ * `channel` must be a valid pointer to a `foxglove_channel_descriptor`.
+ *
+ * If the passed channel is null, an empty value is returned.
+ *
+ * The returned value is valid only for the lifetime of the channel, which is typically the
+ * duration of a callback where a descriptor is passed.
  */
-const char *foxglove_error_to_cstr(foxglove_error error);
+struct foxglove_string foxglove_channel_descriptor_get_topic(const struct foxglove_channel_descriptor *channel);
+#endif
 
+#if !defined(__wasm__)
+/**
+ * Get the message_encoding of a channel descriptor.
+ *
+ * # Safety
+ * `channel` must be a valid pointer to a `foxglove_channel_descriptor`.
+ *
+ * If the passed channel is null, an empty value is returned.
+ *
+ * The returned value is valid only for the lifetime of the channel, which is typically the
+ * duration of a callback where a descriptor is passed.
+ */
+struct foxglove_string foxglove_channel_descriptor_get_message_encoding(const struct foxglove_channel_descriptor *channel);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Get the schema of a channel.
+ *
+ * If the passed channel is null or has no schema, returns `FoxgloveError::ValueError`.
+ *
+ * # Safety
+ * `channel` must be a valid pointer to a `foxglove_channel_descriptor`.
+ * `schema` must be a valid pointer to a `FoxgloveSchema` struct that will be filled in.
+ *
+ * The returned value is valid only for the lifetime of the channel, which is typically the
+ * duration of a callback where a descriptor is passed.
+ */
+foxglove_error foxglove_channel_descriptor_get_schema(const struct foxglove_channel_descriptor *channel,
+                                                      struct foxglove_schema *schema);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Create an iterator over a channel descriptor's metadata.
+ *
+ * You must later free the iterator using foxglove_channel_descriptor_metadata_iter_free.
+ *
+ * Iterate items using foxglove_channel_descriptor_metadata_iter_next.
+ *
+ * # Safety
+ * `channel` must be a valid pointer to a `foxglove_channel_descriptor`.
+ * The channel descriptor must remain valid for the lifetime of the iterator.
+ */
+struct foxglove_channel_descriptor_metadata_iterator *foxglove_channel_descriptor_metadata_iter_create(const struct foxglove_channel_descriptor *channel);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Get the next key-value pair from the metadata iterator.
+ *
+ * Returns true if a pair was found and stored in `key_value`, false if the iterator is exhausted.
+ *
+ * # Safety
+ * `iter` must be a valid pointer to a `foxglove_channel_descriptor_metadata_iterator` created via
+ * `foxglove_channel_descriptor_metadata_iter_create`.
+ * `key_value` must be a valid pointer to a `FoxgloveKeyValue` that will be filled in.
+ * The channel descriptor itself must still be valid.
+ */
+bool foxglove_channel_descriptor_metadata_iter_next(struct foxglove_channel_descriptor_metadata_iterator *iter,
+                                                    struct foxglove_key_value *key_value);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Free a metadata iterator created via `foxglove_channel_descriptor_metadata_iter_create`.
+ *
+ * # Safety
+ * `iter` must be a valid pointer to a `foxglove_channel_descriptor_metadata_iterator` created via
+ * `foxglove_channel_descriptor_metadata_iter_create`.
+ */
+void foxglove_channel_descriptor_metadata_iter_free(struct foxglove_channel_descriptor_metadata_iterator *iter);
+#endif
+
+#if !defined(__wasm__)
 /**
  * Create a new connection graph.
  *
@@ -803,7 +5727,9 @@ const char *foxglove_error_to_cstr(foxglove_error error);
  * `graph` must be a valid pointer to a pointer to a `foxglove_connection_graph`.
  */
 foxglove_error foxglove_connection_graph_create(struct foxglove_connection_graph **graph);
+#endif
 
+#if !defined(__wasm__)
 /**
  * Free the connection graph.
  *
@@ -812,7 +5738,9 @@ foxglove_error foxglove_connection_graph_create(struct foxglove_connection_graph
  * `foxglove_connection_graph_create`.
  */
 void foxglove_connection_graph_free(struct foxglove_connection_graph *graph);
+#endif
 
+#if !defined(__wasm__)
 /**
  * Set a published topic and its associated publisher ids. Overwrites any existing topic with the
  * same name.
@@ -828,7 +5756,9 @@ foxglove_error foxglove_connection_graph_set_published_topic(struct foxglove_con
                                                              struct foxglove_string topic,
                                                              const struct foxglove_string *publisher_ids,
                                                              size_t publisher_ids_count);
+#endif
 
+#if !defined(__wasm__)
 /**
  * Set a subscribed topic and its associated subscriber ids. Overwrites any existing topic with the
  * same name.
@@ -841,7 +5771,9 @@ foxglove_error foxglove_connection_graph_set_subscribed_topic(struct foxglove_co
                                                               struct foxglove_string topic,
                                                               const struct foxglove_string *subscriber_ids,
                                                               size_t subscriber_ids_count);
+#endif
 
+#if !defined(__wasm__)
 /**
  * Set an advertised service and its associated provider ids. Overwrites any existing service with
  * the same name.
@@ -856,19 +5788,23 @@ foxglove_error foxglove_connection_graph_set_advertised_service(struct foxglove_
                                                                 struct foxglove_string service,
                                                                 const struct foxglove_string *provider_ids,
                                                                 size_t provider_ids_count);
+#endif
 
+#if !defined(__wasm__)
 /**
  * Completes a fetch asset request by sending asset data to the client.
  *
  * # Safety
- * - `responder` must be a pointer to a `foxglove_fetch_asset_responder` obtained via the
- *   `foxglove_server_options.fetch_asset` callback. This value is moved into this
- *   function, and must not accessed afterwards.
+ * - `responder` must be a pointer to a `foxglove_fetch_asset_responder` obtained via a
+ *   `fetch_asset` callback. This value is moved into this function, and must not be accessed
+ *   afterwards.
  * - `data` must be a pointer to the response data. This value is copied by this function.
  */
 void foxglove_fetch_asset_respond_ok(struct foxglove_fetch_asset_responder *responder,
                                      struct foxglove_bytes data);
+#endif
 
+#if !defined(__wasm__)
 /**
  * Completes a request by sending an error message to the client.
  *
@@ -876,11 +5812,141 @@ void foxglove_fetch_asset_respond_ok(struct foxglove_fetch_asset_responder *resp
  * - `responder` must be a pointer to a `foxglove_fetch_asset_responder` obtained via the
  *   `foxglove_server_options.fetch_asset` callback. This value is moved into this
  *   function, and must not accessed afterwards.
- * - `message` must be a pointer to a valid UTF-8 string. This value is copied by this function.
+ * - `message` must be a valid UTF-8 string. This value is copied by this function.
  */
 void foxglove_fetch_asset_respond_error(struct foxglove_fetch_asset_responder *responder,
                                         struct foxglove_string message);
+#endif
 
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
+ * Start a remote access gateway with the given options.
+ *
+ * On success, the `gateway` output parameter will be set to a valid pointer.
+ * On failure, an error code is returned.
+ *
+ * # Safety
+ * - `options` must be a valid pointer to a `FoxgloveGatewayOptions` struct with all fields
+ *   satisfying the documented safety requirements.
+ * - If `server_info` is supplied in options, all `server_info` must contain valid UTF8, and
+ *   `server_info` must have length equal to `server_info_count`.
+ * - `gateway` must be a valid pointer to a `*mut FoxgloveGateway`.
+ */
+foxglove_error foxglove_gateway_start(const struct foxglove_gateway_options *FOXGLOVE_NONNULL options,
+                                      struct foxglove_gateway **gateway);
+#endif
+
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
+ * Stop and shut down the gateway and free the resources associated with it.
+ */
+foxglove_error foxglove_gateway_stop(struct foxglove_gateway *gateway);
+#endif
+
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
+ * Get the current connection status of the gateway.
+ *
+ * Returns `Shutdown` if the gateway pointer is null or the gateway has been stopped.
+ */
+foxglove_connection_status foxglove_gateway_connection_status(const struct foxglove_gateway *gateway);
+#endif
+
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
+ * Get the sink ID of the gateway's current session.
+ *
+ * Returns 0 if the gateway pointer is null, the gateway has been stopped,
+ * or no session is currently active.
+ */
+FoxgloveSinkId foxglove_gateway_sink_id(const struct foxglove_gateway *gateway);
+#endif
+
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
+ * Adds a service to the gateway and advertises it to connected clients.
+ *
+ * # Safety
+ * - `gateway` must be a valid pointer to a gateway started with `foxglove_gateway_start`.
+ * - `service` must be a valid pointer to a service allocated by `foxglove_service_create`. This
+ *   value is moved into this function, and must not be accessed afterwards.
+ */
+foxglove_error foxglove_gateway_add_service(const struct foxglove_gateway *gateway,
+                                            struct foxglove_service *service);
+#endif
+
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
+ * Removes a service from the gateway.
+ *
+ * # Safety
+ * - `gateway` must be a valid pointer to a gateway started with `foxglove_gateway_start`.
+ * - `service_name` must be a valid UTF-8 string.
+ */
+foxglove_error foxglove_gateway_remove_service(const struct foxglove_gateway *gateway,
+                                               struct foxglove_string service_name);
+#endif
+
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
+ * Publish parameter values to all subscribed clients.
+ *
+ * # Safety
+ * - `gateway` must be a valid pointer to a gateway started with `foxglove_gateway_start`.
+ * - `params` must be a valid pointer to a value allocated by `foxglove_parameter_array_create`.
+ *   This value is moved into this function, and must not be accessed afterwards.
+ */
+foxglove_error foxglove_gateway_publish_parameter_values(const struct foxglove_gateway *gateway,
+                                                         struct foxglove_parameter_array *params);
+#endif
+
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
+ * Publishes a status message to all connected participants.
+ *
+ * The caller may optionally provide a message ID, which can be used in a subsequent call to
+ * `foxglove_gateway_remove_status`.
+ *
+ * # Safety
+ * - `gateway` must be a valid pointer to a gateway started with `foxglove_gateway_start`.
+ * - `message` must be a valid UTF-8 string, which must remain valid for the duration of this
+ *   call.
+ * - `id` must either be NULL, or a pointer to a valid UTF-8 string, which must remain valid for
+ *   the duration of this call.
+ */
+foxglove_error foxglove_gateway_publish_status(const struct foxglove_gateway *gateway,
+                                               foxglove_server_status_level level,
+                                               struct foxglove_string message,
+                                               const struct foxglove_string *id);
+#endif
+
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
+ * Removes status messages from all connected participants.
+ *
+ * Previously published status messages are referenced by ID.
+ *
+ * # Safety
+ * - `gateway` must be a valid pointer to a gateway started with `foxglove_gateway_start`.
+ * - `ids` must be a pointer to an array of valid UTF-8 strings, all of which must remain valid
+ *   for the duration of this call.
+ */
+foxglove_error foxglove_gateway_remove_status(const struct foxglove_gateway *gateway,
+                                              const struct foxglove_string *ids,
+                                              size_t ids_count);
+#endif
+
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
+ * Publish a connection graph to the gateway.
+ *
+ * Requires `FOXGLOVE_GATEWAY_CAPABILITY_CONNECTION_GRAPH`.
+ */
+foxglove_error foxglove_gateway_publish_connection_graph(const struct foxglove_gateway *gateway,
+                                                         const struct foxglove_connection_graph *graph);
+#endif
+
+#if !defined(__wasm__)
 /**
  * Initialize SDK logging with the given severity level.
  *
@@ -895,16 +5961,22 @@ void foxglove_fetch_asset_respond_error(struct foxglove_fetch_asset_responder *r
  *
  * Log styles (colors) may be configured with the FOXGLOVE_LOG_STYLE environment variable "never",
  * "always", or "auto" (default).
+ *
+ * This is thread-safe, but only the first call to this function will have an effect.
  */
-void foxglove_set_log_level(foxglove_log_level level);
+void foxglove_set_log_level(foxglove_logging_level level);
+#endif
 
+#if !defined(__wasm__)
 /**
  * Creates a new parameter array with the specified capacity.
  *
  * The array must be freed with `foxglove_parameter_array_free`.
  */
 struct foxglove_parameter_array *foxglove_parameter_array_create(size_t capacity);
+#endif
 
+#if !defined(__wasm__)
 /**
  * Pushes a parameter into the array.
  *
@@ -916,7 +5988,9 @@ struct foxglove_parameter_array *foxglove_parameter_array_create(size_t capacity
  */
 foxglove_error foxglove_parameter_array_push(struct foxglove_parameter_array *array,
                                              struct foxglove_parameter *param);
+#endif
 
+#if !defined(__wasm__)
 /**
  * Frees the parameter array and its contained parameters.
  *
@@ -924,7 +5998,9 @@ foxglove_error foxglove_parameter_array_push(struct foxglove_parameter_array *ar
  * - `array` must be a valid pointer to a value allocated by `foxglove_parameter_array_create`.
  */
 void foxglove_parameter_array_free(struct foxglove_parameter_array *array);
+#endif
 
+#if !defined(__wasm__)
 /**
  * Creates a new parameter.
  *
@@ -942,7 +6018,9 @@ foxglove_error foxglove_parameter_create(struct foxglove_parameter **param,
                                          struct foxglove_string name,
                                          foxglove_parameter_type type,
                                          struct foxglove_parameter_value *value);
+#endif
 
+#if !defined(__wasm__)
 /**
  * Creates a new empty parameter.
  *
@@ -955,7 +6033,9 @@ foxglove_error foxglove_parameter_create(struct foxglove_parameter **param,
  */
 foxglove_error foxglove_parameter_create_empty(struct foxglove_parameter **param,
                                                struct foxglove_string name);
+#endif
 
+#if !defined(__wasm__)
 /**
  * Creates a new number parameter.
  *
@@ -969,7 +6049,25 @@ foxglove_error foxglove_parameter_create_empty(struct foxglove_parameter **param
 foxglove_error foxglove_parameter_create_float64(struct foxglove_parameter **param,
                                                  struct foxglove_string name,
                                                  double value);
+#endif
 
+#if !defined(__wasm__)
+/**
+ * Creates a new integer parameter.
+ *
+ * The value must be freed with `foxglove_parameter_free`, or by passing it to a consuming
+ * function such as `foxglove_parameter_array_push`.
+ *
+ * # Safety
+ * - `param` must be a valid pointer.
+ * - `name` must be a valid `foxglove_string`. This value is copied by this function.
+ */
+foxglove_error foxglove_parameter_create_integer(struct foxglove_parameter **param,
+                                                 struct foxglove_string name,
+                                                 int64_t value);
+#endif
+
+#if !defined(__wasm__)
 /**
  * Creates a new boolean parameter.
  *
@@ -983,7 +6081,9 @@ foxglove_error foxglove_parameter_create_float64(struct foxglove_parameter **par
 foxglove_error foxglove_parameter_create_boolean(struct foxglove_parameter **param,
                                                  struct foxglove_string name,
                                                  bool value);
+#endif
 
+#if !defined(__wasm__)
 /**
  * Creates a new string parameter.
  *
@@ -998,7 +6098,9 @@ foxglove_error foxglove_parameter_create_boolean(struct foxglove_parameter **par
 foxglove_error foxglove_parameter_create_string(struct foxglove_parameter **param,
                                                 struct foxglove_string name,
                                                 struct foxglove_string value);
+#endif
 
+#if !defined(__wasm__)
 /**
  * Creates a new byte array parameter.
  *
@@ -1013,7 +6115,9 @@ foxglove_error foxglove_parameter_create_string(struct foxglove_parameter **para
 foxglove_error foxglove_parameter_create_byte_array(struct foxglove_parameter **param,
                                                     struct foxglove_string name,
                                                     struct foxglove_bytes value);
+#endif
 
+#if !defined(__wasm__)
 /**
  * Creates a new parameter which is an array of float64 values.
  *
@@ -1030,7 +6134,19 @@ foxglove_error foxglove_parameter_create_float64_array(struct foxglove_parameter
                                                        struct foxglove_string name,
                                                        const double *values,
                                                        size_t values_len);
+#endif
 
+#if !defined(__wasm__)
+/**
+ * Creates a new parameter which is an array of integer values.
+ */
+foxglove_error foxglove_parameter_create_integer_array(struct foxglove_parameter **param,
+                                                       struct foxglove_string name,
+                                                       const int64_t *values,
+                                                       size_t values_len);
+#endif
+
+#if !defined(__wasm__)
 /**
  * Creates a new parameter which is a dictionary of parameter values.
  *
@@ -1047,7 +6163,9 @@ foxglove_error foxglove_parameter_create_float64_array(struct foxglove_parameter
 foxglove_error foxglove_parameter_create_dict(struct foxglove_parameter **param,
                                               struct foxglove_string name,
                                               struct foxglove_parameter_value_dict *dict);
+#endif
 
+#if !defined(__wasm__)
 /**
  * Returns an estimate of the decoded length for the byte array in bytes.
  *
@@ -1058,7 +6176,9 @@ foxglove_error foxglove_parameter_create_dict(struct foxglove_parameter **param,
  */
 foxglove_error foxglove_parameter_get_byte_array_decoded_size(const struct foxglove_parameter *param,
                                                               size_t *len);
+#endif
 
+#if !defined(__wasm__)
 /**
  * Decodes a byte array into the provided buffer.
  *
@@ -1076,7 +6196,9 @@ foxglove_error foxglove_parameter_get_byte_array_decoded_size(const struct foxgl
 foxglove_error foxglove_parameter_decode_byte_array(const struct foxglove_parameter *param,
                                                     uint8_t *data,
                                                     size_t *len);
+#endif
 
+#if !defined(__wasm__)
 /**
  * Clones a parameter.
  *
@@ -1088,7 +6210,9 @@ foxglove_error foxglove_parameter_decode_byte_array(const struct foxglove_parame
  *   `foxglove_parameter_clone`.
  */
 struct foxglove_parameter *foxglove_parameter_clone(const struct foxglove_parameter *param);
+#endif
 
+#if !defined(__wasm__)
 /**
  * Frees a parameter.
  *
@@ -1097,15 +6221,29 @@ struct foxglove_parameter *foxglove_parameter_clone(const struct foxglove_parame
  *   `foxglove_parameter_clone`.
  */
 void foxglove_parameter_free(struct foxglove_parameter *param);
+#endif
 
+#if !defined(__wasm__)
 /**
- * Creates a new number parameter value.
+ * Creates a new float64 parameter value.
  *
  * The value must be freed with `foxglove_parameter_value_free`, or by passing it to a consuming
  * function such as `foxglove_parameter_create`.
  */
-struct foxglove_parameter_value *foxglove_parameter_value_create_number(double number);
+struct foxglove_parameter_value *foxglove_parameter_value_create_float64(double number);
+#endif
 
+#if !defined(__wasm__)
+/**
+ * Creates a new integer parameter value.
+ *
+ * The value must be freed with `foxglove_parameter_value_free`, or by passing it to a consuming
+ * function such as `foxglove_parameter_create`.
+ */
+struct foxglove_parameter_value *foxglove_parameter_value_create_integer(int64_t integer);
+#endif
+
+#if !defined(__wasm__)
 /**
  * Creates a new boolean parameter value.
  *
@@ -1113,7 +6251,9 @@ struct foxglove_parameter_value *foxglove_parameter_value_create_number(double n
  * function such as `foxglove_parameter_create`.
  */
 struct foxglove_parameter_value *foxglove_parameter_value_create_boolean(bool boolean);
+#endif
 
+#if !defined(__wasm__)
 /**
  * Creates a new string parameter value.
  *
@@ -1125,7 +6265,9 @@ struct foxglove_parameter_value *foxglove_parameter_value_create_boolean(bool bo
  */
 foxglove_error foxglove_parameter_value_create_string(struct foxglove_parameter_value **value,
                                                       struct foxglove_string string);
+#endif
 
+#if !defined(__wasm__)
 /**
  * Creates a new array parameter value.
  *
@@ -1138,7 +6280,9 @@ foxglove_error foxglove_parameter_value_create_string(struct foxglove_parameter_
  *   be accessed afterwards.
  */
 struct foxglove_parameter_value *foxglove_parameter_value_create_array(struct foxglove_parameter_value_array *array);
+#endif
 
+#if !defined(__wasm__)
 /**
  * Creates a new dict parameter value.
  *
@@ -1151,7 +6295,9 @@ struct foxglove_parameter_value *foxglove_parameter_value_create_array(struct fo
  *   accessed afterwards.
  */
 struct foxglove_parameter_value *foxglove_parameter_value_create_dict(struct foxglove_parameter_value_dict *dict);
+#endif
 
+#if !defined(__wasm__)
 /**
  * Clones a parameter value.
  *
@@ -1163,7 +6309,9 @@ struct foxglove_parameter_value *foxglove_parameter_value_create_dict(struct fox
  *   `foxglove_parameter_value_clone`.
  */
 struct foxglove_parameter_value *foxglove_parameter_value_clone(const struct foxglove_parameter_value *value);
+#endif
 
+#if !defined(__wasm__)
 /**
  * Frees a parameter value.
  *
@@ -1171,7 +6319,9 @@ struct foxglove_parameter_value *foxglove_parameter_value_clone(const struct fox
  * - `value` must be a valid pointer to a value allocated by `foxglove_parameter_value_create_*`.
  */
 void foxglove_parameter_value_free(struct foxglove_parameter_value *value);
+#endif
 
+#if !defined(__wasm__)
 /**
  * Creates a new value array with the specified capacity.
  *
@@ -1179,7 +6329,9 @@ void foxglove_parameter_value_free(struct foxglove_parameter_value *value);
  * consuming function such as `foxglove_parameter_value_create_array`.
  */
 struct foxglove_parameter_value_array *foxglove_parameter_value_array_create(size_t capacity);
+#endif
 
+#if !defined(__wasm__)
 /**
  * Pushes a parameter value into the array.
  *
@@ -1191,7 +6343,9 @@ struct foxglove_parameter_value_array *foxglove_parameter_value_array_create(siz
  */
 foxglove_error foxglove_parameter_value_array_push(struct foxglove_parameter_value_array *array,
                                                    struct foxglove_parameter_value *value);
+#endif
 
+#if !defined(__wasm__)
 /**
  * Frees a parameter value array.
  *
@@ -1199,7 +6353,9 @@ foxglove_error foxglove_parameter_value_array_push(struct foxglove_parameter_val
  * - `array` is a valid pointer to a value allocated by `foxglove_parameter_value_array_create`.
  */
 void foxglove_parameter_value_array_free(struct foxglove_parameter_value_array *array);
+#endif
 
+#if !defined(__wasm__)
 /**
  * Creates a new value dict with the specified capacity.
  *
@@ -1207,7 +6363,9 @@ void foxglove_parameter_value_array_free(struct foxglove_parameter_value_array *
  * consuming function such as `foxglove_parameter_value_create_dict`.
  */
 struct foxglove_parameter_value_dict *foxglove_parameter_value_dict_create(size_t capacity);
+#endif
 
+#if !defined(__wasm__)
 /**
  * Inserts an entry into the parameter value dict.
  *
@@ -1219,7 +6377,9 @@ struct foxglove_parameter_value_dict *foxglove_parameter_value_dict_create(size_
 foxglove_error foxglove_parameter_value_dict_insert(struct foxglove_parameter_value_dict *dict,
                                                     struct foxglove_string key,
                                                     struct foxglove_parameter_value *value);
+#endif
 
+#if !defined(__wasm__)
 /**
  * Frees a parameter value dict.
  *
@@ -1227,11 +6387,245 @@ foxglove_error foxglove_parameter_value_dict_insert(struct foxglove_parameter_va
  * - `dict` is a valid pointer to a value allocated by `foxglove_parameter_value_dict_create`.
  */
 void foxglove_parameter_value_dict_free(struct foxglove_parameter_value_dict *dict);
+#endif
 
+#if !defined(__wasm__)
 /**
- * Creates a new websocket service.
+ * Completes a `getParameters` request by sending parameter values to the client.
  *
- * The service must be registered with a websocket server using `foxglove_server_add_service`, or
+ * # Safety
+ * - `responder` must be a pointer to a `foxglove_get_parameters_responder` obtained via a `get`
+ *   callback. This value is moved into this function, and must not be accessed afterwards.
+ * - `params` must be a valid pointer to a value allocated by `foxglove_parameter_array_create`.
+ *   This value is moved into this function, and must not be accessed afterwards. A NULL value is
+ *   treated as an empty array.
+ */
+void foxglove_get_parameters_responder_respond(struct foxglove_get_parameters_responder *responder,
+                                               struct foxglove_parameter_array *params);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Drops a `getParameters` responder without responding.
+ *
+ * Reserved for unrecoverable internal errors; sends a generic error status to the requesting
+ * client. In all other cases, complete the request with
+ * `foxglove_get_parameters_responder_respond` (passing an empty array if no values are available).
+ *
+ * # Safety
+ * - `responder` must be a pointer to a `foxglove_get_parameters_responder` obtained via a `get`
+ *   callback. This value is moved into this function, and must not be accessed afterwards.
+ */
+void foxglove_get_parameters_responder_drop(struct foxglove_get_parameters_responder *responder);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Completes a `setParameters` request with the values that were actually applied.
+ *
+ * Echoes those values back to the requesting client when the request carried a `request_id`;
+ * otherwise does nothing on the wire. Does not notify other parameter subscribers; the caller is
+ * responsible for broadcasting applied updates to subscribers on each sink (for example, via
+ * `foxglove_server_publish_parameter_values` and `foxglove_gateway_publish_parameter_values`).
+ *
+ * # Safety
+ * - `responder` must be a pointer to a `foxglove_set_parameters_responder` obtained via a `set`
+ *   callback. This value is moved into this function, and must not be accessed afterwards.
+ * - `params` must be a valid pointer to a value allocated by `foxglove_parameter_array_create`.
+ *   This value is moved into this function, and must not be accessed afterwards. A NULL value is
+ *   treated as an empty array.
+ */
+void foxglove_set_parameters_responder_respond(struct foxglove_set_parameters_responder *responder,
+                                               struct foxglove_parameter_array *params);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Drops a `setParameters` responder without responding.
+ *
+ * Reserved for unrecoverable internal errors; sends a generic error status to the requesting
+ * client. In all other cases, complete the request with
+ * `foxglove_set_parameters_responder_respond` (passing an empty array if the request could not
+ * be handled).
+ *
+ * # Safety
+ * - `responder` must be a pointer to a `foxglove_set_parameters_responder` obtained via a `set`
+ *   callback. This value is moved into this function, and must not be accessed afterwards.
+ */
+void foxglove_set_parameters_responder_drop(struct foxglove_set_parameters_responder *responder);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Create and start a server.
+ *
+ * Resources must later be freed by calling `foxglove_server_stop`.
+ *
+ * `port` may be 0, in which case an available port will be automatically selected.
+ *
+ * Returns 0 on success, or returns a FoxgloveError code on error.
+ *
+ * # Safety
+ *
+ * - If `name` is supplied in options, it must contain valid UTF8.
+ * - If `host` is supplied in options, it must contain valid UTF8.
+ * - If `supported_encodings` is supplied in options, all `supported_encodings` must contain valid
+ *   UTF8, and `supported_encodings` must have length equal to `supported_encodings_count`.
+ * - If `server_info` is supplied in options, all `server_info` must contain valid UTF8, and
+ *   `server_info` must have length equal to `server_info_count`.
+ */
+foxglove_error foxglove_server_start(const struct foxglove_server_options *FOXGLOVE_NONNULL options,
+                                     struct foxglove_websocket_server **server);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Publishes the current server timestamp to all clients.
+ *
+ * Requires the `FOXGLOVE_CAPABILITY_TIME` capability.
+ */
+foxglove_error foxglove_server_broadcast_time(const struct foxglove_websocket_server *server,
+                                              uint64_t timestamp_nanos);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Publishes the current playback state to all clients.
+ *
+ * Requires the `FOXGLOVE_CAPABILITY_PLAYBACK_CONTROL` capability.
+ *
+ * # Safety
+ * - `playback_state` must be a valid pointer to a playback state that lives for the duration of the call.
+ */
+foxglove_error foxglove_server_broadcast_playback_state(const struct foxglove_websocket_server *server,
+                                                        const struct foxglove_playback_state *playback_state);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Sets a new session ID and notifies all clients, causing them to reset their state.
+ *
+ * If `session_id` is not provided, generates a new one based on the current timestamp.
+ *
+ * # Safety
+ * - `session_id` must either be NULL, or a pointer to a valid UTF-8 string.
+ */
+foxglove_error foxglove_server_clear_session(const struct foxglove_websocket_server *server,
+                                             const struct foxglove_string *session_id);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Adds a service to the server.
+ *
+ * This function will fail if the server was not configured with the `services` capability,
+ * if a service with the same name is already registered, or if the service has no request
+ * encoding and the server has no supported encodings.
+ *
+ * # Safety
+ * - `server` must be a valid pointer to a server started with `foxglove_server_start`.
+ * - `service` must be a valid pointer to a service allocated by `foxglove_service_create`. This
+ *   value is moved into this function, and must not be accessed afterwards.
+ */
+foxglove_error foxglove_server_add_service(const struct foxglove_websocket_server *server,
+                                           struct foxglove_service *service);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Removes a service from the server.
+ *
+ * # Safety
+ * - `server` must be a valid pointer to a server started with `foxglove_server_start`.
+ * - `service_name` must be a valid UTF-8 string.
+ */
+foxglove_error foxglove_server_remove_service(const struct foxglove_websocket_server *server,
+                                              struct foxglove_string service_name);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Get the port on which the server is listening.
+ */
+uint16_t foxglove_server_get_port(struct foxglove_websocket_server *server);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Get the number of currently connected clients.
+ */
+size_t foxglove_server_get_client_count(struct foxglove_websocket_server *server);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Stop and shut down `server` and free the resources associated with it.
+ */
+foxglove_error foxglove_server_stop(struct foxglove_websocket_server *server);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Publish parameter values to all subscribed clients.
+ *
+ * # Safety
+ * - `params` must be a valid parameter to a value allocated by `foxglove_parameter_array_create`.
+ *   This value is moved into this function, and must not be accessed afterwards.
+ */
+foxglove_error foxglove_server_publish_parameter_values(struct foxglove_websocket_server *server,
+                                                        struct foxglove_parameter_array *params);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Publish a connection graph to the server.
+ */
+foxglove_error foxglove_server_publish_connection_graph(struct foxglove_websocket_server *server,
+                                                        struct foxglove_connection_graph *graph);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Publishes a status message to all clients.
+ *
+ * The server may send this message at any time. Client developers may use it for debugging
+ * purposes, display it to the end user, or ignore it.
+ *
+ * The caller may optionally provide a message ID, which can be used in a subsequent call to
+ * `foxglove_server_remove_status`.
+ *
+ * # Safety
+ * - `message` must be a valid UTF-8 string, which must remain valid for the duration of this
+ *   call.
+ * - `id` must either be NULL, or a pointer to a valid UTF-8 string, which must remain valid for
+ *   the duration of this call.
+ */
+foxglove_error foxglove_server_publish_status(struct foxglove_websocket_server *server,
+                                              foxglove_server_status_level level,
+                                              struct foxglove_string message,
+                                              const struct foxglove_string *id);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Removes status messages from all clients.
+ *
+ * Previously published status messages are referenced by ID.
+ *
+ * # Safety
+ * - `ids` must be a pointer to an array of valid UTF-8 strings, all of which must remain valid
+ *   for the duration of this call.
+ */
+foxglove_error foxglove_server_remove_status(struct foxglove_websocket_server *server,
+                                             const struct foxglove_string *ids,
+                                             size_t ids_count);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Creates a new WebSocket service.
+ *
+ * The service must be registered with a WebSocket server using `foxglove_server_add_service`, or
  * freed with `foxglove_service_free`.
  *
  * The callback is invoked from the client's main poll loop and must not block. If blocking or
@@ -1249,7 +6643,7 @@ void foxglove_parameter_value_dict_free(struct foxglove_parameter_value_dict *di
  *
  * # Safety
  * - `service` must be a valid pointer.
- * - `name` must be a valid pointer to a UTF-8 string.
+ * - `name` must be a valid UTF-8 string.
  * - `schema` must be NULL, or a valid pointer to a service schema.
  * - `callback` must be a valid pointer to a service callback function, which must remain valid
  *   until the service is either unregistered or freed.
@@ -1261,27 +6655,33 @@ foxglove_error foxglove_service_create(struct foxglove_service **service,
                                        void (*callback)(const void *context,
                                                         const struct foxglove_service_request *request,
                                                         struct foxglove_service_responder *responder));
+#endif
 
+#if !defined(__wasm__)
 /**
- * Frees a service that was never registered to a websocket server.
+ * Frees a service that was never registered to a WebSocket server.
  *
  * # Safety
  * - `service` must be a valid pointer to a service allocated by `foxglove_service_create`. The
- *   service MUST NOT have been previously registered with a websocket server.
+ *   service MUST NOT have been previously registered with a WebSocket server.
  */
 void foxglove_service_free(struct foxglove_service *service);
+#endif
 
+#if !defined(__wasm__)
 /**
  * Overrides the default response encoding.
  *
  * # Safety
  * - `responder` must be a pointer to a `foxglove_service_responder` obtained via the
  *   `foxglove_service.handler` callback.
- * - `encoding` must be a pointer to a valid UTF-8 string. This value is copied by this function.
+ * - `encoding` must be a valid UTF-8 string. This value is copied by this function.
  */
 foxglove_error foxglove_service_set_response_encoding(struct foxglove_service_responder *responder,
                                                       struct foxglove_string encoding);
+#endif
 
+#if !defined(__wasm__)
 /**
  * Completes a request by sending response data to the client.
  *
@@ -1293,7 +6693,9 @@ foxglove_error foxglove_service_set_response_encoding(struct foxglove_service_re
  */
 void foxglove_service_respond_ok(struct foxglove_service_responder *responder,
                                  struct foxglove_bytes data);
+#endif
 
+#if !defined(__wasm__)
 /**
  * Completes a request by sending an error message to the client.
  *
@@ -1301,10 +6703,62 @@ void foxglove_service_respond_ok(struct foxglove_service_responder *responder,
  * - `responder` must be a pointer to a `foxglove_service_responder` obtained via the
  *   `foxglove_service.handler` callback. This value is moved into this function, and must not
  *   accessed afterwards.
- * - `message` must be a pointer to a valid UTF-8 string. This value is copied by this function.
+ * - `message` must be a valid UTF-8 string. This value is copied by this function.
  */
 void foxglove_service_respond_error(struct foxglove_service_responder *responder,
                                     struct foxglove_string message);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Start the system info publisher.
+ *
+ * On success, writes a non-null handle to `out_publisher`. On failure, returns an error
+ * code and `out_publisher` is left untouched.
+ *
+ * The returned handle must be freed by calling either
+ * [`foxglove_system_info_publisher_stop`] (to abort the background task) or
+ * [`foxglove_system_info_publisher_detach`] (to leave the background task running).
+ *
+ * # Safety
+ * - `options` must be a valid pointer to a [`FoxgloveSystemInfoPublisherOptions`] struct.
+ * - `out_publisher` must be a valid, writable pointer to a `*mut FoxgloveSystemInfoPublisher`.
+ * - See the safety notes on [`FoxgloveSystemInfoPublisherOptions`].
+ */
+foxglove_error foxglove_system_info_publisher_start(const struct foxglove_system_info_publisher_options *options,
+                                                    struct foxglove_system_info_publisher **out_publisher);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Stop the system info publisher and free its resources.
+ *
+ * This aborts the background task. After calling this function, the handle is invalid
+ * and must not be used again. Passing a null pointer is a no-op.
+ *
+ * # Safety
+ * - `publisher`, when non-null, must be a handle returned by
+ *   [`foxglove_system_info_publisher_start`] that has not already been passed to this
+ *   function.
+ */
+foxglove_error foxglove_system_info_publisher_stop(struct foxglove_system_info_publisher *publisher);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Free the system info publisher handle without stopping its background task.
+ *
+ * The background task continues to run until the process exits. After calling this
+ * function, the handle is invalid and must not be used again. Passing a null pointer
+ * is a no-op.
+ *
+ * # Safety
+ * - `publisher`, when non-null, must be a handle returned by
+ *   [`foxglove_system_info_publisher_start`] that has not already been passed to
+ *   either this function or [`foxglove_system_info_publisher_stop`].
+ */
+foxglove_error foxglove_system_info_publisher_detach(struct foxglove_system_info_publisher *publisher);
+#endif
 
 #ifdef __cplusplus
 }  // extern "C"

@@ -1,0 +1,210 @@
+#include <iostream>
+
+#include <rclcpp/client.hpp>
+#include <rclcpp/serialized_message.hpp>
+#include <rclcpp/typesupport_helpers.hpp>
+#include <rclcpp/version.h>
+#include <rosidl_typesupport_introspection_cpp/field_types.hpp>
+#include <rosidl_typesupport_introspection_cpp/service_introspection.hpp>
+
+#include <foxglove_bridge/generic_client.hpp>
+
+namespace {
+
+// Copy of github.com/ros2/rclcpp/blob/33dae5d67/rclcpp/src/rclcpp/typesupport_helpers.cpp#L69-L92
+static std::tuple<std::string, std::string, std::string> extract_type_identifier(
+  const std::string& full_type) {
+  char type_separator = '/';
+  auto sep_position_back = full_type.find_last_of(type_separator);
+  auto sep_position_front = full_type.find_first_of(type_separator);
+  if (sep_position_back == std::string::npos || sep_position_back == 0 ||
+      sep_position_back == full_type.length() - 1) {
+    throw std::runtime_error(
+      "Message type is not of the form package/type and cannot be processed");
+  }
+
+  std::string package_name = full_type.substr(0, sep_position_front);
+  std::string middle_module = "";
+  if (sep_position_back - sep_position_front > 0) {
+    middle_module =
+      full_type.substr(sep_position_front + 1, sep_position_back - sep_position_front - 1);
+  }
+  std::string type_name = full_type.substr(sep_position_back + 1);
+
+  return std::make_tuple(package_name, middle_module, type_name);
+}
+}  // namespace
+
+namespace foxglove_bridge {
+
+constexpr char TYPESUPPORT_INTROSPECTION_LIB_NAME[] = "rosidl_typesupport_introspection_cpp";
+constexpr char TYPESUPPORT_LIB_NAME[] = "rosidl_typesupport_cpp";
+using rosidl_typesupport_introspection_cpp::MessageMembers;
+using rosidl_typesupport_introspection_cpp::ServiceMembers;
+
+std::shared_ptr<void> allocate_message(const MessageMembers* members) {
+  void* buffer = malloc(members->size_of_);
+  if (buffer == nullptr) {
+    throw std::runtime_error("Failed to allocate memory");
+  }
+  memset(buffer, 0, members->size_of_);
+  members->init_function(buffer, rosidl_runtime_cpp::MessageInitialization::ALL);
+  auto deleter = [members](void* ptr) {
+    if (ptr) {
+      // Call the message's destructor to clean up nested allocations
+      members->fini_function(ptr);
+      // Then free the main buffer
+      free(ptr);
+    }
+  };
+
+  return std::shared_ptr<void>(buffer, deleter);
+}
+
+std::string getTypeIntrospectionSymbolName(const std::string& serviceType) {
+  const auto [pkgName, middleModule, typeName] = extract_type_identifier(serviceType);
+
+  return std::string(TYPESUPPORT_INTROSPECTION_LIB_NAME) + "__get_service_type_support_handle__" +
+         pkgName + "__" + (middleModule.empty() ? "srv" : middleModule) + "__" + typeName;
+}
+
+const rosidl_service_type_support_t* GenericClient::getServiceTypeSupportHandle(
+  const std::string& serviceType) {
+#if RCLCPP_VERSION_GTE(25, 0, 0)
+  // Jazzy and newer can use the built-in rclcpp call.
+  return rclcpp::get_service_typesupport_handle(serviceType, TYPESUPPORT_LIB_NAME,
+                                                *_typeSupportLib);
+#else
+  // Humble needs to do additional work; the code below is essentially a copy of what
+  // rclcpp::get_service_typesupport_handle() does in later ROS 2 versions.
+  const auto [pkgName, middleModule, typeName] = extract_type_identifier(serviceType);
+
+  const auto typesupportSymbolName =
+    std::string(TYPESUPPORT_LIB_NAME) + "__get_service_type_support_handle__" + pkgName + "__" +
+    (middleModule.empty() ? "srv" : middleModule) + "__" + typeName;
+
+  if (!_typeSupportLib->has_symbol(typesupportSymbolName)) {
+    throw std::runtime_error("Failed to find symbol '" + typesupportSymbolName + "' in " +
+                             _typeSupportLib->get_library_path());
+  }
+
+  const rosidl_service_type_support_t* (*get_ts)() = nullptr;
+  return (reinterpret_cast<decltype(get_ts)>(_typeSupportLib->get_symbol(typesupportSymbolName)))();
+#endif
+}
+
+GenericClient::GenericClient(rclcpp::node_interfaces::NodeBaseInterface* nodeBase,
+                             rclcpp::node_interfaces::NodeGraphInterface::SharedPtr nodeGraph,
+                             std::string serviceName, std::string serviceType,
+                             rcl_client_options_t& client_options)
+    : rclcpp::ClientBase(nodeBase, nodeGraph) {
+  const auto [pkgName, middleModule, typeName] = extract_type_identifier(serviceType);
+  const auto requestTypeName = serviceType + "_Request";
+  const auto responseTypeName = serviceType + "_Response";
+
+  _typeSupportLib = rclcpp::get_typesupport_library(serviceType, TYPESUPPORT_LIB_NAME);
+  _typeIntrospectionLib =
+    rclcpp::get_typesupport_library(serviceType, TYPESUPPORT_INTROSPECTION_LIB_NAME);
+  if (!_typeSupportLib || !_typeIntrospectionLib) {
+    throw std::runtime_error("Failed to load shared library for service type " + serviceType);
+  }
+
+  _serviceTypeSupportHdl = getServiceTypeSupportHandle(serviceType);
+
+  const auto typeinstrospection_symbol_name = getTypeIntrospectionSymbolName(serviceType);
+
+  // This will throw runtime_error if the symbol was not found.
+  const rosidl_service_type_support_t* (*get_ts)() = nullptr;
+  _typeIntrospectionHdl = (reinterpret_cast<decltype(get_ts)>(
+    _typeIntrospectionLib->get_symbol(typeinstrospection_symbol_name)))();
+
+  // get_typesupport_handle is deprecated since rclcpp 25.0.0
+  // (https://github.com/ros2/rclcpp/pull/2209)
+#if RCLCPP_VERSION_GTE(25, 0, 0)
+  _requestTypeSupportHdl =
+    rclcpp::get_message_typesupport_handle(requestTypeName, TYPESUPPORT_LIB_NAME, *_typeSupportLib);
+  _responseTypeSupportHdl = rclcpp::get_message_typesupport_handle(
+    responseTypeName, TYPESUPPORT_LIB_NAME, *_typeSupportLib);
+#else
+  _requestTypeSupportHdl =
+    rclcpp::get_typesupport_handle(requestTypeName, TYPESUPPORT_LIB_NAME, *_typeSupportLib);
+  _responseTypeSupportHdl =
+    rclcpp::get_typesupport_handle(responseTypeName, TYPESUPPORT_LIB_NAME, *_typeSupportLib);
+#endif
+
+  rcl_ret_t ret = rcl_client_init(this->get_client_handle().get(), this->get_rcl_node_handle(),
+                                  _serviceTypeSupportHdl, serviceName.c_str(), &client_options);
+  if (ret != RCL_RET_OK) {
+    if (ret == RCL_RET_SERVICE_NAME_INVALID) {
+      auto rcl_node_handle = this->get_rcl_node_handle();
+      // this will throw on any validation problem
+      rcl_reset_error();
+      rclcpp::expand_topic_or_service_name(serviceName, rcl_node_get_name(rcl_node_handle),
+                                           rcl_node_get_namespace(rcl_node_handle), true);
+    }
+    rclcpp::exceptions::throw_from_rcl_error(ret, "could not create client");
+  }
+}
+
+std::shared_ptr<void> GenericClient::create_response() {
+  auto srv_members = static_cast<const ServiceMembers*>(_typeIntrospectionHdl->data);
+  return allocate_message(srv_members->response_members_);
+}
+
+std::shared_ptr<rmw_request_id_t> GenericClient::create_request_header() {
+  return std::shared_ptr<rmw_request_id_t>(new rmw_request_id_t);
+}
+
+#if RCLCPP_VERSION_GTE(31, 0, 0)
+void GenericClient::handle_response(const std::shared_ptr<rmw_request_id_t>& request_header,
+                                    const std::shared_ptr<void>& response) {
+#else
+void GenericClient::handle_response(std::shared_ptr<rmw_request_id_t> request_header,
+                                    std::shared_ptr<void> response) {
+#endif
+  std::unique_lock<std::mutex> lock(pending_requests_mutex_);
+  int64_t sequence_number = request_header->sequence_number;
+
+  auto ser_response = std::make_shared<rclcpp::SerializedMessage>();
+  rmw_ret_t r = rmw_serialize(response.get(), _responseTypeSupportHdl,
+                              &ser_response->get_rcl_serialized_message());
+  if (r != RMW_RET_OK) {
+    RCUTILS_LOG_ERROR_NAMED("foxglove_bridge", "Failed to serialize service response. Ignoring...");
+    return;
+  }
+
+  // TODO(esteve) this should throw instead since it is not expected to happen in the first place
+  if (this->pending_requests_.count(sequence_number) == 0) {
+    RCUTILS_LOG_ERROR_NAMED("foxglove_bridge", "Received invalid sequence number. Ignoring...");
+    return;
+  }
+  auto responder = std::move(this->pending_requests_.at(sequence_number));
+  this->pending_requests_.erase(sequence_number);
+  // Unlock here to allow the service to be called recursively from one of its callbacks.
+  lock.unlock();
+
+  std::move(responder).respondOk(
+    reinterpret_cast<const std::byte*>(ser_response->get_rcl_serialized_message().buffer),
+    ser_response->get_rcl_serialized_message().buffer_length);
+}
+
+void GenericClient::async_send_request(SharedRequest request,
+                                       foxglove::ServiceResponder&& responder) {
+  std::lock_guard<std::mutex> lock(pending_requests_mutex_);
+  int64_t sequence_number;
+
+  auto srv_members = static_cast<const ServiceMembers*>(_typeIntrospectionHdl->data);
+  auto buf = allocate_message(srv_members->request_members_);
+
+  const rmw_serialized_message_t* sm = &request->get_rcl_serialized_message();
+  if (const auto ret = rmw_deserialize(sm, _requestTypeSupportHdl, buf.get()) != RCL_RET_OK) {
+    rclcpp::exceptions::throw_from_rcl_error(ret, "failed to desirialize request");
+  }
+  rcl_ret_t ret = rcl_send_request(get_client_handle().get(), buf.get(), &sequence_number);
+  if (RCL_RET_OK != ret) {
+    rclcpp::exceptions::throw_from_rcl_error(ret, "failed to send request");
+  }
+
+  pending_requests_.emplace(sequence_number, std::move(responder));
+}
+}  // namespace foxglove_bridge

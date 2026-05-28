@@ -1,10 +1,11 @@
+import json
 import logging
 import random
 
 import pytest
 from foxglove import Channel, Context, Schema
 from foxglove.channels import LogChannel
-from foxglove.schemas import Log
+from foxglove.messages import Log
 
 
 @pytest.fixture
@@ -58,11 +59,15 @@ def test_requires_an_object_schema(new_topic: str) -> None:
 
 
 def test_log_dict_on_json_channel(new_topic: str) -> None:
-    channel = Channel(
-        new_topic,
-        schema={"type": "object", "additionalProperties": True},
-    )
+    json_schema = {"type": "object", "additionalProperties": True}
+    channel = Channel(new_topic, schema=json_schema)
+
     assert channel.message_encoding == "json"
+
+    schema = channel.schema()
+    assert schema is not None
+    assert schema.encoding == "jsonschema"
+    assert json.loads(schema.data) == json_schema
 
     channel.log({"test": "test"})
 
@@ -71,12 +76,22 @@ def test_log_dict_on_schemaless_channel(new_topic: str) -> None:
     channel = Channel(new_topic)
     assert channel.message_encoding == "json"
 
+    schema = channel.schema()
+    assert schema is not None
+    assert schema.encoding == "jsonschema"
+    assert schema.data == b""
+
     channel.log({"test": "test"})
 
 
 def test_log_dict_with_empty_schema(new_topic: str) -> None:
     channel = Channel(new_topic, schema={})
     assert channel.message_encoding == "json"
+
+    schema = channel.schema()
+    assert schema is not None
+    assert schema.encoding == "jsonschema"
+    assert schema.data == b""
 
     channel.log({"test": "test"})
 
@@ -88,24 +103,73 @@ def test_log_dict_on_schemaless_json_channel(new_topic: str) -> None:
     )
     assert channel.message_encoding == "json"
 
+    schema = channel.schema()
+    assert schema is not None
+    assert schema.encoding == "jsonschema"
+    assert schema.data == b""
+
     channel.log({"test": "test"})
 
 
 def test_log_must_serialize_on_protobuf_channel(new_topic: str) -> None:
+    schema = Schema(
+        name="my_schema",
+        encoding="protobuf",
+        data=b"\x01",
+    )
     channel = Channel(
         new_topic,
         message_encoding="protobuf",
-        schema=Schema(
-            name="my_schema",
-            encoding="protobuf",
-            data=b"\x01",
-        ),
+        schema=schema,
     )
+
+    assert channel.message_encoding == "protobuf"
+    assert channel.schema() == schema
 
     with pytest.raises(TypeError, match="Unsupported message type"):
         channel.log({"test": "test"})
 
     channel.log(b"\x01")
+
+
+def test_channel_attributes(new_topic: str) -> None:
+    channel = Channel(new_topic, message_encoding="json")
+    assert channel.topic() == new_topic
+    assert channel.message_encoding == "json"
+    assert channel.schema() is not None
+    assert channel.metadata() == {}
+    assert not channel.has_sinks()
+
+
+def test_typed_channel_attributes(new_topic: str) -> None:
+    channel = LogChannel(new_topic)
+    assert channel.topic() == new_topic
+    assert channel.message_encoding == "protobuf"
+    assert channel.schema() == Log.get_schema()
+    assert channel.metadata() == {}
+    assert not channel.has_sinks()
+
+
+def test_channel_metadata(new_topic: str) -> None:
+    channel = Channel(new_topic, metadata={"foo": "bar"})
+    assert channel.metadata() == {"foo": "bar"}
+
+
+def test_channel_metadata_mistyped(new_topic: str) -> None:
+    with pytest.raises(TypeError, match="argument 'metadata'"):
+        Channel(new_topic, metadata={"1": 1})  # type: ignore
+
+
+def test_typed_channel_metadata(new_topic: str) -> None:
+    channel = LogChannel(new_topic, metadata={"foo": "bar"})
+    assert channel.metadata() == {"foo": "bar"}
+    channel = LogChannel(new_topic, context=Context(), metadata={"foo": "baz"})
+    assert channel.metadata() == {"foo": "baz"}
+
+
+def test_typed_channel_metadata_mistyped(new_topic: str) -> None:
+    with pytest.raises(TypeError, match="argument 'metadata'"):
+        LogChannel(new_topic, metadata={"1": 1})  # type: ignore
 
 
 def test_closed_channel_log(new_topic: str, caplog: pytest.LogCaptureFixture) -> None:
@@ -171,3 +235,17 @@ def test_exposes_unique_channel_ids(new_topic: str) -> None:
     assert ch_1.id() > 0
     assert ch_1.id() < ch_2.id()
     assert ch_2.id() < ch_3.id()
+
+
+def test_log_message_to_specific_sink(new_topic: str) -> None:
+    ctx = Context()
+    ch = Channel(new_topic, context=ctx)
+    ch.log("test", sink_id=1)
+
+
+def test_log_zero_length_message(new_topic: str) -> None:
+    """Zero-length messages must be accepted by channel.log()."""
+    schema = Schema(name="raw", encoding="raw", data=b"")
+    channel = Channel(new_topic, message_encoding="raw", schema=schema)
+    channel.log(b"")
+    channel.log("")
