@@ -328,9 +328,8 @@ def set_log_level(level: int | str = "INFO") -> None:
     If FOXGLOVE_LOG_LEVEL is set, that's used instead of the passed level.
 
     This function should be called before other Foxglove initialization to capture output from all
-    components.
-
-    This is thread-safe, only the first call to this function will have an effect.
+    components. Calling this after starting a server, gateway, or mcap writer will have no effect.
+    It is thread-safe, but only the first call to this function will have an effect.
 
     This calls logging.basicConfig to setup a global logger if one is not already configured.
     Set up your logging before calling this function to avoid that.
