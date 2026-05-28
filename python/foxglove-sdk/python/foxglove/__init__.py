@@ -317,8 +317,8 @@ try:
     __all__ += ["start_gateway"]
 
 except ImportError:
-    if sys.platform != "emscripten":
-        raise
+    # Remote access is only included on supported platforms.
+    pass
 
 
 def set_log_level(level: int | str = "INFO") -> None:
