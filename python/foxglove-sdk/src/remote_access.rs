@@ -546,7 +546,7 @@ pub fn start_gateway(
     foxglove_api_url: Option<String>,
     foxglove_api_timeout: Option<f64>,
 ) -> PyResult<PyRemoteAccessGateway> {
-    init_logging(py);
+    init_logging(py, None);
 
     let mut gateway = Gateway::new();
 

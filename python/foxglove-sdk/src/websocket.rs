@@ -523,7 +523,7 @@ pub fn start_server(
     playback_time_range: Option<Py<PyTuple>>,
     message_backlog_size: Option<usize>,
 ) -> PyResult<PyWebSocketServer> {
-    init_logging(py);
+    init_logging(py, None);
 
     let mut server = WebSocketServer::new().bind(host, port);
 

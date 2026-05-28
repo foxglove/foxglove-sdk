@@ -262,7 +262,7 @@ fn open_mcap(
     channel_filter: Option<Py<PyAny>>,
     writer_options: Option<PyMcapWriteOptions>,
 ) -> PyResult<PyMcapWriter> {
-    init_logging(py);
+    init_logging(py, None);
 
     let file = match path {
         PathOrFileLike::Path(path) => WriterInner::File(if allow_overwrite {
@@ -303,7 +303,7 @@ fn get_channel_for_topic(topic: &str) -> PyResult<Option<BaseChannel>> {
 
 // Not public. Re-exported in a wrapping function.
 #[pyfunction]
-fn enable_logging(level: u32) -> PyResult<()> {
+fn enable_logging(py: Python<'_>, level: u32) -> PyResult<()> {
     // SDK will not log at levels "CRITICAL" or higher.
     // https://docs.python.org/3/library/logging.html#logging-levels
     let level = match level {
@@ -314,7 +314,7 @@ fn enable_logging(level: u32) -> PyResult<()> {
         10.. => LevelFilter::Debug,
         0.. => LevelFilter::Trace,
     };
-    log::set_max_level(level);
+    init_logging(py, Some(level.as_str()));
     Ok(())
 }
 

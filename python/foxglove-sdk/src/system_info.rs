@@ -53,7 +53,7 @@ pub fn start_sysinfo_publisher(
     refresh_interval: Option<f64>,
     context: Option<PyRef<PyContext>>,
 ) -> PyResult<PySystemInfoPublisher> {
-    init_logging(py);
+    init_logging(py, None);
 
     let mut builder = SystemInfoPublisher::new();
 

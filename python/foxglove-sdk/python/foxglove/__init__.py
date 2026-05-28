@@ -324,18 +324,18 @@ except ImportError:
 
 def set_log_level(level: int | str = "INFO") -> None:
     """
-    Sets the global log level for the Foxglove SDK.
+    Sets the global log level for the Foxglove SDK and initializes logging.
 
-    This is mainly a convenience function for scripts and examples that want a sensible default.
-    Prefer setting FOXGLOVE_LOG_LEVEL environment variable over calling this function.
-    If FOXGLOVE_LOG_LEVEL is set, this function does nothing.
+    If FOXGLOVE_LOG_LEVEL is set, that's used instead of the passed level.
+
+    This function should be called before other Foxglove initialization to capture output from all
+    components.
+
+    This is thread-safe, only the first call to this function will have an effect.
 
     :param level: The logging level to set. This accepts the same values as `logging.setLevel` and
         defaults to "INFO". The SDK will not log at levels "CRITICAL" or higher.
     """
-
-    if "FOXGLOVE_LOG_LEVEL" in os.environ:
-        return
 
     if isinstance(level, str):
         level_map = (
@@ -350,7 +350,6 @@ def set_log_level(level: int | str = "INFO") -> None:
     else:
         level = max(0, min(2**32 - 1, level))
 
-    logging.basicConfig(level=level, format="%(asctime)s [%(levelname)s] %(message)s")
     _foxglove.enable_logging(level)
 
 
