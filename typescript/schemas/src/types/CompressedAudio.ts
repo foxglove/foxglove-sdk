@@ -8,20 +8,21 @@ export type CompressedAudio = {
   /** Timestamp of the start of the audio chunk */
   timestamp: Time;
 
-  /** Audio format. Both 'opus' and 'mp4a.40.2' are currently supported. */
+  /** Audio format. Supported values are `opus` for raw Opus packets and `mp4a.40.2` for AAC-LC ADTS frames. */
   format: string;
 
   /**
-   * Compressed audio data
-   * 
-   * Specifically, the requirements for different `format` values are:
+   * Compressed audio data.
    * 
    * - `opus`
-   *   - Each message should contain a complete raw Opus packet, without Ogg, WebM, or other container framing, as described in https://datatracker.ietf.org/doc/html/rfc6716#section-3.
+   *   - Each message must contain a complete raw Opus packet, without Ogg, WebM, or other container framing, as described in [RFC 6716 section 3](https://datatracker.ietf.org/doc/html/rfc6716#section-3).
+   *   - Raw Opus packets do not encode an original sample rate. Consumers should decode using the Opus output rate assumption of 48 kHz.
+   *   - A single raw Opus packet represents mono or stereo audio; multichannel Opus requires multistream or container metadata and is not supported by this schema.
+   *   - Messages should usually contain 20-60 ms of audio.
    * - `mp4a.40.2`
-   *   - Each message should contain a complete MPEG-4 AAC LC ADTS frame, including the ADTS header, as described in section 1.A.3.2 of ISO/IEC 14496-3:2019.
-   * 
-   * Any combination of sample rate and number of channels allowed by the respective audio format is supported.
+   *   - Each message must contain a complete MPEG-4 AAC-LC ADTS frame, including the ADTS header, as described in section 1.A.3.2 of ISO/IEC 14496-3:2019.
+   *   - The ADTS header supplies stream parameters such as sample rate and channel configuration.
+   *   - At 48 kHz, one AAC-LC frame represents about 21 ms of audio.
    */
   data: Uint8Array;
 };
