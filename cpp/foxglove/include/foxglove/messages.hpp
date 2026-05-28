@@ -2588,8 +2588,8 @@ public:
   }
 
   CompressedPointCloudChannel(const CompressedPointCloudChannel& other) noexcept = delete;
-  CompressedPointCloudChannel& operator=(const CompressedPointCloudChannel& other
-  ) noexcept = delete;
+  CompressedPointCloudChannel& operator=(const CompressedPointCloudChannel& other) noexcept =
+    delete;
   /// @brief Default move constructor.
   CompressedPointCloudChannel(CompressedPointCloudChannel&& other) noexcept = default;
   /// @brief Default move assignment.
@@ -5135,8 +5135,8 @@ public:
   }
 
   TriangleListPrimitiveChannel(const TriangleListPrimitiveChannel& other) noexcept = delete;
-  TriangleListPrimitiveChannel& operator=(const TriangleListPrimitiveChannel& other
-  ) noexcept = delete;
+  TriangleListPrimitiveChannel& operator=(const TriangleListPrimitiveChannel& other) noexcept =
+    delete;
   /// @brief Default move constructor.
   TriangleListPrimitiveChannel(TriangleListPrimitiveChannel&& other) noexcept = default;
   /// @brief Default move assignment.

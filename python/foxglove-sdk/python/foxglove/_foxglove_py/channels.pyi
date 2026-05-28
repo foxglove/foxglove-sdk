@@ -325,13 +325,13 @@ class CompressedAudioChannel:
     You should choose a unique topic name per channel.
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         topic: str,
         *,
         metadata: dict[str, str] | None = None,
         context: Context | None = None,
-    ) -> None: ...
+    ) -> "CompressedAudioChannel": ...
     def id(self) -> int:
         """The unique ID of the channel."""
         ...

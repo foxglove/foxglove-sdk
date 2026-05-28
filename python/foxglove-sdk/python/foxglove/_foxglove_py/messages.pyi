@@ -177,9 +177,9 @@ class CompressedAudio:
     A single chunk of a compressed audio bitstream
     """
 
-    def __init__(
-        self, *, timestamp: Timestamp | None = None, data: bytes = b"", format: str = ""
-    ) -> None: ...
+    def __new__(
+        cls, *, timestamp: Timestamp | None = None, data: bytes = b"", format: str = ""
+    ) -> "CompressedAudio": ...
     @staticmethod
     def get_schema() -> Schema:
         """Returns the CompressedAudio schema"""
