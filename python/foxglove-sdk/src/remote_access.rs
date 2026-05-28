@@ -11,6 +11,7 @@ use pyo3::types::PyBytes;
 
 use crate::PyContext;
 use crate::errors::PyFoxgloveError;
+use crate::logging::init_logging;
 use crate::remote_common::{PyConnectionGraph, PyParameter, PyService, PyStatusLevel};
 use crate::sink_channel_filter::{PyChannelDescriptor, PySinkChannelFilter};
 
@@ -545,6 +546,8 @@ pub fn start_gateway(
     foxglove_api_url: Option<String>,
     foxglove_api_timeout: Option<f64>,
 ) -> PyResult<PyRemoteAccessGateway> {
+    init_logging(py, None);
+
     let mut gateway = Gateway::new();
 
     if let Some(name) = name {

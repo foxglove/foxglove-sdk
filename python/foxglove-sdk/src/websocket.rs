@@ -1,4 +1,5 @@
 use crate::errors::PyFoxgloveError;
+use crate::logging::init_logging;
 use crate::remote_common::{
     CallbackAssetHandler, PyConnectionGraph, PyParameter, PyService, PyStatusLevel,
 };
@@ -522,6 +523,8 @@ pub fn start_server(
     playback_time_range: Option<Py<PyTuple>>,
     message_backlog_size: Option<usize>,
 ) -> PyResult<PyWebSocketServer> {
+    init_logging(py, None);
+
     let mut server = WebSocketServer::new().bind(host, port);
 
     if let Some(session_id) = session_id {

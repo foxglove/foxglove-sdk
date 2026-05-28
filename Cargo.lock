@@ -1552,7 +1552,6 @@ dependencies = [
  "bytes",
  "foxglove 0.24.0",
  "log",
- "maplit",
  "prost-types 0.13.5",
  "pyo3",
  "pyo3-log",
