@@ -848,17 +848,15 @@ pub struct CompressedAudio {
     /// Audio format. Supported values are `opus` for raw Opus packets and `mp4a.40.2` for AAC-LC ADTS frames.
     pub format: FoxgloveString,
 
-    /// Compressed audio data.
+    /// Compressed audio data. Packet duration is determined by the codec during encoding.
     ///
     /// - `opus`
     ///   - Each message must contain a complete raw Opus packet, without Ogg, WebM, or other container framing, as described in [RFC 6716 section 3](https://datatracker.ietf.org/doc/html/rfc6716#section-3).
     ///   - Raw Opus packets do not encode an original sample rate. Consumers should decode using the Opus output rate assumption of 48 kHz.
     ///   - A single raw Opus packet represents mono or stereo audio; multichannel Opus requires multistream or container metadata and is not supported by this schema.
-    ///   - Messages should usually contain 20-60 ms of audio.
     /// - `mp4a.40.2`
     ///   - Each message must contain a complete MPEG-4 AAC-LC ADTS frame, including the ADTS header, as described in section 1.A.3.2 of ISO/IEC 14496-3:2019.
     ///   - The ADTS header supplies stream parameters such as sample rate and channel configuration.
-    ///   - Each AAC-LC frame contains 1024 samples, so the duration depends on the sample rate in the ADTS header. At 48 kHz, one frame represents about 21 ms of audio.
     pub data: *const c_uchar,
     pub data_len: usize,
 }

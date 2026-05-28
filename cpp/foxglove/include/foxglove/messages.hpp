@@ -408,7 +408,7 @@ struct CompressedAudio {
   /// AAC-LC ADTS frames.
   std::string format;
 
-  /// @brief Compressed audio data.
+  /// @brief Compressed audio data. Packet duration is determined by the codec during encoding.
   ///
   /// - `opus`
   ///   - Each message must contain a complete raw Opus packet, without Ogg, WebM, or other
@@ -418,13 +418,10 @@ struct CompressedAudio {
   ///   Opus output rate assumption of 48 kHz.
   ///   - A single raw Opus packet represents mono or stereo audio; multichannel Opus requires
   ///   multistream or container metadata and is not supported by this schema.
-  ///   - Messages should usually contain 20-60 ms of audio.
   /// - `mp4a.40.2`
   ///   - Each message must contain a complete MPEG-4 AAC-LC ADTS frame, including the ADTS header,
   ///   as described in section 1.A.3.2 of ISO/IEC 14496-3:2019.
   ///   - The ADTS header supplies stream parameters such as sample rate and channel configuration.
-  ///   - Each AAC-LC frame contains 1024 samples, so the duration depends on the sample rate in the
-  ///   ADTS header. At 48 kHz, one frame represents about 21 ms of audio.
   std::vector<std::byte> data;
 
   /// @brief Encoded the CompressedAudio as protobuf to the provided buffer.
