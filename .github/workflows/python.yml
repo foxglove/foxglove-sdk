@@ -215,10 +215,12 @@ jobs:
                 exit 1
               fi
             artifact-suffix: "-2_28"
+            test: true
           - runner: ubuntu-22.04
             target: x86_64
             manylinux: auto
             artifact-suffix: ""
+            test: true
           - runner: ubuntu-22.04-arm
             target: aarch64
             manylinux: "2_28"
@@ -243,14 +245,18 @@ jobs:
                 exit 1
               fi
             artifact-suffix: "-2_28"
+            test: true
           - runner: ubuntu-22.04-arm
             target: aarch64
             manylinux: auto
             artifact-suffix: ""
+            test: true
           - runner: ubuntu-22.04
             target: armv7
             manylinux: auto
             artifact-suffix: ""
+            # No native armv7 runner; qemu emulation is too slow for CI.
+            test: false
     steps:
       - uses: actions/setup-python@v6
         with:
@@ -275,6 +281,21 @@ jobs:
         with:
           name: wheels-linux-${{ matrix.platform.target }}${{ matrix.platform.artifact-suffix }}
           path: dist
+      - name: Test wheel
+        if: matrix.platform.test
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install dist/*.whl
+          python -m pip install pytest mcap
+          # Run pytest from a directory that doesn't contain the local source
+          # tree, so it exercises the installed wheel rather than ./python/foxglove.
+          mkdir wheel-test
+          cp -r python/foxglove/tests wheel-test/
+          cp conftest.py wheel-test/
+          cd wheel-test
+          python -m pytest -v tests
 
   musllinux:
     runs-on: ${{ matrix.platform.runner }}
@@ -285,10 +306,16 @@ jobs:
         platform:
           - runner: ubuntu-22.04
             target: x86_64
+            # Native x86_64 musl can be tested inside an Alpine container.
+            test: true
           - runner: ubuntu-22.04
             target: aarch64
+            # No native aarch64 musl runner; qemu emulation is too slow for CI.
+            test: false
           - runner: ubuntu-22.04
             target: armv7
+            # No native armv7 musl runner; qemu emulation is too slow for CI.
+            test: false
     steps:
       - uses: actions/setup-python@v6
         with:
@@ -312,6 +339,18 @@ jobs:
         with:
           name: wheels-musllinux-${{ matrix.platform.target }}
           path: dist
+      - name: Test wheel
+        if: matrix.platform.test
+        run: |
+          docker run --rm -v "$PWD:/io" -w /io python:3.10-alpine sh -euxc '
+            pip install dist/*.whl
+            pip install pytest mcap
+            mkdir wheel-test
+            cp -r python/foxglove/tests wheel-test/
+            cp conftest.py wheel-test/
+            cd wheel-test
+            pytest -v tests
+          '
 
   windows:
     runs-on: ${{ matrix.platform.runner }}
@@ -363,6 +402,18 @@ jobs:
         with:
           name: wheels-windows-${{ matrix.platform.target }}
           path: dist
+      - name: Test wheel
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install dist/*.whl
+          python -m pip install pytest mcap
+          mkdir wheel-test
+          cp -r python/foxglove/tests wheel-test/
+          cp conftest.py wheel-test/
+          cd wheel-test
+          python -m pytest -v tests
 
   macos:
     runs-on: ${{ matrix.platform.runner }}
@@ -399,6 +450,18 @@ jobs:
         with:
           name: wheels-macos-${{ matrix.platform.target }}
           path: dist
+      - name: Test wheel
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install dist/*.whl
+          python -m pip install pytest mcap
+          mkdir wheel-test
+          cp -r python/foxglove/tests wheel-test/
+          cp conftest.py wheel-test/
+          cd wheel-test
+          python -m pytest -v tests
 
   sdist:
     runs-on: ubuntu-latest
