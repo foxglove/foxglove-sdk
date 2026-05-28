@@ -314,7 +314,7 @@ fn enable_logging(py: Python<'_>, level: u32) -> PyResult<()> {
         10.. => LevelFilter::Debug,
         0.. => LevelFilter::Trace,
     };
-    init_logging(py, Some(level.as_str()));
+    init_logging(py, Some(level));
     Ok(())
 }
 

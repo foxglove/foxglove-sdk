@@ -8,18 +8,18 @@ use pyo3_log::Logger;
 /// Initialize pyo3 logging, ignoring errors if a logger has already been initialized.
 ///
 /// Only has an effect the first time it is called, otherwise returns false.
-pub(crate) fn init_logging(py: Python<'_>, level: Option<&str>) -> bool {
+pub(crate) fn init_logging(py: Python<'_>, level: Option<LevelFilter>) -> bool {
     static INIT: Once = Once::new();
     let mut initialized = false;
     INIT.call_once(|| {
         initialized = true;
         // Prefer FOXGLOVE_LOG_LEVEL over level, as we do in C++
         // The person running the program knows what logging they want better than the person writing the program
-        let env_var = match env::var("FOXGLOVE_LOG_LEVEL") {
-            Ok(val) => val,
+        let config = match env::var("FOXGLOVE_LOG_LEVEL") {
+            Ok(val) => parse_log_env(&val),
             Err(_) => {
                 if let Some(level) = level {
-                    format!("foxglove={level}")
+                    vec![(String::new(), level)]
                 } else {
                     // If no log level was passed and FOXGLOVE_LOG_LEVEL was not set, go with the default pyo3_log setup
                     let _ = pyo3_log::try_init();
@@ -28,7 +28,6 @@ pub(crate) fn init_logging(py: Python<'_>, level: Option<&str>) -> bool {
             }
         };
 
-        let config = parse_log_env(&env_var);
         let mut logger = Logger::default();
 
         let mut global_level = None;
