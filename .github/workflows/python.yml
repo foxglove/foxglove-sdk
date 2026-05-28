@@ -351,6 +351,9 @@ jobs:
             -v "$PWD:/io" -w /io \
             -e FOXGLOVE_TEST_REQUIRE_REMOTE_ACCESS \
             python:3.10-alpine sh -euxc '
+              # gcc + musl-dev are needed to build the lz4 sdist; lz4 (a
+              # transitive mcap dep) ships no cp310 musllinux wheel.
+              apk add --no-cache gcc musl-dev
               pip install dist/*.whl
               pip install pytest mcap
               mkdir wheel-test
