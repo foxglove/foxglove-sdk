@@ -332,6 +332,9 @@ def set_log_level(level: int | str = "INFO") -> None:
 
     This is thread-safe, only the first call to this function will have an effect.
 
+    This calls logging.basicConfig to setup a global logger if one is not already configured.
+    Set up your logging before calling this function to avoid that.
+
     :param level: The logging level to set. This accepts the same values as `logging.setLevel` and
         defaults to "INFO". The SDK will not log at levels "CRITICAL" or higher.
     """
