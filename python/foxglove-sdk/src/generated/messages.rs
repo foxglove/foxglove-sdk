@@ -562,7 +562,7 @@ impl From<Color> for foxglove::messages::Color {
 /// A single chunk of a compressed audio bitstream
 ///
 /// :param timestamp: Timestamp of the start of the audio chunk
-/// :param data: Compressed audio data. Packet duration is determined by the codec during encoding.
+/// :param data: Compressed audio data. Packet duration is determined by the codec during encoding. Messages should generally contain approximately 20 ms of audio.
 ///     
 ///     - `opus`
 ///       - Each message must contain a complete raw Opus packet, without Ogg, WebM, or other container framing, as described in `RFC 6716 section 3 <https://datatracker.ietf.org/doc/html/rfc6716#section-3>`__.

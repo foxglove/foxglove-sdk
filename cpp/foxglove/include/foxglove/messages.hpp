@@ -405,6 +405,7 @@ struct CompressedAudio {
   std::optional<Timestamp> timestamp;
 
   /// @brief Compressed audio data. Packet duration is determined by the codec during encoding.
+  /// Messages should generally contain approximately 20 ms of audio.
   ///
   /// - `opus`
   ///   - Each message must contain a complete raw Opus packet, without Ogg, WebM, or other
