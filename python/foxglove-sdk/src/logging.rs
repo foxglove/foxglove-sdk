@@ -19,7 +19,7 @@ pub(crate) fn init_logging(py: Python<'_>, level: Option<LevelFilter>) -> bool {
             Ok(val) => parse_log_env(&val),
             Err(_) => {
                 if let Some(level) = level {
-                    vec![(String::new(), level)]
+                    vec![("foxglove".to_string(), level)]
                 } else {
                     // If no log level was passed and FOXGLOVE_LOG_LEVEL was not set, go with the default pyo3_log setup
                     let _ = pyo3_log::try_init();
@@ -28,13 +28,13 @@ pub(crate) fn init_logging(py: Python<'_>, level: Option<LevelFilter>) -> bool {
             }
         };
 
-        let mut logger = Logger::default();
+        let mut logger = Logger::default().filter(LevelFilter::Warn);
 
         let mut global_level = None;
         for (target, level) in config {
             if target.is_empty() {
-                logger = logger.filter(level);
                 global_level = Some(level);
+                logger = logger.filter(level);
             } else {
                 if target == "foxglove" {
                     global_level = Some(level);
