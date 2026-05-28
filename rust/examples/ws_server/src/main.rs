@@ -101,7 +101,7 @@ struct Cli {
 
 #[tokio::main]
 async fn main() {
-    let env = env_logger::Env::default().default_filter_or("debug");
+    let env = env_logger::Env::default().default_filter_or("info");
     env_logger::init_from_env(env);
 
     let args = Cli::parse();

@@ -65,20 +65,40 @@ export class RunnerWorker {
   };
   constructor() {
     this.#pyodide = this.#setup();
-    // Inject this at the beginning of scripts to allow jedi completions to understand the
-    // playground module already available as a global. The jedi.Interpreter class might be able to help
-    // with this, but it breaks completion for * imports:
-    // https://github.com/davidhalter/jedi/issues/2087
-    const prelude = `import playground\n`;
+    // Define type stubs for functions available in the playground so they can be shown in
+    // autocomplete
+    const playgroundModulePromise = this.#pyodide.then((pyodide): unknown =>
+      pyodide.runPython(
+        `
+from types import ModuleType
 
-    this.#getCompletionItems = this.#pyodide.then(
-      (pyodide) =>
+def set_layout(layout: "foxglove.layouts.Layout", /) -> None:
+    """
+    Update the layout used in the playground.
+
+    :param layout: The layout to use.
+    """
+    ...
+
+mod = ModuleType("playground")
+mod.__doc__ = "Functions available in the SDK playground."
+mod.set_layout = set_layout
+mod
+    `,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        { globals: pyodide.toPy({}) },
+      ),
+    );
+
+    this.#getCompletionItems = Promise.all([this.#pyodide, playgroundModulePromise]).then(
+      ([pyodide, playgroundModule]) =>
         pyodide.runPython(
           `
             import jedi
             from pyodide.ffi import to_js
             def get_completion_items(code, line, col):
-              completions = jedi.Script(prelude + code).complete(line + prelude.count("\\n"), col - 1)
+              ns = {"playground": playground_module}
+              completions = jedi.Interpreter(code, [ns]).complete(line, col - 1)
               return to_js([
                 {
                   "type": completion.type,
@@ -92,18 +112,19 @@ export class RunnerWorker {
             get_completion_items
           `,
           // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-          { globals: pyodide.toPy({ prelude }) },
+          { globals: pyodide.toPy({ playground_module: playgroundModule }) },
         ) as GetCompletionItems,
     );
 
-    this.#getSignatures = this.#pyodide.then(
-      (pyodide) =>
+    this.#getSignatures = Promise.all([this.#pyodide, playgroundModulePromise]).then(
+      ([pyodide, playgroundModule]) =>
         pyodide.runPython(
           `
             import jedi
             from pyodide.ffi import to_js
             def get_signatures(code, line, col):
-              signatures = jedi.Script(prelude + code).get_signatures(line + prelude.count("\\n"), col - 1)
+              ns = {"playground": playground_module}
+              signatures = jedi.Interpreter(code, [ns]).get_signatures(line, col - 1)
               return to_js([
                 {
                   "index": signature.index,
@@ -122,11 +143,11 @@ export class RunnerWorker {
             get_signatures
           `,
           // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-          { globals: pyodide.toPy({ prelude }) },
+          { globals: pyodide.toPy({ playground_module: playgroundModule }) },
         ) as GetSignatures,
     );
-    this.#getHover = this.#pyodide.then(
-      (pyodide) =>
+    this.#getHover = Promise.all([this.#pyodide, playgroundModulePromise]).then(
+      ([pyodide, playgroundModule]) =>
         pyodide.runPython(
           `
             import jedi
@@ -147,36 +168,36 @@ export class RunnerWorker {
                     "sig": name.description,
                     "doc": None,
                   }
-              names = jedi.Script(prelude + code).help(line + prelude.count("\\n"), col - 1)
+              ns = {"playground": playground_module}
+              names = jedi.Interpreter(code, [ns]).help(line, col - 1)
               return to_js([_get_hover_for_name(name) for name in names])
             get_hover
           `,
           // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-          { globals: pyodide.toPy({ prelude }) },
+          { globals: pyodide.toPy({ playground_module: playgroundModule }) },
         ) as GetHover,
     );
-    this.#getReferenceRanges = this.#pyodide.then(
-      (pyodide) =>
+    this.#getReferenceRanges = Promise.all([this.#pyodide, playgroundModulePromise]).then(
+      ([pyodide, playgroundModule]) =>
         pyodide.runPython(
           `
             import jedi
             from pyodide.ffi import to_js
             def get_reference_ranges(code, line, col):
-              prelude_lines = prelude.count("\\n")
-              names = jedi.Script(prelude + code).get_references(line + prelude_lines, col - 1, scope="file")
+              ns = {"playground": playground_module}
+              names = jedi.Interpreter(code, [ns]).get_references(line, col - 1, scope="file")
               return to_js([
                 {
-                  "line": name.line - prelude_lines,
+                  "line": name.line,
                   "col": name.column + 1,
                   "len": len(name.name),
                 }
                 for name in names
-                if name.line > prelude_lines
               ])
             get_reference_ranges
           `,
           // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-          { globals: pyodide.toPy({ prelude }) },
+          { globals: pyodide.toPy({ playground_module: playgroundModule }) },
         ) as GetReferenceRanges,
     );
   }
@@ -205,21 +226,6 @@ export class RunnerWorker {
       wheelPath,
       new Uint8Array(await (await fetch(`/${FOXGLOVE_SDK_WHEEL_FILENAME}`)).arrayBuffer()),
     );
-    // Define type stubs for functions available in the playground so they can be shown in
-    // autocomplete
-    pyodide.FS.mkdirTree("/home/pyodide/playground_packages/playground");
-    pyodide.FS.writeFile(
-      "/home/pyodide/playground_packages/playground/__init__.pyi",
-      `\
-def set_layout(layout: "foxglove.layouts.Layout", /) -> None:
-    """
-    Update the layout used in the playground.
-
-    :param layout: The layout to use.
-    """
-    ...
-`,
-    );
     pyodide.setStdout({
       batched: (output) => {
         this.#abortController.signal.throwIfAborted();
@@ -227,7 +233,11 @@ def set_layout(layout: "foxglove.layouts.Layout", /) -> None:
       },
     });
     this.#abortController.signal.throwIfAborted();
-    await pyodide.loadPackage(["jedi", "micropip"]);
+    await pyodide.loadPackage([
+      "micropip",
+      "/pyodide/jedi-0.20.0-py2.py3-none-any.whl",
+      "parso", // jedi dependency, which is not automatically installed when installing jedi from a whl url
+    ]);
     this.#abortController.signal.throwIfAborted();
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const micropip = pyodide.pyimport("micropip");
@@ -250,13 +260,7 @@ def set_layout(layout: "foxglove.layouts.Layout", /) -> None:
         this.#layoutCallback((layout.to_json as () => string)());
       },
     });
-    // Make playground module available to future scripts without explicit import. Also make type
-    // annotations available to jedi.
-    pyodide.runPython(`
-      import sys
-      sys.path.append("/home/pyodide/playground_packages")
-      import playground
-    `);
+    pyodide.runPython("import playground"); // make module available to future scripts without explicit import
     return pyodide;
   }
 

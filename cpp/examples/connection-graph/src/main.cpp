@@ -28,7 +28,7 @@ int main() {
     }
   });
 
-  foxglove::setLogLevel(foxglove::LogLevel::Debug);
+  foxglove::setLogLevel(foxglove::LogLevel::Info);
 
   foxglove::WebSocketServerOptions options = {};
   options.name = "ws-demo-cpp";

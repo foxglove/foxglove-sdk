@@ -23,7 +23,7 @@ class SubscriptionWatcher(ServerListener):
 
 
 def main() -> None:
-    foxglove.set_log_level("DEBUG")
+    foxglove.set_log_level("INFO")
 
     graph = ConnectionGraph()
     graph.set_published_topic("/example-topic", ["1", "2"])

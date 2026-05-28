@@ -151,7 +151,7 @@ int main() {
     }
   });
 
-  foxglove::setLogLevel(foxglove::LogLevel::Debug);
+  foxglove::setLogLevel(foxglove::LogLevel::Info);
 
   // Create channels for different message types
   auto info_channel_result = foxglove::RawChannel::create("/info", "json", std::nullopt);
