@@ -73,4 +73,5 @@ Packages will be available via apt after the [next sync](https://discourse.ros.o
 [humble](http://repo.ros2.org/status_page/ros_humble_default.html?q=foxglove),
 [jazzy](http://repo.ros2.org/status_page/ros_jazzy_default.html?q=foxglove),
 [kilted](http://repo.ros2.org/status_page/ros_kilted_default.html?q=foxglove),
+[lyrical](http://repo.ros2.org/status_page/ros_lyrical_default.html?q=foxglove),
 [rolling](http://repo.ros2.org/status_page/ros_rolling_default.html?q=foxglove)

@@ -65,6 +65,7 @@ jobs:
           - humble
           - jazzy
           - kilted
+          - lyrical
           - rolling
     name: "ros (${{ matrix.ros_distribution }})"
     steps:
