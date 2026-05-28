@@ -297,7 +297,6 @@ jobs:
           # tree, so it exercises the installed wheel rather than ./python/foxglove.
           mkdir wheel-test
           cp -r python/foxglove/tests wheel-test/
-          cp conftest.py wheel-test/
           cd wheel-test
           python -m pytest -v tests
 
@@ -356,7 +355,6 @@ jobs:
               pip install pytest mcap
               mkdir wheel-test
               cp -r python/foxglove/tests wheel-test/
-              cp conftest.py wheel-test/
               cd wheel-test
               pytest -v tests
             '
@@ -423,7 +421,6 @@ jobs:
           python -m pip install pytest mcap
           mkdir wheel-test
           cp -r python/foxglove/tests wheel-test/
-          cp conftest.py wheel-test/
           cd wheel-test
           python -m pytest -v tests
 
@@ -475,7 +472,6 @@ jobs:
           python -m pip install pytest mcap
           mkdir wheel-test
           cp -r python/foxglove/tests wheel-test/
-          cp conftest.py wheel-test/
           cd wheel-test
           python -m pytest -v tests
 
