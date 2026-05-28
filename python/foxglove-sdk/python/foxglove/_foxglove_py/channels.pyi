@@ -57,13 +57,13 @@ class ArrowPrimitiveChannel:
     You should choose a unique topic name per channel.
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         topic: str,
         *,
         metadata: dict[str, str] | None = None,
         context: Context | None = None,
-    ) -> None: ...
+    ) -> "ArrowPrimitiveChannel": ...
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -124,13 +124,13 @@ class CameraCalibrationChannel:
     You should choose a unique topic name per channel.
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         topic: str,
         *,
         metadata: dict[str, str] | None = None,
         context: Context | None = None,
-    ) -> None: ...
+    ) -> "CameraCalibrationChannel": ...
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -191,13 +191,13 @@ class CircleAnnotationChannel:
     You should choose a unique topic name per channel.
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         topic: str,
         *,
         metadata: dict[str, str] | None = None,
         context: Context | None = None,
-    ) -> None: ...
+    ) -> "CircleAnnotationChannel": ...
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -258,13 +258,13 @@ class ColorChannel:
     You should choose a unique topic name per channel.
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         topic: str,
         *,
         metadata: dict[str, str] | None = None,
         context: Context | None = None,
-    ) -> None: ...
+    ) -> "ColorChannel": ...
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -392,13 +392,13 @@ class CompressedImageChannel:
     You should choose a unique topic name per channel.
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         topic: str,
         *,
         metadata: dict[str, str] | None = None,
         context: Context | None = None,
-    ) -> None: ...
+    ) -> "CompressedImageChannel": ...
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -459,13 +459,13 @@ class CompressedPointCloudChannel:
     You should choose a unique topic name per channel.
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         topic: str,
         *,
         metadata: dict[str, str] | None = None,
         context: Context | None = None,
-    ) -> None: ...
+    ) -> "CompressedPointCloudChannel": ...
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -526,13 +526,13 @@ class CompressedVideoChannel:
     You should choose a unique topic name per channel.
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         topic: str,
         *,
         metadata: dict[str, str] | None = None,
         context: Context | None = None,
-    ) -> None: ...
+    ) -> "CompressedVideoChannel": ...
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -593,13 +593,13 @@ class CubePrimitiveChannel:
     You should choose a unique topic name per channel.
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         topic: str,
         *,
         metadata: dict[str, str] | None = None,
         context: Context | None = None,
-    ) -> None: ...
+    ) -> "CubePrimitiveChannel": ...
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -660,13 +660,13 @@ class CylinderPrimitiveChannel:
     You should choose a unique topic name per channel.
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         topic: str,
         *,
         metadata: dict[str, str] | None = None,
         context: Context | None = None,
-    ) -> None: ...
+    ) -> "CylinderPrimitiveChannel": ...
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -727,13 +727,13 @@ class FrameTransformChannel:
     You should choose a unique topic name per channel.
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         topic: str,
         *,
         metadata: dict[str, str] | None = None,
         context: Context | None = None,
-    ) -> None: ...
+    ) -> "FrameTransformChannel": ...
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -794,13 +794,13 @@ class FrameTransformsChannel:
     You should choose a unique topic name per channel.
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         topic: str,
         *,
         metadata: dict[str, str] | None = None,
         context: Context | None = None,
-    ) -> None: ...
+    ) -> "FrameTransformsChannel": ...
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -861,13 +861,13 @@ class GeoJsonChannel:
     You should choose a unique topic name per channel.
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         topic: str,
         *,
         metadata: dict[str, str] | None = None,
         context: Context | None = None,
-    ) -> None: ...
+    ) -> "GeoJsonChannel": ...
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -928,13 +928,13 @@ class GridChannel:
     You should choose a unique topic name per channel.
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         topic: str,
         *,
         metadata: dict[str, str] | None = None,
         context: Context | None = None,
-    ) -> None: ...
+    ) -> "GridChannel": ...
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -995,13 +995,13 @@ class ImageAnnotationsChannel:
     You should choose a unique topic name per channel.
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         topic: str,
         *,
         metadata: dict[str, str] | None = None,
         context: Context | None = None,
-    ) -> None: ...
+    ) -> "ImageAnnotationsChannel": ...
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -1062,13 +1062,13 @@ class JointStateChannel:
     You should choose a unique topic name per channel.
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         topic: str,
         *,
         metadata: dict[str, str] | None = None,
         context: Context | None = None,
-    ) -> None: ...
+    ) -> "JointStateChannel": ...
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -1129,13 +1129,13 @@ class JointStatesChannel:
     You should choose a unique topic name per channel.
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         topic: str,
         *,
         metadata: dict[str, str] | None = None,
         context: Context | None = None,
-    ) -> None: ...
+    ) -> "JointStatesChannel": ...
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -1196,13 +1196,13 @@ class KeyValuePairChannel:
     You should choose a unique topic name per channel.
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         topic: str,
         *,
         metadata: dict[str, str] | None = None,
         context: Context | None = None,
-    ) -> None: ...
+    ) -> "KeyValuePairChannel": ...
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -1263,13 +1263,13 @@ class LaserScanChannel:
     You should choose a unique topic name per channel.
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         topic: str,
         *,
         metadata: dict[str, str] | None = None,
         context: Context | None = None,
-    ) -> None: ...
+    ) -> "LaserScanChannel": ...
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -1330,13 +1330,13 @@ class LinePrimitiveChannel:
     You should choose a unique topic name per channel.
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         topic: str,
         *,
         metadata: dict[str, str] | None = None,
         context: Context | None = None,
-    ) -> None: ...
+    ) -> "LinePrimitiveChannel": ...
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -1397,13 +1397,13 @@ class LocationFixChannel:
     You should choose a unique topic name per channel.
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         topic: str,
         *,
         metadata: dict[str, str] | None = None,
         context: Context | None = None,
-    ) -> None: ...
+    ) -> "LocationFixChannel": ...
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -1464,13 +1464,13 @@ class LocationFixesChannel:
     You should choose a unique topic name per channel.
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         topic: str,
         *,
         metadata: dict[str, str] | None = None,
         context: Context | None = None,
-    ) -> None: ...
+    ) -> "LocationFixesChannel": ...
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -1531,13 +1531,13 @@ class LogChannel:
     You should choose a unique topic name per channel.
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         topic: str,
         *,
         metadata: dict[str, str] | None = None,
         context: Context | None = None,
-    ) -> None: ...
+    ) -> "LogChannel": ...
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -1598,13 +1598,13 @@ class ModelPrimitiveChannel:
     You should choose a unique topic name per channel.
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         topic: str,
         *,
         metadata: dict[str, str] | None = None,
         context: Context | None = None,
-    ) -> None: ...
+    ) -> "ModelPrimitiveChannel": ...
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -1665,13 +1665,13 @@ class OdometryChannel:
     You should choose a unique topic name per channel.
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         topic: str,
         *,
         metadata: dict[str, str] | None = None,
         context: Context | None = None,
-    ) -> None: ...
+    ) -> "OdometryChannel": ...
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -1732,13 +1732,13 @@ class PackedElementFieldChannel:
     You should choose a unique topic name per channel.
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         topic: str,
         *,
         metadata: dict[str, str] | None = None,
         context: Context | None = None,
-    ) -> None: ...
+    ) -> "PackedElementFieldChannel": ...
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -1799,13 +1799,13 @@ class Point2Channel:
     You should choose a unique topic name per channel.
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         topic: str,
         *,
         metadata: dict[str, str] | None = None,
         context: Context | None = None,
-    ) -> None: ...
+    ) -> "Point2Channel": ...
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -1866,13 +1866,13 @@ class Point3Channel:
     You should choose a unique topic name per channel.
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         topic: str,
         *,
         metadata: dict[str, str] | None = None,
         context: Context | None = None,
-    ) -> None: ...
+    ) -> "Point3Channel": ...
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -1933,13 +1933,13 @@ class Point3InFrameChannel:
     You should choose a unique topic name per channel.
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         topic: str,
         *,
         metadata: dict[str, str] | None = None,
         context: Context | None = None,
-    ) -> None: ...
+    ) -> "Point3InFrameChannel": ...
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -2000,13 +2000,13 @@ class PointCloudChannel:
     You should choose a unique topic name per channel.
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         topic: str,
         *,
         metadata: dict[str, str] | None = None,
         context: Context | None = None,
-    ) -> None: ...
+    ) -> "PointCloudChannel": ...
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -2067,13 +2067,13 @@ class PointsAnnotationChannel:
     You should choose a unique topic name per channel.
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         topic: str,
         *,
         metadata: dict[str, str] | None = None,
         context: Context | None = None,
-    ) -> None: ...
+    ) -> "PointsAnnotationChannel": ...
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -2134,13 +2134,13 @@ class PoseChannel:
     You should choose a unique topic name per channel.
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         topic: str,
         *,
         metadata: dict[str, str] | None = None,
         context: Context | None = None,
-    ) -> None: ...
+    ) -> "PoseChannel": ...
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -2201,13 +2201,13 @@ class PoseInFrameChannel:
     You should choose a unique topic name per channel.
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         topic: str,
         *,
         metadata: dict[str, str] | None = None,
         context: Context | None = None,
-    ) -> None: ...
+    ) -> "PoseInFrameChannel": ...
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -2268,13 +2268,13 @@ class PosesInFrameChannel:
     You should choose a unique topic name per channel.
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         topic: str,
         *,
         metadata: dict[str, str] | None = None,
         context: Context | None = None,
-    ) -> None: ...
+    ) -> "PosesInFrameChannel": ...
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -2335,13 +2335,13 @@ class QuaternionChannel:
     You should choose a unique topic name per channel.
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         topic: str,
         *,
         metadata: dict[str, str] | None = None,
         context: Context | None = None,
-    ) -> None: ...
+    ) -> "QuaternionChannel": ...
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -2402,13 +2402,13 @@ class RawAudioChannel:
     You should choose a unique topic name per channel.
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         topic: str,
         *,
         metadata: dict[str, str] | None = None,
         context: Context | None = None,
-    ) -> None: ...
+    ) -> "RawAudioChannel": ...
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -2469,13 +2469,13 @@ class RawImageChannel:
     You should choose a unique topic name per channel.
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         topic: str,
         *,
         metadata: dict[str, str] | None = None,
         context: Context | None = None,
-    ) -> None: ...
+    ) -> "RawImageChannel": ...
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -2536,13 +2536,13 @@ class SceneEntityChannel:
     You should choose a unique topic name per channel.
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         topic: str,
         *,
         metadata: dict[str, str] | None = None,
         context: Context | None = None,
-    ) -> None: ...
+    ) -> "SceneEntityChannel": ...
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -2603,13 +2603,13 @@ class SceneEntityDeletionChannel:
     You should choose a unique topic name per channel.
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         topic: str,
         *,
         metadata: dict[str, str] | None = None,
         context: Context | None = None,
-    ) -> None: ...
+    ) -> "SceneEntityDeletionChannel": ...
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -2670,13 +2670,13 @@ class SceneUpdateChannel:
     You should choose a unique topic name per channel.
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         topic: str,
         *,
         metadata: dict[str, str] | None = None,
         context: Context | None = None,
-    ) -> None: ...
+    ) -> "SceneUpdateChannel": ...
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -2737,13 +2737,13 @@ class SpherePrimitiveChannel:
     You should choose a unique topic name per channel.
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         topic: str,
         *,
         metadata: dict[str, str] | None = None,
         context: Context | None = None,
-    ) -> None: ...
+    ) -> "SpherePrimitiveChannel": ...
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -2804,13 +2804,13 @@ class TextAnnotationChannel:
     You should choose a unique topic name per channel.
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         topic: str,
         *,
         metadata: dict[str, str] | None = None,
         context: Context | None = None,
-    ) -> None: ...
+    ) -> "TextAnnotationChannel": ...
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -2871,13 +2871,13 @@ class TextPrimitiveChannel:
     You should choose a unique topic name per channel.
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         topic: str,
         *,
         metadata: dict[str, str] | None = None,
         context: Context | None = None,
-    ) -> None: ...
+    ) -> "TextPrimitiveChannel": ...
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -2938,13 +2938,13 @@ class TriangleListPrimitiveChannel:
     You should choose a unique topic name per channel.
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         topic: str,
         *,
         metadata: dict[str, str] | None = None,
         context: Context | None = None,
-    ) -> None: ...
+    ) -> "TriangleListPrimitiveChannel": ...
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -3005,13 +3005,13 @@ class Vector2Channel:
     You should choose a unique topic name per channel.
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         topic: str,
         *,
         metadata: dict[str, str] | None = None,
         context: Context | None = None,
-    ) -> None: ...
+    ) -> "Vector2Channel": ...
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -3072,13 +3072,13 @@ class Vector3Channel:
     You should choose a unique topic name per channel.
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         topic: str,
         *,
         metadata: dict[str, str] | None = None,
         context: Context | None = None,
-    ) -> None: ...
+    ) -> "Vector3Channel": ...
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -3139,13 +3139,13 @@ class VoxelGridChannel:
     You should choose a unique topic name per channel.
     """
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         topic: str,
         *,
         metadata: dict[str, str] | None = None,
         context: Context | None = None,
-    ) -> None: ...
+    ) -> "VoxelGridChannel": ...
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
