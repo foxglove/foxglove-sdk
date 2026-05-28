@@ -1,4 +1,4 @@
-use std::{collections::HashMap, env};
+use std::{collections::HashMap, env, sync::OnceLock};
 
 use log::LevelFilter;
 use pyo3::prelude::*;
@@ -7,33 +7,36 @@ use pyo3_log::Logger;
 
 /// Initialize pyo3 logging, ignoring errors if a logger has already been initialized.
 pub(crate) fn init_logging(py: Python<'_>) {
-    let Ok(env_var) = env::var("FOXGLOVE_LOG_LEVEL") else {
-        let _ = pyo3_log::try_init();
-        return;
-    };
+    static INIT: Once = Once::new();
+    INIT.call_once(|| {
+        let Ok(env_var) = env::var("FOXGLOVE_LOG_LEVEL") else {
+            let _ = pyo3_log::try_init();
+            return;
+        };
 
-    let config = parse_log_env(&env_var);
-    let mut logger = Logger::default();
+        let config = parse_log_env(&env_var);
+        let mut logger = Logger::default();
 
-    let mut global_level = None;
-    for (target, level) in config {
-        if target.is_empty() {
-            logger = logger.filter(level);
-            global_level = Some(level);
-        } else {
-            let is_foxglove_target = target == "foxglove";
-            logger = logger.filter_target(target, level);
-            if is_foxglove_target {
+        let mut global_level = None;
+        for (target, level) in config {
+            if target.is_empty() {
+                logger = logger.filter(level);
                 global_level = Some(level);
+            } else {
+                let is_foxglove_target = target == "foxglove";
+                logger = logger.filter_target(target, level);
+                if is_foxglove_target {
+                    global_level = Some(level);
+                }
             }
         }
-    }
 
-    let _ = logger.install();
-    // Configure Python logging module, if it hasn't been configured.
-    // Without this FOXGLOVE_LOG_LEVEL won't take effect correctly,
-    // Python would use the lastResort logger with Warn level.
-    let _ = configure_python_logging(py, global_level.unwrap_or(LevelFilter::Warn).as_str());
+        let _ = logger.install();
+        // Configure Python logging module, if it hasn't been configured.
+        // Without this FOXGLOVE_LOG_LEVEL won't take effect correctly,
+        // Python would use the lastResort logger with Warn level.
+        let _ = configure_python_logging(py, global_level.unwrap_or(LevelFilter::Warn).as_str());
+    });
 }
 
 fn configure_python_logging(py: Python<'_>, level: &str) -> PyResult<()> {

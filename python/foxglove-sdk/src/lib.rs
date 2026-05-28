@@ -262,6 +262,8 @@ fn open_mcap(
     channel_filter: Option<Py<PyAny>>,
     writer_options: Option<PyMcapWriteOptions>,
 ) -> PyResult<PyMcapWriter> {
+    init_logging(py);
+
     let file = match path {
         PathOrFileLike::Path(path) => WriterInner::File(if allow_overwrite {
             File::create(path)?
@@ -335,7 +337,6 @@ fn shutdown(#[allow(unused_variables)] py: Python<'_>) {
 #[pymodule]
 fn _foxglove_py(m: &Bound<'_, PyModule>) -> PyResult<()> {
     foxglove::library_version::set_sdk_language("python");
-    init_logging(m.py());
     m.add_function(wrap_pyfunction!(enable_logging, m)?)?;
     m.add_function(wrap_pyfunction!(disable_logging, m)?)?;
     m.add_function(wrap_pyfunction!(shutdown, m)?)?;

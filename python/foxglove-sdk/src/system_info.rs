@@ -5,6 +5,7 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
 use crate::PyContext;
+use crate::logging::init_logging;
 
 /// A handle to a running system info publisher.
 ///
@@ -47,10 +48,13 @@ impl PySystemInfoPublisher {
 #[pyfunction]
 #[pyo3(signature = (*, topic=None, refresh_interval=None, context=None))]
 pub fn start_sysinfo_publisher(
+    py: Python<'_>,
     topic: Option<String>,
     refresh_interval: Option<f64>,
     context: Option<PyRef<PyContext>>,
 ) -> PyResult<PySystemInfoPublisher> {
+    init_logging(py);
+
     let mut builder = SystemInfoPublisher::new();
 
     if let Some(topic) = topic {
