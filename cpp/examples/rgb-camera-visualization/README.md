@@ -6,7 +6,7 @@ This example demonstrates how to stream RGB camera data to Foxglove using the C+
 
 This example uses OpenCV for camera capture. You'll need to install OpenCV development libraries:
 
-*Ubuntu/Debian:**
+**Ubuntu/Debian:**
 ```bash
 sudo apt update
 sudo apt install libopencv-dev
