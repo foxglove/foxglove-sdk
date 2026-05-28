@@ -174,7 +174,7 @@ pub struct CompressedAudio {
     /// - `mp4a.40.2`
     ///    - Each message must contain a complete MPEG-4 AAC-LC ADTS frame, including the ADTS header, as described in section 1.A.3.2 of ISO/IEC 14496-3:2019.
     ///    - The ADTS header supplies stream parameters such as sample rate and channel configuration.
-    ///    - At 48 kHz, one AAC-LC frame represents about 21 ms of audio.
+    ///    - Each AAC-LC frame contains 1024 samples, so the duration depends on the sample rate in the ADTS header. At 48 kHz, one frame represents about 21 ms of audio.
     #[prost(bytes = "bytes", tag = "3")]
     #[cfg_attr(feature = "serde", serde(with = "crate::messages::serde_bytes"))]
     pub data: ::prost::bytes::Bytes,
