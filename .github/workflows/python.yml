@@ -216,6 +216,7 @@ jobs:
               fi
             artifact-suffix: "-2_28"
             test: true
+            remote_access: true
           - runner: ubuntu-22.04
             target: x86_64
             manylinux: auto
@@ -246,6 +247,7 @@ jobs:
               fi
             artifact-suffix: "-2_28"
             test: true
+            remote_access: true
           - runner: ubuntu-22.04-arm
             target: aarch64
             manylinux: auto
@@ -284,6 +286,8 @@ jobs:
       - name: Test wheel
         if: matrix.platform.test
         shell: bash
+        env:
+          FOXGLOVE_TEST_REQUIRE_REMOTE_ACCESS: ${{ matrix.platform.remote_access && '1' || '0' }}
         run: |
           set -euxo pipefail
           python -m pip install --upgrade pip
@@ -341,16 +345,21 @@ jobs:
           path: dist
       - name: Test wheel
         if: matrix.platform.test
+        env:
+          FOXGLOVE_TEST_REQUIRE_REMOTE_ACCESS: ${{ matrix.platform.remote_access && '1' || '0' }}
         run: |
-          docker run --rm -v "$PWD:/io" -w /io python:3.10-alpine sh -euxc '
-            pip install dist/*.whl
-            pip install pytest mcap
-            mkdir wheel-test
-            cp -r python/foxglove/tests wheel-test/
-            cp conftest.py wheel-test/
-            cd wheel-test
-            pytest -v tests
-          '
+          docker run --rm \
+            -v "$PWD:/io" -w /io \
+            -e FOXGLOVE_TEST_REQUIRE_REMOTE_ACCESS \
+            python:3.10-alpine sh -euxc '
+              pip install dist/*.whl
+              pip install pytest mcap
+              mkdir wheel-test
+              cp -r python/foxglove/tests wheel-test/
+              cp conftest.py wheel-test/
+              cd wheel-test
+              pytest -v tests
+            '
 
   windows:
     runs-on: ${{ matrix.platform.runner }}
@@ -362,6 +371,7 @@ jobs:
           - runner: windows-latest
             target: x86_64
             extra-args: --features pyo3/extension-module,remote-access
+            remote_access: true
           - runner: windows-latest
             target: x86
     steps:
@@ -404,6 +414,8 @@ jobs:
           path: dist
       - name: Test wheel
         shell: bash
+        env:
+          FOXGLOVE_TEST_REQUIRE_REMOTE_ACCESS: ${{ matrix.platform.remote_access && '1' || '0' }}
         run: |
           set -euxo pipefail
           python -m pip install --upgrade pip
@@ -425,9 +437,11 @@ jobs:
           - runner: macos-15
             target: aarch64
             extra-args: --features pyo3/extension-module,remote-access
+            remote_access: true
           - runner: macos-15-intel
             target: x86_64
             extra-args: --features pyo3/extension-module,remote-access
+            remote_access: true
     steps:
       - uses: actions/setup-python@v6
         with:
@@ -452,6 +466,8 @@ jobs:
           path: dist
       - name: Test wheel
         shell: bash
+        env:
+          FOXGLOVE_TEST_REQUIRE_REMOTE_ACCESS: ${{ matrix.platform.remote_access && '1' || '0' }}
         run: |
           set -euxo pipefail
           python -m pip install --upgrade pip
