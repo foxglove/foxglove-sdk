@@ -93,7 +93,10 @@ jobs:
 
   draft-release:
     needs: [build-deb]
-    if: ${{ github.event_name == 'push' && needs.build-deb.result == 'success' }}
+    # `always()` opts out of the default skip-cascade: build-cpp-dist is skipped
+    # on tag pushes, and without this the cascade would skip draft-release even
+    # though build-deb succeeded.
+    if: ${{ always() && github.event_name == 'push' && needs.build-deb.result == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
