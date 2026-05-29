@@ -487,7 +487,6 @@ if(FOXGLOVE_BUILD_EXAMPLES)
     add_foxglove_example(example_remote_access_fetch_asset SOURCES examples/remote-access-fetch-asset/src/main.cpp)
   endif()
 
-  # The OpenCV-based example builds when OpenCV is available on the system; otherwise skipped.
   find_package(OpenCV QUIET COMPONENTS core videoio)
   if(OpenCV_FOUND)
     add_foxglove_example(example_rgb_camera_visualization SOURCES examples/rgb-camera-visualization/main.cpp LIBS opencv_core opencv_videoio)

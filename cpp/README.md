@@ -16,10 +16,16 @@ cmake -DUSE_PACKAGE_MANAGER_DEPENDENCIES=OFF ..
 
 ## Local development
 
-Build the library and examples:
+Build the library:
 
 ```
 make build
+```
+
+To also build the example programs, set `FOXGLOVE_BUILD_EXAMPLES=ON`:
+
+```
+make build FOXGLOVE_BUILD_EXAMPLES=ON
 ```
 
 Run clang-format:
@@ -54,7 +60,7 @@ Run with Address & Undefined Behavior sanitizers:
 make SANITIZE=address,undefined test
 ```
 
-Run example programs (note that a different `build` directory may be used depending on build settings like sanitizers):
+Run example programs — these require building with `FOXGLOVE_BUILD_EXAMPLES=ON` as shown above (note that a different `build` directory may be used depending on build settings like sanitizers):
 
 ```
 ./build/example_server
@@ -148,10 +154,10 @@ See detailed instructions on dependencies and visualizing data in the [example's
 
 #### Building the Example
 
-Once OpenCV is installed, build the example:
+Once OpenCV is installed, build the examples. The RGB camera example is included automatically when OpenCV is detected on your system:
 
 ```bash
-make BUILD_OPENCV_EXAMPLE=ON build
+make FOXGLOVE_BUILD_EXAMPLES=ON build
 ```
 
 This will create the `example_rgb_camera_visualization` executable in the build directory.

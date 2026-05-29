@@ -278,6 +278,8 @@ jobs:
             libglib2.0-dev libva-dev \
             libwebsockets-dev nlohmann-json3-dev
 
+      # FOXGLOVE_BUILD_EXAMPLES=ON compiles the example sources under clang + asan/ubsan
+      # as a build smoke test; ctest doesn't run the example binaries (none are registered tests).
       - run: make SANITIZE=address,undefined FOXGLOVE_REMOTE_ACCESS=OFF FOXGLOVE_BUILD_EXAMPLES=ON test
         working-directory: cpp
 
