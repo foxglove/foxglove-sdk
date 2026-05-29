@@ -2,6 +2,10 @@
 Changelog for package foxglove_msgs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+3.4.0 (2026-05-28)
+------------------
+* Version bump for foxglove_bridge 3.4.0 release
+
 3.3.0 (2026-04-30)
 ------------------
 * Breaking: Remove Velocity3 schema; LocationFix.velocity now uses Vector3

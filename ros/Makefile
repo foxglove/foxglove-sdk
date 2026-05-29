@@ -1,4 +1,4 @@
-ROS_DISTRIBUTIONS := humble jazzy kilted rolling
+ROS_DISTRIBUTIONS := humble jazzy kilted lyrical rolling
 FOXGLOVE_BRIDGE_REMOTE_ACCESS := ON
 FOXGLOVE_CPP_SDK_DIR :=
 EXTRA_DOCKER_ARGS :=
