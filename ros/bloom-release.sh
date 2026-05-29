@@ -72,7 +72,7 @@ if [[ -z $TAG || -z $DISTRO ]]; then
   exit 1
 fi
 
-REMOTE=ros2-foxglove-bridge-release
+REMOTE=__bloom-release-tmp
 REMOTE_URL=https://github.com/ros2-gbp/foxglove_bridge-release.git
 
 REPO_ROOT=$(git rev-parse --show-toplevel)
@@ -93,6 +93,16 @@ if [[ -z ${GITHUB_TOKEN:-} ]]; then
   fi
 fi
 export GITHUB_TOKEN
+
+GIT_USER_NAME=$(git config user.name 2>/dev/null || true)
+GIT_USER_EMAIL=$(git config user.email 2>/dev/null || true)
+if [[ -z $GIT_USER_NAME || -z $GIT_USER_EMAIL ]]; then
+  echo "error: git user.name and user.email must be configured" >&2
+  echo "  git config --global user.name 'Your Name'" >&2
+  echo "  git config --global user.email 'you@example.com'" >&2
+  exit 1
+fi
+export GIT_USER_NAME GIT_USER_EMAIL
 if ! git rev-parse --verify "refs/tags/$TAG" >/dev/null 2>&1; then
   echo "error: tag '$TAG' not found locally" >&2
   exit 1
@@ -103,13 +113,14 @@ if ! git ls-remote --exit-code origin "refs/tags/$TAG" >/dev/null 2>&1; then
 fi
 
 # In dry-run mode, neither LFS nor bloom should mutate remote state.
-LFS_PUSH_FLAGS=()
+LFS_PUSH_CMD=(git lfs push)
 BLOOM_PRETEND_FLAG=""
 if [[ $DRY_RUN == true ]]; then
-  LFS_PUSH_FLAGS+=(--dry-run)
+  LFS_PUSH_CMD+=(--dry-run)
   BLOOM_PRETEND_FLAG="--pretend"
   echo ">>> DRY-RUN: no remote state will be modified"
 fi
+LFS_PUSH_CMD+=("$REMOTE" "$TAG")
 
 cleanup() {
   git remote remove "$REMOTE" 2>/dev/null || true
@@ -123,7 +134,7 @@ git remote add "$REMOTE" "$REMOTE_URL"
 # pushes resolves without leaking objects from unrelated local refs.
 echo ">>> Syncing LFS objects for $TAG to $REMOTE"
 git lfs fetch origin "$TAG"
-git lfs push "${LFS_PUSH_FLAGS[@]}" "$REMOTE" "$TAG"
+"${LFS_PUSH_CMD[@]}"
 
 echo ">>> Running bloom-release foxglove-sdk --ros-distro $DISTRO${BLOOM_PRETEND_FLAG:+ $BLOOM_PRETEND_FLAG}"
 make -C "$REPO_ROOT/ros" docker-bloom-release \

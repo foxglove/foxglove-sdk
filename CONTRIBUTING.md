@@ -61,7 +61,7 @@ The following is a modified version of [bloom release instructions](https://wiki
    - `ros/src/foxglove_msgs/CHANGELOG.rst`
 2. Manually create a tag named `ros-vX.Y.Z` for the new version
 3. Push the newly created commit and tag
-4. Run `ros/bloom-release.sh --tag <tag> --distro <ros-distro>`, for each distro you want to publish the release to. Follow the prompts, and the script will automatically make a PR to the [ros/rosdistro](https://github.com/ros/rosdistro) repo.
+4. Run `ros/bloom-release.sh --tag <tag> --distro <ros-distro>`, for each distro you want to publish the release to. Follow the prompts, and the script will automatically make a PR to the [ros/rosdistro](https://github.com/ros/rosdistro) repo. Pass `--dry-run` to walk through the workflow without pushing LFS objects or letting bloom publish. See the comment block at the top of `ros/bloom-release.sh` for prerequisites (bloom config, GitHub token, etc.).
 
 Packages will be available via apt after the [next sync](https://discourse.ros.org/c/release/16). View package build status prior to the sync at:
 [humble](http://repo.ros2.org/status_page/ros_humble_default.html?q=foxglove),

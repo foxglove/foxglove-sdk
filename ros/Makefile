@@ -149,10 +149,12 @@ docker-deb-msgs: docker-deb-msgs-rolling
 docker-bloom-release: docker-build-image-humble
 	@test -n "$(BLOOM_RELEASE_DISTRO)" || { echo "error: BLOOM_RELEASE_DISTRO is required" >&2; exit 1; }
 	@test -n "$$GITHUB_TOKEN" || { echo "error: GITHUB_TOKEN is required" >&2; exit 1; }
+	@test -n "$$GIT_USER_NAME" || { echo "error: GIT_USER_NAME is required" >&2; exit 1; }
+	@test -n "$$GIT_USER_EMAIL" || { echo "error: GIT_USER_EMAIL is required" >&2; exit 1; }
 	docker run --rm -it $(DOCKER_RUN_ARGS) \
 		-e HOME=/home/foxglove \
-		-e GIT_USER_NAME="$$(git config user.name)" \
-		-e GIT_USER_EMAIL="$$(git config user.email)" \
+		-e GIT_USER_NAME \
+		-e GIT_USER_EMAIL \
 		-e GITHUB_TOKEN \
 		-e BLOOM_RELEASE_DISTRO="$(BLOOM_RELEASE_DISTRO)" \
 		-e BLOOM_PRETEND_FLAG="$(BLOOM_PRETEND_FLAG)" \
