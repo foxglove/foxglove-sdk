@@ -22,10 +22,10 @@ Follow the OpenCV installation guide for Windows and ensure the OpenCV environme
 
 ## Building the RGB Camera Example
 
-Navigate to the `cpp` directory in this repository, and build all examples including this one:
+Navigate to the `cpp` directory in this repository, and build the examples. The RGB camera example is included automatically when OpenCV is detected on your system:
 
 ```bash
-make BUILD_OPENCV_EXAMPLE=ON build
+make FOXGLOVE_BUILD_EXAMPLES=ON build
 ```
 
 ## Running the Example:
