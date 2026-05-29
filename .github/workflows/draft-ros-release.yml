@@ -57,7 +57,7 @@ jobs:
       matrix:
         arch: [x86_64, aarch64]
         # rolling temporarily disabled while upstream changes land; re-enable when stable
-        distro: [humble, jazzy, kilted]
+        distro: [humble, jazzy, kilted, lyrical]
         package: [bridge, msgs]
         include:
           - arch: x86_64
