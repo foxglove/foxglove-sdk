@@ -330,9 +330,7 @@ impl ViewerConnection {
                 let advertise = if expect_advertise {
                     viewer.expect_advertise().await?
                 } else {
-                    foxglove::protocol::v2::server::Advertise {
-                        channels: Vec::new(),
-                    }
+                    foxglove::protocol::v2::server::Advertise::new([])
                 };
                 anyhow::Ok((server_info, advertise))
             };
