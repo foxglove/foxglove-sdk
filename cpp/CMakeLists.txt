@@ -93,6 +93,21 @@ if(FOXGLOVE_BUILD_EXAMPLES)
     GIT_REPOSITORY https://github.com/HowardHinnant/date.git
     GIT_TAG v3.0.4
   )
+
+  find_or_fetch(mcap
+    GIT_REPOSITORY https://github.com/foxglove/mcap.git
+    GIT_TAG releases/cpp/v2.1.2
+  )
+
+  set(LZ4_BUILD_CLI OFF CACHE BOOL "" FORCE)
+  set(LZ4_BUILD_LEGACY_LZ4C OFF CACHE BOOL "" FORCE)
+  FetchContent_Declare(
+    lz4
+    GIT_REPOSITORY https://github.com/lz4/lz4.git
+    GIT_TAG v1.10.0
+    SOURCE_SUBDIR build/cmake
+  )
+  FetchContent_MakeAvailable(lz4)
 endif()
 
 if(FOXGLOVE_BUILD_EXAMPLES OR FOXGLOVE_BUILD_INTEGRATION_TESTS)
@@ -112,23 +127,6 @@ if(FOXGLOVE_BUILD_EXAMPLES OR FOXGLOVE_BUILD_INTEGRATION_TESTS)
 endif()
 
 set(CMAKE_WARN_DEPRECATED ON CACHE BOOL "" FORCE)
-
-if(FOXGLOVE_BUILD_EXAMPLES)
-  find_or_fetch(mcap
-    GIT_REPOSITORY https://github.com/foxglove/mcap.git
-    GIT_TAG releases/cpp/v2.1.2
-  )
-
-  set(LZ4_BUILD_CLI OFF CACHE BOOL "" FORCE)
-  set(LZ4_BUILD_LEGACY_LZ4C OFF CACHE BOOL "" FORCE)
-  FetchContent_Declare(
-    lz4
-    GIT_REPOSITORY https://github.com/lz4/lz4.git
-    GIT_TAG v1.10.0
-    SOURCE_SUBDIR build/cmake
-  )
-  FetchContent_MakeAvailable(lz4)
-endif()
 
 if(DEFINED SANITIZE)
   if(NOT CMAKE_CXX_COMPILER_ID MATCHES ".*Clang")
