@@ -326,32 +326,19 @@ async fn perlink_product_viewer_connects_under_classful_qdisc() -> Result<()> {
     let gw = TestGateway::start(&ctx).await?;
 
     // This test has no channels, so the gateway won't send an Advertise.
-    // Use connect_with_timeout with an inline retry for ServerInfo instead
-    // of connect_and_handshake (which waits for Advertise).
-    let deadline = tokio::time::Instant::now() + NETEM_EVENT_TIMEOUT;
-    let viewer = loop {
-        let remaining = deadline - tokio::time::Instant::now();
-        let mut v =
-            ViewerConnection::connect_with_timeout(&gw.room_name, "viewer-1", remaining).await?;
-        match v.expect_server_info().await {
-            Ok(server_info) => {
-                assert!(
-                    server_info.session_id.is_some(),
-                    "session_id should be present"
-                );
-                info!("ServerInfo received under classful qdisc: {server_info:?}");
-                break v;
-            }
-            Err(e) if tokio::time::Instant::now() < deadline => {
-                info!("byte stream dropped before ServerInfo ({e:#}), retrying");
-                let _ = v.close().await;
-                continue;
-            }
-            Err(e) => {
-                return Err(e).context("ServerInfo not received under classful qdisc");
-            }
-        }
-    };
+    let expect_advertise = false;
+    let (viewer, server_info, _advertise) = ViewerConnection::connect_and_handshake(
+        &gw.room_name,
+        "viewer-1",
+        expect_advertise,
+        NETEM_EVENT_TIMEOUT,
+    )
+    .await?;
+    assert!(
+        server_info.session_id.is_some(),
+        "session_id should be present"
+    );
+    info!("ServerInfo received under classful qdisc: {server_info:?}");
 
     viewer.close().await?;
     gw.stop().await?;
@@ -377,9 +364,14 @@ async fn perlink_product_data_track_delivery_under_classful_qdisc() -> Result<()
 
     let gw = TestGateway::start(&ctx).await?;
 
-    let (mut viewer, _server_info, advertise) =
-        ViewerConnection::connect_and_handshake(&gw.room_name, "viewer-1", NETEM_EVENT_TIMEOUT)
-            .await?;
+    let expect_advertise = true;
+    let (mut viewer, _server_info, advertise) = ViewerConnection::connect_and_handshake(
+        &gw.room_name,
+        "viewer-1",
+        expect_advertise,
+        NETEM_EVENT_TIMEOUT,
+    )
+    .await?;
     let channel_id = advertise.channels[0].id;
 
     viewer.subscribe_and_wait(&[channel_id], &channel).await?;

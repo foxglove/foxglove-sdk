@@ -301,14 +301,17 @@ impl ViewerConnection {
         }
     }
 
-    /// Connects and completes the handshake (ServerInfo + Advertise), retrying
-    /// the entire flow if the byte stream drops under network impairment.
+    /// Connects and waits for the handshake (ServerInfo, plus Advertise when
+    /// `expect_advertise` is set), retrying the entire flow if the byte stream
+    /// drops under network impairment.
     ///
-    /// Only use this when the gateway has at least one channel — the gateway
-    /// skips the Advertise message when there are no channels to advertise.
+    /// Set `expect_advertise` to `true` only when the gateway has at least one
+    /// channel — it skips the Advertise message when there are no channels to
+    /// advertise. When `false`, the returned `Advertise` is empty.
     pub async fn connect_and_handshake(
         room_name: &str,
         viewer_identity: &str,
+        expect_advertise: bool,
         timeout: Duration,
     ) -> Result<(
         Self,
@@ -317,12 +320,20 @@ impl ViewerConnection {
     )> {
         let deadline = tokio::time::Instant::now() + timeout;
         loop {
-            let remaining = deadline - tokio::time::Instant::now();
+            // `saturating_duration_since` (rather than `-`) avoids a panic if
+            // a prior iteration's `close().await` pushed us past the deadline.
+            let remaining = deadline.saturating_duration_since(tokio::time::Instant::now());
             let mut viewer =
                 Self::connect_with_timeout(room_name, viewer_identity, remaining).await?;
             let handshake = async {
                 let server_info = viewer.expect_server_info().await?;
-                let advertise = viewer.expect_advertise().await?;
+                let advertise = if expect_advertise {
+                    viewer.expect_advertise().await?
+                } else {
+                    foxglove::protocol::v2::server::Advertise {
+                        channels: Vec::new(),
+                    }
+                };
                 anyhow::Ok((server_info, advertise))
             };
             match handshake.await {
