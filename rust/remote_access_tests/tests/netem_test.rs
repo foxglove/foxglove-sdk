@@ -177,7 +177,7 @@ async fn netem_viewer_connects_under_impairment() -> Result<()> {
 
     // This test has no channels, so the gateway won't send an Advertise.
     let expect_advertise = false;
-    let (viewer, server_info, _advertise) = ViewerConnection::connect_and_handshake(
+    let (viewer, server_info, _advertise) = ViewerConnection::connect_and_await_startup(
         &gw.room_name,
         "viewer-1",
         expect_advertise,
@@ -211,7 +211,7 @@ async fn netem_channel_advertisement_under_impairment() -> Result<()> {
 
     let gw = TestGateway::start(&ctx).await?;
     let expect_advertise = true;
-    let (viewer, _server_info, advertise) = ViewerConnection::connect_and_handshake(
+    let (viewer, _server_info, advertise) = ViewerConnection::connect_and_await_startup(
         &gw.room_name,
         "viewer-1",
         expect_advertise,
@@ -246,7 +246,7 @@ async fn netem_message_delivery_under_impairment() -> Result<()> {
 
     let gw = TestGateway::start(&ctx).await?;
     let expect_advertise = true;
-    let (mut viewer, _server_info, advertise) = ViewerConnection::connect_and_handshake(
+    let (mut viewer, _server_info, advertise) = ViewerConnection::connect_and_await_startup(
         &gw.room_name,
         "viewer-1",
         expect_advertise,
@@ -301,7 +301,7 @@ async fn netem_burst_delivery_under_impairment() -> Result<()> {
 
     // This test has no channels, so the gateway won't send an Advertise.
     let expect_advertise = false;
-    let (mut viewer, _server_info, _advertise) = ViewerConnection::connect_and_handshake(
+    let (mut viewer, _server_info, _advertise) = ViewerConnection::connect_and_await_startup(
         &gw.room_name,
         "viewer-1",
         expect_advertise,

@@ -327,7 +327,7 @@ async fn perlink_product_viewer_connects_under_classful_qdisc() -> Result<()> {
 
     // This test has no channels, so the gateway won't send an Advertise.
     let expect_advertise = false;
-    let (viewer, server_info, _advertise) = ViewerConnection::connect_and_handshake(
+    let (viewer, server_info, _advertise) = ViewerConnection::connect_and_await_startup(
         &gw.room_name,
         "viewer-1",
         expect_advertise,
@@ -365,7 +365,7 @@ async fn perlink_product_data_track_delivery_under_classful_qdisc() -> Result<()
     let gw = TestGateway::start(&ctx).await?;
 
     let expect_advertise = true;
-    let (mut viewer, _server_info, advertise) = ViewerConnection::connect_and_handshake(
+    let (mut viewer, _server_info, advertise) = ViewerConnection::connect_and_await_startup(
         &gw.room_name,
         "viewer-1",
         expect_advertise,
