@@ -1216,6 +1216,8 @@ dependencies = [
  "clap",
  "env_logger",
  "foxglove 0.24.0",
+ "schemars 1.0.4",
+ "serde",
  "serde_json",
  "tokio",
  "tracing",
