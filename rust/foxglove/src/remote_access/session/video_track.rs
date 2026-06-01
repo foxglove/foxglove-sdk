@@ -4,7 +4,6 @@ use std::time::Duration;
 use arc_swap::ArcSwapOption;
 use bytes::Bytes;
 use libwebrtc::prelude::*;
-use libwebrtc::video_frame::FrameMetadata;
 use libwebrtc::video_source::native::NativeVideoSource;
 use tokio::sync::watch;
 use tracing::{debug, error, warn};
@@ -233,20 +232,7 @@ fn transcode_and_publish(
     log_time_ns: u64,
 ) -> Result<VideoMetadata, VideoEncodeError> {
     let image_msg = decode_image_message(input_schema, data)?;
-    let (frame, metadata) = build_video_frame(image_msg, log_time_ns)?;
-    video_source.capture_frame(&frame);
-    Ok(metadata)
-}
 
-/// Build the [`VideoFrame`] to hand to libwebrtc, plus the [`VideoMetadata`] used to
-/// annotate the LiveKit channel advertisement.
-///
-/// Split out from [`transcode_and_publish`] so it can be exercised by unit tests
-/// without standing up a [`NativeVideoSource`].
-fn build_video_frame(
-    image_msg: ImageMessage<'_>,
-    log_time_ns: u64,
-) -> Result<(VideoFrame<I420Buffer>, VideoMetadata), VideoEncodeError> {
     let metadata = VideoMetadata {
         encoding: image_msg.image.encoding(),
         frame_id: image_msg.frame_id.clone(),
@@ -272,32 +258,15 @@ fn build_video_frame(
         None => log_time_ns,
     };
 
-    // `timestamp_us` is used by the encoder/RTP pipeline and is *not* preserved
-    // end-to-end. The original capture timestamp (in nanoseconds since epoch) is
-    // carried in-band via the packet-trailer `user_timestamp` field, which the
-    // receiving app can recover on every decoded frame. The track must be
-    // published with `TrackPublishOptions::packet_trailer_features.user_timestamp
-    // = true` for this to actually traverse the wire.
-    //
-    // Note: FrameMetadata::user_timestamp is documented as microseconds
-    // but we store nanoseconds here. This works because this is both serialized
-    // and deserialized as a 64-bit integer (PacketTrailerMetadata.userTimestamp is a bigint in JavaScript)
-    // and the foxglove app expects a nanoseconds timestamp.
-    //
-    // The VideoFrame and FrameMetadata take separate paths through libwebrtc's send pipeline.
-    // In order to reunite them later, libwebrtc stores FrameMetadata in a lookup table keyed by timestamp_us / 1000.
-    // If multiple frames are received within the same millisecond, there will be a collision in this lookup table.
-    // We're not expecting frame rates in the kilohertz range, so this should not be a problem in practice.
+    // Publish the transcoded image to the video track.
     let frame = VideoFrame {
         rotation: VideoRotation::VideoRotation0,
         timestamp_us: (timestamp_ns / 1000) as i64,
-        frame_metadata: Some(FrameMetadata {
-            user_timestamp: Some(timestamp_ns),
-            frame_id: None,
-        }),
+        frame_metadata: None,
         buffer: buffer.0,
     };
-    Ok((frame, metadata))
+    video_source.capture_frame(&frame);
+    Ok(metadata)
 }
 
 /// Validates and normalizes frame dimensions for video encoding.
@@ -364,75 +333,7 @@ fn decode_image_message<'a>(
 
 #[cfg(test)]
 mod tests {
-    use std::borrow::Cow;
-
     use super::*;
-    use crate::img2yuv::{Image, ImageMessage, RawImage, RawImageEncoding};
-    use crate::messages::Timestamp;
-
-    /// Build an `ImageMessage` carrying a minimum-size rgb8 image, optionally with a
-    /// timestamp. The pixel contents are not relevant to these tests; we only care about
-    /// timestamp/metadata propagation.
-    fn make_image_message(timestamp: Option<Timestamp>) -> ImageMessage<'static> {
-        let width: u32 = 16;
-        let height: u32 = 16;
-        let stride = width * 3;
-        let data = vec![128u8; (stride * height) as usize];
-        ImageMessage {
-            timestamp,
-            frame_id: "camera_optical_frame".to_string(),
-            image: Image::Raw(RawImage {
-                encoding: RawImageEncoding::Rgb8,
-                width,
-                height,
-                stride,
-                data: Cow::Owned(data),
-            }),
-        }
-    }
-
-    #[test]
-    fn build_video_frame_propagates_image_timestamp_as_user_timestamp() {
-        // Pick a non-trivial timestamp so we'd notice if the wrong fallback is used.
-        let ts = Timestamp::new(1_700_000_000, 123_456_789);
-        let expected_ns = ts.total_nanos();
-        let log_time_ns = 42; // intentionally different from `expected_ns`
-        let (frame, metadata) =
-            build_video_frame(make_image_message(Some(ts)), log_time_ns).expect("build frame");
-
-        let meta = frame.frame_metadata.expect("frame_metadata must be set");
-        assert_eq!(
-            meta.user_timestamp,
-            Some(expected_ns),
-            "user_timestamp should be the original RawImage timestamp, not log_time"
-        );
-        assert_eq!(
-            meta.frame_id, None,
-            "frame_id is not used for this end-to-end timestamp path"
-        );
-        // timestamp_us continues to be derived from the same source.
-        assert_eq!(frame.timestamp_us, (expected_ns / 1000) as i64);
-        assert_eq!(metadata.frame_id, "camera_optical_frame");
-        assert_eq!(
-            metadata.encoding,
-            ImageEncoding::Raw(RawImageEncoding::Rgb8)
-        );
-    }
-
-    #[test]
-    fn build_video_frame_falls_back_to_log_time_when_image_has_no_timestamp() {
-        let log_time_ns = 9_876_543_210u64;
-        let (frame, _metadata) =
-            build_video_frame(make_image_message(None), log_time_ns).expect("build frame");
-
-        let meta = frame.frame_metadata.expect("frame_metadata must be set");
-        assert_eq!(
-            meta.user_timestamp,
-            Some(log_time_ns),
-            "without an image timestamp, fall back to the message log time"
-        );
-        assert_eq!(frame.timestamp_us, (log_time_ns / 1000) as i64);
-    }
 
     #[test]
     fn test_foxglove_compressed_image() {
