@@ -4,16 +4,19 @@ generate:
 	yarn generate
 
 PYTHON_REMOTE_ACCESS ?= ON
+ifeq ($(PYTHON_REMOTE_ACCESS),ON)
+FOXGLOVE_TEST_REQUIRE_REMOTE_ACCESS = 1
+MATURIN_PEP517_ARGS += --features remote-access
+else
+FOXGLOVE_TEST_REQUIRE_REMOTE_ACCESS = 0
+endif
+
 # Opts into a build-time check that NVENC hardware acceleration for video
 # encoding will be available (cuda.h is present on supported targets). Only
 # meaningful when remote-access is also enabled. Defaults to OFF because the
 # check fails the build on hosts without the CUDA toolkit; opt in explicitly
 # (e.g. in CI) where you want the loud failure.
 PYTHON_REQUIRE_CUDA ?= OFF
-
-ifeq ($(PYTHON_REMOTE_ACCESS),ON)
-MATURIN_PEP517_ARGS += --features remote-access
-endif
 ifeq ($(PYTHON_REQUIRE_CUDA),ON)
 MATURIN_PEP517_ARGS += --features require-cuda
 endif
@@ -37,7 +40,7 @@ test-python:
 	uv --directory python/foxglove-sdk sync --all-extras
 	MATURIN_PEP517_ARGS="$(MATURIN_PEP517_ARGS)" uv --directory python/foxglove-sdk pip install --editable '.[notebook]'
 	uv --directory python/foxglove-sdk run mypy .
-	uv --directory python/foxglove-sdk run pytest
+	FOXGLOVE_TEST_REQUIRE_REMOTE_ACCESS="$(FOXGLOVE_TEST_REQUIRE_REMOTE_ACCESS)" uv --directory python/foxglove-sdk run pytest
 
 .PHONY: benchmark-python
 benchmark-python:

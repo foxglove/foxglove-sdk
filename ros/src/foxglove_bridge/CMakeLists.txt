@@ -9,7 +9,7 @@ if(POLICY CMP0024)
   set(CMAKE_POLICY_DEFAULT_CMP0024 NEW)
 endif()
 
-project(foxglove_bridge LANGUAGES CXX VERSION 3.3.0)
+project(foxglove_bridge LANGUAGES CXX VERSION 3.4.0)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -90,14 +90,14 @@ endif()
 # cmake-glue change don't yet, so the FetchContent download path is broken until a
 # release ships with that glue. For local development, point the override at a
 # `make build-cpp-dist`-produced tree.
-set(FOXGLOVE_SDK_VERSION "0.24.0")
+set(FOXGLOVE_SDK_VERSION "0.25.0")
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
   set(FOXGLOVE_SDK_PLATFORM "aarch64-unknown-linux-gnu")
-  set(FOXGLOVE_SDK_SHA "27f689210f277bbf05cddc96df14e1149ac34c9b68a6f05ba14f2c7baa7ee6ae")
+  set(FOXGLOVE_SDK_SHA "d0c862d6923a0964ac112f0b918befcd60152093f8aeb806b4f440fca0448a66")
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
   set(FOXGLOVE_SDK_PLATFORM "x86_64-unknown-linux-gnu")
-  set(FOXGLOVE_SDK_SHA "4381e1759f08b76f3bb2bf27ac4ab480caeb5cd71b8119221866c469534490c4")
+  set(FOXGLOVE_SDK_SHA "16ff2f7eafbcf673ebb5560f5a84bae07694c7f106973efb6b16253280e4766b")
 else()
   message(FATAL_ERROR "Unsupported platform/architecture combination: ${CMAKE_SYSTEM_PROCESSOR}-${CMAKE_SYSTEM_NAME}")
 endif()

@@ -317,23 +317,26 @@ try:
     __all__ += ["start_gateway"]
 
 except ImportError:
-    if sys.platform != "emscripten":
-        raise
+    # Remote access is only included on supported platforms.
+    pass
 
 
 def set_log_level(level: int | str = "INFO") -> None:
     """
-    Enable SDK logging.
+    Sets the global log level for the Foxglove SDK and initializes logging.
 
-    This function will call logging.basicConfig() for convenience in scripts, but in general you
-    should configure logging yourself before calling this function:
-    https://docs.python.org/3/library/logging.html
+    If FOXGLOVE_LOG_LEVEL is set, that's used instead of the passed level.
+
+    This function should be called before other Foxglove initialization to capture output from all
+    components. Calling this after starting a sink (e.g. server, gateway, or mcap) will
+    have no effect. Only the first call to this function will have an effect. Thread-safe.
+
+    This calls logging.basicConfig to setup a global logger if one is not already configured.
+    Set up your logging before calling this function to avoid that.
 
     :param level: The logging level to set. This accepts the same values as `logging.setLevel` and
         defaults to "INFO". The SDK will not log at levels "CRITICAL" or higher.
     """
-    # This will raise a ValueError for invalid levels if the user has not already configured
-    logging.basicConfig(level=level, format="%(asctime)s [%(levelname)s] %(message)s")
 
     if isinstance(level, str):
         level_map = (

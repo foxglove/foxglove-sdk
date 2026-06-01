@@ -3,7 +3,7 @@ import logging
 import random
 
 import pytest
-from foxglove import Channel, Context, Schema
+from foxglove import Channel, Context, Schema, set_log_level
 from foxglove.channels import LogChannel
 from foxglove.messages import Log
 
@@ -19,6 +19,7 @@ def test_warns_on_duplicate_topics(caplog: pytest.LogCaptureFixture) -> None:
     c2 = Channel("test-duplicate", schema=schema)
     assert c1.id() == c2.id()
 
+    set_log_level("WARN")
     with caplog.at_level(logging.WARNING):
         # Same topic, different schema
         c3 = Channel(
@@ -46,6 +47,7 @@ def test_does_not_warn_on_duplicate_topics_in_contexts(
 
     _ = Channel("test-duplicate", context=ctx1)
 
+    set_log_level("WARN")
     with caplog.at_level(logging.WARNING):
         Channel("test-duplicate", context=ctx2)
 
@@ -175,6 +177,7 @@ def test_typed_channel_metadata_mistyped(new_topic: str) -> None:
 def test_closed_channel_log(new_topic: str, caplog: pytest.LogCaptureFixture) -> None:
     channel = Channel(new_topic, schema={"type": "object"})
     channel.close()
+    set_log_level("WARN")
     with caplog.at_level(logging.WARNING):
         channel.log(b"\x01")
 
@@ -187,6 +190,7 @@ def test_closed_channel_log(new_topic: str, caplog: pytest.LogCaptureFixture) ->
 def test_close_typed_channel(new_topic: str, caplog: pytest.LogCaptureFixture) -> None:
     channel = LogChannel(new_topic)
     channel.close()
+    set_log_level("WARN")
     with caplog.at_level(logging.WARNING):
         channel.log(Log())
 
