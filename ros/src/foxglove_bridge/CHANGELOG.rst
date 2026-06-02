@@ -2,6 +2,11 @@
 Changelog for package foxglove_bridge
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+3.4.1 (2026-06-01)
+------------------
+* Fix an issue with video publication over remote access for certain formats and encoders
+* Update Foxglove SDK version to 0.25.1
+
 3.4.0 (2026-05-28)
 ------------------
 * Fix an issue where the ``parameters`` implementation would occasionally stall message forwarding for several seconds
