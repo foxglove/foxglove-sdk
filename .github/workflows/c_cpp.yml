@@ -196,7 +196,12 @@ jobs:
 
       - name: Build and package C/C++ SDK
         env:
-          RUSTFLAGS: ${{ runner.os == 'Windows' && '-C target-feature=+crt-static' || '' }}
+          # Linux: force --as-needed so unused -l flags from build scripts
+          # (e.g. webrtc-sys probing glib for headers) don't become DT_NEEDED
+          # entries. The amd64 runner's gcc already applies this by default;
+          # the arm64 runner does not, which is why aarch64 builds picked up
+          # spurious libgio/libgobject/libglib dependencies (#1291).
+          RUSTFLAGS: ${{ runner.os == 'Windows' && '-C target-feature=+crt-static' || runner.os == 'Linux' && '-C link-arg=-Wl,--as-needed' || '' }}
         run: >-
           make -f Container.mk build-cpp-dist
           CPP_SDK_DIR=artifacts/foxglove
