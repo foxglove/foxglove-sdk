@@ -173,7 +173,7 @@ pub struct CompressedAudio {
     #[prost(bytes = "bytes", tag = "2")]
     #[cfg_attr(feature = "serde", serde(with = "crate::messages::serde_bytes"))]
     pub data: ::prost::bytes::Bytes,
-    /// Audio format. Supported values are `opus` for raw Opus packets and `mp4a.40.2` for AAC-LC ADTS frames.
+    /// Audio format. Values supported by Foxglove are `opus` for raw Opus packets and `mp4a.40.2` for AAC-LC ADTS frames.
     #[prost(string, tag = "3")]
     pub format: ::prost::alloc::string::String,
 }

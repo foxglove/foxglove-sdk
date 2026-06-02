@@ -107,7 +107,7 @@ const CompressedAudio: FoxgloveMessageSchema = {
       name: "format",
       type: { type: "primitive", name: "string" },
       description:
-        "Audio format. Supported values are `opus` for raw Opus packets and `mp4a.40.2` for AAC-LC ADTS frames.",
+        "Audio format. Values supported by Foxglove are `opus` for raw Opus packets and `mp4a.40.2` for AAC-LC ADTS frames.",
     },
   ],
 };

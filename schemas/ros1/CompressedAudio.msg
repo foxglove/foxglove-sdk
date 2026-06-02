@@ -17,5 +17,5 @@ time timestamp
 #   - The ADTS header supplies stream parameters such as sample rate and channel configuration.
 uint8[] data
 
-# Audio format. Supported values are `opus` for raw Opus packets and `mp4a.40.2` for AAC-LC ADTS frames.
+# Audio format. Values supported by Foxglove are `opus` for raw Opus packets and `mp4a.40.2` for AAC-LC ADTS frames.
 string format

@@ -857,7 +857,7 @@ pub struct CompressedAudio {
     pub data: *const c_uchar,
     pub data_len: usize,
 
-    /// Audio format. Supported values are `opus` for raw Opus packets and `mp4a.40.2` for AAC-LC ADTS frames.
+    /// Audio format. Values supported by Foxglove are `opus` for raw Opus packets and `mp4a.40.2` for AAC-LC ADTS frames.
     pub format: FoxgloveString,
 }
 
