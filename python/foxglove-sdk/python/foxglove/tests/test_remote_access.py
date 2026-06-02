@@ -1,4 +1,12 @@
+import os
+
 import pytest
+
+# Set FOXGLOVE_TEST_REQUIRE_REMOTE_ACCESS=1 in environments where remote_access
+# is expected to be available (e.g. CI jobs building wheels with the
+# remote-access feature). This converts the soft skip below into a hard failure
+# so a broken or accidentally-disabled remote_access build doesn't slip through.
+_REQUIRE_REMOTE_ACCESS = os.environ.get("FOXGLOVE_TEST_REQUIRE_REMOTE_ACCESS") == "1"
 
 try:
     from foxglove import ConnectionGraph, start_gateway
@@ -10,6 +18,8 @@ try:
 
     HAS_REMOTE_ACCESS = True
 except ImportError:
+    if _REQUIRE_REMOTE_ACCESS:
+        raise
     HAS_REMOTE_ACCESS = False
 
 pytestmark = pytest.mark.skipif(

@@ -12,7 +12,7 @@ from foxglove.messages import (
     Vector3,
 )
 
-foxglove.set_log_level("DEBUG")
+foxglove.set_log_level("INFO")
 
 # Our example logs data on a couple of different topics, so we'll create a
 # channel for each. We can use a channel like SceneUpdateChannel to log

@@ -76,7 +76,7 @@ class Listener(ServerListener):
 
 
 def main() -> None:
-    logging.basicConfig(level=logging.INFO)
+    foxglove.set_log_level("INFO")
 
     parser = argparse.ArgumentParser(
         description="Stream an MCAP file with playback control"

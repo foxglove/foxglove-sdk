@@ -4,7 +4,7 @@
 # includes to include paths.
 
 cmake_minimum_required(VERSION 3.22)
-project(foxglove-sdk VERSION 0.24.0)
+project(foxglove-sdk VERSION 0.25.1)
 
 # Enable ccache if available
 find_program(CCACHE_PROGRAM ccache)
@@ -19,6 +19,7 @@ option(USE_PACKAGE_MANAGER_DEPENDENCIES
   ON)
 option(FOXGLOVE_REMOTE_ACCESS "Build with remote access gateway support" OFF)
 option(FOXGLOVE_BUILD_INTEGRATION_TESTS "Build LiveKit integration tests (requires FOXGLOVE_REMOTE_ACCESS)" OFF)
+option(FOXGLOVE_BUILD_EXAMPLES "Build example programs" OFF)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
@@ -85,18 +86,31 @@ find_or_fetch(base64
   GIT_TAG 8d96a2a737ac1396304b1de289beb3a5ea0cb752
 )
 
-option(BUILD_REMOTE_DATA_LOADER_BACKEND_EXAMPLE "Build the remote data loader backend example (requires cpp-httplib and date)" ON)
-
-if(BUILD_REMOTE_DATA_LOADER_BACKEND_EXAMPLE)
+if(FOXGLOVE_BUILD_EXAMPLES)
   set(ENABLE_DATE_TESTING OFF CACHE BOOL "" FORCE)
   set(ENABLE_DATE_INSTALL OFF CACHE BOOL "" FORCE)
   find_or_fetch(date
     GIT_REPOSITORY https://github.com/HowardHinnant/date.git
     GIT_TAG v3.0.4
   )
+
+  find_or_fetch(mcap
+    GIT_REPOSITORY https://github.com/foxglove/mcap.git
+    GIT_TAG releases/cpp/v2.1.2
+  )
+
+  set(LZ4_BUILD_CLI OFF CACHE BOOL "" FORCE)
+  set(LZ4_BUILD_LEGACY_LZ4C OFF CACHE BOOL "" FORCE)
+  FetchContent_Declare(
+    lz4
+    GIT_REPOSITORY https://github.com/lz4/lz4.git
+    GIT_TAG v1.10.0
+    SOURCE_SUBDIR build/cmake
+  )
+  FetchContent_MakeAvailable(lz4)
 endif()
 
-if(BUILD_REMOTE_DATA_LOADER_BACKEND_EXAMPLE OR FOXGLOVE_BUILD_INTEGRATION_TESTS)
+if(FOXGLOVE_BUILD_EXAMPLES OR FOXGLOVE_BUILD_INTEGRATION_TESTS)
   set(HTTPLIB_COMPILE OFF CACHE BOOL "" FORCE)
   set(HTTPLIB_REQUIRE_OPENSSL OFF CACHE BOOL "" FORCE)
   set(HTTPLIB_USE_OPENSSL_IF_AVAILABLE OFF CACHE BOOL "" FORCE)
@@ -113,25 +127,6 @@ if(BUILD_REMOTE_DATA_LOADER_BACKEND_EXAMPLE OR FOXGLOVE_BUILD_INTEGRATION_TESTS)
 endif()
 
 set(CMAKE_WARN_DEPRECATED ON CACHE BOOL "" FORCE)
-
-option(BUILD_WS_STREAM_MCAP_EXAMPLE "Build the MCAP websocket streaming example (requires mcap and lz4)" ON)
-
-if(BUILD_WS_STREAM_MCAP_EXAMPLE)
-  find_or_fetch(mcap
-    GIT_REPOSITORY https://github.com/foxglove/mcap.git
-    GIT_TAG releases/cpp/v2.1.2
-  )
-
-  set(LZ4_BUILD_CLI OFF CACHE BOOL "" FORCE)
-  set(LZ4_BUILD_LEGACY_LZ4C OFF CACHE BOOL "" FORCE)
-  FetchContent_Declare(
-    lz4
-    GIT_REPOSITORY https://github.com/lz4/lz4.git
-    GIT_TAG v1.10.0
-    SOURCE_SUBDIR build/cmake
-  )
-  FetchContent_MakeAvailable(lz4)
-endif()
 
 if(DEFINED SANITIZE)
   if(NOT CMAKE_CXX_COMPILER_ID MATCHES ".*Clang")
@@ -452,55 +447,53 @@ add_custom_target(html-docs
 
 ### Examples
 
-# Helper to define an example target with common boilerplate.
-# Extra arguments after the source file(s) are passed to target_link_libraries.
-function(add_foxglove_example name)
-  cmake_parse_arguments(PARSE_ARGV 1 ARG "" "" "SOURCES;LIBS")
-  add_executable(${name} ${ARG_SOURCES})
-  set_target_properties(${name} PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED True)
-  target_compile_options(${name} PRIVATE ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
-  target_link_options(${name} PRIVATE ${SANITIZER_LINK_OPTIONS})
-  target_link_libraries(${name} foxglove_cpp_shared ${ARG_LIBS})
-  # Mark third-party include directories as SYSTEM to suppress warnings.
-  # SYSTEM on target_link_libraries requires CMake 3.25+, so we add them manually.
-  foreach(_lib ${ARG_LIBS})
-    if(TARGET ${_lib})
-      get_target_property(_inc ${_lib} INTERFACE_INCLUDE_DIRECTORIES)
-      if(_inc)
-        target_include_directories(${name} SYSTEM PRIVATE ${_inc})
+if(FOXGLOVE_BUILD_EXAMPLES)
+  # Helper to define an example target with common boilerplate.
+  # Extra arguments after the source file(s) are passed to target_link_libraries.
+  function(add_foxglove_example name)
+    cmake_parse_arguments(PARSE_ARGV 1 ARG "" "" "SOURCES;LIBS")
+    add_executable(${name} ${ARG_SOURCES})
+    set_target_properties(${name} PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED True)
+    target_compile_options(${name} PRIVATE ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
+    target_link_options(${name} PRIVATE ${SANITIZER_LINK_OPTIONS})
+    target_link_libraries(${name} foxglove_cpp_shared ${ARG_LIBS})
+    # Mark third-party include directories as SYSTEM to suppress warnings.
+    # SYSTEM on target_link_libraries requires CMake 3.25+, so we add them manually.
+    foreach(_lib ${ARG_LIBS})
+      if(TARGET ${_lib})
+        get_target_property(_inc ${_lib} INTERFACE_INCLUDE_DIRECTORIES)
+        if(_inc)
+          target_include_directories(${name} SYSTEM PRIVATE ${_inc})
+        endif()
       endif()
-    endif()
-  endforeach()
-endfunction()
+    endforeach()
+  endfunction()
 
-add_foxglove_example(example_server SOURCES examples/ws-server/src/main.cpp)
-add_foxglove_example(example_services SOURCES examples/ws-services/src/main.cpp LIBS nlohmann_json::nlohmann_json)
-add_foxglove_example(example_mcap SOURCES examples/mcap/src/main.cpp)
-add_foxglove_example(example_foxglove_schemas SOURCES examples/foxglove-schemas/src/main.cpp)
-add_foxglove_example(example_param_server SOURCES examples/param-server/src/main.cpp)
-add_foxglove_example(example_quickstart SOURCES examples/quickstart/src/main.cpp)
-add_foxglove_example(example_connection_graph SOURCES examples/connection-graph/src/main.cpp)
-add_foxglove_example(example_auto_serialize SOURCES examples/auto-serialize/src/main.cpp LIBS nlohmann_json::nlohmann_json)
-add_foxglove_example(example_message_filtering SOURCES examples/message-filtering/src/main.cpp)
+  add_foxglove_example(example_server SOURCES examples/ws-server/src/main.cpp)
+  add_foxglove_example(example_services SOURCES examples/ws-services/src/main.cpp LIBS nlohmann_json::nlohmann_json)
+  add_foxglove_example(example_mcap SOURCES examples/mcap/src/main.cpp)
+  add_foxglove_example(example_foxglove_schemas SOURCES examples/foxglove-schemas/src/main.cpp)
+  add_foxglove_example(example_param_server SOURCES examples/param-server/src/main.cpp)
+  add_foxglove_example(example_quickstart SOURCES examples/quickstart/src/main.cpp)
+  add_foxglove_example(example_connection_graph SOURCES examples/connection-graph/src/main.cpp)
+  add_foxglove_example(example_auto_serialize SOURCES examples/auto-serialize/src/main.cpp LIBS nlohmann_json::nlohmann_json)
+  add_foxglove_example(example_message_filtering SOURCES examples/message-filtering/src/main.cpp)
 
-if(FOXGLOVE_REMOTE_ACCESS)
-  add_foxglove_example(example_remote_access SOURCES examples/remote-access/src/main.cpp)
-  add_foxglove_example(example_remote_access_connection_graph SOURCES examples/remote-access-connection-graph/src/main.cpp)
-  add_foxglove_example(example_remote_access_fetch_asset SOURCES examples/remote-access-fetch-asset/src/main.cpp)
-endif()
+  if(FOXGLOVE_REMOTE_ACCESS)
+    add_foxglove_example(example_remote_access SOURCES examples/remote-access/src/main.cpp)
+    add_foxglove_example(example_remote_access_connection_graph SOURCES examples/remote-access-connection-graph/src/main.cpp)
+    add_foxglove_example(example_remote_access_fetch_asset SOURCES examples/remote-access-fetch-asset/src/main.cpp)
+  endif()
 
-option(BUILD_OPENCV_EXAMPLE "Build the RGB camera visualization example (requires OpenCV)" OFF)
+  find_package(OpenCV QUIET COMPONENTS core videoio)
+  if(OpenCV_FOUND)
+    add_foxglove_example(example_rgb_camera_visualization SOURCES examples/rgb-camera-visualization/main.cpp LIBS opencv_core opencv_videoio)
+  else()
+    message(STATUS "OpenCV not found; skipping example_rgb_camera_visualization")
+  endif()
 
-if(BUILD_OPENCV_EXAMPLE)
-  find_package(OpenCV REQUIRED COMPONENTS core videoio)
-  add_foxglove_example(example_rgb_camera_visualization SOURCES examples/rgb-camera-visualization/main.cpp LIBS opencv_core opencv_videoio)
-endif()
-
-if(BUILD_REMOTE_DATA_LOADER_BACKEND_EXAMPLE)
   add_foxglove_example(example_remote_data_loader_backend SOURCES examples/remote-data-loader-backend/src/main.cpp LIBS nlohmann_json::nlohmann_json httplib::httplib base64 date::date)
-endif()
 
-if(BUILD_WS_STREAM_MCAP_EXAMPLE)
   add_foxglove_example(example_ws_stream_mcap
     SOURCES examples/ws-stream-mcap/src/main.cpp examples/ws-stream-mcap/src/mcap_player.cpp
     LIBS lz4_static

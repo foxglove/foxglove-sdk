@@ -65,6 +65,7 @@ jobs:
           - humble
           - jazzy
           - kilted
+          - lyrical
           # rolling temporarily disabled while upstream changes land; re-enable when stable
     name: "ros (${{ matrix.ros_distribution }})"
     steps:

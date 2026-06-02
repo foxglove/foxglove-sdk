@@ -19,13 +19,23 @@ def test_set_log_level_clamps_illegal_values() -> None:
     set_log_level(2**64)
 
 
-def test_logging_config_with_env() -> None:
+def _run_logging_script(
+    test_script: str, env: dict[str, str]
+) -> subprocess.CompletedProcess[str]:
     # Run a script in a child process so logger can be re-initialized from env.
-    test_script = """
-import logging
-import foxglove
+    result = subprocess.run(
+        [sys.executable, "-c", test_script],
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=5,
+    )
+    assert "test_init_with_env_complete" in result.stdout
+    return result
 
-logging.basicConfig(level=logging.DEBUG)
+
+START_SERVER_SCRIPT = """
+import foxglove
 
 server = foxglove.start_server(port=0)
 server.stop()
@@ -33,30 +43,62 @@ server.stop()
 print("test_init_with_env_complete")
 """
 
-    # Default: unset
+
+START_SERVER_WITH_SET_LOG_LEVEL_SCRIPT = """
+import foxglove
+
+foxglove.set_log_level("INFO")
+
+server = foxglove.start_server(port=0)
+server.stop()
+
+print("test_init_with_env_complete")
+"""
+
+
+def test_logging_disabled_by_default() -> None:
+    # Default: logging is disabled unless enabled by the user or environment.
     env = os.environ.copy()
-    env["FOXGLOVE_LOG_LEVEL"] = ""
+    env.pop("FOXGLOVE_LOG_LEVEL", None)
 
-    result = subprocess.run(
-        [sys.executable, "-c", test_script],
-        env=env,
-        capture_output=True,
-        text=True,
-        timeout=5,
-    )
-    assert "test_init_with_env_complete" in result.stdout
-    assert "Started server" in result.stderr
-
-    # Quiet the WS server logging
-    env = os.environ.copy()
-    env["FOXGLOVE_LOG_LEVEL"] = "debug,foxglove::websocket::server=warn"
-
-    result = subprocess.run(
-        [sys.executable, "-c", test_script],
-        env=env,
-        capture_output=True,
-        text=True,
-        timeout=5,
-    )
-    assert "test_init_with_env_complete" in result.stdout
+    result = _run_logging_script(START_SERVER_SCRIPT, env)
     assert "Started server" not in result.stderr
+    assert "Creating tokio runtime" not in result.stderr
+
+
+def test_set_log_level_enables_logging() -> None:
+    # Set explicitly to INFO in script
+    env = os.environ.copy()
+    env.pop("FOXGLOVE_LOG_LEVEL", None)
+
+    result = _run_logging_script(START_SERVER_WITH_SET_LOG_LEVEL_SCRIPT, env)
+    assert "Started server" in result.stderr
+    assert "Creating tokio runtime" not in result.stderr
+
+
+def test_foxglove_log_level_info_enables_logging() -> None:
+    env = os.environ.copy()
+    env["FOXGLOVE_LOG_LEVEL"] = "info"
+
+    result = _run_logging_script(START_SERVER_SCRIPT, env)
+    assert "Started server" in result.stderr
+    assert "Creating tokio runtime" not in result.stderr
+
+
+def test_foxglove_log_level_debug_enables_logging() -> None:
+    env = os.environ.copy()
+    env["FOXGLOVE_LOG_LEVEL"] = "warn,foxglove=debug"
+
+    result = _run_logging_script(START_SERVER_SCRIPT, env)
+    assert "Started server" in result.stderr
+    assert "Creating tokio runtime" in result.stderr
+
+
+def test_foxglove_log_level_takes_precedence_over_set_log_level() -> None:
+    # Environment filters take precedence over set_log_level.
+    env = os.environ.copy()
+    env["FOXGLOVE_LOG_LEVEL"] = "debug,foxglove=warn"
+
+    result = _run_logging_script(START_SERVER_WITH_SET_LOG_LEVEL_SCRIPT, env)
+    assert "Started server" not in result.stderr
+    assert "Creating tokio runtime" not in result.stderr

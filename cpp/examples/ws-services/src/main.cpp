@@ -25,7 +25,7 @@ bool registerSleepService(foxglove::WebSocketServer& server);
 bool registerIntMathServices(foxglove::WebSocketServer& server);
 
 int main() {
-  foxglove::setLogLevel(foxglove::LogLevel::Debug);
+  foxglove::setLogLevel(foxglove::LogLevel::Info);
 
   std::signal(SIGINT, [](int) {
     if (sigint_handler) {

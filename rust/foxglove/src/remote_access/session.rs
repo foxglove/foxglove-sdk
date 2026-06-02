@@ -6,7 +6,7 @@ use bytes::Bytes;
 use futures_util::StreamExt;
 use indexmap::IndexSet;
 use libwebrtc::video_source::{RtcVideoSource, native::NativeVideoSource};
-use livekit::options::{PacketTrailerFeatures, TrackPublishOptions, VideoCodec};
+use livekit::options::{TrackPublishOptions, VideoCodec};
 use livekit::{
     ByteStreamReader, Room, StreamByteOptions,
     id::{ParticipantIdentity, ParticipantSid},
@@ -2178,13 +2178,6 @@ impl RemoteAccessSession {
             let session = self.clone();
             tokio::spawn(async move {
                 let local_track = LocalTrack::Video(track);
-                // Enable the `user_timestamp` packet-trailer feature so the original image
-                // capture timestamp (set on each `VideoFrame::frame_metadata`) is carried
-                // in-band end-to-end, where it can be recovered on the receiving side.
-                // `PacketTrailerFeatures` is `#[non_exhaustive]`, so we build it
-                // explicitly rather than with a struct literal.
-                let mut packet_trailer_features = PacketTrailerFeatures::default();
-                packet_trailer_features.user_timestamp = true;
                 // Prefer H.264 so that the libwebrtc nvenc encoder (H.264-only) can be used
                 // on Linux hosts that have nvenc available. VP8/VP9/AV1 paths
                 // are software-only in our builds, so H.264 is at worst parity elsewhere.
@@ -2194,7 +2187,6 @@ impl RemoteAccessSession {
                 // and combined with simulcast results in very low quality video with compression artifacts.
                 let publish_options = TrackPublishOptions {
                     video_codec: VideoCodec::H264,
-                    packet_trailer_features,
                     simulcast: false,
                     ..Default::default()
                 };
@@ -2618,6 +2610,57 @@ mod tests {
         let result = tokio::time::timeout(Duration::from_secs(1), handle_a).await;
         assert!(result.is_ok(), "task A should complete after drop");
         assert_eq!(writer_a.writes(), vec![Bytes::from_static(b"msg_a")]);
+    }
+
+    #[tokio::test]
+    async fn flush_task_write_failure_triggers_pending_reset() {
+        use crate::remote_access::participant::{
+            ParticipantWriter, TestByteStreamWriter, test_sid,
+        };
+
+        let cancel = CancellationToken::new();
+        let writer = Arc::new(TestByteStreamWriter::default());
+        writer.set_always_fail_writes(true);
+
+        let pending_resets = Arc::new(parking_lot::Mutex::new(HashSet::new()));
+        let reset_notify = Arc::new(tokio::sync::Notify::new());
+        let sid = test_sid("write-fail");
+
+        let writer_ref = writer.clone();
+        let (participant, handle) = Participant::spawn(
+            ParticipantIdentity("test-viewer".to_string()),
+            sid.clone(),
+            0,
+            ParticipantWriter::Test(writer),
+            DEFAULT_MESSAGE_BACKLOG_SIZE,
+            pending_resets.clone(),
+            reset_notify.clone(),
+            &cancel,
+        );
+
+        participant.send_control(Bytes::from_static(b"trigger failure"));
+
+        // The flush-task should exit after the write error.
+        let result = tokio::time::timeout(Duration::from_secs(1), handle).await;
+        assert!(
+            result.is_ok(),
+            "flush-task did not exit after write failure"
+        );
+
+        let resets: Vec<_> = pending_resets.lock().drain().collect();
+        assert_eq!(
+            resets,
+            vec![sid],
+            "write failure should populate pending_resets"
+        );
+
+        // Confirm the flush task actually attempted a write (proving the
+        // reset came from the write-failure path, not queue overflow).
+        assert_eq!(
+            writer_ref.attempted_writes(),
+            1,
+            "flush task should have attempted exactly one write"
+        );
     }
 
     fn make_test_participant(queue_size: usize) -> (Participant, flume::Receiver<Bytes>) {
