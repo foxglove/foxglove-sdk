@@ -317,10 +317,6 @@ fn perlink_infra_link_a_has_more_packet_loss_than_link_b() -> Result<()> {
 
 /// Verify that a viewer can connect and receive a valid `ServerInfo` message
 /// under the classful qdisc hierarchy.
-///
-/// Under network impairment the byte stream may open but drop before
-/// `ServerInfo` arrives. The test retries the full connect + handshake flow
-/// to tolerate transient stream drops without masking real failures.
 #[traced_test]
 #[ignore]
 #[tokio::test]
@@ -329,32 +325,22 @@ async fn perlink_product_viewer_connects_under_classful_qdisc() -> Result<()> {
     let ctx = foxglove::Context::new();
     let gw = TestGateway::start(&ctx).await?;
 
-    let deadline = tokio::time::Instant::now() + NETEM_EVENT_TIMEOUT;
-    loop {
-        let remaining = deadline - tokio::time::Instant::now();
-        let mut viewer =
-            ViewerConnection::connect_with_timeout(&gw.room_name, "viewer-1", remaining).await?;
-        match viewer.expect_server_info().await {
-            Ok(server_info) => {
-                assert!(
-                    server_info.session_id.is_some(),
-                    "session_id should be present"
-                );
-                info!("ServerInfo received under classful qdisc: {server_info:?}");
-                viewer.close().await?;
-                break;
-            }
-            Err(e) if tokio::time::Instant::now() < deadline => {
-                info!("byte stream dropped before ServerInfo ({e:#}), retrying");
-                let _ = viewer.close().await;
-                continue;
-            }
-            Err(e) => {
-                return Err(e).context("ServerInfo not received under classful qdisc");
-            }
-        }
-    }
+    // This test has no channels, so the gateway won't send an Advertise.
+    let expect_advertise = false;
+    let (viewer, server_info, _advertise) = ViewerConnection::connect_and_await_startup(
+        &gw.room_name,
+        "viewer-1",
+        expect_advertise,
+        NETEM_EVENT_TIMEOUT,
+    )
+    .await?;
+    assert!(
+        server_info.session_id.is_some(),
+        "session_id should be present"
+    );
+    info!("ServerInfo received under classful qdisc: {server_info:?}");
 
+    viewer.close().await?;
     gw.stop().await?;
     Ok(())
 }
@@ -364,10 +350,6 @@ async fn perlink_product_viewer_connects_under_classful_qdisc() -> Result<()> {
 /// viewer receives it (or the test times out). This validates that the data plane
 /// functions correctly under classful qdiscs (HTB root + netem leaf), which is
 /// structurally different from the flat `root netem` tested in `netem_test.rs`.
-///
-/// Under network impairment the byte stream may open but drop before the
-/// handshake completes. The test retries the connect + handshake flow to
-/// tolerate transient stream drops without masking real failures.
 #[traced_test]
 #[ignore]
 #[tokio::test]
@@ -382,53 +364,36 @@ async fn perlink_product_data_track_delivery_under_classful_qdisc() -> Result<()
 
     let gw = TestGateway::start(&ctx).await?;
 
-    let deadline = tokio::time::Instant::now() + NETEM_EVENT_TIMEOUT;
-    loop {
-        let remaining = deadline - tokio::time::Instant::now();
-        let mut viewer =
-            ViewerConnection::connect_with_timeout(&gw.room_name, "viewer-1", remaining).await?;
+    let expect_advertise = true;
+    let (mut viewer, _server_info, advertise) = ViewerConnection::connect_and_await_startup(
+        &gw.room_name,
+        "viewer-1",
+        expect_advertise,
+        NETEM_EVENT_TIMEOUT,
+    )
+    .await?;
+    let channel_id = advertise.channels[0].id;
 
-        let handshake = async {
-            let _server_info = viewer.expect_server_info().await?;
-            let advertise = viewer.expect_advertise().await?;
-            let channel_id = advertise.channels[0].id;
-            viewer.subscribe_and_wait(&[channel_id], &channel).await?;
-            anyhow::Ok(channel_id)
-        };
+    viewer.subscribe_and_wait(&[channel_id], &channel).await?;
 
-        let channel_id = match handshake.await {
-            Ok(id) => id,
-            Err(e) if tokio::time::Instant::now() < deadline => {
-                info!("byte stream dropped during handshake ({e:#}), retrying");
-                let _ = viewer.close().await;
-                continue;
-            }
-            Err(e) => {
-                return Err(e).context("handshake failed under classful qdisc");
-            }
-        };
+    let payload = b"perlink-hello";
+    let sender_channel = channel.clone();
+    let sender = tokio::spawn(async move {
+        let mut interval = tokio::time::interval(Duration::from_millis(50));
+        loop {
+            interval.tick().await;
+            sender_channel.log(payload);
+        }
+    });
 
-        let payload = b"perlink-hello";
-        let sender_channel = channel.clone();
-        let sender = tokio::spawn(async move {
-            let mut interval = tokio::time::interval(Duration::from_millis(50));
-            loop {
-                interval.tick().await;
-                sender_channel.log(payload);
-            }
-        });
+    let msg = viewer
+        .expect_new_data_track_and_message_data(channel_id)
+        .await?;
+    sender.abort();
+    assert_eq!(msg.data.as_ref(), payload);
+    info!("data track message delivered under classful qdisc");
 
-        let msg = viewer
-            .expect_new_data_track_and_message_data(channel_id)
-            .await?;
-        sender.abort();
-        assert_eq!(msg.data.as_ref(), payload);
-        info!("data track message delivered under classful qdisc");
-
-        viewer.close().await?;
-        break;
-    }
-
+    viewer.close().await?;
     gw.stop().await?;
     Ok(())
 }

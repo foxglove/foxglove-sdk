@@ -301,6 +301,55 @@ impl ViewerConnection {
         }
     }
 
+    /// Connects and waits for the server's startup messages (ServerInfo, plus
+    /// Advertise when `expect_advertise` is set), retrying the entire flow if
+    /// the byte stream drops under network impairment.
+    ///
+    /// Set `expect_advertise` to `true` only when the gateway has at least one
+    /// channel — it skips the Advertise message when there are no channels to
+    /// advertise. When `false`, the returned `Advertise` is empty.
+    pub async fn connect_and_await_startup(
+        room_name: &str,
+        viewer_identity: &str,
+        expect_advertise: bool,
+        timeout: Duration,
+    ) -> Result<(
+        Self,
+        foxglove::protocol::v2::server::ServerInfo,
+        foxglove::protocol::v2::server::Advertise<'static>,
+    )> {
+        let deadline = tokio::time::Instant::now() + timeout;
+        loop {
+            // `saturating_duration_since` (rather than `-`) avoids a panic if
+            // a prior iteration's `close().await` pushed us past the deadline.
+            let remaining = deadline.saturating_duration_since(tokio::time::Instant::now());
+            let mut viewer =
+                Self::connect_with_timeout(room_name, viewer_identity, remaining).await?;
+            let startup = async {
+                let server_info = viewer.expect_server_info().await?;
+                let advertise = if expect_advertise {
+                    viewer.expect_advertise().await?
+                } else {
+                    foxglove::protocol::v2::server::Advertise::new([])
+                };
+                anyhow::Ok((server_info, advertise))
+            };
+            match startup.await {
+                Ok((server_info, advertise)) => {
+                    return Ok((viewer, server_info, advertise));
+                }
+                Err(e) if tokio::time::Instant::now() < deadline => {
+                    info!("byte stream dropped during startup ({e:#}), retrying");
+                    let _ = viewer.close().await;
+                    continue;
+                }
+                Err(e) => {
+                    return Err(e).context("startup failed under impairment");
+                }
+            }
+        }
+    }
+
     /// Reads and validates the initial ServerInfo message.
     pub async fn expect_server_info(
         &mut self,
