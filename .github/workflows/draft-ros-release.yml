@@ -117,22 +117,25 @@ jobs:
         run: |
           set -euo pipefail
           extract() {
-            # Print from the first "X.Y.Z (date)" heading up to (but not including) the second.
+            # Print bullets from the first "X.Y.Z (date)" heading up to (but not
+            # including) the second, skipping the heading line and its dashed
+            # underline so the rendered markdown matches the prior release style.
             awk '
               /^[0-9]+\.[0-9]+\.[0-9]+ \(/ {
                 count++
                 if (count == 2) exit
+                skip_dashes = 1
+                next
               }
+              skip_dashes && /^-+$/ { skip_dashes = 0; next }
               count == 1 { print }
             ' "$1"
           }
           {
             echo "## foxglove_bridge"
-            echo
             extract ros/src/foxglove_bridge/CHANGELOG.rst
             echo
             echo "## foxglove_msgs"
-            echo
             extract ros/src/foxglove_msgs/CHANGELOG.rst
           } > release-notes.md
           cat release-notes.md
