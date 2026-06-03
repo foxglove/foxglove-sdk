@@ -53,10 +53,9 @@ const COMPOSE_FILES = [
   "docker-compose.netem-livekit.yml",
 ];
 const PROFILE_ARGS = ["--profile", "perlink"];
-const DOWN_HINT =
-  "Tear down the stack when done: docker compose " +
-  COMPOSE_FILES.join(" ") +
-  " --profile perlink down";
+const DOWN_HINT = `Tear down the stack when done: docker compose ${COMPOSE_FILES.join(
+  " ",
+)} --profile perlink down`;
 
 interface Options {
   rustLog: string;
@@ -110,8 +109,9 @@ function resolveMcapPath(positional: string | undefined): string {
   return abs;
 }
 
-function requireEnv(name: string): void {
-  if (process.env[name] == null || process.env[name] === "") {
+function requireEnv(name: string): string {
+  const value = process.env[name];
+  if (value == null || value === "") {
     console.error(
       `Error: ${name} is not set.\n` +
         "  Both FOXGLOVE_API_URL and FOXGLOVE_DEVICE_TOKEN are required; for example:\n" +
@@ -120,11 +120,12 @@ function requireEnv(name: string): void {
     );
     process.exit(1);
   }
+  return value;
 }
 
 function run(opts: Options, positional: string | undefined): void {
-  requireEnv("FOXGLOVE_API_URL");
-  requireEnv("FOXGLOVE_DEVICE_TOKEN");
+  const apiUrl = requireEnv("FOXGLOVE_API_URL");
+  const deviceToken = requireEnv("FOXGLOVE_DEVICE_TOKEN");
   const mcapPath = resolveMcapPath(positional);
 
   // Bring up (or refresh) the stack with the bind-mount pointing at the host
@@ -164,9 +165,9 @@ function run(opts: Options, positional: string | undefined): void {
       upEnv,
       "exec",
       "-e",
-      `FOXGLOVE_API_URL=${process.env.FOXGLOVE_API_URL ?? ""}`,
+      `FOXGLOVE_API_URL=${apiUrl}`,
       "-e",
-      `FOXGLOVE_DEVICE_TOKEN=${process.env.FOXGLOVE_DEVICE_TOKEN ?? ""}`,
+      `FOXGLOVE_DEVICE_TOKEN=${deviceToken}`,
       "-e",
       `RUST_LOG=${opts.rustLog}`,
       "gateway-runner",

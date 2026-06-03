@@ -63,17 +63,16 @@ function composeCapture(...args: string[]): string {
 }
 
 function resolveArgs(opts: Options, trailing: string[]): string[] {
-  const hasProfile = opts.profile != null;
   const hasTrailing = trailing.length > 0;
-  if (hasProfile && hasTrailing) {
+  if (opts.profile != null && hasTrailing) {
     console.error("Error: pass either --profile or raw netem args, not both.");
     process.exit(1);
   }
-  if (hasProfile) {
-    const preset = PROFILES[opts.profile!];
+  if (opts.profile != null) {
+    const preset = PROFILES[opts.profile];
     if (preset == null) {
       const known = Object.keys(PROFILES).join(", ");
-      console.error(`Error: unknown profile '${opts.profile!}'. Known: ${known}`);
+      console.error(`Error: unknown profile '${opts.profile}'. Known: ${known}`);
       process.exit(1);
     }
     return preset.split(" ");
@@ -101,7 +100,7 @@ function run(opts: Options, trailing: string[]): void {
   try {
     sidecarId = composeCapture("ps", "gateway-netem", "-q").trim();
   } catch {
-    sidecarId = "";
+    // docker/compose unavailable or the query failed; treat as "not running".
   }
   if (sidecarId === "") {
     console.error(
