@@ -136,7 +136,12 @@ export function Playground(): React.JSX.Element {
       return;
     }
     try {
-      await runner.run(editorRef.current?.getValue() ?? "");
+      const code = editorRef.current?.getValue() ?? "";
+      const layout = await viewerRef.current?.getLayout();
+      setUrlState({ code, layout });
+      // setUrlState() above is synchronous, so location.href includes this exact code/layout
+      // state immediately.
+      await runner.run(code, window.location.href);
 
       try {
         const { name, data } = await runner.readFile();

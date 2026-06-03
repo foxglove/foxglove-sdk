@@ -30,8 +30,8 @@ export class Runner extends EventEmitter<EventMap> {
     );
   }
 
-  async run(code: string): Promise<void> {
-    this.emit("run-completed", await this.#remote.run(code));
+  async run(code: string, sourceUrl: string): Promise<void> {
+    this.emit("run-completed", await this.#remote.run(code, sourceUrl));
   }
 
   async readFile(): Promise<{ name: string; data: Uint8Array<ArrayBuffer> }> {
