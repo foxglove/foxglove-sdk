@@ -26,6 +26,14 @@ all: deps build
 clean:
 	rm -rf build dist install log
 
+# ROS 1 Noetic bridge, built from source on jammy (see Dockerfile.noetic for
+# why). Requires `make build-cpp-dist` at the repo root first.
+.PHONY: docker-build-noetic
+docker-build-noetic:
+	docker build -f Dockerfile.noetic \
+		--build-arg FOXGLOVE_BRIDGE_REMOTE_ACCESS=$(FOXGLOVE_BRIDGE_REMOTE_ACCESS) \
+		-t foxglove-bridge-ros1-noetic ..
+
 .PHONY: deps
 deps:
 	rosdep install -y \
