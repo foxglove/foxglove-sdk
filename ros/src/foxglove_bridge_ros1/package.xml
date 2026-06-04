@@ -22,6 +22,7 @@
   <depend condition="$ROS_VERSION == 1">foxglove_bridge_core</depend>
 
   <depend condition="$ROS_VERSION == 1">roscpp</depend>
+  <depend condition="$ROS_VERSION == 1">rosgraph_msgs</depend>
   <depend condition="$ROS_VERSION == 1">topic_tools</depend>
   <depend condition="$ROS_VERSION == 1">ros_babel_fish</depend>
 

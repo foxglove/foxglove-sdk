@@ -148,6 +148,9 @@ private:
   std::vector<std::regex> _topicWhitelistPatterns;
   std::vector<std::regex> _serviceWhitelistPatterns;
 
+  // Forwards /clock to clients (Time capability) when use_sim_time is set.
+  ros::Subscriber _clockSubscription;
+
   std::atomic<int> _graphSubscriptionCount = 0;
   std::atomic<bool> _shuttingDown = false;
   std::unique_ptr<std::thread> _pollThread;

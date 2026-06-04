@@ -5,6 +5,7 @@
 #include <ros/master.h>
 #include <ros/serialization.h>
 #include <ros/service.h>
+#include <rosgraph_msgs/Clock.h>
 #include <xmlrpcpp/XmlRpcValue.h>
 
 #include <foxglove_bridge_core/capabilities.hpp>
@@ -84,11 +85,15 @@ Ros1FoxgloveBridge::Ros1FoxgloveBridge(ros::NodeHandle nh, ros::NodeHandle priva
     foxglove::setLogLevel(foxglove::LogLevel::Debug);
   }
 
+  // use_sim_time is a global (not private) parameter in ROS 1.
+  const bool useSimTime = _nh.param<bool>("/use_sim_time", false);
+
   TransportOptions transportOptions;
   transportOptions.host = address;
   transportOptions.port = static_cast<uint16_t>(std::clamp(port, 0, 65535));
   transportOptions.supportedEncodings = {ROS1_MESSAGE_ENCODING};
   transportOptions.capabilities = capabilities;
+  transportOptions.broadcastTimeCapability = useSimTime;
   transportOptions.serverInfo = std::move(rosServerInfo);
   transportOptions.messageBacklogSize = saturatingToSizeT(messageBacklogSize);
   transportOptions.useTls = useTls;
@@ -140,6 +145,13 @@ Ros1FoxgloveBridge::Ros1FoxgloveBridge(ros::NodeHandle nh, ros::NodeHandle priva
   }
 
   ROS_INFO("Server listening on port %d", _transports->port());
+
+  if (useSimTime) {
+    _clockSubscription = _nh.subscribe<rosgraph_msgs::Clock>(
+      "/clock", 10, [this](const rosgraph_msgs::Clock::ConstPtr& msg) {
+        _transports->broadcastTime(msg->clock.toNSec());
+      });
+  }
 
   _pollThread = std::make_unique<std::thread>([this]() {
     pollThread();

@@ -18,6 +18,7 @@ endif()
 
 find_package(catkin REQUIRED COMPONENTS
   roscpp
+  rosgraph_msgs
   topic_tools
   ros_babel_fish
 )
