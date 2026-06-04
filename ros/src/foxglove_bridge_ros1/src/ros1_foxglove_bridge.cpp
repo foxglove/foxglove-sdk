@@ -2,6 +2,7 @@
 #include <cstring>
 #include <unordered_set>
 
+#include <resource_retriever/retriever.h>
 #include <ros/master.h>
 #include <ros/serialization.h>
 #include <ros/service.h>
@@ -70,9 +71,14 @@ Ros1FoxgloveBridge::Ros1FoxgloveBridge(ros::NodeHandle nh, ros::NodeHandle priva
   _serviceWhitelistPatterns = parseRegexPatterns(serviceWhitelist);
   const auto paramWhitelist =
     _privateNh.param<std::vector<std::string>>("param_whitelist", {".*"});
+  const auto assetUriAllowlist = _privateNh.param<std::vector<std::string>>(
+    "asset_uri_allowlist",
+    {"^package://(?:[-\\w%]+/"
+     ")*[-\\w%.]+\\.(?:dae|fbx|glb|gltf|jpeg|jpg|mtl|obj|png|stl|tif|tiff|urdf|webp|xacro)$"});
+  _assetUriAllowlistPatterns = parseRegexPatterns(assetUriAllowlist);
   const auto capabilities = _privateNh.param<std::vector<std::string>>(
-    "capabilities",
-    {"clientPublish", "connectionGraph", "services", "parameters", "parametersSubscribe"});
+    "capabilities", {"assets", "clientPublish", "connectionGraph", "services", "parameters",
+                     "parametersSubscribe"});
   const int messageBacklogSize = _privateNh.param<int>("message_backlog_size", 1024);
   _maxUpdatePeriodMs =
     saturatingToSizeT(static_cast<int64_t>(_privateNh.param<int>("max_update_ms", 5000)));
@@ -658,11 +664,29 @@ void Ros1FoxgloveBridge::onConnectionGraphSubscribe(bool subscribe) {
   }
 }
 
-void Ros1FoxgloveBridge::fetchAsset(std::string_view uri,
+void Ros1FoxgloveBridge::fetchAsset(std::string_view uriView,
                                     foxglove::FetchAssetResponder&& responder) {
-  // TODO(ros1-bridge): asset fetching via resource_retriever, gated behind the
-  // "assets" capability (not in the default capability set yet).
-  std::move(responder).respondError("Fetching assets is not supported: " + std::string(uri));
+  std::string uri(uriView);
+  try {
+    // We reject URIs that are not on the allowlist or that contain two consecutive dots. The
+    // latter can be utilized to construct URIs for retrieving confidential files that should
+    // not be accessible over the WebSocket connection. Example:
+    // `package://<pkg_name>/../../../secret.txt`. This is an extra security measure and should
+    // not be necessary if the allowlist is strict enough.
+    if (uri.find("..") != std::string::npos ||
+        !isWhitelisted(uri, _assetUriAllowlistPatterns)) {
+      throw std::runtime_error("Asset URI not allowed: " + uri);
+    }
+
+    resource_retriever::Retriever resourceRetriever;
+    const resource_retriever::MemoryResource memoryResource = resourceRetriever.get(uri);
+    std::vector<std::byte> data(memoryResource.size);
+    std::memcpy(data.data(), memoryResource.data.get(), memoryResource.size);
+    std::move(responder).respondOk(data);
+  } catch (const std::exception& ex) {
+    ROS_WARN("Failed to retrieve asset '%s': %s", uri.c_str(), ex.what());
+    std::move(responder).respondError("Failed to retrieve asset " + uri);
+  }
 }
 
 void Ros1FoxgloveBridge::handleServiceRequest(const foxglove::ServiceRequest& request,

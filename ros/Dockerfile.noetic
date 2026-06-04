@@ -42,6 +42,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libboost-thread-dev \
         libbz2-dev \
         libconsole-bridge-dev \
+        libcurl4-openssl-dev \
         libgpgme-dev \
         libgtest-dev \
         liblog4cxx-dev \
@@ -66,7 +67,7 @@ RUN pip3 install --no-cache-dir \
         python-gnupg
 
 RUN mkdir -p /ros_ws/src \
-    && rosinstall_generator ros_comm topic_tools ros_babel_fish \
+    && rosinstall_generator ros_comm topic_tools ros_babel_fish resource_retriever \
         --rosdistro noetic --deps --tar > /ros_ws/noetic.rosinstall \
     && vcs import /ros_ws/src < /ros_ws/noetic.rosinstall
 

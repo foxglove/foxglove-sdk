@@ -17,6 +17,7 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 find_package(catkin REQUIRED COMPONENTS
+  resource_retriever
   roscpp
   rosgraph_msgs
   topic_tools

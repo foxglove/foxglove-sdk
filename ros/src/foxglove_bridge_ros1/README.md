@@ -53,7 +53,6 @@ docker run --rm --network host \
 
 ## Known limitations / TODOs
 
-- No asset fetching yet.
 - Remote-access QoS classification for latched topics is observational: a
   topic is only classified Reliable after a latched publisher has been seen
   (ROS 1 reveals latching only in per-connection headers).

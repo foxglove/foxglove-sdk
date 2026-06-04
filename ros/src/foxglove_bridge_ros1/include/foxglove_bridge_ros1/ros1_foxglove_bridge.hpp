@@ -147,6 +147,7 @@ private:
 
   std::vector<std::regex> _topicWhitelistPatterns;
   std::vector<std::regex> _serviceWhitelistPatterns;
+  std::vector<std::regex> _assetUriAllowlistPatterns;
 
   // Forwards /clock to clients (Time capability) when use_sim_time is set.
   ros::Subscriber _clockSubscription;
