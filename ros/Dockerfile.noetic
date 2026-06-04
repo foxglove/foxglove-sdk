@@ -44,6 +44,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libconsole-bridge-dev \
         libgpgme-dev \
         libgtest-dev \
+        liblog4cxx-dev \
         liblz4-dev \
         libpoco-dev \
         libssl-dev \
@@ -69,14 +70,27 @@ RUN mkdir -p /ros_ws/src \
         --rosdistro noetic --deps --tar > /ros_ws/noetic.rosinstall \
     && vcs import /ros_ws/src < /ros_ws/noetic.rosinstall
 
-# ROSCONSOLE_BACKEND=print: jammy's log4cxx 0.12 changed LoggerPtr to a
-# std::shared_ptr, which noetic's rosconsole predates. The print backend avoids
-# log4cxx entirely; in a container, stdout logging is what we want anyway.
+# jammy's log4cxx 0.12 changed LoggerPtr to a std::shared_ptr, which noetic's
+# rosconsole (1.14.3) predates. Swap in the ROS One (ros-o) fork of rosconsole,
+# which carries compatibility patches for log4cxx 0.11-0.13 on the same 1.14.3
+# lineage. Pinned to the obese-devel commit with the 0.11-0.13 compat patch.
+ARG ROS_O_ROSCONSOLE_COMMIT=e3753eec58bf4e76012d019fd307349f94d1d0be
+RUN rm -rf /ros_ws/src/rosconsole \
+    && mkdir -p /ros_ws/src/rosconsole \
+    && curl -fsSL "https://github.com/ros-o/rosconsole/archive/${ROS_O_ROSCONSOLE_COMMIT}.tar.gz" \
+        | tar -xz --strip-components=1 -C /ros_ws/src/rosconsole
+
+# log4cxx 0.12 headers require C++17 (std::shared_mutex), and ros/console.h
+# now exposes them to everything downstream. jammy's gcc defaults to C++17, so
+# only packages that pin an older standard need fixing: ros_babel_fish pins
+# -std=c++11.
+RUN find /ros_ws/src/ros_babel_fish -name CMakeLists.txt \
+        -exec sed -i 's/-std=c++11/-std=c++17/' {} +
+
 RUN cd /ros_ws \
     && python3 src/catkin/bin/catkin_make_isolated \
         --install --install-space /opt/ros/noetic \
-        -DCMAKE_BUILD_TYPE=Release \
-        -DROSCONSOLE_BACKEND=print
+        -DCMAKE_BUILD_TYPE=Release
 
 # ---------------------------------------------------------------------------
 # Stage 2: foxglove_bridge_core + foxglove_bridge_ros1.

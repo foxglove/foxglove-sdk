@@ -9,7 +9,11 @@ local WebSocket server and, when enabled, the Foxglove remote access gateway
 
 Noetic is only released for Ubuntu 20.04 (focal, glibc 2.31), but the SDK's
 remote access support requires glibc >= 2.35. The supported build is therefore
-a from-source Noetic on Ubuntu 22.04 (jammy), via Docker. From the repo root:
+a from-source Noetic on Ubuntu 22.04 (jammy), via Docker. Two jammy
+compatibility substitutions are made (see Dockerfile.noetic): rosconsole comes
+from the ROS One (ros-o) fork, which supports jammy's log4cxx 0.12, and
+ros_babel_fish is built as C++17 (log4cxx 0.12 headers require it). From the
+repo root:
 
 ```sh
 make build-cpp-dist          # once: jammy-built SDK dist with remote access
@@ -48,9 +52,6 @@ docker run --rm --network host \
 
 ## Known limitations / TODOs
 
-- rosconsole in the Docker image is built with the `print` backend (jammy's
-  log4cxx 0.12 is API-incompatible with noetic's rosconsole), so named-logger
-  services (`get_loggers`) report an empty hierarchy. To be fixed.
 - Parameter updates are poll-based; the master's `subscribeParam` push
   mechanism would need a dedicated XML-RPC endpoint (see legacy bridge).
 - No latched-topic replay for late-joining clients (parity with the legacy
