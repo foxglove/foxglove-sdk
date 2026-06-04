@@ -1,18 +1,14 @@
 #pragma once
 
-#include <atomic>
-#include <condition_variable>
 #include <functional>
-#include <memory>
 #include <mutex>
 #include <regex>
 #include <string>
-#include <thread>
-#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
 #include <ros/ros.h>
+#include <ros/xmlrpc_manager.h>
 
 #include <foxglove_bridge_core/transport_manager.hpp>
 
@@ -22,16 +18,14 @@ using ParamUpdateFunc = std::function<void(const ParameterList&)>;
 
 /// ParameterBackend over the ROS 1 master parameter server.
 ///
-/// Subscriptions are implemented by polling: the master's `subscribeParam`
-/// push mechanism requires running a second XML-RPC endpoint (roscpp's own
-/// already binds `paramUpdate` for its internal cache), which is not worth the
-/// machinery for a first implementation.
-/// TODO(ros1-bridge): consider push-based updates via a dedicated XmlRpcServer
-/// (see the legacy ros-foxglove-bridge implementation).
+/// Subscriptions use the master's `subscribeParam` push mechanism: a second
+/// ros::XMLRPCManager instance (roscpp's own already binds `paramUpdate` for
+/// its internal cache) serves a `paramUpdate` endpoint that the master calls
+/// when a subscribed parameter changes. Ported from the legacy
+/// foxglove/ros-foxglove-bridge (MIT).
 class Ros1ParameterInterface : public ParameterBackend {
 public:
-  Ros1ParameterInterface(ros::NodeHandle nh, std::vector<std::regex> paramWhitelistPatterns,
-                         std::chrono::milliseconds pollInterval);
+  Ros1ParameterInterface(ros::NodeHandle nh, std::vector<std::regex> paramWhitelistPatterns);
   ~Ros1ParameterInterface() override;
 
   ParameterList getParams(const std::vector<std::string_view>& paramNames,
@@ -44,22 +38,20 @@ public:
   void setParamUpdateCallback(ParamUpdateFunc paramUpdateFunc);
 
 private:
-  void pollSubscribedParams();
+  /// `paramUpdate` XML-RPC endpoint, called by the master on parameter change.
+  void parameterUpdates(XmlRpc::XmlRpcValue& params, XmlRpc::XmlRpcValue& result);
+
+  /// Issue a master subscribeParam/unsubscribeParam call for one parameter.
+  bool executeParamSubscription(const std::string& opName, const std::string& paramName);
 
   ros::NodeHandle _nh;
   std::vector<std::regex> _paramWhitelistPatterns;
-  std::chrono::milliseconds _pollInterval;
+
+  ros::XMLRPCManager _xmlrpcServer;
 
   std::mutex _mutex;
   ParamUpdateFunc _paramUpdateFunc;
-  // Subscribed parameter names, with the last observed value (as XML) for
-  // change detection.
-  std::unordered_map<std::string, std::string> _subscribedParams;
-
-  std::atomic<bool> _shuttingDown = false;
-  std::unique_ptr<std::thread> _pollThread;
-  std::mutex _pollMutex;
-  std::condition_variable _pollCv;
+  std::unordered_set<std::string> _subscribedParams;
 };
 
 }  // namespace foxglove_bridge

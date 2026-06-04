@@ -126,9 +126,8 @@ Ros1FoxgloveBridge::Ros1FoxgloveBridge(ros::NodeHandle nh, ros::NodeHandle priva
   // Parameter backend, only when the Parameters capability is requested.
   if (hasCapability(processCapabilities(capabilities),
                     foxglove::WebSocketServerCapabilities::Parameters)) {
-    _paramInterface = std::make_unique<Ros1ParameterInterface>(
-      _nh, parseRegexPatterns(paramWhitelist),
-      std::chrono::milliseconds(_privateNh.param<int>("param_poll_interval_ms", 1000)));
+    _paramInterface =
+      std::make_unique<Ros1ParameterInterface>(_nh, parseRegexPatterns(paramWhitelist));
   }
 
   _transports = std::make_unique<TransportManager>(std::move(transportOptions), *this,

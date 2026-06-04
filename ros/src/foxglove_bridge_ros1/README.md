@@ -47,13 +47,12 @@ docker run --rm --network host \
   bridge), the md5 looked up via babel_fish, and raw bytes forwarded with a
   dynamic-traits `GenericService`.
 - **Parameters** implement the core's `ParameterBackend` over `ros::param`;
-  subscriptions are change-detected by polling (`~param_poll_interval_ms`,
-  default 1000).
+  subscriptions use the master's `subscribeParam` push mechanism via a second
+  `ros::XMLRPCManager` serving a `paramUpdate` endpoint (legacy bridge
+  pattern).
 
 ## Known limitations / TODOs
 
-- Parameter updates are poll-based; the master's `subscribeParam` push
-  mechanism would need a dedicated XML-RPC endpoint (see legacy bridge).
 - No asset fetching yet.
 - Remote-access QoS classification for latched topics is observational: a
   topic is only classified Reliable after a latched publisher has been seen

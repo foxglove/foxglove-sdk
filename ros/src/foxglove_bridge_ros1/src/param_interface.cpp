@@ -1,5 +1,8 @@
 #include <map>
 
+#include <ros/master.h>
+#include <ros/names.h>
+#include <xmlrpcpp/XmlRpcException.h>
 #include <xmlrpcpp/XmlRpcValue.h>
 
 #include <foxglove_bridge_core/utils.hpp>
@@ -93,22 +96,28 @@ XmlRpc::XmlRpcValue toRosParam(const foxglove::ParameterValueView& value,
 }  // namespace
 
 Ros1ParameterInterface::Ros1ParameterInterface(ros::NodeHandle nh,
-                                               std::vector<std::regex> paramWhitelistPatterns,
-                                               std::chrono::milliseconds pollInterval)
+                                               std::vector<std::regex> paramWhitelistPatterns)
     : _nh(std::move(nh))
-    , _paramWhitelistPatterns(std::move(paramWhitelistPatterns))
-    , _pollInterval(pollInterval) {
-  _pollThread = std::make_unique<std::thread>([this]() {
-    pollSubscribedParams();
+    , _paramWhitelistPatterns(std::move(paramWhitelistPatterns)) {
+  _xmlrpcServer.bind("paramUpdate", [this](XmlRpc::XmlRpcValue& params,
+                                           XmlRpc::XmlRpcValue& result) {
+    parameterUpdates(params, result);
   });
+  _xmlrpcServer.start();
 }
 
 Ros1ParameterInterface::~Ros1ParameterInterface() {
-  _shuttingDown = true;
-  _pollCv.notify_all();
-  if (_pollThread) {
-    _pollThread->join();
+  // Politely drop our registrations; the master would otherwise only clean
+  // them up after a failed paramUpdate notification.
+  std::unordered_set<std::string> subscribed;
+  {
+    std::lock_guard<std::mutex> lock(_mutex);
+    subscribed.swap(_subscribedParams);
   }
+  for (const auto& paramName : subscribed) {
+    executeParamSubscription("unsubscribeParam", paramName);
+  }
+  _xmlrpcServer.shutdown();
 }
 
 ParameterList Ros1ParameterInterface::getParams(const std::vector<std::string_view>& paramNames,
@@ -175,33 +184,44 @@ void Ros1ParameterInterface::setParams(const ParameterList& params,
   }
 }
 
+bool Ros1ParameterInterface::executeParamSubscription(const std::string& opName,
+                                                      const std::string& paramName) {
+  // Registered under a distinct caller id so the master doesn't conflate these
+  // subscriptions with roscpp's own (cached-parameter) registrations.
+  XmlRpc::XmlRpcValue params, result, payload;
+  params[0] = ros::this_node::getName() + "2";
+  params[1] = _xmlrpcServer.getServerURI();
+  params[2] = ros::names::resolve(paramName);
+
+  if (ros::master::execute(opName, params, result, payload, false)) {
+    ROS_DEBUG("%s '%s'", opName.c_str(), paramName.c_str());
+    return true;
+  }
+  ROS_WARN("Failed to %s '%s': %s", opName.c_str(), paramName.c_str(), result.toXml().c_str());
+  return false;
+}
+
 void Ros1ParameterInterface::subscribeParams(const std::vector<std::string_view>& paramNames) {
-  std::lock_guard<std::mutex> lock(_mutex);
   for (const auto& nameView : paramNames) {
     const std::string name(nameView);
     if (!isWhitelisted(name, _paramWhitelistPatterns)) {
       ROS_ERROR("Parameter '%s' is not on the parameter whitelist", name.c_str());
       continue;
     }
-    // Record the current value so only future changes are reported.
-    std::string currentXml;
-    try {
-      XmlRpc::XmlRpcValue value;
-      if (_nh.getParam(name, value)) {
-        currentXml = value.toXml();
-      }
-    } catch (const std::exception& ex) {
-      ROS_WARN("Failed to read parameter '%s': %s", name.c_str(), ex.what());
+    if (executeParamSubscription("subscribeParam", name)) {
+      std::lock_guard<std::mutex> lock(_mutex);
+      _subscribedParams.insert(name);
     }
-    _subscribedParams.insert({name, currentXml});
-    ROS_DEBUG("Subscribed to parameter '%s'", name.c_str());
   }
 }
 
 void Ros1ParameterInterface::unsubscribeParams(const std::vector<std::string_view>& paramNames) {
-  std::lock_guard<std::mutex> lock(_mutex);
   for (const auto& nameView : paramNames) {
-    _subscribedParams.erase(std::string(nameView));
+    const std::string name(nameView);
+    if (executeParamSubscription("unsubscribeParam", name)) {
+      std::lock_guard<std::mutex> lock(_mutex);
+      _subscribedParams.erase(name);
+    }
   }
 }
 
@@ -210,52 +230,38 @@ void Ros1ParameterInterface::setParamUpdateCallback(ParamUpdateFunc paramUpdateF
   _paramUpdateFunc = std::move(paramUpdateFunc);
 }
 
-void Ros1ParameterInterface::pollSubscribedParams() {
-  while (!_shuttingDown) {
-    {
-      std::unique_lock<std::mutex> lock(_pollMutex);
-      _pollCv.wait_for(lock, _pollInterval, [this] {
-        return _shuttingDown.load();
-      });
-    }
-    if (_shuttingDown) {
-      return;
-    }
+void Ros1ParameterInterface::parameterUpdates(XmlRpc::XmlRpcValue& params,
+                                              XmlRpc::XmlRpcValue& result) {
+  result[0] = 1;
+  result[1] = std::string("");
+  result[2] = 0;
 
-    ParameterList updates;
+  if (params.size() != 3) {
+    ROS_ERROR("Parameter update called with invalid parameter size: %d", params.size());
+    return;
+  }
+
+  try {
+    const std::string paramName = ros::names::clean(params[1]);
+    XmlRpc::XmlRpcValue paramValue = params[2];
+    auto param = fromRosParam(paramName, paramValue);
+
+    ParamUpdateFunc updateFunc;
     {
       std::lock_guard<std::mutex> lock(_mutex);
-      if (!_paramUpdateFunc || _subscribedParams.empty()) {
-        continue;
-      }
-
-      for (auto& [name, lastXml] : _subscribedParams) {
-        try {
-          XmlRpc::XmlRpcValue value;
-          std::string currentXml;
-          if (_nh.getParam(name, value)) {
-            currentXml = value.toXml();
-          }
-          if (currentXml != lastXml) {
-            lastXml = currentXml;
-            updates.push_back(fromRosParam(name, value));
-          }
-        } catch (const std::exception& ex) {
-          ROS_WARN_THROTTLE(10.0, "Failed to poll parameter '%s': %s", name.c_str(), ex.what());
-        }
-      }
+      updateFunc = _paramUpdateFunc;
     }
-
-    if (!updates.empty()) {
-      ParamUpdateFunc updateFunc;
-      {
-        std::lock_guard<std::mutex> lock(_mutex);
-        updateFunc = _paramUpdateFunc;
-      }
-      if (updateFunc) {
-        updateFunc(updates);
-      }
+    if (updateFunc) {
+      ParameterList update;
+      update.push_back(std::move(param));
+      updateFunc(update);
     }
+  } catch (const std::exception& ex) {
+    ROS_ERROR("Failed to update parameter: %s", ex.what());
+  } catch (const XmlRpc::XmlRpcException& ex) {
+    ROS_ERROR("Failed to update parameter: %s", ex.getMessage().c_str());
+  } catch (...) {
+    ROS_ERROR("Failed to update parameter");
   }
 }
 
