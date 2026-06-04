@@ -2,16 +2,13 @@
 
 #include <atomic>
 #include <chrono>
-#include <condition_variable>
 #include <deque>
 #include <map>
 #include <memory>
 #include <mutex>
-#include <queue>
 #include <regex>
 #include <thread>
 #include <unordered_set>
-#include <variant>
 
 #include <rclcpp/rclcpp.hpp>
 #include <rmw/types.h>
@@ -21,8 +18,6 @@
 
 #include <foxglove/fetch_asset.hpp>
 #include <foxglove/foxglove.hpp>
-#include <foxglove/parameter_handler.hpp>
-#include <foxglove/system_info.hpp>
 #include <foxglove/websocket.hpp>
 #ifdef FOXGLOVE_REMOTE_ACCESS
 #include <foxglove/remote_access.hpp>
@@ -32,6 +27,8 @@
 #include <foxglove_bridge/param_utils.hpp>
 #include <foxglove_bridge/parameter_interface.hpp>
 #include <foxglove_bridge/utils.hpp>
+#include <foxglove_bridge_core/transport_manager.hpp>
+#include <foxglove_bridge_core/types.hpp>
 
 namespace foxglove_bridge {
 
@@ -41,13 +38,8 @@ extern const char FOXGLOVE_BRIDGE_GIT_HASH[];
 using Subscription = rclcpp::GenericSubscription::SharedPtr;
 using Publication = rclcpp::GenericPublisher::SharedPtr;
 
-using MapOfSets = std::unordered_map<std::string, std::unordered_set<std::string>>;
 using ServicesByType = std::unordered_map<std::string, std::string>;
 
-using ClientId = uint32_t;
-using SinkId = uint64_t;
-using ChannelId = uint64_t;
-using ChannelAndClientId = std::pair<ChannelId, ClientId>;
 struct ClientAdvertisement {
   Publication publisher;
   std::string topicName;
@@ -56,19 +48,13 @@ struct ClientAdvertisement {
   std::shared_ptr<RosMsgParser::Parser> jsonParser;
 };
 
-class ClientChannelError : public std::runtime_error {
-public:
-  ClientChannelError(const std::string& msg)
-      : std::runtime_error(msg) {}
-};
-
-class FoxgloveBridge : public rclcpp::Node {
+class FoxgloveBridge : public rclcpp::Node, public BridgeDelegate {
 public:
   using TopicAndDatatype = std::pair<std::string, std::string>;
 
   FoxgloveBridge(const rclcpp::NodeOptions& options = rclcpp::NodeOptions());
 
-  ~FoxgloveBridge();
+  ~FoxgloveBridge() override;
 
   void rosgraphPollThread();
 
@@ -85,16 +71,47 @@ public:
     return _graphSubscriptionCount.load();
   }
 
+  // BridgeDelegate (callbacks from the TransportManager, normalized across the
+  // WebSocket server and the remote access gateway)
+  void onSubscribe(ChannelId channelId, ClientId clientId, bool isGateway,
+                   std::optional<SinkId> sinkId) override;
+  void onUnsubscribe(ChannelId channelId, ClientId clientId, bool isGateway) override;
+  void onClientAdvertise(const ClientChannelInfo& channel, ClientId clientId,
+                         bool isGateway) override;
+  void onClientUnadvertise(ChannelId clientChannelId, ClientId clientId, bool isGateway) override;
+  void onClientMessage(ChannelId clientChannelId, ClientId clientId, bool isGateway,
+                       const std::byte* data, size_t dataLen) override;
+  void onConnectionGraphSubscribe(bool subscribe) override;
+  void fetchAsset(std::string_view uri, foxglove::FetchAssetResponder&& responder) override;
+  void onClientConnect() override;
+  void onClientDisconnect() override;
+#ifdef FOXGLOVE_REMOTE_ACCESS
+  foxglove::QosProfile classifyRemoteAccessQos(
+    const foxglove::ChannelDescriptor& channel) override;
+  void onGatewayConnectionStatusChanged(foxglove::RemoteAccessConnectionStatus status) override;
+#endif
+
 private:
-  struct PairHash {
-    template <class T1, class T2>
-    std::size_t operator()(const std::pair<T1, T2>& pair) const {
-      return std::hash<T1>()(pair.first) ^ std::hash<T2>()(pair.second);
+  // Client-advertised channels are keyed per transport: client IDs (and their
+  // channel IDs) are only unique within a transport.
+  struct ClientChannelKey {
+    ChannelId channelId;
+    ClientId clientId;
+    bool isGateway;
+
+    bool operator==(const ClientChannelKey& other) const {
+      return channelId == other.channelId && clientId == other.clientId &&
+             isGateway == other.isGateway;
+    }
+  };
+  struct ClientChannelKeyHash {
+    std::size_t operator()(const ClientChannelKey& key) const {
+      return std::hash<ChannelId>()(key.channelId) ^ std::hash<ClientId>()(key.clientId) ^
+             std::hash<bool>()(key.isGateway);
     }
   };
 
-  std::unique_ptr<foxglove::WebSocketServer> _server;
-  std::unique_ptr<foxglove::SystemInfoPublisher> _sysinfoPublisher;
+  std::unique_ptr<TransportManager> _transports;
   std::unordered_map<ChannelId, foxglove::RawChannel> _channels;
 
   // One shared ROS subscription per channel, reference-counted by client subscriptions
@@ -117,14 +134,9 @@ private:
   };
   std::unordered_map<ChannelId, ChannelSubscription> _subscriptions;
 
-  std::unordered_map<ChannelAndClientId, ClientAdvertisement, PairHash> _clientAdvertisedTopics;
-  foxglove::WebSocketServerCapabilities _capabilities;
+  std::unordered_map<ClientChannelKey, ClientAdvertisement, ClientChannelKeyHash>
+    _clientAdvertisedTopics;
 
-#ifdef FOXGLOVE_REMOTE_ACCESS
-  std::unique_ptr<foxglove::RemoteAccessGateway> _gateway;
-  std::unordered_map<ChannelAndClientId, ClientAdvertisement, PairHash>
-    _gatewayClientAdvertisedTopics;
-#endif
   ServicesByType _advertisedServices;
   std::unordered_map<std::string, GenericClient::SharedPtr> _serviceClients;
   std::unordered_map<std::string, std::unique_ptr<foxglove::ServiceHandler>> _serviceHandlers;
@@ -151,75 +163,10 @@ private:
   bool _disableLoanMessage = true;
   std::unordered_map<std::string, std::shared_ptr<RosMsgParser::Parser>> _jsonParsers;
   std::atomic<bool> _shuttingDown = false;
-  foxglove::Context _serverContext;
 
   rclcpp::Publisher<std_msgs::msg::UInt32>::SharedPtr _clientCountPublisher;
 
-  void subscribeConnectionGraph(bool subscribe);
-
-  void subscribe(ChannelId channelId, const foxglove::ClientMetadata& client);
-
-  void unsubscribe(ChannelId channelId, const foxglove::ClientMetadata& client);
-
-  void clientAdvertise(ClientId clientId, const foxglove::ClientChannel& channel);
-
-  void clientUnadvertise(ClientId clientId, ChannelId clientChannelId);
-
-  void clientMessage(ClientId clientId, ChannelId clientChannelId, const std::byte* data,
-                     size_t dataLen);
-
-  // Each parameter op carries enough state to be handled by the worker thread.
-  // Get and Set ops own their responders; Subscribe/Unsubscribe carry just the
-  // parameter names so they serialize with get/set on the same queue.
-  struct GetParamsOp {
-    std::vector<std::string> names;
-    foxglove::GetParametersResponder responder;
-  };
-  struct SetParamsOp {
-    std::vector<foxglove::Parameter> parameters;
-    foxglove::SetParametersResponder responder;
-  };
-  struct SubscribeParamsOp {
-    std::vector<std::string> names;
-  };
-  struct UnsubscribeParamsOp {
-    std::vector<std::string> names;
-  };
-  using ParameterOp =
-    std::variant<GetParamsOp, SetParamsOp, SubscribeParamsOp, UnsubscribeParamsOp>;
-
-  // Wire the parameter-related callbacks/handler on a server or gateway options struct.
-  // Both options structs share these field types; this helper keeps the WS and gateway
-  // sites in sync.
-  void wireParameterCallbacks(
-    std::function<void(const std::vector<std::string_view>&)>& onSubscribe,
-    std::function<void(const std::vector<std::string_view>&)>& onUnsubscribe,
-    foxglove::ParameterHandler& handler);
-
-  void enqueueParameterOp(ParameterOp&& op);
-  void parameterWorkerLoop();
-  void handleGetParams(GetParamsOp&& op);
-  void handleSetParams(SetParamsOp&& op);
-  void handleSubscribeParams(SubscribeParamsOp&& op);
-  void handleUnsubscribeParams(UnsubscribeParamsOp&& op);
-
   void parameterUpdates(const std::vector<foxglove::Parameter>& parameters);
-
-  std::mutex _paramOpMutex;
-  std::condition_variable _paramOpCv;
-  std::queue<ParameterOp> _paramOpQueue;
-  bool _paramOpShutdown = false;
-  std::unique_ptr<std::thread> _paramWorkerThread;
-
-  // Parameter subscription refcount, owned by the worker thread.
-  //
-  // The websocket server and remote access gateway each independently maintain
-  // state about parameter subscriptions on behalf of clients. They each fire
-  // onParametersSubscribe when the first subscriber subscribes to a particular
-  // parameter, and onParametersUnsubscribe when the last subscriber
-  // unsubscribes. We use this map to aggregate subscriptions across the two
-  // transports.
-  std::unordered_map<std::string, int> _paramSubscriberCount;
 
   void rosMessageHandler(ChannelId channelId, std::shared_ptr<const rclcpp::SerializedMessage> msg,
                          const rclcpp::MessageInfo& messageInfo);
@@ -246,12 +193,6 @@ private:
   void handleServiceRequest(const foxglove::ServiceRequest& request,
                             foxglove::ServiceResponder&& responder);
 
-  void fetchAsset(const std::string_view uri, foxglove::FetchAssetResponder&& responder);
-
-  void onClientConnect();
-
-  void onClientDisconnect();
-
   void publishClientCount();
 
   struct TopicQosInfo {
@@ -265,17 +206,6 @@ private:
   TopicQosInfo collectTopicQosInfo(const std::string& topic);
 
   rclcpp::QoS determineQoS(const std::string& topic);
-
-#ifdef FOXGLOVE_REMOTE_ACCESS
-  void gatewaySubscribe(uint32_t clientId, const foxglove::ChannelDescriptor& channel);
-  void gatewayUnsubscribe(uint32_t clientId, const foxglove::ChannelDescriptor& channel);
-  void gatewayClientAdvertise(uint32_t clientId, const foxglove::ChannelDescriptor& channel);
-  void gatewayClientUnadvertise(uint32_t clientId, const foxglove::ChannelDescriptor& channel);
-  void gatewayClientMessage(uint32_t clientId, const foxglove::ChannelDescriptor& channel,
-                            const std::byte* data, size_t dataLen);
-  void gatewayConnectionStatusChanged(foxglove::RemoteAccessConnectionStatus status);
-  foxglove::QosProfile classifyRemoteAccessQos(const foxglove::ChannelDescriptor& channel);
-#endif
 };
 
 }  // namespace foxglove_bridge

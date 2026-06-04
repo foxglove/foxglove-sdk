@@ -1,5 +1,4 @@
 #include <filesystem>
-#include <fstream>
 #include <type_traits>
 #include <unordered_set>
 
@@ -9,6 +8,7 @@
 #include <foxglove_bridge/ros2_foxglove_bridge.hpp>
 #include <foxglove_bridge/utils.hpp>
 #include <foxglove_bridge/version.hpp>
+#include <foxglove_bridge_core/capabilities.hpp>
 
 namespace foxglove_bridge {
 namespace {
@@ -17,48 +17,6 @@ inline bool isHiddenTopicOrService(const std::string& name) {
     throw std::invalid_argument("Topic or service name can't be empty");
   }
   return name.front() == '_' || name.find("/_") != std::string::npos;
-}
-
-inline foxglove::WebSocketServerCapabilities processCapabilities(
-  const std::vector<std::string>& capabilities) {
-  const std::unordered_map<std::string, foxglove::WebSocketServerCapabilities>
-    STRING_TO_CAPABILITY = {
-      {"clientPublish", foxglove::WebSocketServerCapabilities::ClientPublish},
-      {"parameters", foxglove::WebSocketServerCapabilities::Parameters},
-      {"parametersSubscribe", foxglove::WebSocketServerCapabilities::Parameters},
-      {"services", foxglove::WebSocketServerCapabilities::Services},
-      {"connectionGraph", foxglove::WebSocketServerCapabilities::ConnectionGraph},
-      {"assets", foxglove::WebSocketServerCapabilities::Assets},
-    };
-  foxglove::WebSocketServerCapabilities out = foxglove::WebSocketServerCapabilities::None;
-  for (const auto& capability : capabilities) {
-    if (STRING_TO_CAPABILITY.find(capability) != STRING_TO_CAPABILITY.end()) {
-      out = out | STRING_TO_CAPABILITY.at(capability);
-    }
-  }
-  return out;
-}
-
-inline bool hasCapability(const foxglove::WebSocketServerCapabilities& capabilities,
-                          foxglove::WebSocketServerCapabilities capability) {
-  return (capabilities & capability) == capability;
-}
-
-inline std::vector<std::byte> readFile(const std::string& filepath) {
-  std::ifstream file(filepath, std::ios::binary | std::ios::ate);
-  if (!file.is_open()) {
-    throw std::runtime_error("Failed to open file: " + filepath);
-  }
-
-  std::streamsize length = file.tellg();
-  file.seekg(0, std::ios::beg);
-
-  std::vector<std::byte> buffer(length);
-  if (!file.read(reinterpret_cast<char*>(buffer.data()), length)) {
-    throw std::runtime_error("Failed to read file: " + filepath);
-  }
-
-  return buffer;
 }
 
 #if !RCLCPP_VERSION_GTE(28, 0, 0)
@@ -149,66 +107,9 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
     this->get_logger().set_level(rclcpp::Logger::Level::Debug);
   }
 
-  _serverContext = foxglove::Context::create();
-
-  foxglove::WebSocketServerOptions sdkServerOptions;
-  _capabilities = processCapabilities(capabilities);
-  sdkServerOptions.host = address;
-  sdkServerOptions.port = port;
-  sdkServerOptions.supported_encodings = {"cdr", "json"};
-  sdkServerOptions.capabilities = _capabilities;
-  sdkServerOptions.context = _serverContext;
-
-  sdkServerOptions.server_info = rosServerInfo;
-  sdkServerOptions.message_backlog_size = messageBacklogSize;
-
-  if (_useSimTime) {
-    sdkServerOptions.capabilities =
-      sdkServerOptions.capabilities | foxglove::WebSocketServerCapabilities::Time;
-  }
-
-  // If TLS is enabled, load the certificate and key files from disk
-  if (useTls) {
-    if (certfile.empty() || !std::filesystem::exists(certfile)) {
-      throw std::invalid_argument("certfile must be provided when TLS is enabled and must exist");
-    }
-
-    if (keyfile.empty() || !std::filesystem::exists(keyfile)) {
-      throw std::invalid_argument("keyfile must be provided when TLS is enabled and must exist");
-    }
-
-    sdkServerOptions.tls_identity = foxglove::TlsIdentity{};
-    sdkServerOptions.tls_identity->cert = readFile(certfile);
-    sdkServerOptions.tls_identity->key = readFile(keyfile);
-  }
-
-  // Setup callbacks
-  sdkServerOptions.callbacks.onConnectionGraphSubscribe =
-    std::bind(&FoxgloveBridge::subscribeConnectionGraph, this, true);
-  sdkServerOptions.callbacks.onConnectionGraphUnsubscribe =
-    std::bind(&FoxgloveBridge::subscribeConnectionGraph, this, false);
-  sdkServerOptions.callbacks.onSubscribe = std::bind(&FoxgloveBridge::subscribe, this, _1, _2);
-  sdkServerOptions.callbacks.onUnsubscribe = std::bind(&FoxgloveBridge::unsubscribe, this, _1, _2);
-
-  if (hasCapability(_capabilities, foxglove::WebSocketServerCapabilities::ClientPublish)) {
-    sdkServerOptions.callbacks.onClientAdvertise =
-      std::bind(&FoxgloveBridge::clientAdvertise, this, _1, _2);
-    sdkServerOptions.callbacks.onClientUnadvertise =
-      std::bind(&FoxgloveBridge::clientUnadvertise, this, _1, _2);
-    sdkServerOptions.callbacks.onMessageData =
-      std::bind(&FoxgloveBridge::clientMessage, this, _1, _2, _3, _4);
-  }
-
-  if (hasCapability(_capabilities, foxglove::WebSocketServerCapabilities::Assets)) {
-    sdkServerOptions.fetch_asset = std::bind(&FoxgloveBridge::fetchAsset, this, _1, _2);
-  }
-
-  if (hasCapability(sdkServerOptions.capabilities,
-                    foxglove::WebSocketServerCapabilities::Parameters)) {
-    wireParameterCallbacks(sdkServerOptions.callbacks.onParametersSubscribe,
-                           sdkServerOptions.callbacks.onParametersUnsubscribe,
-                           sdkServerOptions.parameter_handler);
-
+  // Parameter backend, only when the Parameters capability is requested.
+  const auto sdkCapabilities = processCapabilities(capabilities);
+  if (hasCapability(sdkCapabilities, foxglove::WebSocketServerCapabilities::Parameters)) {
     _paramInterface = std::make_shared<ParameterInterface>(this, paramWhitelistPatterns,
                                                            ignoreUnresponsiveParamNodes
                                                              ? UnresponsiveNodePolicy::Ignore
@@ -216,46 +117,58 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
     _paramInterface->setParamUpdateCallback(std::bind(&FoxgloveBridge::parameterUpdates, this, _1));
   }
 
-  if (publishClientCount) {
-    sdkServerOptions.callbacks.onClientConnect = std::bind(&FoxgloveBridge::onClientConnect, this);
-    sdkServerOptions.callbacks.onClientDisconnect =
-      std::bind(&FoxgloveBridge::onClientDisconnect, this);
-  }
+  TransportOptions transportOptions;
+  transportOptions.host = address;
+  transportOptions.port = port;
+  transportOptions.supportedEncodings = {"cdr", "json"};
+  transportOptions.capabilities = capabilities;
+  transportOptions.broadcastTimeCapability = _useSimTime;
+  transportOptions.serverInfo = std::move(rosServerInfo);
+  transportOptions.messageBacklogSize = messageBacklogSize;
+  transportOptions.useTls = useTls;
+  transportOptions.certfile = certfile;
+  transportOptions.keyfile = keyfile;
+  transportOptions.notifyClientCount = publishClientCount;
+  transportOptions.remoteAccess = this->get_parameter(PARAM_REMOTE_ACCESS).as_bool();
+  transportOptions.deviceToken = this->get_parameter(PARAM_DEVICE_TOKEN).as_string();
+  transportOptions.foxgloveApiUrl = this->get_parameter(PARAM_FOXGLOVE_API_URL).as_string();
+  transportOptions.sysinfo = this->get_parameter(PARAM_SYSINFO).as_bool();
+  transportOptions.sysinfoTopic = this->get_parameter(PARAM_SYSINFO_TOPIC).as_string();
+  transportOptions.sysinfoRefreshInterval =
+    std::chrono::milliseconds(this->get_parameter(PARAM_SYSINFO_REFRESH_INTERVAL).as_int());
 
-  auto maybeSdkServer = foxglove::WebSocketServer::create(std::move(sdkServerOptions));
-
-  if (!maybeSdkServer.has_value()) {
-    throw std::runtime_error(std::string("Couldn't initialize websocket server: ") +
-                             foxglove::strerror(maybeSdkServer.error()));
-  }
-
-  // Constructing an SDK server also starts it listening automatically
-  _server = std::make_unique<foxglove::WebSocketServer>(std::move(maybeSdkServer.value()));
-  this->set_parameter(rclcpp::Parameter{PARAM_PORT, _server->port()});
-  RCLCPP_INFO(this->get_logger(), "Server listening on port %d", _server->port());
-
-  if (this->get_parameter(PARAM_SYSINFO).as_bool()) {
-    foxglove::SystemInfoOptions sysinfoOptions;
-    sysinfoOptions.context = _serverContext;
-    sysinfoOptions.topic = this->get_parameter(PARAM_SYSINFO_TOPIC).as_string();
-    sysinfoOptions.refresh_interval =
-      std::chrono::milliseconds(this->get_parameter(PARAM_SYSINFO_REFRESH_INTERVAL).as_int());
-    auto maybeSysinfo = foxglove::SystemInfoPublisher::create(std::move(sysinfoOptions));
-    if (!maybeSysinfo.has_value()) {
-      RCLCPP_WARN(this->get_logger(), "Couldn't start system info publisher: %s",
-                  foxglove::strerror(maybeSysinfo.error()));
-    } else {
-      _sysinfoPublisher =
-        std::make_unique<foxglove::SystemInfoPublisher>(std::move(maybeSysinfo.value()));
+  Logger logger([this](BridgeLogLevel level, const std::string& message) {
+    switch (level) {
+      case BridgeLogLevel::Debug:
+        RCLCPP_DEBUG(this->get_logger(), "%s", message.c_str());
+        break;
+      case BridgeLogLevel::Info:
+        RCLCPP_INFO(this->get_logger(), "%s", message.c_str());
+        break;
+      case BridgeLogLevel::Warn:
+        RCLCPP_WARN(this->get_logger(), "%s", message.c_str());
+        break;
+      case BridgeLogLevel::Error:
+        RCLCPP_ERROR(this->get_logger(), "%s", message.c_str());
+        break;
+      case BridgeLogLevel::Fatal:
+        RCLCPP_FATAL(this->get_logger(), "%s", message.c_str());
+        break;
     }
-  }
+  });
+
+  _transports = std::make_unique<TransportManager>(std::move(transportOptions), *this,
+                                                   _paramInterface.get(), std::move(logger));
+
+  this->set_parameter(rclcpp::Parameter{PARAM_PORT, _transports->port()});
+  RCLCPP_INFO(this->get_logger(), "Server listening on port %d", _transports->port());
 
   if (publishClientCount) {
     static const std::string CLIENT_COUNT_TOPIC = "/foxglove_bridge/client_count";
     _clientCountPublisher = this->create_publisher<std_msgs::msg::UInt32>(
       CLIENT_COUNT_TOPIC, rclcpp::QoS{rclcpp::KeepLast(1)}.transient_local());
     auto init_msg = std_msgs::msg::UInt32();
-    init_msg.data = _server->clientCount();
+    init_msg.data = _transports->clientCount();
     _clientCountPublisher->publish(
       init_msg);  // Initialize transient local topic to current connection count
   }
@@ -271,116 +184,8 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
       [&](std::shared_ptr<const rosgraph_msgs::msg::Clock> msg) {
         const auto timestamp = rclcpp::Time{msg->clock}.nanoseconds();
         assert(timestamp >= 0 && "Timestamp is negative");
-        _server->broadcastTime(static_cast<uint64_t>(timestamp));
+        _transports->broadcastTime(static_cast<uint64_t>(timestamp));
       });
-  }
-
-#ifndef FOXGLOVE_REMOTE_ACCESS
-  if (this->get_parameter(PARAM_REMOTE_ACCESS).as_bool()) {
-    throw std::runtime_error(
-      "remote_access is set to true but the bridge was not built with "
-      "FOXGLOVE_BRIDGE_REMOTE_ACCESS=ON. Remote access is not available.");
-  }
-#else
-  const bool enableRemoteAccess = this->get_parameter(PARAM_REMOTE_ACCESS).as_bool();
-  if (enableRemoteAccess) {
-    auto deviceToken = this->get_parameter(PARAM_DEVICE_TOKEN).as_string();
-    if (deviceToken.empty()) {
-      const char* envToken = std::getenv("FOXGLOVE_DEVICE_TOKEN");
-      if (envToken != nullptr) {
-        deviceToken = envToken;
-      }
-    }
-    if (deviceToken.empty()) {
-      RCLCPP_FATAL(this->get_logger(),
-                   "remote_access is enabled but no device_token was provided. "
-                   "Set FOXGLOVE_DEVICE_TOKEN or pass the device_token parameter.");
-      throw std::runtime_error("missing device_token for remote_access");
-    }
-
-    foxglove::RemoteAccessGatewayOptions gatewayOptions;
-    gatewayOptions.context = _serverContext;
-    gatewayOptions.device_token = deviceToken;
-    gatewayOptions.supported_encodings = {"cdr", "json"};
-    gatewayOptions.server_info = std::move(rosServerInfo);
-    gatewayOptions.message_backlog_size = messageBacklogSize;
-
-    const auto foxgloveApiUrl = this->get_parameter(PARAM_FOXGLOVE_API_URL).as_string();
-    if (!foxgloveApiUrl.empty()) {
-      gatewayOptions.foxglove_api_url = foxgloveApiUrl;
-    }
-
-    // Map WebSocket server capabilities to gateway capabilities
-    gatewayOptions.capabilities = foxglove::RemoteAccessGatewayCapabilities::None;
-    if (hasCapability(_capabilities, foxglove::WebSocketServerCapabilities::ClientPublish)) {
-      gatewayOptions.capabilities =
-        gatewayOptions.capabilities | foxglove::RemoteAccessGatewayCapabilities::ClientPublish;
-    }
-    if (hasCapability(_capabilities, foxglove::WebSocketServerCapabilities::Parameters)) {
-      gatewayOptions.capabilities =
-        gatewayOptions.capabilities | foxglove::RemoteAccessGatewayCapabilities::Parameters;
-    }
-    if (hasCapability(_capabilities, foxglove::WebSocketServerCapabilities::Services)) {
-      gatewayOptions.capabilities =
-        gatewayOptions.capabilities | foxglove::RemoteAccessGatewayCapabilities::Services;
-    }
-    if (hasCapability(_capabilities, foxglove::WebSocketServerCapabilities::Assets)) {
-      gatewayOptions.capabilities =
-        gatewayOptions.capabilities | foxglove::RemoteAccessGatewayCapabilities::Assets;
-    }
-    if (hasCapability(_capabilities, foxglove::WebSocketServerCapabilities::ConnectionGraph)) {
-      gatewayOptions.capabilities =
-        gatewayOptions.capabilities | foxglove::RemoteAccessGatewayCapabilities::ConnectionGraph;
-    }
-
-    // Wire up gateway callbacks
-    gatewayOptions.callbacks.onConnectionStatusChanged =
-      std::bind(&FoxgloveBridge::gatewayConnectionStatusChanged, this, _1);
-    gatewayOptions.callbacks.onSubscribe =
-      std::bind(&FoxgloveBridge::gatewaySubscribe, this, _1, _2);
-    gatewayOptions.callbacks.onUnsubscribe =
-      std::bind(&FoxgloveBridge::gatewayUnsubscribe, this, _1, _2);
-    gatewayOptions.qos_classifier = std::bind(&FoxgloveBridge::classifyRemoteAccessQos, this, _1);
-
-    if (hasCapability(_capabilities, foxglove::WebSocketServerCapabilities::ClientPublish)) {
-      gatewayOptions.callbacks.onClientAdvertise =
-        std::bind(&FoxgloveBridge::gatewayClientAdvertise, this, _1, _2);
-      gatewayOptions.callbacks.onClientUnadvertise =
-        std::bind(&FoxgloveBridge::gatewayClientUnadvertise, this, _1, _2);
-      gatewayOptions.callbacks.onMessageData =
-        std::bind(&FoxgloveBridge::gatewayClientMessage, this, _1, _2, _3, _4);
-    }
-
-    if (hasCapability(_capabilities, foxglove::WebSocketServerCapabilities::Assets)) {
-      gatewayOptions.fetch_asset = std::bind(&FoxgloveBridge::fetchAsset, this, _1, _2);
-    }
-
-    if (hasCapability(_capabilities, foxglove::WebSocketServerCapabilities::Parameters)) {
-      wireParameterCallbacks(gatewayOptions.callbacks.onParametersSubscribe,
-                             gatewayOptions.callbacks.onParametersUnsubscribe,
-                             gatewayOptions.parameter_handler);
-    }
-
-    if (hasCapability(_capabilities, foxglove::WebSocketServerCapabilities::ConnectionGraph)) {
-      gatewayOptions.callbacks.onConnectionGraphSubscribe =
-        std::bind(&FoxgloveBridge::subscribeConnectionGraph, this, true);
-      gatewayOptions.callbacks.onConnectionGraphUnsubscribe =
-        std::bind(&FoxgloveBridge::subscribeConnectionGraph, this, false);
-    }
-
-    auto maybeGateway = foxglove::RemoteAccessGateway::create(std::move(gatewayOptions));
-    if (!maybeGateway.has_value()) {
-      throw std::runtime_error(std::string("Failed to create remote access gateway: ") +
-                               foxglove::strerror(maybeGateway.error()));
-    }
-    _gateway = std::make_unique<foxglove::RemoteAccessGateway>(std::move(maybeGateway.value()));
-    RCLCPP_INFO(this->get_logger(), "Remote access gateway started");
-  }
-#endif
-
-  if (_paramInterface) {
-    _paramWorkerThread =
-      std::make_unique<std::thread>(std::bind(&FoxgloveBridge::parameterWorkerLoop, this));
   }
 
   _rosgraphPollThread =
@@ -393,27 +198,8 @@ FoxgloveBridge::~FoxgloveBridge() {
   if (_rosgraphPollThread) {
     _rosgraphPollThread->join();
   }
-  if (_sysinfoPublisher) {
-    _sysinfoPublisher->stop();
-  }
-#ifdef FOXGLOVE_REMOTE_ACCESS
-  if (_gateway) {
-    _gateway->stop();
-  }
-#endif
-  _server->stop();
-  // Stop the parameter worker after the server and gateway are stopped, so no new ops
-  // arrive while we're shutting it down. Any ops still in the queue get dropped.
-  if (_paramWorkerThread) {
-    std::queue<ParameterOp> drained;
-    {
-      std::lock_guard<std::mutex> lock(_paramOpMutex);
-      _paramOpShutdown = true;
-      std::swap(_paramOpQueue, drained);
-    }
-    _paramOpCv.notify_all();
-    _paramWorkerThread->join();
-  }
+  // Stops the transports (gateway, then server) and the parameter worker.
+  _transports->stop();
   RCLCPP_INFO(this->get_logger(), "Shutdown complete");
 }
 
@@ -554,7 +340,7 @@ void FoxgloveBridge::updateAdvertisedTopics(
 
       // Create the new SDK channel
       auto channelResult =
-        foxglove::RawChannel::create(topic, messageEncoding, schema, _serverContext);
+        foxglove::RawChannel::create(topic, messageEncoding, schema, _transports->context());
       if (!channelResult.has_value()) {
         RCLCPP_ERROR(this->get_logger(), "Failed to create channel for topic \"%s\" (%s)",
                      topic.c_str(), foxglove::strerror(channelResult.error()));
@@ -583,7 +369,7 @@ void FoxgloveBridge::updateAdvertisedTopics(
 void FoxgloveBridge::updateAdvertisedServices() {
   if (!rclcpp::ok()) {
     return;
-  } else if (!hasCapability(_capabilities, foxglove::WebSocketServerCapabilities::Services)) {
+  } else if (!_transports->hasCapability(foxglove::WebSocketServerCapabilities::Services)) {
     return;
   }
 
@@ -603,20 +389,7 @@ void FoxgloveBridge::updateAdvertisedServices() {
     _advertisedServices.erase(serviceName);
     _serviceClients.erase(serviceName);
     _serviceHandlers.erase(serviceName);
-    auto error = _server->removeService(serviceName);
-    if (error != foxglove::FoxgloveError::Ok) {
-      RCLCPP_ERROR(this->get_logger(), "Failed to remove service %s: %s", serviceName.c_str(),
-                   foxglove::strerror(error));
-    }
-#ifdef FOXGLOVE_REMOTE_ACCESS
-    if (_gateway) {
-      auto gatewayError = _gateway->removeService(serviceName);
-      if (gatewayError != foxglove::FoxgloveError::Ok) {
-        RCLCPP_ERROR(this->get_logger(), "Failed to remove service %s from gateway: %s",
-                     serviceName.c_str(), foxglove::strerror(gatewayError));
-      }
-    }
-#endif
+    _transports->removeService(serviceName);
   }
 
   // Advertise new services
@@ -720,37 +493,9 @@ void FoxgloveBridge::updateAdvertisedServices() {
 
     _serviceHandlers.insert({serviceName, std::move(handler)});
 
-    auto serviceResult =
-      foxglove::Service::create(serviceName, serviceSchema, *_serviceHandlers.at(serviceName));
-    if (!serviceResult.has_value()) {
-      RCLCPP_ERROR(this->get_logger(), "Failed to create service %s: %s", serviceName.c_str(),
-                   foxglove::strerror(serviceResult.error()));
+    if (!_transports->addService(serviceName, serviceSchema, *_serviceHandlers.at(serviceName))) {
       continue;
     }
-
-    auto addServiceError = _server->addService(std::move(serviceResult.value()));
-    if (addServiceError != foxglove::FoxgloveError::Ok) {
-      RCLCPP_ERROR(this->get_logger(), "Failed to add service %s to server: %s",
-                   serviceName.c_str(), foxglove::strerror(addServiceError));
-      continue;
-    }
-
-#ifdef FOXGLOVE_REMOTE_ACCESS
-    if (_gateway) {
-      auto gatewayServiceResult =
-        foxglove::Service::create(serviceName, serviceSchema, *_serviceHandlers.at(serviceName));
-      if (gatewayServiceResult.has_value()) {
-        auto gatewayAddError = _gateway->addService(std::move(gatewayServiceResult.value()));
-        if (gatewayAddError != foxglove::FoxgloveError::Ok) {
-          RCLCPP_ERROR(this->get_logger(), "Failed to add service %s to gateway: %s",
-                       serviceName.c_str(), foxglove::strerror(gatewayAddError));
-        }
-      } else {
-        RCLCPP_ERROR(this->get_logger(), "Failed to create gateway service %s: %s",
-                     serviceName.c_str(), foxglove::strerror(gatewayServiceResult.error()));
-      }
-    }
-#endif
 
     _advertisedServices.insert({serviceName, serviceType});
   }
@@ -807,15 +552,10 @@ void FoxgloveBridge::updateConnectionGraph(
   }
 
   RCLCPP_INFO(this->get_logger(), "publishing connection graph");
-  _server->publishConnectionGraph(connectionGraph);
-#ifdef FOXGLOVE_REMOTE_ACCESS
-  if (_gateway) {
-    (void)_gateway->publishConnectionGraph(connectionGraph);
-  }
-#endif
+  _transports->publishConnectionGraph(connectionGraph);
 }
 
-void FoxgloveBridge::subscribeConnectionGraph(bool subscribe) {
+void FoxgloveBridge::onConnectionGraphSubscribe(bool subscribe) {
   RCLCPP_INFO(this->get_logger(), "received connection graph subscribe request");
   if (subscribe) {
     ++_graphSubscriptionCount;
@@ -826,10 +566,17 @@ void FoxgloveBridge::subscribeConnectionGraph(bool subscribe) {
   }
 }
 
-void FoxgloveBridge::subscribe(ChannelId channelId, const foxglove::ClientMetadata& client) {
-  RCLCPP_INFO(this->get_logger(), "received subscribe request for channel %lu from client %u",
-              channelId, client.id);
-  createOrIncrementSubscription(channelId, client.id, false, client.sink_id);
+void FoxgloveBridge::onSubscribe(ChannelId channelId, ClientId clientId, bool isGateway,
+                                 std::optional<SinkId> sinkId) {
+  RCLCPP_INFO(this->get_logger(), "%sreceived subscribe request for channel %lu from client %u",
+              isGateway ? "Gateway: " : "", channelId, clientId);
+  createOrIncrementSubscription(channelId, clientId, isGateway, sinkId);
+}
+
+void FoxgloveBridge::onUnsubscribe(ChannelId channelId, ClientId clientId, bool isGateway) {
+  RCLCPP_INFO(this->get_logger(), "%sreceived unsubscribe request for channel %lu from client %u",
+              isGateway ? "Gateway: " : "", channelId, clientId);
+  removeOrDecrementSubscription(channelId, clientId, isGateway);
 }
 
 Subscription FoxgloveBridge::createRosSubscription(ChannelId channelId, const std::string& topic,
@@ -932,12 +679,6 @@ void FoxgloveBridge::createOrIncrementSubscriptionLocked(ChannelId channelId, Cl
   } else {
     subIt->second.wsClientIds.insert(clientId);
   }
-}
-
-void FoxgloveBridge::unsubscribe(ChannelId channelId, const foxglove::ClientMetadata& client) {
-  RCLCPP_INFO(this->get_logger(), "received unsubscribe request for channel %lu from client %u",
-              channelId, client.id);
-  removeOrDecrementSubscription(channelId, client.id, false);
 }
 
 void FoxgloveBridge::removeOrDecrementSubscription(ChannelId channelId, ClientId clientId,
@@ -1058,13 +799,11 @@ void FoxgloveBridge::publishClientData(const ClientAdvertisement& ad, const std:
   }
 }
 
-void FoxgloveBridge::clientAdvertise(ClientId clientId, const foxglove::ClientChannel& channel) {
+void FoxgloveBridge::onClientAdvertise(const ClientChannelInfo& channel, ClientId clientId,
+                                       bool isGateway) {
   std::lock_guard<std::mutex> lock(_clientAdvertisementsMutex);
 
-  ChannelAndClientId key = {channel.id, clientId};
-  const std::string topicName(channel.topic);
-  const std::string topicType(channel.schema_name);
-  const std::string encoding(channel.encoding);
+  const ClientChannelKey key = {channel.id, clientId, isGateway};
 
   if (_clientAdvertisedTopics.find(key) != _clientAdvertisedTopics.end()) {
     throw ClientChannelError("Received client advertisement from client ID " +
@@ -1072,18 +811,19 @@ void FoxgloveBridge::clientAdvertise(ClientId clientId, const foxglove::ClientCh
                              std::to_string(channel.id) + " it had already advertised");
   }
 
-  if (topicType.empty()) {
+  if (channel.schemaName.empty()) {
     throw ClientChannelError("Received client advertisement from client ID " +
                              std::to_string(clientId) + " for channel " +
                              std::to_string(channel.id) + " with empty schema name");
   }
 
   try {
-    auto ad =
-      createClientPublisher(topicName, topicType, encoding, channel.schema, channel.schema_len);
+    auto ad = createClientPublisher(channel.topic, channel.schemaName, channel.encoding,
+                                    channel.schemaData, channel.schemaLen);
     RCLCPP_INFO(this->get_logger(),
-                "Client ID %d is advertising \"%s\" (%s) on channel %d with encoding \"%s\"",
-                clientId, topicName.c_str(), topicType.c_str(), channel.id, encoding.c_str());
+                "%sClient ID %u is advertising \"%s\" (%s) on channel %lu with encoding \"%s\"",
+                isGateway ? "Gateway: " : "", clientId, channel.topic.c_str(),
+                channel.schemaName.c_str(), channel.id, channel.encoding.c_str());
     _clientAdvertisedTopics.emplace(key, std::move(ad));
   } catch (const std::exception& ex) {
     throw ClientChannelError("Failed to create publisher for client channel " +
@@ -1091,10 +831,11 @@ void FoxgloveBridge::clientAdvertise(ClientId clientId, const foxglove::ClientCh
   }
 }
 
-void FoxgloveBridge::clientUnadvertise(ClientId clientId, ChannelId clientChannelId) {
+void FoxgloveBridge::onClientUnadvertise(ChannelId clientChannelId, ClientId clientId,
+                                         bool isGateway) {
   std::lock_guard<std::mutex> lock(_clientAdvertisementsMutex);
 
-  ChannelAndClientId key = {clientChannelId, clientId};
+  const ClientChannelKey key = {clientChannelId, clientId, isGateway};
 
   auto it = _clientAdvertisedTopics.find(key);
   if (it == _clientAdvertisedTopics.end()) {
@@ -1105,8 +846,9 @@ void FoxgloveBridge::clientUnadvertise(ClientId clientId, ChannelId clientChanne
 
   const auto& publisher = it->second.publisher;
   RCLCPP_INFO(this->get_logger(),
-              "Client ID %u is no longer advertising %s (%zu subscribers) on channel %lu", clientId,
-              publisher->get_topic_name(), publisher->get_subscription_count(), clientChannelId);
+              "%sClient ID %u is no longer advertising %s (%zu subscribers) on channel %lu",
+              isGateway ? "Gateway: " : "", clientId, publisher->get_topic_name(),
+              publisher->get_subscription_count(), clientChannelId);
 
   _clientAdvertisedTopics.erase(it);
 
@@ -1118,11 +860,11 @@ void FoxgloveBridge::clientUnadvertise(ClientId clientId, ChannelId clientChanne
   }
 }
 
-void FoxgloveBridge::clientMessage(ClientId clientId, ChannelId clientChannelId,
-                                   const std::byte* data, size_t dataLen) {
+void FoxgloveBridge::onClientMessage(ChannelId clientChannelId, ClientId clientId, bool isGateway,
+                                     const std::byte* data, size_t dataLen) {
   ClientAdvertisement ad;
   {
-    const ChannelAndClientId key = {clientChannelId, clientId};
+    const ClientChannelKey key = {clientChannelId, clientId, isGateway};
     std::lock_guard<std::mutex> lock(_clientAdvertisementsMutex);
 
     auto it = _clientAdvertisedTopics.find(key);
@@ -1145,176 +887,8 @@ void FoxgloveBridge::clientMessage(ClientId clientId, ChannelId clientChannelId,
   }
 }
 
-void FoxgloveBridge::wireParameterCallbacks(
-  std::function<void(const std::vector<std::string_view>&)>& onSubscribe,
-  std::function<void(const std::vector<std::string_view>&)>& onUnsubscribe,
-  foxglove::ParameterHandler& handler) {
-  onSubscribe = [this](const std::vector<std::string_view>& names) {
-    SubscribeParamsOp op;
-    op.names.reserve(names.size());
-    for (const auto& name : names) {
-      op.names.emplace_back(name);
-    }
-    enqueueParameterOp(std::move(op));
-  };
-  onUnsubscribe = [this](const std::vector<std::string_view>& names) {
-    UnsubscribeParamsOp op;
-    op.names.reserve(names.size());
-    for (const auto& name : names) {
-      op.names.emplace_back(name);
-    }
-    enqueueParameterOp(std::move(op));
-  };
-  handler.onGet = [this](uint32_t /*clientId*/, std::optional<std::string_view> /*requestId*/,
-                         const std::vector<std::string_view>& names,
-                         foxglove::GetParametersResponder&& responder) {
-    GetParamsOp op{{}, std::move(responder)};
-    op.names.reserve(names.size());
-    for (const auto& name : names) {
-      op.names.emplace_back(name);
-    }
-    enqueueParameterOp(std::move(op));
-  };
-  handler.onSet = [this](uint32_t /*clientId*/, std::optional<std::string_view> /*requestId*/,
-                         const std::vector<foxglove::ParameterView>& params,
-                         foxglove::SetParametersResponder&& responder) {
-    SetParamsOp op{{}, std::move(responder)};
-    op.parameters.reserve(params.size());
-    for (const auto& param : params) {
-      op.parameters.emplace_back(param.clone());
-    }
-    enqueueParameterOp(std::move(op));
-  };
-}
-
-void FoxgloveBridge::enqueueParameterOp(ParameterOp&& op) {
-  {
-    std::lock_guard<std::mutex> lock(_paramOpMutex);
-    if (_paramOpShutdown) {
-      // Worker is gone; drop the op. Get/Set responders will send the requesting client an
-      // error status on destruction; Subscribe/Unsubscribe are fire-and-forget.
-      return;
-    }
-    _paramOpQueue.push(std::move(op));
-  }
-  _paramOpCv.notify_one();
-}
-
-void FoxgloveBridge::parameterWorkerLoop() {
-  std::unique_lock<std::mutex> lock(_paramOpMutex);
-  while (true) {
-    _paramOpCv.wait(lock, [&] {
-      return _paramOpShutdown || !_paramOpQueue.empty();
-    });
-    if (_paramOpShutdown && _paramOpQueue.empty()) {
-      return;
-    }
-    auto op = std::move(_paramOpQueue.front());
-    _paramOpQueue.pop();
-    lock.unlock();
-
-    std::visit(
-      [this](auto& concrete) {
-        using T = std::decay_t<decltype(concrete)>;
-        if constexpr (std::is_same_v<T, GetParamsOp>) {
-          this->handleGetParams(std::move(concrete));
-        } else if constexpr (std::is_same_v<T, SetParamsOp>) {
-          this->handleSetParams(std::move(concrete));
-        } else if constexpr (std::is_same_v<T, SubscribeParamsOp>) {
-          this->handleSubscribeParams(std::move(concrete));
-        } else if constexpr (std::is_same_v<T, UnsubscribeParamsOp>) {
-          this->handleUnsubscribeParams(std::move(concrete));
-        }
-      },
-      op);
-
-    lock.lock();
-  }
-}
-
-void FoxgloveBridge::handleGetParams(GetParamsOp&& op) {
-  std::vector<std::string_view> views(op.names.begin(), op.names.end());
-  try {
-    auto values = _paramInterface->getParams(views, std::chrono::seconds(5));
-    std::move(op.responder).respond(std::move(values));
-  } catch (const std::exception& ex) {
-    RCLCPP_ERROR(this->get_logger(), "getParams failed: %s", ex.what());
-    // Dropping the responder sends the client an error status.
-  }
-}
-
-void FoxgloveBridge::handleSetParams(SetParamsOp&& op) {
-  if (op.parameters.empty()) {
-    // Nothing to apply; avoid the degenerate getParams({}, ...) which would enumerate every
-    // parameter on every node.
-    std::move(op.responder).respond({});
-    return;
-  }
-  try {
-    _paramInterface->setParams(op.parameters, std::chrono::seconds(5));
-    // Fetch the actually-applied values so we can echo them back to the requester.
-    std::vector<std::string_view> names;
-    names.reserve(op.parameters.size());
-    for (const auto& param : op.parameters) {
-      names.emplace_back(param.name());
-    }
-    auto updated = _paramInterface->getParams(names, std::chrono::seconds(5));
-    std::move(op.responder).respond(std::move(updated));
-  } catch (const std::exception& ex) {
-    RCLCPP_ERROR(this->get_logger(), "setParams failed: %s", ex.what());
-    // Dropping the responder sends the client an error status.
-  }
-}
-
-void FoxgloveBridge::handleSubscribeParams(SubscribeParamsOp&& op) {
-  std::vector<std::string_view> toForward;
-  toForward.reserve(op.names.size());
-  for (const auto& name : op.names) {
-    if (++_paramSubscriberCount[name] == 1) {
-      toForward.emplace_back(name);
-    }
-  }
-  if (toForward.empty()) {
-    return;
-  }
-  try {
-    _paramInterface->subscribeParams(toForward);
-  } catch (const std::exception& ex) {
-    RCLCPP_ERROR(this->get_logger(), "subscribeParams failed: %s", ex.what());
-  }
-}
-
-void FoxgloveBridge::handleUnsubscribeParams(UnsubscribeParamsOp&& op) {
-  std::vector<std::string_view> toForward;
-  toForward.reserve(op.names.size());
-  for (const auto& name : op.names) {
-    auto it = _paramSubscriberCount.find(name);
-    if (it == _paramSubscriberCount.end()) {
-      RCLCPP_WARN(this->get_logger(), "Unsubscribe for untracked parameter '%s'", name.c_str());
-      continue;
-    }
-    if (--it->second == 0) {
-      toForward.emplace_back(name);  // `name` lives in `op.names` until this function returns
-      _paramSubscriberCount.erase(it);
-    }
-  }
-  if (toForward.empty()) {
-    return;
-  }
-  try {
-    _paramInterface->unsubscribeParams(toForward);
-  } catch (const std::exception& ex) {
-    RCLCPP_ERROR(this->get_logger(), "unsubscribeParams failed: %s", ex.what());
-  }
-}
-
 void FoxgloveBridge::parameterUpdates(const std::vector<foxglove::Parameter>& parameters) {
-  _server->publishParameterValues(ParameterInterface::cloneParameterList(parameters));
-#ifdef FOXGLOVE_REMOTE_ACCESS
-  if (_gateway) {
-    _gateway->publishParameterValues(ParameterInterface::cloneParameterList(parameters));
-  }
-#endif
+  _transports->publishParameterValues(parameters);
 }
 
 void FoxgloveBridge::rosMessageHandler(ChannelId channelId,
@@ -1540,28 +1114,9 @@ foxglove::QosProfile FoxgloveBridge::classifyRemoteAccessQos(
   }
   return profile;
 }
-#endif
 
-void FoxgloveBridge::onClientConnect() {
-  publishClientCount();
-}
-
-void FoxgloveBridge::onClientDisconnect() {
-  publishClientCount();
-}
-
-void FoxgloveBridge::publishClientCount() {
-  if (!_clientCountPublisher) {
-    return;
-  }
-  const auto currentCount = _server->clientCount();
-  auto msg = std_msgs::msg::UInt32{};
-  msg.data = currentCount;
-  _clientCountPublisher->publish(msg);
-}
-
-#ifdef FOXGLOVE_REMOTE_ACCESS
-void FoxgloveBridge::gatewayConnectionStatusChanged(foxglove::RemoteAccessConnectionStatus status) {
+void FoxgloveBridge::onGatewayConnectionStatusChanged(
+  foxglove::RemoteAccessConnectionStatus status) {
   const char* label = "unknown";
   switch (status) {
     case foxglove::RemoteAccessConnectionStatus::Connecting:
@@ -1579,131 +1134,25 @@ void FoxgloveBridge::gatewayConnectionStatusChanged(foxglove::RemoteAccessConnec
   }
   RCLCPP_INFO(this->get_logger(), "Remote access gateway status: %s", label);
 }
-
-void FoxgloveBridge::gatewaySubscribe(uint32_t clientId,
-                                      const foxglove::ChannelDescriptor& channel) {
-  auto sinkId = _gateway->sinkId();
-  if (!sinkId.has_value()) {
-    RCLCPP_WARN(this->get_logger(),
-                "Gateway: subscribe request for channel %lu (\"%s\") from client %u "
-                "but gateway session has no sink ID (reconnecting?); "
-                "cached transient_local messages will not be replayed",
-                channel.id(), std::string(channel.topic()).c_str(), clientId);
-  }
-  RCLCPP_INFO(this->get_logger(),
-              "Gateway: received subscribe request for channel %lu (\"%s\") from client %u",
-              channel.id(), std::string(channel.topic()).c_str(), clientId);
-  createOrIncrementSubscription(channel.id(), clientId, true, sinkId);
-}
-
-void FoxgloveBridge::gatewayUnsubscribe(uint32_t clientId,
-                                        const foxglove::ChannelDescriptor& channel) {
-  RCLCPP_INFO(this->get_logger(),
-              "Gateway: received unsubscribe request for channel %lu (\"%s\") from client %u",
-              channel.id(), std::string(channel.topic()).c_str(), clientId);
-  removeOrDecrementSubscription(channel.id(), clientId, true);
-}
-
-void FoxgloveBridge::gatewayClientAdvertise(uint32_t clientId,
-                                            const foxglove::ChannelDescriptor& channel) {
-  std::lock_guard<std::mutex> lock(_clientAdvertisementsMutex);
-
-  const ChannelId channelId = channel.id();
-  const std::string topicName(channel.topic());
-  const std::string encoding(channel.messageEncoding());
-
-  ChannelAndClientId key = {channelId, clientId};
-  if (_gatewayClientAdvertisedTopics.find(key) != _gatewayClientAdvertisedTopics.end()) {
-    RCLCPP_WARN(this->get_logger(), "Gateway: client %u already advertised channel %lu (\"%s\")",
-                clientId, channelId, topicName.c_str());
-    return;
-  }
-
-  std::string topicType;
-  const std::byte* schemaData = nullptr;
-  size_t schemaLen = 0;
-  auto schema = channel.schema();
-  if (schema.has_value()) {
-    topicType = schema->name;
-    schemaData = schema->data;
-    schemaLen = schema->data_len;
-  }
-
-  if (topicType.empty()) {
-    RCLCPP_ERROR(this->get_logger(),
-                 "Gateway: client %u advertised channel %lu (\"%s\") with empty schema name",
-                 clientId, channelId, topicName.c_str());
-    return;
-  }
-
-  try {
-    auto ad = createClientPublisher(topicName, topicType, encoding, schemaData, schemaLen);
-    RCLCPP_INFO(this->get_logger(),
-                "Gateway: client %u is advertising channel %lu \"%s\" (%s) with encoding \"%s\"",
-                clientId, channelId, topicName.c_str(), topicType.c_str(), encoding.c_str());
-    _gatewayClientAdvertisedTopics.emplace(key, std::move(ad));
-  } catch (const std::exception& ex) {
-    RCLCPP_ERROR(this->get_logger(),
-                 "Gateway: failed to create publisher for client %u channel %lu (\"%s\"): %s",
-                 clientId, channelId, topicName.c_str(), ex.what());
-  }
-}
-
-void FoxgloveBridge::gatewayClientUnadvertise(uint32_t clientId,
-                                              const foxglove::ChannelDescriptor& channel) {
-  std::lock_guard<std::mutex> lock(_clientAdvertisementsMutex);
-
-  const ChannelId channelId = channel.id();
-  ChannelAndClientId key = {channelId, clientId};
-
-  auto it = _gatewayClientAdvertisedTopics.find(key);
-  if (it == _gatewayClientAdvertisedTopics.end()) {
-    RCLCPP_WARN(this->get_logger(), "Gateway: client %u unadvertised unknown channel %lu (\"%s\")",
-                clientId, channelId, std::string(channel.topic()).c_str());
-    return;
-  }
-
-  RCLCPP_INFO(this->get_logger(),
-              "Gateway: client %u is no longer advertising channel %lu (\"%s\")", clientId,
-              channelId, it->second.topicName.c_str());
-  _gatewayClientAdvertisedTopics.erase(it);
-
-  if (!_shuttingDown && rclcpp::ok()) {
-    // Create a timer that immediately goes out of scope (so it never fires) which will trigger
-    // the previously destroyed publisher to be cleaned up. This is a workaround for
-    // https://github.com/ros2/rclcpp/issues/2146
-    this->create_wall_timer(1s, []() {});
-  }
-}
-
-void FoxgloveBridge::gatewayClientMessage(uint32_t clientId,
-                                          const foxglove::ChannelDescriptor& channel,
-                                          const std::byte* data, size_t dataLen) {
-  const ChannelId channelId = channel.id();
-  ClientAdvertisement ad;
-  {
-    ChannelAndClientId key = {channelId, clientId};
-    std::lock_guard<std::mutex> lock(_clientAdvertisementsMutex);
-
-    auto it = _gatewayClientAdvertisedTopics.find(key);
-    if (it == _gatewayClientAdvertisedTopics.end()) {
-      RCLCPP_ERROR(this->get_logger(),
-                   "Gateway: dropping message from client %u for unknown channel %lu", clientId,
-                   channelId);
-      return;
-    }
-
-    ad = it->second;
-  }
-
-  try {
-    publishClientData(ad, data, dataLen);
-  } catch (const std::exception& ex) {
-    RCLCPP_ERROR(this->get_logger(), "Gateway: dropping message from client %u for channel %lu: %s",
-                 clientId, channelId, ex.what());
-  }
-}
 #endif
+
+void FoxgloveBridge::onClientConnect() {
+  publishClientCount();
+}
+
+void FoxgloveBridge::onClientDisconnect() {
+  publishClientCount();
+}
+
+void FoxgloveBridge::publishClientCount() {
+  if (!_clientCountPublisher) {
+    return;
+  }
+  const auto currentCount = _transports->clientCount();
+  auto msg = std_msgs::msg::UInt32{};
+  msg.data = currentCount;
+  _clientCountPublisher->publish(msg);
+}
 
 }  // namespace foxglove_bridge
 

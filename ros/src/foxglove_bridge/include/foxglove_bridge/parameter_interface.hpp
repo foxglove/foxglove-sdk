@@ -11,10 +11,10 @@
 #include <rclcpp/rclcpp.hpp>
 
 #include <foxglove/parameter.hpp>
+#include <foxglove_bridge_core/transport_manager.hpp>
 
 namespace foxglove_bridge {
 
-using ParameterList = std::vector<foxglove::Parameter>;
 using ParamUpdateFunc = std::function<void(const ParameterList&)>;
 
 enum class UnresponsiveNodePolicy {
@@ -22,16 +22,16 @@ enum class UnresponsiveNodePolicy {
   Retry,
 };
 
-class ParameterInterface {
+class ParameterInterface : public ParameterBackend {
 public:
   ParameterInterface(rclcpp::Node* node, std::vector<std::regex> paramWhitelistPatterns,
                      UnresponsiveNodePolicy unresponsiveNodePolicy);
 
   ParameterList getParams(const std::vector<std::string_view>& paramNames,
-                          const std::chrono::duration<double>& timeout);
-  void setParams(const ParameterList& params, const std::chrono::duration<double>& timeout);
-  void subscribeParams(const std::vector<std::string_view>& paramNames);
-  void unsubscribeParams(const std::vector<std::string_view>& paramNames);
+                          const std::chrono::duration<double>& timeout) override;
+  void setParams(const ParameterList& params, const std::chrono::duration<double>& timeout) override;
+  void subscribeParams(const std::vector<std::string_view>& paramNames) override;
+  void unsubscribeParams(const std::vector<std::string_view>& paramNames) override;
   void setParamUpdateCallback(ParamUpdateFunc paramUpdateFunc);
 
   static ParameterList cloneParameterList(const ParameterList& other);

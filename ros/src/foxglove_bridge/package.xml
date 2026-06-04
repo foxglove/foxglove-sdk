@@ -10,6 +10,9 @@
 
     <buildtool_depend>ament_cmake</buildtool_depend>
 
+    <!-- ROS-agnostic bridge core (transports, SDK ownership) -->
+    <depend>foxglove_bridge_core</depend>
+
     <!-- ROS 2 runtime dependencies -->
     <depend>ament_index_cpp</depend>
     <depend>rclcpp</depend>
