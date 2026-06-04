@@ -10,7 +10,7 @@ builtin_interfaces/Time timestamp
 # 
 # - `opus`
 #   - Each message must contain a complete raw Opus packet, without Ogg, WebM, or other container framing, as described in [RFC 6716 section 3](https://datatracker.ietf.org/doc/html/rfc6716#section-3).
-#   - Raw Opus packets do not encode an original sample rate. Consumers should decode using the Opus output rate assumption of 48 kHz.
+#   - Each packet contains all information necessary for decoding, and may be decoded at any sample rate supported by Opus (8, 12, 16, 24, or 48 kHz).
 #   - A single raw Opus packet represents mono or stereo audio; multichannel Opus requires multistream or container metadata and is not supported by this schema.
 # - `mp4a.40.2`
 #   - Each message must contain a complete MPEG-4 AAC-LC ADTS frame, including the ADTS header, as described in section 1.A.3.2 of ISO/IEC 14496-3:2019.
