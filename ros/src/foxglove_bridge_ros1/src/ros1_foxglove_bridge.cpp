@@ -437,22 +437,39 @@ void Ros1FoxgloveBridge::onSubscribe(ChannelId channelId, ClientId clientId, boo
 
   auto subIt = _subscriptions.find(channelId);
   if (subIt == _subscriptions.end()) {
-    // First subscriber for this channel -- create the ROS subscription
+    // First subscriber for this channel -- create the ROS subscription.
+    // Subscribe with the full MessageEvent so the connection header (which
+    // carries the publisher's latching flag and callerid) is available.
     const std::string topic(channel.topic());
-    boost::function<void(const topic_tools::ShapeShifter::ConstPtr&)> callback =
-      [this, channelId](const topic_tools::ShapeShifter::ConstPtr& msg) {
-        this->rosMessageHandler(channelId, msg);
+    boost::function<void(const ros::MessageEvent<topic_tools::ShapeShifter const>&)> callback =
+      [this, channelId](const ros::MessageEvent<topic_tools::ShapeShifter const>& msgEvent) {
+        this->rosMessageHandler(channelId, msgEvent);
       };
 
-    ChannelSubscription channelSub;
-    channelSub.rosSubscription = _nh.subscribe<topic_tools::ShapeShifter>(
+    ros::SubscribeOptions subscribeOptions;
+    subscribeOptions.initByFullCallbackType<
+      const ros::MessageEvent<topic_tools::ShapeShifter const>&>(
       topic, static_cast<uint32_t>(_subscriptionQueueLength), callback);
+
+    ChannelSubscription channelSub;
+    channelSub.rosSubscription = _nh.subscribe(subscribeOptions);
 
     auto [it, inserted] = _subscriptions.emplace(channelId, std::move(channelSub));
     (void)inserted;
     subIt = it;
 
     ROS_INFO("Created ROS subscription on %s for channel %lu", topic.c_str(), channelId);
+  } else if (sinkId.has_value()) {
+    // Replay latched messages to the late-joining client before adding it to
+    // the broadcast set, so it doesn't miss latched values. (The client may
+    // rarely receive a message twice if a broadcast lands between the SDK
+    // accepting its subscription and this replay; latched topics carry
+    // idempotent state, so duplicates are harmless.)
+    for (const auto& [callerid, cached] : subIt->second.latchedMessages) {
+      (void)callerid;
+      channel.log(reinterpret_cast<const std::byte*>(cached.data.data()), cached.data.size(),
+                  cached.timestamp, sinkId.value());
+    }
   }
 
   if (isGateway) {
@@ -487,11 +504,16 @@ void Ros1FoxgloveBridge::onUnsubscribe(ChannelId channelId, ClientId clientId, b
   }
 }
 
-void Ros1FoxgloveBridge::rosMessageHandler(ChannelId channelId,
-                                           const topic_tools::ShapeShifter::ConstPtr& msg) {
+void Ros1FoxgloveBridge::rosMessageHandler(
+  ChannelId channelId, const ros::MessageEvent<topic_tools::ShapeShifter const>& msgEvent) {
   // NOTE: Do not call any ROS_* logging functions from this function. Otherwise, subscribing
   // to `/rosout` will cause a feedback loop
   const auto timestamp = ros::Time::now().toNSec();
+  const auto msg = msgEvent.getConstMessage();
+
+  std::vector<uint8_t> buffer(msg->size());
+  ros::serialization::OStream stream(buffer.data(), static_cast<uint32_t>(buffer.size()));
+  msg->write(stream);
 
   std::lock_guard<std::mutex> lock(_subscriptionsMutex);
   auto channelIt = _channels.find(channelId);
@@ -499,9 +521,21 @@ void Ros1FoxgloveBridge::rosMessageHandler(ChannelId channelId,
     return;
   }
 
-  std::vector<uint8_t> buffer(msg->size());
-  ros::serialization::OStream stream(buffer.data(), static_cast<uint32_t>(buffer.size()));
-  msg->write(stream);
+  // Cache the last message per latched publisher for replay to late
+  // subscribers.
+  const auto connectionHeader = msgEvent.getConnectionHeaderPtr();
+  if (connectionHeader) {
+    const auto latchingIt = connectionHeader->find("latching");
+    if (latchingIt != connectionHeader->end() && latchingIt->second == "1") {
+      auto subIt = _subscriptions.find(channelId);
+      if (subIt != _subscriptions.end()) {
+        const auto calleridIt = connectionHeader->find("callerid");
+        const std::string callerid =
+          calleridIt != connectionHeader->end() ? calleridIt->second : std::string();
+        subIt->second.latchedMessages[callerid] = CachedLatchedMessage{buffer, timestamp};
+      }
+    }
+  }
 
   channelIt->second.log(reinterpret_cast<const std::byte*>(buffer.data()), buffer.size(),
                         timestamp);
@@ -694,6 +728,23 @@ ros_babel_fish::ServiceDescription::ConstPtr Ros1FoxgloveBridge::getServiceDescr
 }
 
 #ifdef FOXGLOVE_REMOTE_ACCESS
+foxglove::QosProfile Ros1FoxgloveBridge::classifyRemoteAccessQos(
+  const foxglove::ChannelDescriptor& channel) {
+  // Latched topics carry idempotent state whose (replayed) messages must not
+  // be dropped, so they ride the reliable control channel instead of a lossy
+  // data track. ROS 1 only reveals latching via per-connection headers, so
+  // this can only classify based on messages seen so far: a topic is treated
+  // as latched once a latched publisher has been observed on it. Before the
+  // first message arrives the default (lossy) profile applies.
+  foxglove::QosProfile profile;
+  std::lock_guard<std::mutex> lock(_subscriptionsMutex);
+  auto subIt = _subscriptions.find(channel.id());
+  if (subIt != _subscriptions.end() && !subIt->second.latchedMessages.empty()) {
+    profile.reliability = foxglove::Reliability::Reliable;
+  }
+  return profile;
+}
+
 void Ros1FoxgloveBridge::onGatewayConnectionStatusChanged(
   foxglove::RemoteAccessConnectionStatus status) {
   const char* label = "unknown";

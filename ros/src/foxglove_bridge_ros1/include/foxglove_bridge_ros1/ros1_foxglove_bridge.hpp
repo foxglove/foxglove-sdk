@@ -12,7 +12,9 @@
 #include <unordered_set>
 #include <vector>
 
+#include <ros/message_event.h>
 #include <ros/ros.h>
+#include <ros/subscribe_options.h>
 #include <ros_babel_fish/generation/providers/integrated_description_provider.h>
 #include <topic_tools/shape_shifter.h>
 
@@ -43,6 +45,8 @@ public:
   void onConnectionGraphSubscribe(bool subscribe) override;
   void fetchAsset(std::string_view uri, foxglove::FetchAssetResponder&& responder) override;
 #ifdef FOXGLOVE_REMOTE_ACCESS
+  foxglove::QosProfile classifyRemoteAccessQos(
+    const foxglove::ChannelDescriptor& channel) override;
   void onGatewayConnectionStatusChanged(foxglove::RemoteAccessConnectionStatus status) override;
 #endif
 
@@ -82,10 +86,21 @@ private:
   };
 
   // One shared ROS subscription per channel, reference-counted by client subscriptions
+  struct CachedLatchedMessage {
+    std::vector<uint8_t> data;
+    uint64_t timestamp;
+  };
   struct ChannelSubscription {
     ros::Subscriber rosSubscription;
     std::unordered_set<ClientId> wsClientIds;
     std::unordered_set<ClientId> gatewayClientIds;
+    // Last message per latched publisher (keyed by callerid), replayed to
+    // late-joining clients. A latched ROS publisher only re-sends to new ROS
+    // subscribers, and the bridge holds a single shared ROS subscription, so
+    // late Foxglove clients would otherwise miss it. Lives and dies with the
+    // ROS subscription: after the last client unsubscribes, the next
+    // first-subscriber receives the latched message from ROS itself.
+    std::map<std::string, CachedLatchedMessage> latchedMessages;
   };
 
   /// Master polling loop: topic/service discovery and connection graph
@@ -95,7 +110,8 @@ private:
   void updateAdvertisedTopics(const std::vector<TopicAndDatatype>& topics);
   void updateAdvertisedServices(const std::vector<std::string>& serviceNames);
 
-  void rosMessageHandler(ChannelId channelId, const topic_tools::ShapeShifter::ConstPtr& msg);
+  void rosMessageHandler(ChannelId channelId,
+                         const ros::MessageEvent<topic_tools::ShapeShifter const>& msgEvent);
 
   void handleServiceRequest(const foxglove::ServiceRequest& request,
                             foxglove::ServiceResponder&& responder);

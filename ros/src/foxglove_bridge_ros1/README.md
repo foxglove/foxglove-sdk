@@ -54,8 +54,10 @@ docker run --rm --network host \
 
 - Parameter updates are poll-based; the master's `subscribeParam` push
   mechanism would need a dedicated XML-RPC endpoint (see legacy bridge).
-- No latched-topic replay for late-joining clients (parity with the legacy
-  bridge), and no asset fetching yet.
+- No asset fetching yet.
+- Remote-access QoS classification for latched topics is observational: a
+  topic is only classified Reliable after a latched publisher has been seen
+  (ROS 1 reveals latching only in per-connection headers).
 - `ROS_VERSION == 1` conditions plus a `COLCON_IGNORE` marker keep ROS 2
   colcon/rosdep away from this package; `Dockerfile.noetic` removes the marker
   in its private workspace copy because modern `catkin_pkg` honors
