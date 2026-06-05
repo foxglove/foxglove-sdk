@@ -98,6 +98,13 @@ RUN cd /ros_ws \
 # ---------------------------------------------------------------------------
 FROM noetic-base AS bridge
 
+# Test-only build dependencies (the smoke test's ws-protocol client).
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libasio-dev \
+        libwebsocketpp-dev \
+        nlohmann-json3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
 # SDK dist produced by `make build-cpp-dist` (jammy-built, remote-access ON)
 COPY cpp/dist /sdk/cpp/dist
 

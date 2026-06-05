@@ -34,6 +34,14 @@ docker-build-noetic:
 		--build-arg FOXGLOVE_BRIDGE_REMOTE_ACCESS=$(FOXGLOVE_BRIDGE_REMOTE_ACCESS) \
 		-t foxglove-bridge-ros1-noetic ..
 
+.PHONY: docker-test-noetic
+docker-test-noetic: docker-build-noetic
+	docker run --rm foxglove-bridge-ros1-noetic bash -c "\
+		cd /bridge_ws \
+		&& catkin_make_isolated --install --install-space /opt/foxglove \
+			--catkin-make-args run_tests \
+		&& catkin_test_results build_isolated"
+
 .PHONY: deps
 deps:
 	rosdep install -y \

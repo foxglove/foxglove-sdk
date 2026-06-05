@@ -30,6 +30,17 @@ docker run --rm --network host \
   rosrun foxglove_bridge_ros1 foxglove_bridge _remote_access:=true
 ```
 
+## Testing
+
+```sh
+cd ros && make docker-test-noetic
+```
+
+Runs the rostest-based smoke suite (`tests/smoke.test`) in the image: a master,
+the bridge, and a gtest that exercises topics, latched replay, client publish,
+service calls, parameter get/set/push, asset fetching, and time broadcast over
+the ws-protocol, using the test client shared with the ROS 2 bridge tests.
+
 ## Implementation notes
 
 - **Schemas/md5sums** come from `ros_babel_fish`'s integrated description

@@ -52,6 +52,28 @@ set_target_properties(foxglove_bridge PROPERTIES
   BUILD_WITH_INSTALL_RPATH TRUE
 )
 
+if(CATKIN_ENABLE_TESTING)
+  find_package(rostest REQUIRED)
+  find_package(nlohmann_json REQUIRED)
+  find_package(websocketpp REQUIRED)
+
+  # The smoke test launches a master + the bridge (smoke.test) and exercises it
+  # with the ws-protocol test client shared with the ROS 2 bridge tests.
+  add_rostest_gtest(smoke_test tests/smoke.test tests/smoke_test.cpp)
+  # ASIO_STANDALONE makes websocketpp dispatch to standalone asio (header-only,
+  # supplied by the `asio` system package) rather than boost::asio.
+  target_compile_definitions(smoke_test PRIVATE ASIO_STANDALONE)
+  target_include_directories(smoke_test PRIVATE include tests)
+  target_include_directories(smoke_test SYSTEM PRIVATE ${catkin_INCLUDE_DIRS})
+  target_link_libraries(smoke_test
+    foxglove_bridge_core::foxglove_bridge_core
+    nlohmann_json::nlohmann_json
+    websocketpp::websocketpp
+    ${catkin_LIBRARIES}
+  )
+  enable_strict_compiler_warnings(smoke_test)
+endif()
+
 install(TARGETS foxglove_bridge
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )

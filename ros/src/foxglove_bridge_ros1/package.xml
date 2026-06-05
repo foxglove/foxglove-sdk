@@ -27,6 +27,12 @@
   <depend condition="$ROS_VERSION == 1">topic_tools</depend>
   <depend condition="$ROS_VERSION == 1">ros_babel_fish</depend>
 
+  <test_depend condition="$ROS_VERSION == 1">rostest</test_depend>
+  <test_depend condition="$ROS_VERSION == 1">std_msgs</test_depend>
+  <test_depend condition="$ROS_VERSION == 1">nlohmann-json-dev</test_depend>
+  <test_depend condition="$ROS_VERSION == 1">websocketpp</test_depend>
+  <test_depend condition="$ROS_VERSION == 1">asio</test_depend>
+
   <export>
     <build_type>catkin</build_type>
   </export>
