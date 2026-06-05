@@ -44,6 +44,7 @@ tracing-test = "0.2.5"
 insta = { version = "1.42.2", features = ["json"] }
 
 [patch.crates-io]
+livekit = { path = "vendor/livekit" }
 webrtc-sys = { path = "vendor/webrtc-sys" }
 
 [workspace.lints.clippy]
