@@ -172,6 +172,23 @@ class Color:
         """Encodes the Color."""
         ...
 
+class CompressedAudio:
+    """
+    A single chunk of a compressed audio bitstream
+    """
+
+    def __new__(
+        cls, *, timestamp: Timestamp | None = None, data: bytes = b"", format: str = ""
+    ) -> "CompressedAudio": ...
+    @staticmethod
+    def get_schema() -> Schema:
+        """Returns the CompressedAudio schema"""
+        ...
+
+    def encode(self) -> bytes:
+        """Encodes the CompressedAudio."""
+        ...
+
 class CompressedImage:
     """
     A compressed image
@@ -1101,6 +1118,7 @@ FoxgloveMessage = Union[
     CameraCalibration,
     CircleAnnotation,
     Color,
+    CompressedAudio,
     CompressedImage,
     CompressedPointCloud,
     CompressedVideo,

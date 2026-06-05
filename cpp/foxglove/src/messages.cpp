@@ -21,6 +21,7 @@ void cameraCalibrationToC(
 void circleAnnotationToC(
   foxglove_circle_annotation& dest, const CircleAnnotation& src, Arena& arena
 );
+void compressedAudioToC(foxglove_compressed_audio& dest, const CompressedAudio& src, Arena& arena);
 void compressedImageToC(foxglove_compressed_image& dest, const CompressedImage& src, Arena& arena);
 void compressedPointCloudToC(
   foxglove_compressed_point_cloud& dest, const CompressedPointCloud& src, Arena& arena
@@ -219,6 +220,42 @@ uint64_t ColorChannel::id() const noexcept {
 }
 
 bool ColorChannel::hasSinks() const noexcept {
+  return foxglove_channel_has_sinks(impl_.get());
+}
+
+FoxgloveResult<CompressedAudioChannel> CompressedAudioChannel::create(
+  const std::string_view& topic, const Context& context
+) {
+  const foxglove_channel* channel = nullptr;
+  foxglove_error error = foxglove_channel_create_compressed_audio(
+    {topic.data(), topic.size()}, context.getInner(), &channel
+  );
+  if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
+    return tl::unexpected(FoxgloveError(error));
+  }
+  return CompressedAudioChannel(ChannelUniquePtr(channel));
+}
+
+FoxgloveError CompressedAudioChannel::log(
+  const CompressedAudio& msg, std::optional<uint64_t> log_time, std::optional<uint64_t> sink_id
+) noexcept {
+  Arena arena;
+  foxglove_compressed_audio c_msg;
+  compressedAudioToC(c_msg, msg, arena);
+  return FoxgloveError(foxglove_channel_log_compressed_audio(
+    impl_.get(), &c_msg, log_time ? &*log_time : nullptr, sink_id ? *sink_id : 0
+  ));
+}
+
+void CompressedAudioChannel::close() noexcept {
+  foxglove_channel_close(impl_.get());
+}
+
+uint64_t CompressedAudioChannel::id() const noexcept {
+  return foxglove_channel_get_id(impl_.get());
+}
+
+bool CompressedAudioChannel::hasSinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
@@ -1764,6 +1801,16 @@ void circleAnnotationToC(
   dest.metadata_count = src.metadata.size();
 }
 
+void compressedAudioToC(
+  foxglove_compressed_audio& dest, const CompressedAudio& src, [[maybe_unused]] Arena& arena
+) {
+  dest.timestamp =
+    src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
+  dest.data = reinterpret_cast<const unsigned char*>(src.data.data());
+  dest.data_len = src.data.size();
+  dest.format = {src.format.data(), src.format.size()};
+}
+
 void compressedImageToC(
   foxglove_compressed_image& dest, const CompressedImage& src, [[maybe_unused]] Arena& arena
 ) {
@@ -2250,6 +2297,13 @@ FoxgloveError Color::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   );
 }
 
+FoxgloveError CompressedAudio::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
+  Arena arena;
+  foxglove_compressed_audio c_msg;
+  compressedAudioToC(c_msg, *this, arena);
+  return FoxgloveError(foxglove_compressed_audio_encode(&c_msg, ptr, len, encoded_len));
+}
+
 FoxgloveError CompressedImage::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_compressed_image c_msg;
@@ -2571,6 +2625,16 @@ Schema CircleAnnotation::schema() {
 
 Schema Color::schema() {
   struct foxglove_schema c_schema = foxglove_color_schema();
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data_len = c_schema.data_len;
+  return result;
+}
+
+Schema CompressedAudio::schema() {
+  struct foxglove_schema c_schema = foxglove_compressed_audio_schema();
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);

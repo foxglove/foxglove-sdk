@@ -840,6 +840,33 @@ typedef struct foxglove_circle_annotation {
 } foxglove_circle_annotation;
 
 /**
+ * A single chunk of a compressed audio bitstream
+ */
+typedef struct foxglove_compressed_audio {
+  /**
+   * Timestamp of the start of the audio chunk
+   */
+  const struct foxglove_timestamp *timestamp;
+  /**
+   * Compressed audio data. Packet duration is determined by the codec during encoding. Messages should generally contain approximately 20 ms of audio.
+   *
+   * - `opus`
+   *   - Each message must contain a complete raw Opus packet, without Ogg, WebM, or other container framing, as described in [RFC 6716 section 3](https://datatracker.ietf.org/doc/html/rfc6716#section-3).
+   *   - Each packet contains all information necessary for decoding, and may be decoded at any sample rate supported by Opus (8, 12, 16, 24, or 48 kHz).
+   *   - A single raw Opus packet represents mono or stereo audio; multichannel Opus requires multistream or container metadata and is not supported by this schema.
+   * - `mp4a.40.2`
+   *   - Each message must contain a complete MPEG-4 AAC-LC ADTS frame, including the ADTS header, as described in section 1.A.3.2 of ISO/IEC 14496-3:2019.
+   *   - The ADTS header supplies stream parameters such as sample rate and channel configuration.
+   */
+  const unsigned char *data;
+  size_t data_len;
+  /**
+   * Audio format. Values supported by Foxglove are `opus` for raw Opus packets and `mp4a.40.2` for AAC-LC ADTS frames.
+   */
+  struct foxglove_string format;
+} foxglove_compressed_audio;
+
+/**
  * A compressed image
  */
 typedef struct foxglove_compressed_image {
@@ -3310,6 +3337,52 @@ foxglove_error foxglove_color_encode(const struct foxglove_color *msg,
                                      uint8_t *ptr,
                                      size_t len,
                                      size_t *encoded_len);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_compressed_audio(struct foxglove_string topic,
+                                                        const struct foxglove_context *context,
+                                                        const struct foxglove_channel **channel);
+
+#if !defined(__wasm__)
+/**
+ * Log a CompressedAudio message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_compressed_audio.
+ */
+foxglove_error foxglove_channel_log_compressed_audio(const struct foxglove_channel *channel,
+                                                     const struct foxglove_compressed_audio *msg,
+                                                     const uint64_t *log_time,
+                                                     FoxgloveSinkId sink_id);
+#endif
+
+/**
+ * Get the CompressedAudio schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_compressed_audio_schema(void);
+
+/**
+ * Encode a CompressedAudio message as protobuf to the buffer provided.
+ *
+ * On success, writes the encoded length to *encoded_len.
+ * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+ * returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+ * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+ *
+ * # Safety
+ * ptr must be a valid pointer to a memory region at least len bytes long.
+ */
+foxglove_error foxglove_compressed_audio_encode(const struct foxglove_compressed_audio *msg,
+                                                uint8_t *ptr,
+                                                size_t len,
+                                                size_t *encoded_len);
 
 /**
  * Create a new typed channel, and return an owned raw channel pointer to it.

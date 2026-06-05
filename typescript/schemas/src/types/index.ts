@@ -2,6 +2,7 @@ export * from "./ArrowPrimitive";
 export * from "./CameraCalibration";
 export * from "./CircleAnnotation";
 export * from "./Color";
+export * from "./CompressedAudio";
 export * from "./CompressedImage";
 export * from "./CompressedPointCloud";
 export * from "./CompressedVideo";

@@ -839,6 +839,176 @@ pub unsafe extern "C" fn foxglove_color_encode(
     }
 }
 
+/// A single chunk of a compressed audio bitstream
+#[repr(C)]
+pub struct CompressedAudio {
+    /// Timestamp of the start of the audio chunk
+    pub timestamp: *const FoxgloveTimestamp,
+
+    /// Compressed audio data. Packet duration is determined by the codec during encoding. Messages should generally contain approximately 20 ms of audio.
+    ///
+    /// - `opus`
+    ///   - Each message must contain a complete raw Opus packet, without Ogg, WebM, or other container framing, as described in [RFC 6716 section 3](https://datatracker.ietf.org/doc/html/rfc6716#section-3).
+    ///   - Each packet contains all information necessary for decoding, and may be decoded at any sample rate supported by Opus (8, 12, 16, 24, or 48 kHz).
+    ///   - A single raw Opus packet represents mono or stereo audio; multichannel Opus requires multistream or container metadata and is not supported by this schema.
+    /// - `mp4a.40.2`
+    ///   - Each message must contain a complete MPEG-4 AAC-LC ADTS frame, including the ADTS header, as described in section 1.A.3.2 of ISO/IEC 14496-3:2019.
+    ///   - The ADTS header supplies stream parameters such as sample rate and channel configuration.
+    pub data: *const c_uchar,
+    pub data_len: usize,
+
+    /// Audio format. Values supported by Foxglove are `opus` for raw Opus packets and `mp4a.40.2` for AAC-LC ADTS frames.
+    pub format: FoxgloveString,
+}
+
+#[cfg(not(target_family = "wasm"))]
+impl CompressedAudio {
+    /// Create a new typed channel, and return an owned raw channel pointer to it.
+    ///
+    /// # Safety
+    /// We're trusting the caller that the channel will only be used with this type T.
+    #[unsafe(no_mangle)]
+    pub unsafe extern "C" fn foxglove_channel_create_compressed_audio(
+        topic: FoxgloveString,
+        context: *const FoxgloveContext,
+        channel: *mut *const FoxgloveChannel,
+    ) -> FoxgloveError {
+        if channel.is_null() {
+            tracing::error!("channel cannot be null");
+            return FoxgloveError::ValueError;
+        }
+        unsafe {
+            let result =
+                do_foxglove_channel_create::<foxglove::messages::CompressedAudio>(topic, context);
+            result_to_c(result, channel)
+        }
+    }
+}
+
+impl BorrowToNative for CompressedAudio {
+    type NativeType = foxglove::messages::CompressedAudio;
+
+    unsafe fn borrow_to_native(
+        &self,
+        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
+        let format = unsafe {
+            string_from_raw(
+                self.format.as_ptr() as *const _,
+                self.format.len(),
+                "format",
+            )?
+        };
+
+        Ok(ManuallyDrop::new(foxglove::messages::CompressedAudio {
+            timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
+            data: ManuallyDrop::into_inner(unsafe { bytes_from_raw(self.data, self.data_len) }),
+            format: ManuallyDrop::into_inner(format),
+        }))
+    }
+}
+
+/// Log a CompressedAudio message to a channel.
+///
+/// # Safety
+/// The channel must have been created for this type with foxglove_channel_create_compressed_audio.
+#[cfg(not(target_family = "wasm"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_channel_log_compressed_audio(
+    channel: Option<&FoxgloveChannel>,
+    msg: Option<&CompressedAudio>,
+    log_time: Option<&u64>,
+    sink_id: FoxgloveSinkId,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { CompressedAudio::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
+            log_msg_to_channel(channel, &*msg, log_time, sink_id)
+        }
+        Err(e) => {
+            tracing::error!("CompressedAudio: {}", e);
+            e.into()
+        }
+    }
+}
+
+/// Get the CompressedAudio schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_compressed_audio_schema() -> FoxgloveSchema {
+    let native =
+        foxglove::messages::CompressedAudio::get_schema().expect("CompressedAudio schema is Some");
+    let name: &'static str = "foxglove.CompressedAudio";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("CompressedAudio schema data is static");
+    };
+    FoxgloveSchema {
+        name: name.into(),
+        encoding: encoding.into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
+/// Encode a CompressedAudio message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_compressed_audio_encode(
+    msg: Option<&CompressedAudio>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { CompressedAudio::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg
+                        .encoded_len()
+                        .expect("foxglove messages return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("CompressedAudio: {}", e);
+            FoxgloveError::EncodeError
+        }
+    }
+}
+
 /// A compressed image
 #[repr(C)]
 pub struct CompressedImage {

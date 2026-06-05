@@ -559,6 +559,72 @@ impl From<Color> for foxglove::messages::Color {
     }
 }
 
+/// A single chunk of a compressed audio bitstream
+///
+/// :param timestamp: Timestamp of the start of the audio chunk
+/// :param data: Compressed audio data. Packet duration is determined by the codec during encoding. Messages should generally contain approximately 20 ms of audio.
+///     
+///     - `opus`
+///       - Each message must contain a complete raw Opus packet, without Ogg, WebM, or other container framing, as described in `RFC 6716 section 3 <https://datatracker.ietf.org/doc/html/rfc6716#section-3>`__.
+///       - Each packet contains all information necessary for decoding, and may be decoded at any sample rate supported by Opus (8, 12, 16, 24, or 48 kHz).
+///       - A single raw Opus packet represents mono or stereo audio; multichannel Opus requires multistream or container metadata and is not supported by this schema.
+///     - `mp4a.40.2`
+///       - Each message must contain a complete MPEG-4 AAC-LC ADTS frame, including the ADTS header, as described in section 1.A.3.2 of ISO/IEC 14496-3:2019.
+///       - The ADTS header supplies stream parameters such as sample rate and channel configuration.
+/// :param format: Audio format. Values supported by Foxglove are `opus` for raw Opus packets and `mp4a.40.2` for AAC-LC ADTS frames.
+///
+/// See https://docs.foxglove.dev/docs/visualization/message-schemas/compressed-audio
+#[pyclass(module = "foxglove.messages")]
+#[derive(Clone)]
+pub(crate) struct CompressedAudio(pub(crate) foxglove::messages::CompressedAudio);
+#[pymethods]
+impl CompressedAudio {
+    #[new]
+    #[pyo3(signature = (*, timestamp=None, data=None, format="") )]
+    fn new(timestamp: Option<Timestamp>, data: Option<Bound<'_, PyBytes>>, format: &str) -> Self {
+        Self(foxglove::messages::CompressedAudio {
+            timestamp: timestamp.map(Into::into),
+            data: data
+                .map(|x| Bytes::copy_from_slice(x.as_bytes()))
+                .unwrap_or_default(),
+            format: format.to_string(),
+        })
+    }
+    fn __repr__(&self) -> String {
+        format!(
+            "CompressedAudio(timestamp={:?}, data={:?}, format={:?})",
+            self.0.timestamp, self.0.data, self.0.format,
+        )
+    }
+    /// Returns the CompressedAudio schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::messages::CompressedAudio::get_schema()
+            .unwrap()
+            .into()
+    }
+    /// Encodes the CompressedAudio as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
+    }
+}
+
+impl From<CompressedAudio> for foxglove::messages::CompressedAudio {
+    fn from(value: CompressedAudio) -> Self {
+        value.0
+    }
+}
+
 /// A compressed image
 ///
 /// :param timestamp: Timestamp of image
@@ -3604,6 +3670,7 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<CameraCalibration>()?;
     module.add_class::<CircleAnnotation>()?;
     module.add_class::<Color>()?;
+    module.add_class::<CompressedAudio>()?;
     module.add_class::<CompressedImage>()?;
     module.add_class::<CompressedPointCloud>()?;
     module.add_class::<CompressedVideo>()?;

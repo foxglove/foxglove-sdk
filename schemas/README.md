@@ -22,6 +22,7 @@ If the IDL does not support optional fields (e.g. ROS) you must specify a value 
 - [CameraCalibration](#cameracalibration)
 - [CircleAnnotation](#circleannotation)
 - [Color](#color)
+- [CompressedAudio](#compressedaudio)
 - [CompressedImage](#compressedimage)
 - [CompressedPointCloud](#compressedpointcloud)
 - [CompressedVideo](#compressedvideo)
@@ -576,6 +577,65 @@ float64
 <td>
 
 Alpha value between 0 and 1
+
+</td>
+</tr>
+</table>
+
+## CompressedAudio
+
+A single chunk of a compressed audio bitstream
+
+<table>
+  <tr>
+    <th>field</th>
+    <th>type</th>
+    <th>description</th>
+  </tr>
+<tr>
+<td><code>timestamp</code></td>
+<td>
+
+[Timestamp](#timestamp)
+
+</td>
+<td>
+
+Timestamp of the start of the audio chunk
+
+</td>
+</tr>
+<tr>
+<td><code>data</code></td>
+<td>
+
+bytes
+
+</td>
+<td>
+
+Compressed audio data. Packet duration is determined by the codec during encoding. Messages should generally contain approximately 20 ms of audio.
+
+- `opus`
+  - Each message must contain a complete raw Opus packet, without Ogg, WebM, or other container framing, as described in [RFC 6716 section 3](https://datatracker.ietf.org/doc/html/rfc6716#section-3).
+  - Each packet contains all information necessary for decoding, and may be decoded at any sample rate supported by Opus (8, 12, 16, 24, or 48 kHz).
+  - A single raw Opus packet represents mono or stereo audio; multichannel Opus requires multistream or container metadata and is not supported by this schema.
+- `mp4a.40.2`
+  - Each message must contain a complete MPEG-4 AAC-LC ADTS frame, including the ADTS header, as described in section 1.A.3.2 of ISO/IEC 14496-3:2019.
+  - The ADTS header supplies stream parameters such as sample rate and channel configuration.
+
+</td>
+</tr>
+<tr>
+<td><code>format</code></td>
+<td>
+
+string
+
+</td>
+<td>
+
+Audio format. Values supported by Foxglove are `opus` for raw Opus packets and `mp4a.40.2` for AAC-LC ADTS frames.
 
 </td>
 </tr>
