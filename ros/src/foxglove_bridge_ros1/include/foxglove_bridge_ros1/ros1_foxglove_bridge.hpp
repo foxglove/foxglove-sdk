@@ -137,6 +137,16 @@ private:
   std::unordered_map<ChannelId, ChannelSubscription> _subscriptions;
   std::mutex _subscriptionsMutex;
 
+  // Channels with an observed latched publisher, for remote-access QoS
+  // classification. Kept under its OWN mutex: the SDK invokes the QoS
+  // classifier from inside the gateway session, which can run concurrently
+  // with (and be waited on by) channel.log() calls made while holding
+  // _subscriptionsMutex — touching _subscriptionsMutex from the classifier
+  // deadlocks. This mutex is only ever held for set operations, never across
+  // any SDK call.
+  std::mutex _latchedChannelsMutex;
+  std::unordered_set<ChannelId> _latchedChannels;
+
   std::unordered_map<ClientChannelKey, ClientAdvertisement, ClientChannelKeyHash>
     _clientAdvertisedTopics;
   std::mutex _clientAdvertisementsMutex;

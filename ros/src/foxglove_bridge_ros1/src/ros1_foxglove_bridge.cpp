@@ -296,6 +296,10 @@ void Ros1FoxgloveBridge::updateAdvertisedTopics(const std::vector<TopicAndDataty
         ROS_INFO("Removing channel %lu for topic \"%s\" (%s)", channelId, topic.c_str(),
                  schemaName.c_str());
         _subscriptions.erase(channelId);
+        {
+          std::lock_guard<std::mutex> latchedLock(_latchedChannelsMutex);
+          _latchedChannels.erase(channelId);
+        }
         channelsToClose.push_back(std::move(channel));
         channelIt = _channels.erase(channelIt);
       } else {
@@ -518,6 +522,8 @@ void Ros1FoxgloveBridge::onUnsubscribe(ChannelId channelId, ClientId clientId, b
   if (subIt->second.wsClientIds.empty() && subIt->second.gatewayClientIds.empty()) {
     ROS_INFO("Cleaned up ROS subscription for channel %lu (no more subscribers)", channelId);
     _subscriptions.erase(subIt);
+    std::lock_guard<std::mutex> latchedLock(_latchedChannelsMutex);
+    _latchedChannels.erase(channelId);
   }
 }
 
@@ -550,6 +556,10 @@ void Ros1FoxgloveBridge::rosMessageHandler(
         const std::string callerid =
           calleridIt != connectionHeader->end() ? calleridIt->second : std::string();
         subIt->second.latchedMessages[callerid] = CachedLatchedMessage{buffer, timestamp};
+        {
+          std::lock_guard<std::mutex> latchedLock(_latchedChannelsMutex);
+          _latchedChannels.insert(channelId);
+        }
       }
     }
   }
@@ -771,10 +781,14 @@ foxglove::QosProfile Ros1FoxgloveBridge::classifyRemoteAccessQos(
   // this can only classify based on messages seen so far: a topic is treated
   // as latched once a latched publisher has been observed on it. Before the
   // first message arrives the default (lossy) profile applies.
+  //
+  // NOTE: the SDK invokes this callback from inside the gateway session, which
+  // can be waited on by channel.log() calls made while _subscriptionsMutex is
+  // held — taking _subscriptionsMutex here deadlocks the bridge. Only the
+  // dedicated _latchedChannelsMutex may be used.
   foxglove::QosProfile profile;
-  std::lock_guard<std::mutex> lock(_subscriptionsMutex);
-  auto subIt = _subscriptions.find(channel.id());
-  if (subIt != _subscriptions.end() && !subIt->second.latchedMessages.empty()) {
+  std::lock_guard<std::mutex> lock(_latchedChannelsMutex);
+  if (_latchedChannels.find(channel.id()) != _latchedChannels.end()) {
     profile.reliability = foxglove::Reliability::Reliable;
   }
   return profile;
