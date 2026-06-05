@@ -43,6 +43,9 @@ tracing = { version = "0.1", features = ["log"] }
 tracing-test = "0.2.5"
 insta = { version = "1.42.2", features = ["json"] }
 
+[patch.crates-io]
+webrtc-sys = { path = "vendor/webrtc-sys" }
+
 [workspace.lints.clippy]
 assigning_clones = "warn"
 borrow_as_ptr = "warn"
