@@ -20,15 +20,33 @@ make build-cpp-dist          # once: jammy-built SDK dist with remote access
 cd ros && make docker-build-noetic
 ```
 
-Run against an external rosmaster:
+Run against an external rosmaster (e.g. a robot running a stock focal
+Noetic — the bridge interoperates over TCPROS; the robot side needs no
+changes):
 
 ```sh
 docker run --rm --network host \
   -e ROS_MASTER_URI=http://localhost:11311 \
+  -e ROS_HOSTNAME=localhost \
   -e FOXGLOVE_DEVICE_TOKEN=<token> \
   foxglove-bridge-ros1-noetic \
   rosrun foxglove_bridge_ros1 foxglove_bridge _remote_access:=true
 ```
+
+### Assets in a sidecar deployment
+
+`fetchAsset` resolves `package://` URIs with resource_retriever against the
+*bridge container's* filesystem, not the robot's. When the bridge runs as a
+sidecar next to an existing robot, mount the robot's description packages
+(URDF meshes etc.) into the container under `/opt/foxglove/share`, which is
+already on the bridge's `ROS_PACKAGE_PATH`:
+
+```sh
+  -v /path/to/my_robot_description:/opt/foxglove/share/my_robot_description:ro
+```
+
+(The URDF itself usually travels as the `robot_description` parameter and
+needs no mount; only the assets it references do.)
 
 ## Testing
 
