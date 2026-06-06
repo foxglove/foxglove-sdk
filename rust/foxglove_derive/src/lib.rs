@@ -588,9 +588,18 @@ fn derive_named_struct_impl(
         });
     }
 
-    let enum_defs = enum_defs.into_values().collect::<Vec<_>>();
-    let message_defs = message_defs.into_values().collect::<Vec<_>>();
-    let file_defs = file_defs.into_values().collect::<Vec<_>>();
+    // Emit definitions in a deterministic order: HashMap iteration order is
+    // randomized per process, so splicing `into_values()` directly makes the
+    // generated tokens (and the consuming crate's SVH) differ build-to-build.
+    let mut enum_defs: Vec<_> = enum_defs.into_iter().collect();
+    enum_defs.sort_by_key(|(t, _)| quote::quote!(#t).to_string());
+    let enum_defs = enum_defs.into_iter().map(|(_, d)| d).collect::<Vec<_>>();
+    let mut message_defs: Vec<_> = message_defs.into_iter().collect();
+    message_defs.sort_by_key(|(t, _)| quote::quote!(#t).to_string());
+    let message_defs = message_defs.into_iter().map(|(_, d)| d).collect::<Vec<_>>();
+    let mut file_defs: Vec<_> = file_defs.into_iter().collect();
+    file_defs.sort_by_key(|(t, _)| quote::quote!(#t).to_string());
+    let file_defs = file_defs.into_iter().map(|(_, d)| d).collect::<Vec<_>>();
     let has_generics = !input.generics.params.is_empty();
 
     // Extract computation bodies so we can conditionally wrap with OnceLock
