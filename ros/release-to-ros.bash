@@ -1,7 +1,7 @@
 #!/bin/bash
 # Release the foxglove_bridge and foxglove_msgs packages to a ROS distro via bloom.
 #
-# Usage: ros/bloom-release.sh --tag <tag> --distro <ros-distro> [--dry-run]
+# Usage: ros/release-to-ros.bash --tag <tag> --distro <ros-distro> [--dry-run]
 #
 # The specified release tag must exist locally and at origin.
 #

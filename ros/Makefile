@@ -140,7 +140,7 @@ docker-deb-bridge: docker-deb-bridge-rolling
 docker-deb-msgs: docker-deb-msgs-rolling
 
 # Run bloom-release inside the humble image, regardless of the target distro.
-# Invoked by ./bloom-release.sh; the bloom config is mounted, and GITHUB_TOKEN
+# Invoked by ./release-to-ros.bash; the bloom config is mounted, and GITHUB_TOKEN
 # is consumed by the credential helper baked into the image (see Dockerfile.ros)
 # so bloom's intermediate git push doesn't prompt. Requires
 # BLOOM_RELEASE_DISTRO=<ros-distro> and GITHUB_TOKEN; set
