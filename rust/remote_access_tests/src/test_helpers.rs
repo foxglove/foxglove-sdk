@@ -602,6 +602,33 @@ impl ViewerConnection {
         }
     }
 
+    /// Waits for a `TrackSubscribed` room event for a video track and returns the
+    /// subscribed [`RemoteVideoTrack`], so callers can read receiver-side WebRTC stats
+    /// (e.g. the actually-received frame dimensions and frame rate).
+    ///
+    /// Non-matching `DataTrackPublished` events are buffered for later consumption.
+    pub async fn expect_video_track_subscribed(
+        &mut self,
+    ) -> Result<livekit::track::RemoteVideoTrack> {
+        let deadline = tokio::time::Instant::now() + EVENT_TIMEOUT;
+        loop {
+            let event = tokio::time::timeout_at(deadline, self.events.recv())
+                .await
+                .context("timeout waiting for TrackSubscribed event")?
+                .context("room events channel closed")?;
+            match event {
+                RoomEvent::TrackSubscribed {
+                    track: livekit::track::RemoteTrack::Video(track),
+                    ..
+                } => return Ok(track),
+                RoomEvent::DataTrackPublished(track) => {
+                    self.pending_data_tracks.push(track);
+                }
+                _ => continue,
+            }
+        }
+    }
+
     /// Waits for a `TrackUnsubscribed` room event and returns the track name.
     pub async fn expect_track_unsubscribed(&mut self) -> Result<String> {
         let deadline = tokio::time::Instant::now() + EVENT_TIMEOUT;
