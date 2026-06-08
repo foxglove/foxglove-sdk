@@ -925,6 +925,154 @@ async fn livekit_video_metadata_advertised_after_image_logged() -> Result<()> {
     Ok(())
 }
 
+/// Encode an `width`x`height` rgb8 `foxglove.RawImage` as protobuf bytes.
+///
+/// Fills the buffer with a simple vertical gradient so the encoder sees real
+/// (non-uniform) content rather than a flat color.
+fn encode_raw_image_sized(frame_id: &str, width: u32, height: u32) -> Vec<u8> {
+    let step = width * 3; // rgb8: 3 bytes per pixel
+    let mut data = vec![0u8; (step * height) as usize];
+    for y in 0..height {
+        let row = (y * step) as usize;
+        let v = (y % 256) as u8;
+        for x in 0..width {
+            let px = row + (x * 3) as usize;
+            data[px] = v;
+            data[px + 1] = (x % 256) as u8;
+            data[px + 2] = 128;
+        }
+    }
+    let msg = RawImage {
+        timestamp: Some(Timestamp::new(1, 0)),
+        frame_id: frame_id.to_string(),
+        width,
+        height,
+        encoding: "rgb8".to_string(),
+        step,
+        data: data.into(),
+    };
+    let mut buf = Vec::new();
+    Encode::encode(&msg, &mut buf).expect("encode RawImage");
+    buf
+}
+
+/// FLE-579 reproduction: stream 1080p frames and measure the resolution the
+/// receiver actually decodes.
+///
+/// The gateway initializes its `NativeVideoSource` with `VideoResolution::default()`
+/// (1280x720), so even though we capture 1920x1080 frames the encoder is configured
+/// for 720p. This test feeds 1080p frames, subscribes a viewer, and reads the
+/// receiver-side inbound-RTP stats (`frame_width`/`frame_height`/`frames_per_second`).
+///
+/// It asserts the receiver decodes the full 1920x1080. If the bug reproduces in this
+/// local (software-encoder) loopback, the assertion fails showing the capped
+/// dimensions; after the fix (initializing the source at the real frame size) it
+/// should pass.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_video_1080p_resolution_not_capped() -> Result<()> {
+    const WIDTH: u32 = 1920;
+    const HEIGHT: u32 = 1080;
+
+    let ctx = foxglove::Context::new();
+
+    let video_channel = ctx
+        .channel_builder("/camera")
+        .message_encoding("protobuf")
+        .schema(Schema::new("foxglove.RawImage", "protobuf", &b""[..]))
+        .build_raw()
+        .context("create video channel")?;
+
+    let gw = TestGateway::start(&ctx).await?;
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+
+    let _server_info = viewer.expect_server_info().await?;
+    let advertise = viewer.expect_advertise().await?;
+    let channel_id = advertise.channels[0].id;
+
+    viewer
+        .subscribe_video_and_wait(&[channel_id], &video_channel)
+        .await?;
+    let track = viewer.expect_video_track_subscribed().await?;
+    info!("subscribed to video track {}", track.name());
+
+    // Pump 1080p frames at ~30fps from a background task until told to stop.
+    let frame = encode_raw_image_sized("camera_optical_frame", WIDTH, HEIGHT);
+    let stop = Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let pump = {
+        let video_channel = video_channel.clone();
+        let stop = stop.clone();
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(Duration::from_millis(33));
+            while !stop.load(std::sync::atomic::Ordering::Relaxed) {
+                interval.tick().await;
+                video_channel.log(&frame);
+            }
+        })
+    };
+
+    // Poll receiver stats until we've decoded a healthy number of frames, then
+    // record the steady-state resolution and frame rate.
+    let deadline = tokio::time::Instant::now() + Duration::from_secs(20);
+    let mut last: Option<(u32, u32, f64, u64)> = None;
+    loop {
+        if tokio::time::Instant::now() >= deadline {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(500)).await;
+        let stats = track.get_stats().await.context("get_stats")?;
+        let mut codec = String::new();
+        for s in &stats {
+            if let livekit::webrtc::stats::RtcStats::Codec(c) = s {
+                codec = c.codec.mime_type.clone();
+            }
+        }
+        for s in &stats {
+            if let livekit::webrtc::stats::RtcStats::InboundRtp(rtp) = s {
+                let w = rtp.inbound.frame_width;
+                let h = rtp.inbound.frame_height;
+                let fps = rtp.inbound.frames_per_second;
+                let received = rtp.inbound.frames_received;
+                let decoder = &rtp.inbound.decoder_implementation;
+                info!(
+                    "inbound video stats: {w}x{h} @ {fps:.1} fps, frames_received={received}, \
+                     codec={codec}, decoder={decoder}"
+                );
+                last = Some((w, h, fps, received));
+            }
+        }
+        // Once we've decoded a good number of frames at a stable resolution, stop early.
+        if let Some((_, _, _, received)) = last {
+            if received >= 60 {
+                break;
+            }
+        }
+    }
+
+    stop.store(true, std::sync::atomic::Ordering::Relaxed);
+    let _ = pump.await;
+
+    let (w, h, fps, received) = last.context("never received any inbound video stats")?;
+    info!("final inbound video stats: {w}x{h} @ {fps:.1} fps, frames_received={received}");
+
+    assert!(
+        received > 0,
+        "viewer should have decoded at least one frame"
+    );
+    assert_eq!(
+        (w, h),
+        (WIDTH, HEIGHT),
+        "receiver decoded {w}x{h} but expected {WIDTH}x{HEIGHT}; \
+         the encoder source was likely capped to its 720p default (FLE-579)"
+    );
+
+    viewer.close().await?;
+    gw.stop().await?;
+    Ok(())
+}
+
 /// Test that when a viewer sends a client Advertise message the gateway fires
 /// `on_client_advertise` on the listener with the correct client identity and topic.
 #[traced_test]
