@@ -21,7 +21,7 @@
 #   }
 #
 # For more information on how to set up the PAT, see:
-# https://wiki.ros.org/bloom/Tutorials/GithubManualAuthorization
+# https://docs.ros.org/en/rolling/How-To-Guides/Releasing/First-Time-Release.html
 
 set -euo pipefail
 
