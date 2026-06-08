@@ -8,9 +8,13 @@
 //   yarn netem-impair --profile pristine
 //   yarn netem-impair -- delay 500ms loss 10%       # raw netem args
 //
-// Each invocation REPLACES all netem settings on the qdisc. Unmentioned
-// settings reset to 0 — for example, switching from "delay 500ms loss 20%"
-// to "delay 400ms" resets loss to 0%.
+// Each invocation REPLACES all netem settings on the qdisc — unmentioned
+// settings reset to their defaults. For example, switching from
+// "delay 500ms loss 20%" to "delay 400ms" resets loss to 0%. `rate` is a kernel
+// special case (it persists across a bare `tc qdisc change`), so `netem_impair.py`
+// appends an uncapped rate when none is given; omitting `rate` here therefore
+// means "no rate limit", consistent with the other settings. So `pristine`
+// (`delay 0ms`) really does restore an unshaped link.
 //
 // Scope: this wrapper hardcodes the `gateway-netem` sidecar, so it only
 // retunes the gateway-upload link. The underlying `netem_impair.py` is not so

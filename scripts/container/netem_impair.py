@@ -27,12 +27,27 @@ def main() -> None:
 
     # Arguments are already a list from sys.argv — no shell parsing needed.
     netem_args = args
+
+    # Normalize `rate` so every invocation fully replaces the qdisc settings.
+    #
+    # `tc qdisc change` overwrites delay/loss/jitter unconditionally — they live
+    # in the base tc_netem_qopt struct. But `rate` rides a separate
+    # TCA_NETEM_RATE attribute that the kernel only re-applies when `rate` is on
+    # the command line; a bare change leaves any previous rate cap in place. That
+    # silently breaks A/B comparisons: e.g. `delay 100ms rate 2mbit` followed by
+    # `delay 0ms` leaves the 2mbit cap intact instead of clearing it. When the
+    # caller omits `rate`, append an effectively-uncapped value so "no rate" means
+    # "no rate limit" — matching the uncapped HTB classes in netem_setup.py.
+    if "rate" not in netem_args:
+        netem_args = [*netem_args, "rate", "1000gbit"]
+
     errors = 0
 
     for iface in sorted(p.name for p in Path("/sys/class/net").iterdir()):
         result = subprocess.run(
             ["tc", "qdisc", "show", "dev", iface],  # noqa: S603, S607
-            capture_output=True, text=True,
+            capture_output=True,
+            text=True,
         )
         for line in result.stdout.splitlines():
             if "qdisc netem" not in line:
@@ -50,9 +65,20 @@ def main() -> None:
                 continue
 
             change_result = subprocess.run(
-                ["tc", "qdisc", "change", "dev", iface, *parent_args,  # noqa: S603, S607
-                 "handle", handle, "netem", *netem_args],
-                capture_output=True, text=True,
+                [
+                    "tc",
+                    "qdisc",
+                    "change",
+                    "dev",
+                    iface,
+                    *parent_args,  # noqa: S603, S607
+                    "handle",
+                    handle,
+                    "netem",
+                    *netem_args,
+                ],
+                capture_output=True,
+                text=True,
             )
             if change_result.returncode == 0:
                 print(f"  {iface} {handle}: netem {' '.join(netem_args)}")
