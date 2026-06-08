@@ -83,6 +83,7 @@ def set_layout(layout: "foxglove.layouts.Layout", /) -> None:
 mod = ModuleType("playground")
 mod.__doc__ = "Functions available in the SDK playground."
 mod.set_layout = set_layout
+mod.current_url = ""
 mod
     `,
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
@@ -264,7 +265,7 @@ mod
     return pyodide;
   }
 
-  async run(code: string, sourceUrl: string): Promise<string | undefined> {
+  async run(code: string, currentUrl: string): Promise<string | undefined> {
     const pyodide = await this.#pyodide;
     await pyodide.loadPackagesFromImports(code);
     pyodide.runPython(
@@ -278,21 +279,11 @@ mod
         pathlib.Path("/home/pyodide/playground").mkdir(parents=True)
         os.chdir("/home/pyodide/playground")
 
-        # monkey patch foxglove.open_mcap to write the source URL to the mcap's metadata
-        import foxglove
-
-        if not hasattr(foxglove, "_playground_original_open_mcap"):
-          foxglove._playground_original_open_mcap = foxglove.open_mcap
-
-        def _playground_open_mcap(*args, **kwargs):
-          writer = foxglove._playground_original_open_mcap(*args, **kwargs)
-          writer.write_metadata("foxglove.playground", {"url": source_url})
-          return writer
-
-        foxglove.open_mcap = _playground_open_mcap
+        import playground
+        playground.current_url = current_url
       `,
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      { globals: pyodide.toPy({ source_url: sourceUrl }) },
+      { globals: pyodide.toPy({ current_url: currentUrl }) },
     );
     pyodide.runPython(code);
     return this.#getFileNames(pyodide)[0];

@@ -306,6 +306,7 @@ export function Playground(): React.JSX.Element {
 
 const DEFAULT_CODE = `\
 import foxglove
+import playground
 from foxglove import Channel
 from foxglove.channels import SceneUpdateChannel
 from foxglove.messages import (
@@ -319,6 +320,7 @@ from foxglove.messages import (
 scene_channel = SceneUpdateChannel("/scene")
 
 with foxglove.open_mcap("playground.mcap") as writer:
+  writer.write_metadata("foxglove.playground", {"url": playground.current_url})
   for i in range(10):
     size = 1 + 0.2 * i
     scene_channel.log(
