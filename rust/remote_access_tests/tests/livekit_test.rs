@@ -956,23 +956,17 @@ fn encode_raw_image_sized(frame_id: &str, width: u32, height: u32) -> Vec<u8> {
     buf
 }
 
-/// FLE-579 reproduction: stream 1080p frames and measure the resolution the
-/// receiver actually decodes.
+/// FLE-579 regression: stream 1080p frames and verify the receiver decodes the full
+/// 1920x1080.
 ///
-/// The gateway initializes its `NativeVideoSource` with `VideoResolution::default()`
-/// (1280x720), so even though we capture 1920x1080 frames the encoder is configured
-/// for 720p. This test feeds 1080p frames, subscribes a viewer, and reads the
-/// receiver-side inbound-RTP stats (`frame_width`/`frame_height`/`frames_per_second`).
+/// Background: on the H.264/VideoToolbox path (macOS) the encoder negotiated H.264
+/// level 3.1, which caps resolution at 720p regardless of bitrate (and periodically
+/// froze while reconfiguring on WebRTC bitrate probes). The fix publishes VP8 on macOS
+/// (`start_video_tracks`), which has no level cap, so 1080p is delivered.
 ///
-/// The gateway publishes with `video_codec: VideoCodec::H264` (see
-/// `start_video_tracks`), so on macOS this exercises the real H.264/VideoToolbox
-/// encoder path rather than a software VP8 loopback — i.e. the same path that
-/// exhibits the production cap.
-///
-/// It asserts the receiver decodes the full 1920x1080. On current code the bug
-/// reproduces and the assertion fails showing the capped dimensions (observed
-/// 320x180 @ ~15 fps, never recovering); after the fix (initializing the source
-/// at the real frame size) it should pass.
+/// This feeds 1080p frames, subscribes a viewer, and polls the receiver-side inbound-RTP
+/// resolution until it ramps up to the full 1920x1080 (WebRTC starts low and climbs, so
+/// we wait for the target rather than sampling a single early frame).
 #[traced_test]
 #[ignore]
 #[tokio::test]
@@ -1018,9 +1012,9 @@ async fn livekit_video_1080p_resolution_not_capped() -> Result<()> {
         })
     };
 
-    // Poll receiver stats until we've decoded a healthy number of frames, then
-    // record the steady-state resolution and frame rate.
-    let deadline = tokio::time::Instant::now() + Duration::from_secs(20);
+    // Poll receiver stats until the resolution ramps up to the full frame size
+    // (or we time out). WebRTC starts at a downscaled resolution and climbs.
+    let deadline = tokio::time::Instant::now() + Duration::from_secs(30);
     let mut last: Option<(u32, u32, f64, u64)> = None;
     loop {
         if tokio::time::Instant::now() >= deadline {
@@ -1048,9 +1042,9 @@ async fn livekit_video_1080p_resolution_not_capped() -> Result<()> {
                 last = Some((w, h, fps, received));
             }
         }
-        // Once we've decoded a good number of frames at a stable resolution, stop early.
-        if let Some((_, _, _, received)) = last {
-            if received >= 60 {
+        // Stop as soon as the receiver has ramped up to the full resolution.
+        if let Some((w, h, _, _)) = last {
+            if (w, h) == (WIDTH, HEIGHT) {
                 break;
             }
         }
@@ -1069,8 +1063,8 @@ async fn livekit_video_1080p_resolution_not_capped() -> Result<()> {
     assert_eq!(
         (w, h),
         (WIDTH, HEIGHT),
-        "receiver decoded {w}x{h} but expected {WIDTH}x{HEIGHT}; \
-         the encoder source was likely capped to its 720p default (FLE-579)"
+        "receiver decoded {w}x{h} but expected {WIDTH}x{HEIGHT} within the timeout; \
+         the H.264/VideoToolbox level-3.1 cap should be avoided by publishing VP8 on macOS (FLE-579)"
     );
 
     viewer.close().await?;
