@@ -25,8 +25,10 @@
 #
 # MCAP mount:
 #   gateway-runner bind-mounts `${MCAP_HOST_PATH:-./scripts/fixtures/empty.mcap}`
-#   at `/workspace/recording.mcap` so the `remote_access_stream_mcap` example
-#   can play back a host-side recording from inside the container. Set
+#   at `/data/recording.mcap` so the `remote_access_stream_mcap` example can play
+#   back a host-side recording from inside the container. The mount target lives
+#   outside the `.:/workspace` repo bind on purpose — a target nested under
+#   /workspace makes Docker create a stray mountpoint stub in the repo root. Set
 #   MCAP_HOST_PATH to an absolute path before `yarn start-netem --perlink` (or
 #   use `yarn stream-mcap`, which sets it for you). With no override, the empty
 #   fixture is mounted so the stack still comes up cleanly.
@@ -66,7 +68,7 @@ services:
       - netem-cargo-registry:/usr/local/cargo/registry
       - netem-cargo-git:/usr/local/cargo/git
       - netem-target:/workspace/target-docker
-      - ${MCAP_HOST_PATH:-./scripts/fixtures/empty.mcap}:/workspace/recording.mcap:ro
+      - ${MCAP_HOST_PATH:-./scripts/fixtures/empty.mcap}:/data/recording.mcap:ro
     environment:
       CARGO_TARGET_DIR: /workspace/target-docker
       LIVEKIT_URL: "http://10.99.0.2:7880"
