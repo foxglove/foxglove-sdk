@@ -128,7 +128,7 @@ yarn start-netem --perlink
 
 Update impairment without restarting containers or dropping connections. Only newly enqueued packets use the updated parameters.
 
-Each update replaces _all_ settings. Replacing "delay 500ms loss 20%" with "delay 400ms" (loss is not mentioned) _resets_ loss to 0%.
+Each update replaces _all_ settings. Replacing "delay 500ms loss 20%" with "delay 400ms" (loss is not mentioned) _resets_ loss to 0%. `rate` is a kernel special case — it persists across a bare `tc qdisc change` — so `netem_impair.py` appends an uncapped rate whenever you don't pass one. Omitting `rate` (e.g. `delay 0ms`) therefore clears any prior cap and restores an unshaped link.
 
 ```sh
 COMPOSE="docker compose -f docker-compose.yaml -f docker-compose.netem.yml -f docker-compose.netem-livekit.yml"
