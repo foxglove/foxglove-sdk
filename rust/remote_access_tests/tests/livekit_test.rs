@@ -964,10 +964,15 @@ fn encode_raw_image_sized(frame_id: &str, width: u32, height: u32) -> Vec<u8> {
 /// for 720p. This test feeds 1080p frames, subscribes a viewer, and reads the
 /// receiver-side inbound-RTP stats (`frame_width`/`frame_height`/`frames_per_second`).
 ///
-/// It asserts the receiver decodes the full 1920x1080. If the bug reproduces in this
-/// local (software-encoder) loopback, the assertion fails showing the capped
-/// dimensions; after the fix (initializing the source at the real frame size) it
-/// should pass.
+/// The gateway publishes with `video_codec: VideoCodec::H264` (see
+/// `start_video_tracks`), so on macOS this exercises the real H.264/VideoToolbox
+/// encoder path rather than a software VP8 loopback — i.e. the same path that
+/// exhibits the production cap.
+///
+/// It asserts the receiver decodes the full 1920x1080. On current code the bug
+/// reproduces and the assertion fails showing the capped dimensions (observed
+/// 320x180 @ ~15 fps, never recovering); after the fix (initializing the source
+/// at the real frame size) it should pass.
 #[traced_test]
 #[ignore]
 #[tokio::test]
