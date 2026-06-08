@@ -174,7 +174,7 @@ yarn stream-mcap
 
 `yarn stream-mcap` owns the stack lifecycle: it brings up (or refreshes) the
 per-link compose stack with the file bind-mounted at
-`/workspace/recording.mcap` inside `gateway-runner`, builds
+`/data/recording.mcap` inside `gateway-runner`, builds
 `example_remote_access_stream_mcap` (~90s the first time, incremental
 thereafter), and runs it.
 

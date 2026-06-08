@@ -21,7 +21,7 @@
 // What it does:
 //   1. Resolves the MCAP path to an absolute path and validates it.
 //   2. Brings up (or refreshes) the per-link stack with MCAP_HOST_PATH exported
-//      so the file is bind-mounted at /workspace/recording.mcap inside
+//      so the file is bind-mounted at /data/recording.mcap inside
 //      gateway-runner. This invocation owns the stack — `yarn start-netem
 //      --perlink` from a separate terminal is NOT required, and any
 //      NETEM_GATEWAY_UPLOAD set in that other terminal would be wiped here
@@ -139,7 +139,7 @@ function run(opts: Options, positional: string | undefined): void {
   // A single try/catch keeps a Ctrl-C (or container failure) from burying that
   // output under a node stack trace.
   try {
-    console.log(`Mounting ${mcapPath} -> /workspace/recording.mcap`);
+    console.log(`Mounting ${mcapPath} -> /data/recording.mcap`);
     compose(upEnv, ...PROFILE_ARGS, "up", "-d", "--wait");
 
     console.log("");
@@ -173,7 +173,7 @@ function run(opts: Options, positional: string | undefined): void {
       "gateway-runner",
       "/workspace/target-docker/release/example_remote_access_stream_mcap",
       "--file",
-      "/workspace/recording.mcap",
+      "/data/recording.mcap",
     );
   } catch (err) {
     if (wasSignaled(err)) {
