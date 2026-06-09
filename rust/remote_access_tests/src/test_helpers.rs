@@ -582,34 +582,16 @@ impl ViewerConnection {
         self.send_framed_message(&framed).await
     }
 
-    /// Waits for a `TrackSubscribed` room event and returns the track name.
-    pub async fn expect_track_subscribed(&mut self) -> Result<String> {
-        let deadline = tokio::time::Instant::now() + EVENT_TIMEOUT;
-        loop {
-            let event = tokio::time::timeout_at(deadline, self.events.recv())
-                .await
-                .context("timeout waiting for TrackSubscribed event")?
-                .context("room events channel closed")?;
-            match event {
-                RoomEvent::TrackSubscribed { publication, .. } => {
-                    return Ok(publication.name());
-                }
-                RoomEvent::DataTrackPublished(track) => {
-                    self.pending_data_tracks.push(track);
-                }
-                _ => continue,
-            }
-        }
-    }
-
-    /// Waits for a `TrackSubscribed` room event for a video track and returns the
-    /// subscribed [`RemoteVideoTrack`], so callers can read receiver-side WebRTC stats
-    /// (e.g. the actually-received frame dimensions and frame rate).
+    /// Waits for a `TrackSubscribed` room event and returns the publication name
+    /// together with the subscribed [`RemoteTrack`].
+    ///
+    /// The returned track lets callers read receiver-side WebRTC stats (e.g. the
+    /// actually-received frame dimensions and frame rate for video tracks).
     ///
     /// Non-matching `DataTrackPublished` events are buffered for later consumption.
-    pub async fn expect_video_track_subscribed(
+    pub async fn expect_track_subscribed(
         &mut self,
-    ) -> Result<livekit::track::RemoteVideoTrack> {
+    ) -> Result<(String, livekit::track::RemoteTrack)> {
         let deadline = tokio::time::Instant::now() + EVENT_TIMEOUT;
         loop {
             let event = tokio::time::timeout_at(deadline, self.events.recv())
@@ -618,9 +600,10 @@ impl ViewerConnection {
                 .context("room events channel closed")?;
             match event {
                 RoomEvent::TrackSubscribed {
-                    track: livekit::track::RemoteTrack::Video(track),
-                    ..
-                } => return Ok(track),
+                    track, publication, ..
+                } => {
+                    return Ok((publication.name(), track));
+                }
                 RoomEvent::DataTrackPublished(track) => {
                     self.pending_data_tracks.push(track);
                 }

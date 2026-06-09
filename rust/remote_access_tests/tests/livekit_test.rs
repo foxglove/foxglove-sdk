@@ -7,7 +7,7 @@
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use anyhow::{Context as _, Result};
+use anyhow::{bail, Context as _, Result};
 use foxglove::messages::{RawImage, Timestamp};
 use foxglove::protocol::v2::client::SubscribeChannel;
 use foxglove::protocol::v2::server::ServerMessage;
@@ -526,7 +526,7 @@ async fn livekit_video_track_lifecycle() -> Result<()> {
         .subscribe_video_and_wait(&[channel_id], &video_channel)
         .await?;
     let expected_track_name = format!("video-ch-{channel_id}");
-    let track_name = viewer.expect_track_subscribed().await?;
+    let (track_name, _track) = viewer.expect_track_subscribed().await?;
     assert_eq!(
         track_name, expected_track_name,
         "video track name should match video-ch-{{channelId}}"
@@ -573,7 +573,7 @@ async fn livekit_video_track_resubscribe() -> Result<()> {
     viewer
         .subscribe_video_and_wait(&[channel_id], &video_channel)
         .await?;
-    let track_name = viewer.expect_track_subscribed().await?;
+    let (track_name, _track) = viewer.expect_track_subscribed().await?;
     assert_eq!(track_name, expected_track_name);
     info!("first subscribe: video track published");
 
@@ -596,7 +596,7 @@ async fn livekit_video_track_resubscribe() -> Result<()> {
             request_video_track: true,
         }])
         .await?;
-    let track_name = viewer.expect_track_subscribed().await?;
+    let (track_name, _track) = viewer.expect_track_subscribed().await?;
     assert_eq!(track_name, expected_track_name);
     info!("resubscribe: video track re-established");
 
@@ -731,7 +731,7 @@ async fn livekit_video_resubscribe_switches_to_data_plane() -> Result<()> {
     viewer
         .subscribe_video_and_wait(&[channel_id], &video_channel)
         .await?;
-    let track_name = viewer.expect_track_subscribed().await?;
+    let (track_name, _track) = viewer.expect_track_subscribed().await?;
     assert_eq!(track_name, expected_track_name);
     info!("video track published");
 
@@ -876,7 +876,7 @@ async fn livekit_video_metadata_advertised_after_image_logged() -> Result<()> {
     viewer
         .subscribe_video_and_wait(&[channel_id], &video_channel)
         .await?;
-    let _track_name = viewer.expect_track_subscribed().await?;
+    let (_track_name, _track) = viewer.expect_track_subscribed().await?;
 
     // Log a valid protobuf-encoded RawImage.
     let image_bytes = encode_raw_image("camera_optical_frame");
@@ -992,8 +992,11 @@ async fn livekit_video_1080p_resolution_not_capped() -> Result<()> {
     viewer
         .subscribe_video_and_wait(&[channel_id], &video_channel)
         .await?;
-    let track = viewer.expect_video_track_subscribed().await?;
-    info!("subscribed to video track {}", track.name());
+    let (track_name, track) = viewer.expect_track_subscribed().await?;
+    let livekit::track::RemoteTrack::Video(track) = track else {
+        bail!("expected a video track, got {track_name}");
+    };
+    info!("subscribed to video track {track_name}");
 
     // Pump 1080p frames at ~30fps from a background task until told to stop.
     let frame = encode_raw_image_sized("camera_optical_frame", WIDTH, HEIGHT);
