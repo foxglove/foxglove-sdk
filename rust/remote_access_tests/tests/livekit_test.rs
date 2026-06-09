@@ -1025,38 +1025,37 @@ async fn livekit_video_1080p_resolution_not_capped() -> Result<()> {
         }
         tokio::time::sleep(Duration::from_millis(500)).await;
         let stats = track.get_stats().await.context("get_stats")?;
-        let mut codec = String::new();
         for s in &stats {
-            if let livekit::webrtc::stats::RtcStats::Codec(c) = s {
-                codec = c.codec.mime_type.clone();
+            match s {
+                livekit::webrtc::stats::RtcStats::Codec(c) => {
+                    last_codec = c.codec.mime_type.clone();
+                }
+                livekit::webrtc::stats::RtcStats::InboundRtp(rtp) => {
+                    let w = rtp.inbound.frame_width;
+                    let h = rtp.inbound.frame_height;
+                    let fps = rtp.inbound.frames_per_second;
+                    let received = rtp.inbound.frames_received;
+                    let decoder = &rtp.inbound.decoder_implementation;
+                    info!(
+                        "inbound video stats: {w}x{h} @ {fps:.1} fps, frames_received={received}, \
+                         codec={last_codec}, decoder={decoder}"
+                    );
+                    last = Some((w, h, fps, received));
+                }
+                _ => {}
             }
-        }
-        for s in &stats {
-            if let livekit::webrtc::stats::RtcStats::InboundRtp(rtp) = s {
-                let w = rtp.inbound.frame_width;
-                let h = rtp.inbound.frame_height;
-                let fps = rtp.inbound.frames_per_second;
-                let received = rtp.inbound.frames_received;
-                let decoder = &rtp.inbound.decoder_implementation;
-                info!(
-                    "inbound video stats: {w}x{h} @ {fps:.1} fps, frames_received={received}, \
-                     codec={codec}, decoder={decoder}"
-                );
-                last = Some((w, h, fps, received));
-            }
-        }
-        if !codec.is_empty() {
-            last_codec = codec;
         }
         // Stop once we have a codec reading and the platform-appropriate target is met.
-        if let (false, Some((w, h, _, received))) = (last_codec.is_empty(), last) {
-            let ready = if expect_vp8 {
-                (w, h) == (WIDTH, HEIGHT)
-            } else {
-                received >= 60
-            };
-            if ready {
-                break;
+        if !last_codec.is_empty() {
+            if let Some((w, h, _, received)) = last {
+                let ready = if expect_vp8 {
+                    (w, h) == (WIDTH, HEIGHT)
+                } else {
+                    received >= 60
+                };
+                if ready {
+                    break;
+                }
             }
         }
     }
