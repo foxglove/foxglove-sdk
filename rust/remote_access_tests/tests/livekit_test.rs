@@ -927,8 +927,8 @@ async fn livekit_video_metadata_advertised_after_image_logged() -> Result<()> {
 
 /// Encode an `width`x`height` rgb8 `foxglove.RawImage` as protobuf bytes.
 ///
-/// Fills the buffer with a simple vertical gradient so the encoder sees real
-/// (non-uniform) content rather than a flat color.
+/// Fills the buffer with a 2D gradient (red varies by row, green by column, blue
+/// constant) so the encoder sees real (non-uniform) content rather than a flat color.
 fn encode_raw_image_sized(frame_id: &str, width: u32, height: u32) -> Vec<u8> {
     let step = width * 3; // rgb8: 3 bytes per pixel
     let mut data = vec![0u8; (step * height) as usize];
@@ -1062,7 +1062,7 @@ async fn livekit_video_1080p_resolution_not_capped() -> Result<()> {
     }
 
     stop.store(true, std::sync::atomic::Ordering::Relaxed);
-    let _ = pump.await;
+    pump.await.expect("stopping frame pump");
 
     let (w, h, fps, received) = last.context("never received any inbound video stats")?;
     info!(
