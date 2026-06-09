@@ -83,6 +83,7 @@ def set_layout(layout: "foxglove.layouts.Layout", /) -> None:
 mod = ModuleType("playground")
 mod.__doc__ = "Functions available in the SDK playground."
 mod.set_layout = set_layout
+mod.current_url = ""
 mod
     `,
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
@@ -264,7 +265,7 @@ mod
     return pyodide;
   }
 
-  async run(code: string): Promise<string | undefined> {
+  async run(code: string, currentUrl: string): Promise<string | undefined> {
     const pyodide = await this.#pyodide;
     await pyodide.loadPackagesFromImports(code);
     pyodide.runPython(
@@ -277,9 +278,12 @@ mod
           pass
         pathlib.Path("/home/pyodide/playground").mkdir(parents=True)
         os.chdir("/home/pyodide/playground")
+
+        import playground
+        playground.current_url = current_url
       `,
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      { globals: pyodide.toPy({}) },
+      { globals: pyodide.toPy({ current_url: currentUrl }) },
     );
     pyodide.runPython(code);
     return this.#getFileNames(pyodide)[0];
