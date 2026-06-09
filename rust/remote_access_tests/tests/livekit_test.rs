@@ -956,17 +956,15 @@ fn encode_raw_image_sized(frame_id: &str, width: u32, height: u32) -> Vec<u8> {
     buf
 }
 
-/// FLE-579 regression: stream 1080p frames and verify the receiver decodes the full
-/// 1920x1080.
+/// FLE-579 regression: verify the per-platform video codec selection, and that the
+/// macOS path is no longer resolution-capped.
 ///
-/// Background: on the H.264/VideoToolbox path (macOS) the encoder negotiated H.264
-/// level 3.1, which caps resolution at 720p regardless of bitrate (and periodically
-/// froze while reconfiguring on WebRTC bitrate probes). The fix publishes VP8 on macOS
-/// (`start_video_tracks`), which has no level cap, so 1080p is delivered.
-///
-/// This feeds 1080p frames, subscribes a viewer, and polls the receiver-side inbound-RTP
-/// resolution until it ramps up to the full 1920x1080 (WebRTC starts low and climbs, so
-/// we wait for the target rather than sampling a single early frame).
+/// On macOS the gateway publishes VP8 (`start_video_tracks`) to avoid the H.264 /
+/// VideoToolbox level-3.1 720p cap; VP8 has no level cap, so 1080p is delivered. On
+/// other platforms (e.g. Linux/nvenc) it keeps H.264, which is still level-capped until
+/// FLE-584. So this asserts the codec on every platform, and the full-resolution payoff
+/// only on the VP8 (macOS) path. WebRTC starts downscaled and climbs, so on the VP8 path
+/// we wait for the resolution to reach the target rather than sampling an early frame.
 #[traced_test]
 #[ignore]
 #[tokio::test]
@@ -1012,10 +1010,15 @@ async fn livekit_video_1080p_resolution_not_capped() -> Result<()> {
         })
     };
 
-    // Poll receiver stats until the resolution ramps up to the full frame size
-    // (or we time out). WebRTC starts at a downscaled resolution and climbs.
+    // macOS publishes VP8 (no level cap → reaches full resolution); other platforms keep
+    // H.264, which is still level-capped until FLE-584.
+    let expect_vp8 = cfg!(target_os = "macos");
+
+    // Poll receiver stats. On the VP8 path, wait for the resolution to climb to the full
+    // frame size; otherwise just wait for steady flow (H.264 stays capped).
     let deadline = tokio::time::Instant::now() + Duration::from_secs(30);
     let mut last: Option<(u32, u32, f64, u64)> = None;
+    let mut last_codec = String::new();
     loop {
         if tokio::time::Instant::now() >= deadline {
             break;
@@ -1042,9 +1045,17 @@ async fn livekit_video_1080p_resolution_not_capped() -> Result<()> {
                 last = Some((w, h, fps, received));
             }
         }
-        // Stop as soon as the receiver has ramped up to the full resolution.
-        if let Some((w, h, _, _)) = last {
-            if (w, h) == (WIDTH, HEIGHT) {
+        if !codec.is_empty() {
+            last_codec = codec;
+        }
+        // Stop once we have a codec reading and the platform-appropriate target is met.
+        if let (false, Some((w, h, _, received))) = (last_codec.is_empty(), last) {
+            let ready = if expect_vp8 {
+                (w, h) == (WIDTH, HEIGHT)
+            } else {
+                received >= 60
+            };
+            if ready {
                 break;
             }
         }
@@ -1054,18 +1065,33 @@ async fn livekit_video_1080p_resolution_not_capped() -> Result<()> {
     let _ = pump.await;
 
     let (w, h, fps, received) = last.context("never received any inbound video stats")?;
-    info!("final inbound video stats: {w}x{h} @ {fps:.1} fps, frames_received={received}");
+    info!(
+        "final inbound video stats: {w}x{h} @ {fps:.1} fps, frames_received={received}, codec={last_codec}"
+    );
 
     assert!(
         received > 0,
         "viewer should have decoded at least one frame"
     );
-    assert_eq!(
-        (w, h),
-        (WIDTH, HEIGHT),
-        "receiver decoded {w}x{h} but expected {WIDTH}x{HEIGHT} within the timeout; \
-         the H.264/VideoToolbox level-3.1 cap should be avoided by publishing VP8 on macOS (FLE-579)"
-    );
+
+    if expect_vp8 {
+        assert!(
+            last_codec.eq_ignore_ascii_case("video/VP8"),
+            "macOS should publish VP8, got {last_codec}"
+        );
+        assert_eq!(
+            (w, h),
+            (WIDTH, HEIGHT),
+            "VP8 on macOS should deliver the full {WIDTH}x{HEIGHT} (FLE-579); got {w}x{h}"
+        );
+    } else {
+        // Non-macOS keeps H.264 for nvenc; it is still level-3.1 capped (FLE-584), so we
+        // only assert the codec selection here, not the resolution.
+        assert!(
+            last_codec.eq_ignore_ascii_case("video/H264"),
+            "non-macOS should publish H.264, got {last_codec}"
+        );
+    }
 
     viewer.close().await?;
     gw.stop().await?;
