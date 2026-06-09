@@ -7,7 +7,7 @@
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use anyhow::{bail, Context as _, Result};
+use anyhow::{Context as _, Result, bail};
 use foxglove::messages::{RawImage, Timestamp};
 use foxglove::protocol::v2::client::SubscribeChannel;
 use foxglove::protocol::v2::server::ServerMessage;
@@ -928,17 +928,18 @@ async fn livekit_video_metadata_advertised_after_image_logged() -> Result<()> {
 /// Encode an `width`x`height` rgb8 `foxglove.RawImage` as protobuf bytes.
 ///
 /// Fills the buffer with a 2D gradient (red varies by row, green by column, blue
-/// constant) so the encoder sees real (non-uniform) content rather than a flat color.
-fn encode_raw_image_sized(frame_id: &str, width: u32, height: u32) -> Vec<u8> {
+/// constant), shifted by `seq` so successive frames differ — identical frames would
+/// compress to almost nothing and wouldn't exercise the encoder realistically.
+fn encode_raw_image_sized(frame_id: &str, width: u32, height: u32, seq: u32) -> Vec<u8> {
     let step = width * 3; // rgb8: 3 bytes per pixel
     let mut data = vec![0u8; (step * height) as usize];
     for y in 0..height {
         let row = (y * step) as usize;
-        let v = (y % 256) as u8;
+        let v = ((y + seq) % 256) as u8;
         for x in 0..width {
             let px = row + (x * 3) as usize;
             data[px] = v;
-            data[px + 1] = (x % 256) as u8;
+            data[px + 1] = ((x + seq) % 256) as u8;
             data[px + 2] = 128;
         }
     }
@@ -998,17 +999,24 @@ async fn livekit_video_1080p_resolution_not_capped() -> Result<()> {
     };
     info!("subscribed to video track {track_name}");
 
-    // Pump 1080p frames at ~30fps from a background task until told to stop.
-    let frame = encode_raw_image_sized("camera_optical_frame", WIDTH, HEIGHT);
+    // Pump 1080p frames at ~30fps from a background task until told to stop. Cycle through
+    // a handful of distinct frames (shifted gradients) so the encoder sees real motion
+    // rather than a static image. Pre-encode them up front: encoding a frame is blocking
+    // CPU work, so doing it in the hot loop would stall the runtime.
+    let frames: Vec<Vec<u8>> = (0u32..8)
+        .map(|seq| encode_raw_image_sized("camera_optical_frame", WIDTH, HEIGHT, seq))
+        .collect();
     let stop = Arc::new(std::sync::atomic::AtomicBool::new(false));
     let pump = {
         let video_channel = video_channel.clone();
         let stop = stop.clone();
         tokio::spawn(async move {
             let mut interval = tokio::time::interval(Duration::from_millis(33));
+            let mut i = 0usize;
             while !stop.load(std::sync::atomic::Ordering::Relaxed) {
                 interval.tick().await;
-                video_channel.log(&frame);
+                video_channel.log(&frames[i % frames.len()]);
+                i += 1;
             }
         })
     };
