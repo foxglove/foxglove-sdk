@@ -3111,7 +3111,7 @@ export const SceneEntity = {
     },
     "frame_locked": {
       "type": "boolean",
-      "description": "Whether the entity should keep its location in the fixed frame (false) or follow the frame specified in `frame_id` as it moves relative to the fixed frame (true)"
+      "description": "False indicates the entity should keep its location in the fixed frame until a new entity is published. True indicates the entity should follow the frame specified in `frame_id` as it moves relative to the fixed frame when new transform messages are received."
     },
     "metadata": {
       "type": "array",
@@ -4472,7 +4472,7 @@ export const SceneUpdate = {
           },
           "frame_locked": {
             "type": "boolean",
-            "description": "Whether the entity should keep its location in the fixed frame (false) or follow the frame specified in `frame_id` as it moves relative to the fixed frame (true)"
+            "description": "False indicates the entity should keep its location in the fixed frame until a new entity is published. True indicates the entity should follow the frame specified in `frame_id` as it moves relative to the fixed frame when new transform messages are received."
           },
           "metadata": {
             "type": "array",

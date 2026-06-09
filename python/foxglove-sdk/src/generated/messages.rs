@@ -2093,7 +2093,7 @@ impl From<SceneEntityDeletion> for foxglove::messages::SceneEntityDeletion {
 /// :param frame_id: Frame of reference
 /// :param id: Identifier for the entity. A entity will replace any prior entity on the same topic with the same `id`.
 /// :param lifetime: Length of time (relative to `timestamp`) after which the entity should be automatically removed. Zero value indicates the entity should remain visible until it is replaced or deleted.
-/// :param frame_locked: Whether the entity should keep its location in the fixed frame (false) or follow the frame specified in `frame_id` as it moves relative to the fixed frame (true)
+/// :param frame_locked: False indicates the entity should keep its location in the fixed frame until a new entity is published. True indicates the entity should follow the frame specified in `frame_id` as it moves relative to the fixed frame when new transform messages are received.
 /// :param metadata: Additional user-provided metadata associated with the entity. Keys must be unique.
 /// :param arrows: Arrow primitives
 /// :param cubes: Cube primitives
