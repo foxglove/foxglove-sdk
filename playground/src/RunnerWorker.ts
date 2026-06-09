@@ -279,7 +279,6 @@ mod
         pathlib.Path("/home/pyodide/playground").mkdir(parents=True)
         os.chdir("/home/pyodide/playground")
 
-        import playground
         playground.current_url = current_url
       `,
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
