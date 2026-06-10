@@ -2181,12 +2181,25 @@ impl RemoteAccessSession {
                 // Prefer H.264 so that the libwebrtc nvenc encoder (H.264-only) can be used
                 // on Linux hosts that have nvenc available. VP8/VP9/AV1 paths
                 // are software-only in our builds, so H.264 is at worst parity elsewhere.
+                //
+                // Exception: on macOS we publish VP8 instead. On the macOS VideoToolbox
+                // H.264 path we observed (FLE-579) that the default negotiated H.264 level
+                // (Constrained Baseline 3.1) limits the stream to 720p, and that encoded
+                // output paused for several seconds at a time while the encoder adapted to
+                // bitrate changes; VP8 reached full 1080p without those pauses. The H.264
+                // level default is not macOS-specific and is tracked separately in FLE-584.
+                //
                 // Disable simulcast. We expect viewers will be mostly homogenous, and
                 // simulcast is a lot of work for the robot without much to gain.
                 // We observed that nvenc aggressively enforces the target bitrate,
                 // and combined with simulcast results in very low quality video with compression artifacts.
+                let video_codec = if cfg!(target_os = "macos") {
+                    VideoCodec::VP8
+                } else {
+                    VideoCodec::H264
+                };
                 let publish_options = TrackPublishOptions {
-                    video_codec: VideoCodec::H264,
+                    video_codec,
                     simulcast: false,
                     ..Default::default()
                 };

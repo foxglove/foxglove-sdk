@@ -7,7 +7,7 @@
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use anyhow::{Context as _, Result};
+use anyhow::{Context as _, Result, bail};
 use foxglove::messages::{RawImage, Timestamp};
 use foxglove::protocol::v2::client::SubscribeChannel;
 use foxglove::protocol::v2::server::ServerMessage;
@@ -526,7 +526,7 @@ async fn livekit_video_track_lifecycle() -> Result<()> {
         .subscribe_video_and_wait(&[channel_id], &video_channel)
         .await?;
     let expected_track_name = format!("video-ch-{channel_id}");
-    let track_name = viewer.expect_track_subscribed().await?;
+    let (track_name, _track) = viewer.expect_track_subscribed().await?;
     assert_eq!(
         track_name, expected_track_name,
         "video track name should match video-ch-{{channelId}}"
@@ -573,7 +573,7 @@ async fn livekit_video_track_resubscribe() -> Result<()> {
     viewer
         .subscribe_video_and_wait(&[channel_id], &video_channel)
         .await?;
-    let track_name = viewer.expect_track_subscribed().await?;
+    let (track_name, _track) = viewer.expect_track_subscribed().await?;
     assert_eq!(track_name, expected_track_name);
     info!("first subscribe: video track published");
 
@@ -596,7 +596,7 @@ async fn livekit_video_track_resubscribe() -> Result<()> {
             request_video_track: true,
         }])
         .await?;
-    let track_name = viewer.expect_track_subscribed().await?;
+    let (track_name, _track) = viewer.expect_track_subscribed().await?;
     assert_eq!(track_name, expected_track_name);
     info!("resubscribe: video track re-established");
 
@@ -731,7 +731,7 @@ async fn livekit_video_resubscribe_switches_to_data_plane() -> Result<()> {
     viewer
         .subscribe_video_and_wait(&[channel_id], &video_channel)
         .await?;
-    let track_name = viewer.expect_track_subscribed().await?;
+    let (track_name, _track) = viewer.expect_track_subscribed().await?;
     assert_eq!(track_name, expected_track_name);
     info!("video track published");
 
@@ -876,7 +876,7 @@ async fn livekit_video_metadata_advertised_after_image_logged() -> Result<()> {
     viewer
         .subscribe_video_and_wait(&[channel_id], &video_channel)
         .await?;
-    let _track_name = viewer.expect_track_subscribed().await?;
+    let (_track_name, _track) = viewer.expect_track_subscribed().await?;
 
     // Log a valid protobuf-encoded RawImage.
     let image_bytes = encode_raw_image("camera_optical_frame");
@@ -919,6 +919,189 @@ async fn livekit_video_metadata_advertised_after_image_logged() -> Result<()> {
         "hasVideoTrack should still be present"
     );
     info!("video metadata re-advertisement validated: {metadata:?}");
+
+    viewer.close().await?;
+    gw.stop().await?;
+    Ok(())
+}
+
+/// Encode an `width`x`height` rgb8 `foxglove.RawImage` as protobuf bytes.
+///
+/// Fills the buffer with a 2D gradient (red varies by row, green by column, blue
+/// constant), shifted by `seq` so successive frames differ — identical frames would
+/// compress to almost nothing and wouldn't exercise the encoder realistically.
+fn encode_raw_image_sized(frame_id: &str, width: u32, height: u32, seq: u32) -> Vec<u8> {
+    let step = width * 3; // rgb8: 3 bytes per pixel
+    let mut data = vec![0u8; (step * height) as usize];
+    for y in 0..height {
+        let row = (y * step) as usize;
+        let v = ((y + seq) % 256) as u8;
+        for x in 0..width {
+            let px = row + (x * 3) as usize;
+            data[px] = v;
+            data[px + 1] = ((x + seq) % 256) as u8;
+            data[px + 2] = 128;
+        }
+    }
+    let msg = RawImage {
+        timestamp: Some(Timestamp::new(1, 0)),
+        frame_id: frame_id.to_string(),
+        width,
+        height,
+        encoding: "rgb8".to_string(),
+        step,
+        data: data.into(),
+    };
+    let mut buf = Vec::new();
+    Encode::encode(&msg, &mut buf).expect("encode RawImage");
+    buf
+}
+
+/// FLE-579 regression: verify the per-platform video codec selection, and that the
+/// macOS path is no longer resolution-capped.
+///
+/// On macOS the gateway publishes VP8 (`start_video_tracks`) to avoid the H.264 /
+/// VideoToolbox level-3.1 720p cap; VP8 has no level cap, so 1080p is delivered. On
+/// other platforms (e.g. Linux/nvenc) it keeps H.264, which is still level-capped until
+/// FLE-584. So this asserts the codec on every platform, and the full-resolution payoff
+/// only on the VP8 (macOS) path. WebRTC starts downscaled and climbs, so on the VP8 path
+/// we wait for the resolution to reach the target rather than sampling an early frame.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_video_1080p_resolution_not_capped() -> Result<()> {
+    const WIDTH: u32 = 1920;
+    const HEIGHT: u32 = 1080;
+
+    let ctx = foxglove::Context::new();
+
+    let video_channel = ctx
+        .channel_builder("/camera")
+        .message_encoding("protobuf")
+        .schema(Schema::new("foxglove.RawImage", "protobuf", &b""[..]))
+        .build_raw()
+        .context("create video channel")?;
+
+    let gw = TestGateway::start(&ctx).await?;
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+
+    let _server_info = viewer.expect_server_info().await?;
+    let advertise = viewer.expect_advertise().await?;
+    let channel_id = advertise.channels[0].id;
+
+    viewer
+        .subscribe_video_and_wait(&[channel_id], &video_channel)
+        .await?;
+    let (track_name, track) = viewer.expect_track_subscribed().await?;
+    let livekit::track::RemoteTrack::Video(track) = track else {
+        bail!("expected a video track, got {track_name}");
+    };
+    info!("subscribed to video track {track_name}");
+
+    // Pump 1080p frames at ~30fps from a background task until told to stop. Cycle through
+    // a handful of distinct frames (shifted gradients) so the encoder sees real motion
+    // rather than a static image. Pre-encode them up front: encoding a frame is blocking
+    // CPU work, so doing it in the hot loop would stall the runtime.
+    let frames: Vec<Vec<u8>> = (0u32..8)
+        .map(|seq| encode_raw_image_sized("camera_optical_frame", WIDTH, HEIGHT, seq))
+        .collect();
+    let stop = Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let pump = {
+        let video_channel = video_channel.clone();
+        let stop = stop.clone();
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(Duration::from_millis(33));
+            let mut i = 0usize;
+            while !stop.load(std::sync::atomic::Ordering::Relaxed) {
+                interval.tick().await;
+                video_channel.log(&frames[i % frames.len()]);
+                i += 1;
+            }
+        })
+    };
+
+    // macOS publishes VP8 (no level cap → reaches full resolution); other platforms keep
+    // H.264, which is still level-capped until FLE-584.
+    let expect_vp8 = cfg!(target_os = "macos");
+
+    // Poll receiver stats. On the VP8 path, wait for the resolution to climb to the full
+    // frame size; otherwise just wait for steady flow (H.264 stays capped).
+    let deadline = tokio::time::Instant::now() + Duration::from_secs(30);
+    let mut last: Option<(u32, u32, f64, u64)> = None;
+    let mut last_codec = String::new();
+    loop {
+        if tokio::time::Instant::now() >= deadline {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(500)).await;
+        let stats = track.get_stats().await.context("get_stats")?;
+        for s in &stats {
+            match s {
+                livekit::webrtc::stats::RtcStats::Codec(c) => {
+                    last_codec = c.codec.mime_type.clone();
+                }
+                livekit::webrtc::stats::RtcStats::InboundRtp(rtp) => {
+                    let w = rtp.inbound.frame_width;
+                    let h = rtp.inbound.frame_height;
+                    let fps = rtp.inbound.frames_per_second;
+                    let received = rtp.inbound.frames_received;
+                    let decoder = &rtp.inbound.decoder_implementation;
+                    info!(
+                        "inbound video stats: {w}x{h} @ {fps:.1} fps, frames_received={received}, \
+                         codec={last_codec}, decoder={decoder}"
+                    );
+                    last = Some((w, h, fps, received));
+                }
+                _ => {}
+            }
+        }
+        // Stop once we have a codec reading and the platform-appropriate target is met.
+        if !last_codec.is_empty() {
+            if let Some((w, h, _, received)) = last {
+                let ready = if expect_vp8 {
+                    (w, h) == (WIDTH, HEIGHT)
+                } else {
+                    received >= 60
+                };
+                if ready {
+                    break;
+                }
+            }
+        }
+    }
+
+    stop.store(true, std::sync::atomic::Ordering::Relaxed);
+    pump.await.expect("stopping frame pump");
+
+    let (w, h, fps, received) = last.context("never received any inbound video stats")?;
+    info!(
+        "final inbound video stats: {w}x{h} @ {fps:.1} fps, frames_received={received}, codec={last_codec}"
+    );
+
+    assert!(
+        received > 0,
+        "viewer should have decoded at least one frame"
+    );
+
+    if expect_vp8 {
+        assert!(
+            last_codec.eq_ignore_ascii_case("video/VP8"),
+            "macOS should publish VP8, got {last_codec}"
+        );
+        assert_eq!(
+            (w, h),
+            (WIDTH, HEIGHT),
+            "VP8 on macOS should deliver the full {WIDTH}x{HEIGHT} (FLE-579); got {w}x{h}"
+        );
+    } else {
+        // Non-macOS keeps H.264 for nvenc; it is still level-3.1 capped (FLE-584), so we
+        // only assert the codec selection here, not the resolution.
+        assert!(
+            last_codec.eq_ignore_ascii_case("video/H264"),
+            "non-macOS should publish H.264, got {last_codec}"
+        );
+    }
 
     viewer.close().await?;
     gw.stop().await?;
