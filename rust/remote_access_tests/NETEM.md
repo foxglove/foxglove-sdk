@@ -250,7 +250,7 @@ LiveKit's WebRTC ICE candidates, which are container-internal addresses
   to Docker bridge networks. Note that `host.docker.internal` is provided to
   containers by Docker Desktop, not by the native engine, so the
   `FOXGLOVE_API_URL` values above need an `extra_hosts: host-gateway` entry
-  (tracked in [FLE-588](https://linear.app/foxglove/issue/FLE-588)), and the
+  (tracked in FLE-588), and the
   hosts-file line from the per-link prerequisites applies on Linux too.
 - **macOS (Docker Desktop), and Docker Desktop for Linux:** containers run
   inside a virtual machine, so the candidate addresses are not routable from
@@ -258,8 +258,7 @@ LiveKit's WebRTC ICE candidates, which are container-internal addresses
   gateway → LiveKit path is unaffected (it stays container-to-container). To
   watch playback from a Mac, use a Linux machine, run the browser in a
   container on the perlink network, or set up a routed tunnel into the
-  perlink subnet — options and tradeoffs are written up in
-  [FLE-588](https://linear.app/foxglove/issue/FLE-588).
+  perlink subnet — options and tradeoffs are written up in FLE-588.
 
 When playback does connect, confirm in `chrome://webrtc-internals` that the
 selected candidate pair uses `10.99.x.x` addresses. If the host can also
