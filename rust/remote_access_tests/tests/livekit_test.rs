@@ -958,7 +958,7 @@ fn encode_raw_image_sized(frame_id: &str, width: u32, height: u32, seq: u32) -> 
 }
 
 /// FLE-579 regression: verify the per-platform video codec selection, and that the
-/// macOS path is no longer resolution-capped.
+/// macOS path is no longer 720p-capped.
 ///
 /// On macOS the gateway publishes H.265 (`start_video_tracks`), which avoids the
 /// H.264 / VideoToolbox level-3.1 720p cap (FLE-587), so 1080p is delivered. On
