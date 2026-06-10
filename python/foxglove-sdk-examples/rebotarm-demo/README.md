@@ -26,6 +26,18 @@ Throughout all phases (homing, oscillation, return-to-start) the script:
   URIs from the bundled [`urdf/`](./urdf) folder (URDF file + STL meshes).
 - Publishes `FrameTransforms` on `/tf` at ~30 Hz using [yourdfpy](https://github.com/clemense/yourdfpy)
   for forward kinematics from the live joint positions read off the motor bus.
+- Publishes `JointStates` (position **rad**, velocity **rad/s**, effort **Nm**) on
+  `/joint_states` at up to 50 Hz, sampled in a single bus poll via
+  `RobotArm.get_state()` so the three signals are coherent. Joint names match
+  the URDF (`joint1`, `joint2`, `join3`*, `joint4`, `joint5`, `joint6`) so the
+  series line up with what the 3D panel is showing.
+
+  In Foxglove, drop in a **Plot** panel and add series like
+  `/joint_states.joints[:].position`, `.velocity`, or `.effort` (use the
+  `[:].`-style array path to plot all six joints at once, or
+  `/joint_states.joints[0].velocity` for just one). The schema is the standard
+  Foxglove [`JointState`](https://docs.foxglove.dev/docs/visualization/message-schemas/joint-state)
+  / [`JointStates`](https://docs.foxglove.dev/docs/visualization/message-schemas/joint-states).
 
 The bundled URDF [`reBot-DevArm_fixend.urdf`](./urdf/reBot-DevArm_description_fixend/urdf/reBot-DevArm_fixend.urdf)
 defines the six revolute joints (`joint1`, `joint2`, `join3`*, `joint4`, `joint5`,
@@ -81,47 +93,96 @@ streamer in parallel, it will publish the camera-internal optical frames
 `oak_imu_frame`, …) on `/tf` rooted at this `oak` frame, so live camera /
 point-cloud topics will line up with the arm visualization automatically.
 
-### Built-in OAK point cloud streamer
+### Built-in OAK streamer (point cloud + video + IMU)
 
 This demo also ships its own minimal OAK-4 publisher in
 [`oak_streamer.py`](./oak_streamer.py) — a single library file with one
 `OakStreamer` class — so you don't need to run `../oak-luxonis-4d` in a
-second process to see live depth in Foxglove.
+second process to see live data in Foxglove.
 
-What it does (when an OAK device is attached and `depthai` is installed):
+When an OAK device is attached and `depthai` is installed, the streamer
+publishes three topics on top of the URDF visualization:
 
-- Opens a DepthAI v3 pipeline (color + stereo + `dai.node.RGBD`) and
-  publishes a **colored point cloud** on `/oak/depth/points` (XYZ float32 +
-  separate `red` / `green` / `blue` / `alpha` Uint8 fields — Foxglove's
-  *"RGBA (separate fields)"* color mode).
+| Topic               | Schema                       | Default rate / size              | Notes                                                                                                                                          |
+| ------------------- | ---------------------------- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/oak/depth/points` | `foxglove.PointCloud`        | 640x400 @ 30 fps RGBD            | Colored point cloud from `dai.node.RGBD`. XYZ float32 + separate `red` / `green` / `blue` / `alpha` Uint8 fields (Foxglove's *"RGBA (separate fields)"* color mode). |
+| `/oak/rgb/video`    | `foxglove.CompressedVideo`   | **1920x1080 @ 30 fps H.264**     | 1080p H.264 preview. Hardware-encoded by `dai.node.VideoEncoder` so the host pays zero CPU. NV12 ISP output is tapped off the same color sensor as RGBD — see the [sensor-rate constraint](#sensor-rate-constraint-video-tap--rgbd) below. |
+| `/oak/imu`          | JSON (sensor_msgs-like)      | **50 Hz** accel + gyro           | One message per packet, batched by the device. Schema name `sensor_msgs.msg.ImuLike` (header / orientation / angular_velocity / linear_acceleration).                |
+
+#### Sensor-rate constraint (video tap ↔ RGBD)
+
+DepthAI v3 binds one `Camera` node per `CameraBoardSocket`, sharing a single
+sensor / ISP timeline. The streamer pins that sensor at `OAK_RGBD_FPS` via
+`Camera.build(sensorFps=...)` so subsequent `requestOutput(... fps=...)`
+calls are interpreted as **subsampling requests**, not as new sensor rates.
+
+Even so, asking the video tap for a *lower* output rate than RGBD can drag
+the color stream feeding `dai.node.RGBD` down to that rate on some firmware
+versions. The depth path keeps running at the StereoDepth rate (30 fps),
+so depth and color end up 2:1 out of phase and the Sync node inside `RGBD`
+emits:
+
+```
+Sync(5) [warning] Sync node has been trying to sync for N messages, but the messages are still not in sync.
+Sync(5) [warning] Output inDepthSync timestamp is …
+Sync(5) [warning] Output inColorSync timestamp is …
+```
+
+…which briefly stalls `/oak/depth/points`. The streamer guards against this
+by **forcing the video tap to use `OAK_RGBD_FPS`** internally, logging a
+warning if `OAK_VIDEO_FPS` was set lower. The only way to actually get a
+slower color stream is to lower `OAK_RGBD_FPS`.
+
+And the static-extrinsic TF tree:
+
 - Reads the device calibration and publishes the **depthai-ros-style**
-  static TF tree (`oak_{rgb,left,right}_camera_{frame,optical_frame}`,
-  `oak_imu_frame`) **rooted at the URDF's `oak` link**, so the camera
-  visualization, point cloud, and URDF share one consistent TF tree.
-- Re-stamps the TF tree on every received cloud, so Foxglove sees fresh
-  timestamps and never marks the device transforms as stale.
-- Runs in its own daemon thread with `start()` / `stop()`. `main.py` only
-  calls these two methods.
+  tree (`oak_{rgb,left,right}_camera_{frame,optical_frame}`, `oak_imu_frame`)
+  **rooted at the URDF's `oak` link**, so the camera visualization, point
+  cloud, video, IMU, and URDF all share one consistent TF tree.
+- Re-stamps the live `/tf` on every received cloud so Foxglove never
+  marks the device transforms as stale.
+
+Implementation details worth knowing:
+
+- One daemon thread, one `dai.Device`, one `dai.Pipeline`. `main.py` only
+  calls `OakStreamer.start()` and `OakStreamer.stop(timeout)`.
 - **Auto-degrades**: if `depthai` is missing or no OAK is plugged in,
   `OakStreamer.start()` logs a warning and exits cleanly — the homing and
   sinusoidal-sway demo keeps running.
+- Per-stream failures (video tap or IMU node setup) are caught locally and
+  only that stream is disabled; the other two still publish.
+- IMU batches are drained up to `imu_max_packets_per_tick` per worker
+  iteration so a long IMU burst cannot starve the cloud / video paths.
 
 Tunables (top of `main.py`):
 
-| Constant                | Meaning                                                                                       |
-| ----------------------- | --------------------------------------------------------------------------------------------- |
-| `ENABLE_OAK_STREAMER`   | Master switch (`True` by default). Set `False` to disable the camera publisher.               |
-| `OAK_TF_PREFIX`         | TF naming prefix; matches depthai-ros (`{prefix}_rgb_camera_optical_frame`, etc.).            |
-| `OAK_TF_BASE_FRAME`     | Root frame the device TF tree attaches to. Must match a URDF link (default `oak` on `link5`). |
-| `OAK_PCL_TOPIC`         | Foxglove topic for the colored point cloud.                                                   |
-| `OAK_RGBD_SIZE`         | Color / stereo / RGBD output resolution (width, height).                                      |
-| `OAK_RGBD_FPS`          | Pipeline FPS.                                                                                 |
-| `OAK_IR_LASER_INTENSITY`| IR dot-projector intensity, 0..1; matches the Luxonis stereo example default.                 |
+| Constant                  | Meaning                                                                                       |
+| ------------------------- | --------------------------------------------------------------------------------------------- |
+| `ENABLE_OAK_STREAMER`     | Master switch (`True` by default). Set `False` to disable the camera publisher.               |
+| `OAK_TF_PREFIX`           | TF naming prefix; matches depthai-ros (`{prefix}_rgb_camera_optical_frame`, etc.).            |
+| `OAK_TF_BASE_FRAME`       | Root frame the device TF tree attaches to. Must match a URDF link (default `oak` on `link5`). |
+| `OAK_PCL_TOPIC`           | Foxglove topic for the colored point cloud.                                                   |
+| `OAK_RGBD_SIZE`           | Color / stereo / RGBD output resolution (width, height).                                      |
+| `OAK_RGBD_FPS`            | RGBD pipeline FPS.                                                                            |
+| `OAK_IR_LASER_INTENSITY`  | IR dot-projector intensity, 0..1; matches the Luxonis stereo example default.                 |
+| `OAK_ENABLE_VIDEO`        | Toggle the small H.264 video tap.                                                             |
+| `OAK_VIDEO_TOPIC`         | Foxglove topic for the H.264 video.                                                           |
+| `OAK_VIDEO_SIZE`          | Video resolution (width, height); default `(1920, 1080)`. Lower it (e.g. `(1280, 720)`) if `requestOutput`/`VideoEncoder` setup logs a warning on your device. |
+| `OAK_VIDEO_FPS`           | Video FPS (also feeds the encoder frame rate).                                                |
+| `OAK_ENABLE_IMU`          | Toggle the IMU publisher.                                                                     |
+| `OAK_IMU_TOPIC`           | Foxglove topic for IMU JSON messages.                                                         |
+| `OAK_IMU_RATE_HZ`         | Accel + gyro report rate (Hz). Default `50`.                                                  |
 
 In Foxglove: add a **3D panel**, follow frame `world` (or `base_link`),
 enable the URDF custom layer (already in [`foxglove/rebotarm_layout.json`](./foxglove/rebotarm_layout.json)),
-then add the `/oak/depth/points` PointCloud topic — set its color mode to
-*"RGBA (separate fields)"* if it isn't auto-detected.
+then:
+
+- Add the `/oak/depth/points` topic to the 3D panel — set its color mode to
+  *"RGBA (separate fields)"* if it isn't auto-detected.
+- Add an **Image** panel and select `/oak/rgb/video` (Foxglove will decode
+  the H.264 stream automatically).
+- Add a **Plot** panel with `/oak/imu.linear_acceleration.{x,y,z}` and
+  `/oak/imu.angular_velocity.{x,y,z}` to see live IMU traces.
 
 ## Prerequisites
 
@@ -223,6 +284,8 @@ All tunables live at the top of [`main.py`](./main.py):
 | `RETURN_TOLERANCE_RAD` | Per-joint convergence threshold for the safe-return move (rad). |
 | `SHUTDOWN_TIMEOUT_S` | Absolute upper bound for graceful shutdown before the watchdog hard-exits (s). |
 | `FORCE_STOP_GRACE_S` | Tightened deadline after the 2nd Ctrl+C/SIGTERM, applied to the disconnect phase only (s). |
+| `TF_PUBLISH_HZ` | Max rate at which `/tf` is published (Hz). |
+| `JOINT_STATES_PUBLISH_HZ` | Max rate at which `/joint_states` (position / velocity / effort) is published (Hz). |
 
 ## Safety
 

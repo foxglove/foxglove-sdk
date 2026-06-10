@@ -46,8 +46,14 @@ except Exception as _ex:  # pragma: no cover - missing-device / missing-package 
     _DEPTHAI_AVAILABLE = False
     _DEPTHAI_IMPORT_ERROR = _ex
 
-from foxglove.channels import FrameTransformsChannel, PointCloudChannel
+from foxglove import Channel, Schema
+from foxglove.channels import (
+    CompressedVideoChannel,
+    FrameTransformsChannel,
+    PointCloudChannel,
+)
 from foxglove.messages import (
+    CompressedVideo,
     FrameTransform,
     FrameTransforms,
     PackedElementField,
@@ -434,6 +440,63 @@ def _dai_ts_to_foxglove(img: Any) -> Timestamp | None:
         return None
 
 
+def _imu_ts_to_foxglove(ts_any: Any) -> Timestamp:
+    """Convert a DepthAI ``timedelta``-like timestamp to Foxglove ``Timestamp``."""
+    try:
+        total_ns = int(ts_any.total_seconds() * 1e9)
+        return Timestamp(sec=total_ns // 1_000_000_000, nsec=total_ns % 1_000_000_000)
+    except Exception:
+        return Timestamp.now()
+
+
+# JSON schema matching the IMU topic in `oak-luxonis-4d/main.py` (a flat
+# subset of `sensor_msgs/Imu`). Foxglove auto-discovers the topic without
+# needing a ROS bag or msgdef.
+IMU_JSON_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "header": {
+            "type": "object",
+            "properties": {
+                "stamp": {
+                    "type": "object",
+                    "properties": {
+                        "sec": {"type": "integer"},
+                        "nsec": {"type": "integer"},
+                    },
+                },
+                "frame_id": {"type": "string"},
+            },
+        },
+        "orientation": {
+            "type": "object",
+            "properties": {
+                "x": {"type": "number"},
+                "y": {"type": "number"},
+                "z": {"type": "number"},
+                "w": {"type": "number"},
+            },
+        },
+        "angular_velocity": {
+            "type": "object",
+            "properties": {
+                "x": {"type": "number"},
+                "y": {"type": "number"},
+                "z": {"type": "number"},
+            },
+        },
+        "linear_acceleration": {
+            "type": "object",
+            "properties": {
+                "x": {"type": "number"},
+                "y": {"type": "number"},
+                "z": {"type": "number"},
+            },
+        },
+    },
+}
+
+
 # --------------------------------------------------------------------------- #
 # Point cloud building                                                        #
 # --------------------------------------------------------------------------- #
@@ -545,16 +608,57 @@ def _build_pcl_message(
     )
 
 
-def _build_rgbd_stereo(pipeline: Any, size: tuple[int, int], fps: int) -> Any:
+def _camera_build_with_fps(
+    pipeline: Any, socket: Any, sensor_fps: float
+) -> Any:
+    """Create + build a ``Camera`` node with an explicit ``sensorFps``.
+
+    Pinning ``sensorFps`` at build time matters when the same Camera node is
+    later asked for more than one output (e.g. the RGBD-aligned color stream
+    *and* a small NV12 stream for the H.264 video tap). Without a pinned
+    sensor rate, a later ``requestOutput(... fps=...)`` at a lower rate can
+    drag the entire sensor / ISP timeline down, which knocks the depth-color
+    Sync node inside ``dai.node.RGBD`` out of alignment and prints
+    ``"Sync node has been trying to sync for N messages"`` warnings.
+
+    Falls back to a positional build if the bindings don't accept the kwarg.
+    """
+    node = pipeline.create(dai.node.Camera)
+    fps_f = float(sensor_fps)
+    if socket is None:
+        try:
+            return node.build(sensorFps=fps_f)
+        except TypeError:
+            return node.build()
+    try:
+        return node.build(socket, sensorFps=fps_f)
+    except TypeError:
+        try:
+            return node.build(boardSocket=socket, sensorFps=fps_f)
+        except TypeError:
+            return node.build(socket)
+
+
+def _build_rgbd_stereo(
+    pipeline: Any, size: tuple[int, int], fps: int
+) -> tuple[Any, Any]:
     """Stereo + color RGBD pipeline matching the Luxonis Rerun example.
+
+    Returns ``(rgbd_node, color_camera_node)`` so callers can request additional
+    outputs (e.g. a small NV12 stream for a host-side video encoder) from the
+    same ``Camera`` node without re-acquiring CAM_A.
 
     Depth is aligned to color and the RGBD node consumes the aligned depth and
     the color stream; this is the configuration the example uses to set
     ``DepthUnit.METER``.
+
+    All three cameras (color, left, right) are pinned to ``fps`` via
+    ``sensorFps`` so a later video tap at a different ``requestOutput`` rate
+    cannot slow the color sensor down and desync depth from color.
     """
-    color = pipeline.create(dai.node.Camera).build()
-    left = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B)
-    right = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_C)
+    color = _camera_build_with_fps(pipeline, None, fps)
+    left = _camera_build_with_fps(pipeline, dai.CameraBoardSocket.CAM_B, fps)
+    right = _camera_build_with_fps(pipeline, dai.CameraBoardSocket.CAM_C, fps)
     stereo = pipeline.create(dai.node.StereoDepth)
     rgbd = pipeline.create(dai.node.RGBD).build()
 
@@ -581,7 +685,7 @@ def _build_rgbd_stereo(pipeline: Any, size: tuple[int, int], fps: int) -> Any:
         stereo.depth.link(rgbd.inDepth)
         out.link(stereo.inputAlignTo)
     out.link(rgbd.inColor)
-    return rgbd
+    return rgbd, color
 
 
 # --------------------------------------------------------------------------- #
@@ -592,8 +696,9 @@ def _build_rgbd_stereo(pipeline: Any, size: tuple[int, int], fps: int) -> Any:
 class OakStreamerConfig:
     """Tunable parameters for ``OakStreamer``.
 
-    Defaults are picked for the reBotArm demo: depth + color RGBD point cloud
-    rooted at the URDF ``oak`` link, no raw image streams (saves USB / CPU).
+    Defaults are picked for the reBotArm demo: colored RGBD point cloud,
+    small-resolution H.264 video, and 50 Hz IMU — all rooted at the URDF
+    ``oak`` link with shared ``/tf``.
     """
 
     # TF naming (matches depthai-ros: {prefix}_{socket}_camera_optical_frame).
@@ -603,32 +708,59 @@ class OakStreamerConfig:
     # static TF tree slot in there naturally.
     tf_base_frame: str = "oak"
 
-    # Point cloud
+    # ---- Point cloud (RGBD) ------------------------------------------------
     pcl_topic: str = "/oak/depth/points"
     # If None, defaults to "{tf_prefix}_rgb_camera_optical_frame".
     pcl_frame_id: Optional[str] = None
 
-    # Pipeline shape
+    # Pipeline shape for the RGBD/depth path.
     rgbd_size: tuple[int, int] = DEFAULT_SIZE
     rgbd_fps: int = STEREO_DEFAULT_FPS
     ir_laser_intensity: float = 0.7  # 0..1; matches the Luxonis example default.
 
-    # TF channels: pass the channels already created by the demo so OAK TF
-    # joins the URDF TF on the same /tf topic. If left None, the streamer
-    # creates its own channels (useful for standalone testing).
+    # ---- Video (low-res H.264, hardware encoded on device) -----------------
+    enable_video: bool = True
+    video_topic: str = "/oak/rgb/video"
+    # 1080p preview. The video tap is taken off the same color sensor as the
+    # RGBD path, so the ISP just adds another scaler stage; bandwidth is fine
+    # at H.264 and Foxglove decodes 1080p in software without trouble.
+    video_size: tuple[int, int] = (1080, 720)
+    # Lower FPS keeps bandwidth low and leaves the depth pipeline headroom.
+    video_fps: int = 15
+    # Default frame_id when None: "{tf_prefix}_rgb_camera_optical_frame".
+    video_frame_id: Optional[str] = None
+
+    # ---- IMU (accel + gyro at the same rate) -------------------------------
+    enable_imu: bool = True
+    imu_topic: str = "/oak/imu"
+    imu_rate_hz: int = 50
+    # Device-side batching reduces "host too slow" warnings under load.
+    imu_batch_threshold: int = 5
+    imu_max_batch_reports: int = 20
+    # Per worker-loop drain cap so IMU bursts cannot starve vision streams.
+    imu_max_packets_per_tick: int = 16
+    # Default frame_id when None: "{tf_prefix}_imu_frame".
+    imu_frame_id: Optional[str] = None
+
+    # ---- TF -----------------------------------------------------------------
+    # Pass the channels already created by the demo so OAK TF joins the URDF
+    # TF on the same /tf topic. If left None, the streamer creates its own.
     tf_channel: Optional[FrameTransformsChannel] = None
     tf_static_channel: Optional[FrameTransformsChannel] = None
     publish_static_tf: bool = True       # publish once on connect
     publish_live_tf_each_cloud: bool = True  # re-stamp & re-publish with each cloud
 
-    # Worker behavior
-    poll_sleep_s: float = 0.005          # idle sleep when no cloud is ready
+    # ---- Worker behavior ----------------------------------------------------
+    # Idle sleep when every queue is empty. 5 ms gives plenty of headroom for
+    # 50 Hz IMU (every 20 ms) and 30 Hz clouds.
+    poll_sleep_s: float = 0.005
     log_every_n_clouds: int = 60         # 0 disables periodic stats logging
     log_prefix: str = "[oak]"            # prepended to log lines
 
-    # Allow callers to pre-pick an output PointCloudChannel; if None the
-    # streamer creates one named after ``pcl_topic``.
+    # Optional pre-created channels. If None the streamer creates them itself.
     point_cloud_channel: Optional[PointCloudChannel] = None
+    video_channel: Optional[CompressedVideoChannel] = None
+    imu_channel: Optional[Channel] = None
 
 
 @dataclass
@@ -640,6 +772,8 @@ class _OakStreamerState:
     started_event: threading.Event = field(default_factory=threading.Event)
     last_error: Optional[BaseException] = None
     clouds_published: int = 0
+    video_frames_published: int = 0
+    imu_samples_published: int = 0
 
 
 class OakStreamer:
@@ -661,24 +795,52 @@ class OakStreamer:
     """
 
     def __init__(self, config: Optional[OakStreamerConfig] = None):
+        import json as _json  # local import keeps top-level deps tight
+
         self.config = config or OakStreamerConfig()
+        cfg = self.config
 
-        # Channels: own them if the caller didn't provide them.
-        if self.config.point_cloud_channel is None:
-            self._pcl_channel: PointCloudChannel = PointCloudChannel(topic=self.config.pcl_topic)
-        else:
-            self._pcl_channel = self.config.point_cloud_channel
+        # Point cloud channel
+        self._pcl_channel: PointCloudChannel = (
+            cfg.point_cloud_channel
+            if cfg.point_cloud_channel is not None
+            else PointCloudChannel(topic=cfg.pcl_topic)
+        )
 
-        self._owned_tf_channel: bool = False
-        self._owned_tf_static_channel: bool = False
-        self._tf_channel: Optional[FrameTransformsChannel] = self.config.tf_channel
-        self._tf_static_channel: Optional[FrameTransformsChannel] = self.config.tf_static_channel
+        # Video channel (only if enabled). Creating a channel reserves the
+        # topic name on the WS server, so we skip it when disabled.
+        self._video_channel: Optional[CompressedVideoChannel] = None
+        if cfg.enable_video:
+            self._video_channel = (
+                cfg.video_channel
+                if cfg.video_channel is not None
+                else CompressedVideoChannel(topic=cfg.video_topic)
+            )
+
+        # IMU channel (custom JSON schema)
+        self._imu_channel: Optional[Channel] = None
+        if cfg.enable_imu:
+            self._imu_channel = (
+                cfg.imu_channel
+                if cfg.imu_channel is not None
+                else Channel(
+                    topic=cfg.imu_topic,
+                    message_encoding="json",
+                    schema=Schema(
+                        name="sensor_msgs.msg.ImuLike",
+                        encoding="jsonschema",
+                        data=_json.dumps(IMU_JSON_SCHEMA).encode("utf-8"),
+                    ),
+                )
+            )
+
+        # TF channels
+        self._tf_channel: Optional[FrameTransformsChannel] = cfg.tf_channel
+        self._tf_static_channel: Optional[FrameTransformsChannel] = cfg.tf_static_channel
         if self._tf_channel is None:
             self._tf_channel = FrameTransformsChannel(topic="/tf")
-            self._owned_tf_channel = True
         if self._tf_static_channel is None:
             self._tf_static_channel = FrameTransformsChannel(topic="/tf_static")
-            self._owned_tf_static_channel = True
 
         self._state = _OakStreamerState()
         self._log = logging.getLogger("oak_streamer")
@@ -724,6 +886,14 @@ class OakStreamer:
         return self._state.clouds_published
 
     @property
+    def video_frames_published(self) -> int:
+        return self._state.video_frames_published
+
+    @property
+    def imu_samples_published(self) -> int:
+        return self._state.imu_samples_published
+
+    @property
     def last_error(self) -> Optional[BaseException]:
         return self._state.last_error
 
@@ -736,9 +906,165 @@ class OakStreamer:
             else f"{self.config.tf_prefix}_rgb_camera_optical_frame"
         )
 
+    def _resolved_video_frame_id(self) -> str:
+        return (
+            self.config.video_frame_id
+            if self.config.video_frame_id
+            else f"{self.config.tf_prefix}_rgb_camera_optical_frame"
+        )
+
+    def _resolved_imu_frame_id(self) -> str:
+        return (
+            self.config.imu_frame_id
+            if self.config.imu_frame_id
+            else f"{self.config.tf_prefix}_imu_frame"
+        )
+
+    def _attach_video_stream(self, pipeline: Any, color_cam: Any) -> Any:
+        """Add a small-res H.264 video tap off ``color_cam``.
+
+        Returns the output queue or ``None`` if the device / SDK refused.
+        Failure here is non-fatal: the rest of the streamer keeps running.
+
+        IMPORTANT: the video output is requested at ``rgbd_fps`` (the color
+        sensor's pinned rate), not at ``video_fps``. Requesting a *different*
+        rate from the same Camera node can drag the color sensor down — even
+        with ``sensorFps`` pinned at build time — which desyncs the RGBD node
+        and produces ``"Sync node has been trying to sync"`` warnings. The
+        encoder's ``frameRate`` is set to the same value so the H.264 stream's
+        labeled rate matches reality.
+        """
+        cfg = self.config
+        if cfg.video_fps != cfg.rgbd_fps:
+            self._log.warning(
+                "%s video_fps=%d differs from rgbd_fps=%d; both color outputs "
+                "share one sensor so the video tap will run at %d fps to keep "
+                "the depth-color Sync node aligned. Lower rgbd_fps if you "
+                "really need a slower stream.",
+                cfg.log_prefix, cfg.video_fps, cfg.rgbd_fps, cfg.rgbd_fps,
+            )
+        effective_fps = cfg.rgbd_fps
+
+        try:
+            nv12_out = color_cam.requestOutput(
+                cfg.video_size, dai.ImgFrame.Type.NV12, fps=effective_fps,
+            )
+        except Exception as ex:
+            self._log.warning(
+                "%s could not request NV12 video output @ %dx%d/%d fps (%s); video disabled",
+                cfg.log_prefix, cfg.video_size[0], cfg.video_size[1], effective_fps, ex,
+            )
+            return None
+
+        try:
+            encoder = pipeline.create(dai.node.VideoEncoder).build(
+                nv12_out,
+                frameRate=effective_fps,
+                profile=dai.VideoEncoderProperties.Profile.H264_MAIN,
+            )
+            q = encoder.out.createOutputQueue(maxSize=4, blocking=False)
+        except Exception as ex:
+            self._log.warning(
+                "%s VideoEncoder setup failed (%s); video disabled", cfg.log_prefix, ex,
+            )
+            return None
+        self._log.info(
+            "%s video: %dx%d H.264 @ %d fps on %s",
+            cfg.log_prefix, cfg.video_size[0], cfg.video_size[1], effective_fps, cfg.video_topic,
+        )
+        return q
+
+    def _attach_imu_stream(self, pipeline: Any) -> Any:
+        """Add an IMU node at ``cfg.imu_rate_hz``; return its output queue."""
+        cfg = self.config
+        try:
+            imu = pipeline.create(dai.node.IMU)
+            hz = max(1, min(int(cfg.imu_rate_hz), 500))
+            imu.enableIMUSensor(dai.IMUSensor.ACCELEROMETER_UNCALIBRATED, hz)
+            imu.enableIMUSensor(dai.IMUSensor.GYROSCOPE_UNCALIBRATED, hz)
+            batch_thr = max(1, int(cfg.imu_batch_threshold))
+            max_batch = max(batch_thr + 1, int(cfg.imu_max_batch_reports))
+            imu.setBatchReportThreshold(batch_thr)
+            imu.setMaxBatchReports(max_batch)
+            q = imu.out.createOutputQueue(maxSize=50, blocking=False)
+        except Exception as ex:
+            self._log.warning(
+                "%s IMU node setup failed (%s); IMU disabled", cfg.log_prefix, ex,
+            )
+            return None
+        self._log.info(
+            "%s IMU: accel/gyro @ %d Hz batchReportThreshold=%d maxBatchReports=%d on %s",
+            cfg.log_prefix, hz, batch_thr, max_batch, cfg.imu_topic,
+        )
+        return q
+
+    def _publish_video_frame(self, pkt: Any, frame_id: str) -> bool:
+        """Pack an H.264 NAL packet into a Foxglove ``CompressedVideo``."""
+        ts = _dai_ts_to_foxglove(pkt) or Timestamp.now()
+        try:
+            data = pkt.getData()
+        except Exception:
+            return False
+        if data is None:
+            return False
+        blob = data.tobytes() if hasattr(data, "tobytes") else bytes(memoryview(data))
+        if not blob:
+            return False
+        try:
+            assert self._video_channel is not None
+            self._video_channel.log(
+                CompressedVideo(timestamp=ts, frame_id=frame_id, data=blob, format="h264")
+            )
+        except Exception as ex:
+            self._log.warning("%s video publish failed: %s", self.config.log_prefix, ex)
+            return False
+        return True
+
+    def _publish_imu_packets(self, ip: Any, frame_id: str) -> int:
+        """Convert an ``IMUData`` batch into N JSON messages; returns N."""
+        import json as _json
+
+        published = 0
+        max_n = max(1, int(self.config.imu_max_packets_per_tick))
+        try:
+            packets = ip.packets[:max_n]
+        except Exception:
+            return 0
+        for imu_packet in packets:
+            try:
+                accel = imu_packet.acceleroMeter
+                gyro = imu_packet.gyroscope
+                ts = _imu_ts_to_foxglove(accel.getTimestamp())
+                payload = {
+                    "header": {
+                        "stamp": {"sec": ts.sec, "nsec": ts.nsec},
+                        "frame_id": frame_id,
+                    },
+                    "orientation": {"x": 0.0, "y": 0.0, "z": 0.0, "w": 1.0},
+                    "angular_velocity": {
+                        "x": float(gyro.x),
+                        "y": float(gyro.y),
+                        "z": float(gyro.z),
+                    },
+                    "linear_acceleration": {
+                        "x": float(accel.x),
+                        "y": float(accel.y),
+                        "z": float(accel.z),
+                    },
+                }
+                assert self._imu_channel is not None
+                self._imu_channel.log(_json.dumps(payload).encode("utf-8"))
+                published += 1
+            except Exception as ex:
+                self._log.debug("%s IMU packet skipped: %s", self.config.log_prefix, ex)
+                continue
+        return published
+
     def _run(self) -> None:
         cfg = self.config
         pcl_frame_id = self._resolved_pcl_frame_id()
+        video_frame_id = self._resolved_video_frame_id()
+        imu_frame_id = self._resolved_imu_frame_id()
         log_prefix = cfg.log_prefix
 
         # 1) Open device, read calibration, build & publish static TF.
@@ -769,10 +1095,10 @@ class OakStreamer:
                     Timestamp.now(), log_static=True, log_tf=True,
                 )
 
-        # 2) Build the RGBD pipeline and stream point clouds.
+        # 2) Build pipeline: RGBD + (optional) H.264 video tap + (optional) IMU.
         try:
             with dai.Pipeline() as pipeline:  # type: ignore[union-attr]
-                rgbd = _build_rgbd_stereo(pipeline, cfg.rgbd_size, cfg.rgbd_fps)
+                rgbd, color_cam = _build_rgbd_stereo(pipeline, cfg.rgbd_size, cfg.rgbd_fps)
                 if _try_set_depth_units_meter(rgbd):
                     self._log.info(
                         "%s RGBD: setDepthUnits(METER) succeeded (verified per-cloud)", log_prefix
@@ -783,9 +1109,18 @@ class OakStreamer:
                     )
 
                 pcl_queue = rgbd.pcl.createOutputQueue(maxSize=2, blocking=False)
+
+                video_queue = None
+                if cfg.enable_video and self._video_channel is not None:
+                    video_queue = self._attach_video_stream(pipeline, color_cam)
+
+                imu_queue = None
+                if cfg.enable_imu and self._imu_channel is not None:
+                    imu_queue = self._attach_imu_stream(pipeline)
+
                 pipeline.start()
 
-                # IR laser dot projector (matches the rerun example).
+                # IR laser dot projector (matches the Luxonis Rerun example).
                 try:
                     device = pipeline.getDefaultDevice()
                     if device is not None and hasattr(device, "setIrLaserDotProjectorIntensity"):
@@ -794,53 +1129,88 @@ class OakStreamer:
                     self._log.debug("%s setIrLaserDotProjectorIntensity skipped: %s", log_prefix, ex)
 
                 self._log.info(
-                    "%s RGBD pipeline running (size=%dx%d fps=%d), publishing on %s",
-                    log_prefix, cfg.rgbd_size[0], cfg.rgbd_size[1], cfg.rgbd_fps, cfg.pcl_topic,
+                    "%s pipeline running: RGBD %dx%d@%d on %s%s%s",
+                    log_prefix,
+                    cfg.rgbd_size[0], cfg.rgbd_size[1], cfg.rgbd_fps, cfg.pcl_topic,
+                    f" + H.264 video on {cfg.video_topic}" if video_queue is not None else "",
+                    f" + {cfg.imu_rate_hz} Hz IMU on {cfg.imu_topic}" if imu_queue is not None else "",
                 )
                 self._state.started_event.set()
 
                 locked_scale_cell: list[Optional[float]] = [None]
                 while not self._state.stop_event.is_set() and pipeline.isRunning():
+                    progressed = False
+
+                    # --- Point cloud ----------------------------------------
                     try:
                         pcl_data = pcl_queue.tryGet()
                     except Exception as ex:
                         self._log.warning("%s pcl queue error: %s", log_prefix, ex)
-                        time.sleep(cfg.poll_sleep_s)
-                        continue
-                    if pcl_data is None:
-                        # Honor stop_event promptly.
+                        pcl_data = None
+                    if pcl_data is not None:
+                        progressed = True
+                        ts = _dai_ts_to_foxglove(pcl_data) or Timestamp.now()
+                        msg = _build_pcl_message(
+                            pcl_data, ts, pcl_frame_id, locked_scale_cell=locked_scale_cell,
+                        )
+                        if msg is not None:
+                            try:
+                                self._pcl_channel.log(msg)
+                                self._state.clouds_published += 1
+                                if cfg.publish_live_tf_each_cloud and tf_snaps:
+                                    _log_tf_snapshots(
+                                        self._tf_channel, self._tf_static_channel,
+                                        tf_snaps, ts, log_static=False, log_tf=True,
+                                    )
+                            except Exception as ex:
+                                self._log.warning("%s PointCloud publish failed: %s", log_prefix, ex)
+
+                    # --- Video (H.264) --------------------------------------
+                    if video_queue is not None:
+                        try:
+                            vp = video_queue.tryGet()
+                        except Exception as ex:
+                            self._log.warning("%s video queue error: %s", log_prefix, ex)
+                            vp = None
+                        if vp is not None:
+                            progressed = True
+                            if self._publish_video_frame(vp, video_frame_id):
+                                self._state.video_frames_published += 1
+
+                    # --- IMU (drain up to imu_max_packets_per_tick) ---------
+                    if imu_queue is not None:
+                        try:
+                            ip = imu_queue.tryGet()
+                        except Exception as ex:
+                            self._log.warning("%s imu queue error: %s", log_prefix, ex)
+                            ip = None
+                        if ip is not None and hasattr(ip, "packets"):
+                            progressed = True
+                            n = self._publish_imu_packets(ip, imu_frame_id)
+                            self._state.imu_samples_published += n
+
+                    if not progressed:
+                        # Honor stop_event promptly while nothing is happening.
                         if self._state.stop_event.wait(cfg.poll_sleep_s):
                             break
-                        continue
-
-                    ts = _dai_ts_to_foxglove(pcl_data) or Timestamp.now()
-                    msg = _build_pcl_message(
-                        pcl_data, ts, pcl_frame_id, locked_scale_cell=locked_scale_cell,
-                    )
-                    if msg is None:
-                        continue
-                    try:
-                        self._pcl_channel.log(msg)
-                    except Exception as ex:
-                        self._log.warning("%s PointCloud publish failed: %s", log_prefix, ex)
-                        continue
-                    self._state.clouds_published += 1
-
-                    if cfg.publish_live_tf_each_cloud and tf_snaps:
-                        _log_tf_snapshots(
-                            self._tf_channel, self._tf_static_channel, tf_snaps, ts,
-                            log_static=False, log_tf=True,
-                        )
 
                     n_every = cfg.log_every_n_clouds
-                    if n_every > 0 and self._state.clouds_published % n_every == 0:
+                    if (
+                        n_every > 0
+                        and self._state.clouds_published > 0
+                        and self._state.clouds_published % n_every == 0
+                    ):
                         self._log.info(
-                            "%s published %d clouds (scale=%.5g)",
-                            log_prefix, self._state.clouds_published,
+                            "%s published: %d clouds, %d video frames, %d IMU samples "
+                            "(scale=%.5g)",
+                            log_prefix,
+                            self._state.clouds_published,
+                            self._state.video_frames_published,
+                            self._state.imu_samples_published,
                             (locked_scale_cell[0] or 1.0),
                         )
 
-                # Drain stop_event triggered: try to stop the pipeline gracefully.
+                # Stop request: drain & stop the pipeline gracefully.
                 try:
                     pipeline.stop()
                 except Exception as ex:
@@ -850,6 +1220,9 @@ class OakStreamer:
             self._log.warning("%s pipeline error: %s", log_prefix, ex)
         finally:
             self._log.info(
-                "%s worker exiting (published %d clouds)",
-                log_prefix, self._state.clouds_published,
+                "%s worker exiting (published %d clouds, %d video frames, %d IMU samples)",
+                log_prefix,
+                self._state.clouds_published,
+                self._state.video_frames_published,
+                self._state.imu_samples_published,
             )

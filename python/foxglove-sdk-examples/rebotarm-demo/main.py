@@ -25,10 +25,12 @@ from typing import Optional
 
 import foxglove
 import numpy as np
-from foxglove.channels import FrameTransformsChannel
+from foxglove.channels import FrameTransformsChannel, JointStatesChannel
 from foxglove.messages import (
     FrameTransform,
     FrameTransforms,
+    JointState,
+    JointStates,
     Quaternion,
     Timestamp,
     Vector3,
@@ -46,7 +48,7 @@ from reBotArm_control_py.actuator import RobotArm
 
 # Home pose (degrees, joint1 .. joint6). Oscillation is centered here.
 HOME_POSE_DEG = np.array(
-    [-8.21, -39.40, -60.14, 21.41, 0.89, 91.72],
+    [-8.21, -39.40, -68.0, 21.41, 0.89, 91.72],
     dtype=np.float64,
 )
 HOME_POSE_RAD = np.deg2rad(HOME_POSE_DEG)
@@ -56,7 +58,7 @@ PERIOD_S = 20.0                # Full sine period (seconds); larger = slower
 FREQ_HZ = 1.0 / PERIOD_S
 
 # Per-joint swing amplitude (degrees); joint 1 is largest but still small
-AMPLITUDE_DEG = np.array([15.0, 5.0, 5.0, 8.0, 8.0, 10.0], dtype=np.float64)
+AMPLITUDE_DEG = np.array([20.0, 8.0, 5.0, 8.0, 8.0, 10.0], dtype=np.float64)
 
 # Per-joint phase offset (radians); staggered to produce a wave-like motion
 PHASE_RAD = np.array([0.00, 0.25, 0.50, 0.75, 1.00, 1.25], dtype=np.float64) * np.pi
@@ -105,6 +107,14 @@ BASE_FRAME_ID = "base_link"
 TF_PUBLISH_HZ = 30.0
 _TF_PUBLISH_INTERVAL = 1.0 / TF_PUBLISH_HZ
 
+# Joint-state telemetry (position, velocity, effort/torque) on /joint_states.
+# Published at a higher rate than TF so plots of velocity / torque look smooth.
+# Each tick triggers one bus poll via arm.get_state(), which is cheap when the
+# control loop is already running at 500 Hz.
+JOINT_STATES_TOPIC = "/joint_states"
+JOINT_STATES_PUBLISH_HZ = 50.0
+_JOINT_STATES_PUBLISH_INTERVAL = 1.0 / JOINT_STATES_PUBLISH_HZ
+
 # OAK-4 camera streaming. When True, the demo also spins up an `OakStreamer`
 # that publishes a colored point cloud + device static TF onto the same /tf
 # topic used by the URDF visualization. The streamer auto-degrades to a no-op
@@ -117,6 +127,27 @@ OAK_PCL_TOPIC = "/oak/depth/points"
 OAK_RGBD_SIZE: tuple[int, int] = (640, 400)
 OAK_RGBD_FPS = 30
 OAK_IR_LASER_INTENSITY = 0.7        # 0..1; matches the upstream Luxonis example default
+
+# 1080p H.264 video preview (hardware-encoded on the device).
+# NOTE: the video tap shares the color sensor (CAM_A / IMX378) with the RGBD
+# pipeline, which requests OAK_RGBD_SIZE off the same dai.node.Camera. DepthAI
+# v3 picks a sensor mode that satisfies the largest requested output and the
+# ISP downscales to each consumer's size, so 1920x1080 here coexists fine with
+# the 640x400 RGBD color tap. The OakStreamer also pins the sensor rate to
+# OAK_RGBD_FPS, so the video tap runs at OAK_RGBD_FPS regardless of
+# OAK_VIDEO_FPS — set them equal here to keep logs / encoder labeling
+# consistent. Setting OAK_VIDEO_FPS lower than OAK_RGBD_FPS triggers a warning
+# and is treated as OAK_RGBD_FPS internally; the only way to get a slower
+# color stream is to lower OAK_RGBD_FPS.
+OAK_ENABLE_VIDEO = True
+OAK_VIDEO_TOPIC = "/oak/rgb/video"
+OAK_VIDEO_SIZE: tuple[int, int] = (1080, 720)
+OAK_VIDEO_FPS = OAK_RGBD_FPS
+
+# IMU stream (accelerometer + gyroscope at the same rate).
+OAK_ENABLE_IMU = True
+OAK_IMU_TOPIC = "/oak/imu"
+OAK_IMU_RATE_HZ = 50
 
 
 # --------------------------------------------------------------------------- #
@@ -135,11 +166,16 @@ _start_pose_rad: np.ndarray | None = None  # captured once, right after enable
 # Foxglove publishing state (populated by setup_foxglove)
 _fox_server: Optional[foxglove.WebSocketServer] = None
 _tf_channel: Optional[FrameTransformsChannel] = None
+_joint_states_channel: Optional[JointStatesChannel] = None
 _urdf: Optional[URDF] = None
 # Mapping from URDF revolute-joint name to index in arm.get_positions().
 # Built in setup_foxglove() by walking robot.robot.joints in order.
 _urdf_joint_index: dict[str, int] = {}
+# Ordered list of (joint_name, motor_index) pairs for /joint_states publishing.
+# Same content as _urdf_joint_index but iteration-friendly.
+_joint_state_names: list[tuple[str, int]] = []
 _last_tf_pub_t: float = 0.0
+_last_joint_states_pub_t: float = 0.0
 
 # OAK streamer instance (created by setup_oak_streamer, joined in main's finally)
 _oak_streamer: Optional[OakStreamer] = None
@@ -249,9 +285,11 @@ def asset_handler(uri: str) -> Optional[bytes]:
 
 def setup_foxglove() -> foxglove.WebSocketServer:
     """Load the URDF, start the Foxglove WS server with the asset handler,
-    and create the ``/tf`` channel. Returns the running server handle.
+    and create the ``/tf`` + ``/joint_states`` channels. Returns the running
+    server handle.
     """
-    global _fox_server, _tf_channel, _urdf, _urdf_joint_index
+    global _fox_server, _tf_channel, _joint_states_channel
+    global _urdf, _urdf_joint_index, _joint_state_names
 
     foxglove.set_log_level(logging.INFO)
 
@@ -277,18 +315,25 @@ def setup_foxglove() -> foxglove.WebSocketServer:
     for joint in _urdf.robot.joints:
         if joint.type == "revolute":
             _urdf_joint_index[joint.name] = len(_urdf_joint_index)
+    _joint_state_names = list(_urdf_joint_index.items())
     print(
         "[foxglove] URDF revolute joints (in order): "
-        + ", ".join(f"{name}->q[{idx}]" for name, idx in _urdf_joint_index.items())
+        + ", ".join(f"{name}->q[{idx}]" for name, idx in _joint_state_names)
     )
 
     _tf_channel = FrameTransformsChannel(topic="/tf")
+    _joint_states_channel = JointStatesChannel(topic=JOINT_STATES_TOPIC)
     _fox_server = foxglove.start_server(asset_handler=asset_handler)
     print(f"[foxglove] server: {_fox_server.app_url()}")
     print(
         f"[foxglove] add a 3D panel + URDF custom layer with URL\n"
         f"           {URDF_PACKAGE_URI}\n"
         f"           (the SDK asset handler serves it from {URDF_ROOT})"
+    )
+    print(
+        f"[foxglove] publishing joint position/velocity/torque on "
+        f"{JOINT_STATES_TOPIC} @ {JOINT_STATES_PUBLISH_HZ:.0f} Hz "
+        "(add a Plot panel and select e.g. /joint_states.joints[:].velocity[:])"
     )
     return _fox_server
 
@@ -323,13 +368,28 @@ def setup_oak_streamer() -> None:
             rgbd_size=OAK_RGBD_SIZE,
             rgbd_fps=OAK_RGBD_FPS,
             ir_laser_intensity=OAK_IR_LASER_INTENSITY,
+            enable_video=OAK_ENABLE_VIDEO,
+            video_topic=OAK_VIDEO_TOPIC,
+            video_size=OAK_VIDEO_SIZE,
+            video_fps=OAK_VIDEO_FPS,
+            enable_imu=OAK_ENABLE_IMU,
+            imu_topic=OAK_IMU_TOPIC,
+            imu_rate_hz=OAK_IMU_RATE_HZ,
             tf_channel=_tf_channel,  # share URDF's /tf topic so trees stay merged
             log_prefix="[oak]",
         )
     )
     _oak_streamer.start()
-    print(f"[oak] streamer started (point cloud on {OAK_PCL_TOPIC}, "
-          f"static + live TF under '{OAK_TF_BASE_FRAME}' frame)")
+    extras = []
+    if OAK_ENABLE_VIDEO:
+        extras.append(f"H.264 video {OAK_VIDEO_SIZE[0]}x{OAK_VIDEO_SIZE[1]}@{OAK_VIDEO_FPS} on {OAK_VIDEO_TOPIC}")
+    if OAK_ENABLE_IMU:
+        extras.append(f"IMU @ {OAK_IMU_RATE_HZ} Hz on {OAK_IMU_TOPIC}")
+    suffix = (" + " + " + ".join(extras)) if extras else ""
+    print(
+        f"[oak] streamer started (point cloud on {OAK_PCL_TOPIC}{suffix}, "
+        f"static + live TF under '{OAK_TF_BASE_FRAME}' frame)"
+    )
 
 
 def maybe_publish_tf(arm: RobotArm, *, force: bool = False) -> None:
@@ -410,6 +470,52 @@ def maybe_publish_tf(arm: RobotArm, *, force: bool = False) -> None:
         print(f"[foxglove] /tf publish failed ({e})")
 
 
+def maybe_publish_joint_states(arm: RobotArm, *, force: bool = False) -> None:
+    """Publish a ``JointStates`` message (position, velocity, effort) at up to
+    ``JOINT_STATES_PUBLISH_HZ``.
+
+    Reads (pos, vel, torque) in a single bus poll via ``arm.get_state()`` so
+    the three signals are sampled at the same instant. Safe to call from any
+    thread that may read arm state; throttles internally so callers can drop
+    this into tight inner loops. Pass ``force=True`` to publish unconditionally
+    (e.g. once at the end of a phase).
+    """
+    global _last_joint_states_pub_t
+
+    if _joint_states_channel is None or not _joint_state_names:
+        return
+
+    now = time.perf_counter()
+    if not force and (now - _last_joint_states_pub_t) < _JOINT_STATES_PUBLISH_INTERVAL:
+        return
+    _last_joint_states_pub_t = now
+
+    try:
+        pos, vel, torq = arm.get_state()
+    except Exception as e:
+        print(f"[foxglove] could not read arm state ({e}); skipping /joint_states tick")
+        return
+
+    ts = Timestamp.now()
+    joints: list[JointState] = []
+    for name, idx in _joint_state_names:
+        if idx >= len(pos):
+            continue
+        joints.append(
+            JointState(
+                name=name,
+                position=float(pos[idx]),
+                velocity=float(vel[idx]),
+                effort=float(torq[idx]),
+            )
+        )
+
+    try:
+        _joint_states_channel.log(JointStates(timestamp=ts, joints=joints))
+    except Exception as e:
+        print(f"[foxglove] /joint_states publish failed ({e})")
+
+
 # --------------------------------------------------------------------------- #
 # Homing helper
 # --------------------------------------------------------------------------- #
@@ -462,6 +568,7 @@ def home_arm(arm: RobotArm) -> bool:
             last_print = elapsed
 
         maybe_publish_tf(arm)
+        maybe_publish_joint_states(arm)
 
         if max_err < HOMING_TOLERANCE_RAD:
             converged = True
@@ -548,6 +655,7 @@ def return_to_start(
             last_print = elapsed
 
         maybe_publish_tf(arm)
+        maybe_publish_joint_states(arm)
 
         if max_err < RETURN_TOLERANCE_RAD:
             if converged_at < 0.0:
@@ -581,6 +689,8 @@ def demo_controller(arm: RobotArm, dt: float) -> None:
     q_target = CENTER_RAD + ramp * _amplitude_rad * np.sin(phase_t)
 
     arm.pos_vel(q_target, vlim=_vlim_arr)
+
+    maybe_publish_joint_states(arm)
 
     demo_controller._counter += 1
     if demo_controller._counter % PRINT_EVERY == 0:
@@ -664,6 +774,7 @@ def main() -> None:
                       "treating as fault and returning to start")
                 break
             maybe_publish_tf(arm)
+            maybe_publish_joint_states(arm)
             time.sleep(0.05)
     except Exception as e:
         # Re-raised after the finally block so the caller sees the traceback,
