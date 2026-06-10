@@ -56,6 +56,7 @@ const PROFILE_ARGS = ["--profile", "perlink"];
 const DOWN_HINT = `Tear down the stack when done: docker compose ${COMPOSE_FILES.join(
   " ",
 )} --profile perlink down`;
+const STREAMER_BIN = "/workspace/target-docker/release/example_remote_access_stream_mcap";
 
 interface Options {
   rustLog: string;
@@ -73,6 +74,24 @@ function wasSignaled(err: unknown): boolean {
   const status = (err as { status?: number; signal?: string }).status;
   const signal = (err as { status?: number; signal?: string }).signal;
   return status === 130 || signal === "SIGINT" || signal === "SIGTERM";
+}
+
+// Best-effort: stop any streamer still running inside gateway-runner. The
+// streamer runs via `docker compose exec` and loops MCAP playback forever, so an
+// interrupted or hard-killed run can leave it alive — holding the gateway lease
+// and making the next run fail with "another gateway holds the lease". `pkill`
+// exits non-zero when nothing matches, and the exec fails if the stack is down;
+// both mean "no orphan to clean up", so swallow the error.
+function stopStreamer(env: NodeJS.ProcessEnv): void {
+  try {
+    execFileSync(
+      "docker",
+      ["compose", ...COMPOSE_FILES, "exec", "-T", "gateway-runner", "pkill", "-f", STREAMER_BIN],
+      { stdio: "ignore", env },
+    );
+  } catch {
+    // No matching process, or the stack isn't up — nothing to clean up.
+  }
 }
 
 function resolveMcapPath(positional: string | undefined): string {
@@ -135,9 +154,24 @@ function run(opts: Options, positional: string | undefined): void {
   // its qdisc to NETEM_GATEWAY_UPLOAD's value in *this* env.
   const upEnv: NodeJS.ProcessEnv = { ...process.env, MCAP_HOST_PATH: mcapPath };
 
+  // The streamer runs via a synchronous execFileSync, so while it's running this
+  // process is blocked. Node's default SIGINT/SIGTERM action would then kill us
+  // before any cleanup — orphaning the in-container streamer, which keeps looping
+  // playback and holds the gateway lease. Registering handlers overrides that
+  // default so we stop the streamer before exiting. (A hard SIGKILL still skips
+  // this, but the pre-launch stopStreamer() below covers that on the next run.)
+  const onSignal = (signal: NodeJS.Signals): void => {
+    stopStreamer(upEnv);
+    console.log("\nStreamer stopped.");
+    console.log(DOWN_HINT);
+    process.exit(signal === "SIGINT" ? 130 : 143);
+  };
+  process.on("SIGINT", onSignal);
+  process.on("SIGTERM", onSignal);
+
   // The compose calls below inherit stdio, so their own errors print directly.
-  // A single try/catch keeps a Ctrl-C (or container failure) from burying that
-  // output under a node stack trace.
+  // The try/catch keeps a container failure from burying that output under a
+  // node stack trace.
   try {
     console.log(`Mounting ${mcapPath} -> /data/recording.mcap`);
     compose(upEnv, ...PROFILE_ARGS, "up", "-d", "--wait");
@@ -155,6 +189,11 @@ function run(opts: Options, positional: string | undefined): void {
       "--release",
     );
 
+    // Clear any streamer left over from an earlier run before claiming the
+    // gateway lease — a lingering one (e.g. from a hard-killed run) would make
+    // the watch stream fail with "another gateway holds the lease".
+    stopStreamer(upEnv);
+
     // Forward only the env vars the streamer needs; everything else stays in
     // the container's default environment.
     console.log("");
@@ -171,11 +210,14 @@ function run(opts: Options, positional: string | undefined): void {
       "-e",
       `RUST_LOG=${opts.rustLog}`,
       "gateway-runner",
-      "/workspace/target-docker/release/example_remote_access_stream_mcap",
+      STREAMER_BIN,
       "--file",
       "/data/recording.mcap",
     );
   } catch (err) {
+    // Stop the streamer in case the exec died but left it running. (Ctrl-C /
+    // SIGTERM are handled by onSignal above, which exits before reaching here.)
+    stopStreamer(upEnv);
     if (wasSignaled(err)) {
       console.log("\nStreamer stopped.");
       console.log(DOWN_HINT);
@@ -190,6 +232,9 @@ function run(opts: Options, positional: string | undefined): void {
     process.exit((err as { status?: number }).status ?? 1);
   }
 
+  // The streamer normally loops forever; reaching here means it exited on its
+  // own, so make sure nothing lingers before pointing at teardown.
+  stopStreamer(upEnv);
   console.log("");
   console.log(DOWN_HINT);
 }
