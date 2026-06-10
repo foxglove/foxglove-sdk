@@ -136,12 +136,20 @@ const BYTES_PER_PIXEL: usize = 3;
 const FPS: u32 = 30;
 
 /// Read a `usize` from an environment variable, falling back to `default` if the
-/// variable is unset or cannot be parsed.
+/// variable is unset or cannot be parsed. Values below `default` are clamped up
+/// to it: the test-card geometry (checkerboard placement, ticker band) assumes
+/// at least the default 960x540 frame, and smaller frames would panic or render
+/// incorrectly.
 fn env_usize(name: &str, default: usize) -> usize {
-    std::env::var(name)
+    let value = std::env::var(name)
         .ok()
         .and_then(|v| v.parse().ok())
-        .unwrap_or(default)
+        .unwrap_or(default);
+    if value < default {
+        tracing::warn!("{name}={value} is below the minimum {default}; using {default}");
+        return default;
+    }
+    value
 }
 
 /// 5x7 bitmap font. Each glyph is stored as 7 rows of 5-bit patterns
