@@ -106,9 +106,11 @@ below apply here too (locally issued `fox_dt_…` token; org plan with remote
 access). Whether the browser can show the stream depends on the host
 platform — see "Verifying browser playback" below.
 
-> **Note:** The first `cargo build` inside the container takes ~90 seconds.
-> Subsequent builds are incremental (the target directory is cached in a Docker
-> volume). Requires Docker Desktop with at least 12 GB of memory allocated.
+> **Note:** The first `cargo build` inside the container compiles the example
+> and its native WebRTC dependencies from a cold cache, which can take several
+> minutes — cargo's progress output shows it is still working. Subsequent
+> builds are incremental (the target directory is cached in a Docker volume).
+> Requires Docker Desktop with at least 12 GB of memory allocated.
 
 ## Default impairment profiles
 
@@ -193,8 +195,8 @@ yarn stream-mcap
 `yarn stream-mcap` owns the stack lifecycle: it brings up (or refreshes) the
 per-link compose stack with the file bind-mounted at
 `/data/recording.mcap` inside `gateway-runner`, builds
-`example_remote_access_stream_mcap` (~90s the first time, incremental
-thereafter), and runs it. When it brings the stack up fresh, download links
+`example_remote_access_stream_mcap` (the first build from a cold cache can
+take several minutes; incremental thereafter), and runs it. When it brings the stack up fresh, download links
 start flat (unshaped) — this is intentional for an uplink-focused test; see
 the Scope note below for retuning downloads.
 
