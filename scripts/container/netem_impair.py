@@ -37,7 +37,11 @@ def main() -> None:
     # silently breaks A/B comparisons: e.g. `delay 100ms rate 2mbit` followed by
     # `delay 0ms` leaves the 2mbit cap intact instead of clearing it. When the
     # caller omits `rate`, append an effectively-uncapped value so "no rate" means
-    # "no rate limit" — matching the uncapped HTB classes in netem_setup.py.
+    # "no rate limit". 1000gbit is deliberately far above the `rate 10gbit` HTB
+    # classes in netem_setup.py: in classful (per-link) mode that HTB ceiling
+    # bounds throughput regardless of this value, while in flat mode netem is the
+    # root qdisc with nothing above it, so this value itself must be high enough
+    # to never be the bottleneck.
     if "rate" not in netem_args:
         netem_args = [*netem_args, "rate", "1000gbit"]
 

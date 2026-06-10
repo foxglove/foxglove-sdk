@@ -28,8 +28,12 @@
 //      when compose recreates the runner. To set a non-default starting
 //      profile, export NETEM_GATEWAY_UPLOAD before invoking this command, or
 //      use `yarn netem-impair --profile <name>` after the stack is up.
-//   3. Builds `example_remote_access_stream_mcap` inside the container
-//      (incremental after the first run, ~90s the first time).
+//   3. Builds `example_remote_access_stream_mcap` inside the container.
+//      The first build from a cold cargo cache is slow (it compiles the SDK's
+//      remote-access stack, including native WebRTC code) — cargo's progress
+//      output streams to the terminal, so a quiet-looking wait means it's
+//      still compiling. Later builds are incremental via the persistent
+//      cargo volumes.
 //   4. Execs the streamer with the bind-mounted file.
 //
 // Unlike `yarn start-netem`, this script intentionally LEAVES THE STACK
@@ -154,16 +158,19 @@ function run(opts: Options, positional: string | undefined): void {
   // its qdisc to NETEM_GATEWAY_UPLOAD's value in *this* env.
   const upEnv: NodeJS.ProcessEnv = { ...process.env, MCAP_HOST_PATH: mcapPath };
 
-  // The streamer runs via a synchronous execFileSync, so while it's running this
-  // process is blocked. Node's default SIGINT/SIGTERM action would then kill us
-  // before any cleanup — orphaning the in-container streamer, which keeps looping
-  // playback and holds the gateway lease. Registering handlers overrides that
-  // default so we stop the streamer before exiting. (A hard SIGKILL still skips
-  // this, but the pre-launch stopStreamer() below covers that on the next run.)
+  // Registering SIGINT/SIGTERM handlers replaces Node's default action (die
+  // immediately), which would otherwise kill this wrapper mid-execFileSync and
+  // orphan the in-container streamer — it keeps looping playback and holds the
+  // gateway lease. The handler body itself almost never runs: while a compose
+  // call is blocking, the wrapper's signal is only latched. The child dies
+  // from its own copy of the signal, execFileSync throws, and the catch below
+  // handles the signaled exit — its process.exit ends the process before the
+  // latched signal is ever dispatched. The body only runs when a signal lands
+  // in one of the brief gaps between compose calls, so it cleans up quietly
+  // and exits with the conventional code. (A hard SIGKILL skips all of this,
+  // but the pre-launch stopStreamer() below covers that on the next run.)
   const onSignal = (signal: NodeJS.Signals): void => {
     stopStreamer(upEnv);
-    console.log("\nStreamer stopped.");
-    console.log(DOWN_HINT);
     process.exit(signal === "SIGINT" ? 130 : 143);
   };
   process.on("SIGINT", onSignal);
@@ -215,13 +222,16 @@ function run(opts: Options, positional: string | undefined): void {
       "/data/recording.mcap",
     );
   } catch (err) {
-    // Stop the streamer in case the exec died but left it running. (Ctrl-C /
-    // SIGTERM are handled by onSignal above, which exits before reaching here.)
+    // Stop the streamer in case the exec died but left it running. This is
+    // also the Ctrl-C path: the signal reaches the child first, execFileSync
+    // throws, and this catch runs while the wrapper's own copy of the signal
+    // is still latched (see the onSignal comment above).
     stopStreamer(upEnv);
     if (wasSignaled(err)) {
       console.log("\nStreamer stopped.");
       console.log(DOWN_HINT);
-      return;
+      const { signal } = err as { signal?: string };
+      process.exit(signal === "SIGTERM" ? 143 : 130);
     }
     // A non-signal failure (cargo build error, `up --wait` healthcheck
     // timeout, streamer panic) already printed its own error to the inherited
