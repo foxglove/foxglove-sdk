@@ -74,9 +74,15 @@ sudo sh -c 'echo "127.0.0.1 host.docker.internal" >> /etc/hosts'
 # Terminal 1: start LiveKit + netem with per-link sidecars
 yarn start-netem --perlink
 
-# Terminal 2: start the Foxglove app with LiveKit URL override
+# Terminal 2: start the Foxglove app with the LiveKit overrides.
 # host.docker.internal resolves to the host from both macOS and Docker containers.
-(cd ../app && docker compose up -d && LIVEKIT_HOST=ws://host.docker.internal:7880 yarn start)
+# All three LiveKit variables are required, or the server reports remote access
+# as unconfigured (403); devkey/secret are the LiveKit --dev defaults.
+(cd ../app && docker compose up -d && \
+  LIVEKIT_HOST=ws://host.docker.internal:7880 \
+  LIVEKIT_API_KEY=devkey \
+  LIVEKIT_API_SECRET=secret \
+  yarn start)
 
 # Terminal 3: start the web frontend
 (cd ../app && yarn web serve:local)
@@ -95,6 +101,10 @@ $COMPOSE exec \
 Open `http://localhost:8080` in a browser and connect to the device. The test
 card traffic traverses the impaired gateway link (upload shaped by
 `gateway-netem`, download shaped by the LiveKit netem sidecar's gateway class).
+The device-token and org-plan prerequisites from the MCAP streaming section
+below apply here too (locally issued `fox_dt_…` token; org plan with remote
+access). Whether the browser can show the stream depends on the host
+platform — see "Verifying browser playback" below.
 
 > **Note:** The first `cargo build` inside the container takes ~90 seconds.
 > Subsequent builds are incremental (the target directory is cached in a Docker
@@ -157,8 +167,16 @@ conditions and to compare profiles live.
 ### Prerequisites
 
 - `host.docker.internal` set up on macOS (see the per-link Quick start above).
-- The Foxglove app stack running on the host with `LIVEKIT_HOST` overridden,
-  same as in the per-link Quick start.
+- The Foxglove app stack running on the host with all three LiveKit variables
+  set, using the same Terminal 2 command as in the per-link Quick start above.
+  The server treats remote access as unconfigured (403) unless `LIVEKIT_HOST`,
+  `LIVEKIT_API_KEY`, and `LIVEKIT_API_SECRET` are all non-empty; the netem
+  stack's LiveKit runs in `--dev` mode, whose default credentials are
+  `devkey` / `secret`.
+- A device token (`fox_dt_…`) issued by that local app instance — tokens from
+  other instances fail with 401 Unauthorized. The device must have remote
+  access enabled, and its org's plan must support remote access (for local
+  testing, set the org plan to `enterprise` in `console_dev`; reversible).
 - An MCAP recording on the host. Provide its **absolute** path via
   `MCAP_HOST_PATH` (or as the positional arg to `yarn stream-mcap`).
 
@@ -176,7 +194,9 @@ yarn stream-mcap
 per-link compose stack with the file bind-mounted at
 `/data/recording.mcap` inside `gateway-runner`, builds
 `example_remote_access_stream_mcap` (~90s the first time, incremental
-thereafter), and runs it.
+thereafter), and runs it. When it brings the stack up fresh, download links
+start flat (unshaped) — this is intentional for an uplink-focused test; see
+the Scope note below for retuning downloads.
 
 Once the stream is up, apply the impairment profile you want with
 `yarn netem-impair` (see next section). Don't try to set
@@ -189,7 +209,7 @@ environment_ (the Starlink default if unset). The cleanest workflow is:
 apply impairment.
 
 Open `http://localhost:8080` and connect to the device to watch the
-playback.
+playback (platform-dependent — see "Verifying browser playback" below).
 
 ### Switch profiles mid-stream
 
@@ -215,6 +235,35 @@ yarn netem-impair -- delay 500ms loss 10%
 > all download links at once (see "Changing impairment live" above). Per-link
 > viewer/download retuning still requires a stack restart with new
 > `NETEM_VIEWER_UPLOAD` / `NETEM_*_DOWNLOAD` env vars.
+
+## Verifying browser playback
+
+The flows above verify the gateway side (stream established, lease granted)
+and the impairment itself (live `tc` qdisc state). Seeing the playback at
+`http://localhost:8080` additionally requires that the host browser can reach
+LiveKit's WebRTC ICE candidates, which are container-internal addresses
+(e.g. `10.99.0.2` on the perlink network):
+
+- **Linux with the native Docker Engine:** works — the host has direct routes
+  to Docker bridge networks. Note that `host.docker.internal` is provided to
+  containers by Docker Desktop, not by the native engine, so the
+  `FOXGLOVE_API_URL` values above need an `extra_hosts: host-gateway` entry
+  (tracked in [FLE-588](https://linear.app/foxglove/issue/FLE-588)), and the
+  hosts-file line from the per-link prerequisites applies on Linux too.
+- **macOS (Docker Desktop), and Docker Desktop for Linux:** containers run
+  inside a virtual machine, so the candidate addresses are not routable from
+  the host and the browser's WebRTC connection cannot be established. The
+  gateway → LiveKit path is unaffected (it stays container-to-container). To
+  watch playback from a Mac, use a Linux machine, run the browser in a
+  container on the perlink network, or set up a routed tunnel into the
+  perlink subnet — options and tradeoffs are written up in
+  [FLE-588](https://linear.app/foxglove/issue/FLE-588).
+
+When playback does connect, confirm in `chrome://webrtc-internals` that the
+selected candidate pair uses `10.99.x.x` addresses. If the host can also
+route to the default compose network (e.g. via tooling that exposes all
+container IPs), ICE may select an unimpaired path and the impairment
+profiles will not apply to what you see.
 
 ## Scenarios
 
