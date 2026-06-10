@@ -1022,8 +1022,11 @@ async fn livekit_video_1080p_resolution_not_capped() -> Result<()> {
         })
     };
 
-    // macOS publishes H.265 (HEVC via VideoToolbox, no resolution cap); other
-    // platforms keep H.264, which is still level-capped until FLE-584.
+    // macOS publishes H.265 (HEVC via VideoToolbox). H.265 has level-based
+    // resolution caps like H.264, but we observe level 6.0 negotiated
+    // (level-id=180), which supports resolutions to at least 4K — not a
+    // practical constraint. Other platforms keep H.264, which is still
+    // level-capped until FLE-584.
     let expect_hevc = cfg!(target_os = "macos");
 
     // Poll receiver stats. On the HEVC path, wait for the resolution to climb to the full
