@@ -247,9 +247,14 @@ mod tests {
             panic!("expected mcap header");
         };
 
+        let tokens = header.library.split(' ').collect::<Vec<_>>();
+        assert_eq!(tokens.len(), 2);
         assert_eq!(
-            header.library,
-            format!("{} {}", get_library_version(), mcap::LIBRARY_IDENTIFIER)
+            tokens[0],
+            concat!("foxglove-sdk-rust/", env!("CARGO_PKG_VERSION"))
         );
+        assert!(!tokens[0].contains("/v"));
+        assert_eq!(tokens[1], mcap::LIBRARY_IDENTIFIER);
+        assert!(tokens[1].starts_with("mcap-rust/"));
     }
 }
