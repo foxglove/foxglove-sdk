@@ -5,6 +5,7 @@
 .DS_Store
 .idea/
 .mypy_cache/
+.netem-relay/
 .pytest_cache/
 .virtualenvs/
 .uv_cache/

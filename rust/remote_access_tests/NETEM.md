@@ -289,15 +289,95 @@ LiveKit's WebRTC ICE candidates, which are container-internal addresses
   inside a virtual machine, so the candidate addresses are not routable from
   the host and the browser's WebRTC connection cannot be established. The
   gateway → LiveKit path is unaffected (it stays container-to-container). To
-  watch playback from a Mac, use a Linux machine, run the browser in a
-  container on the perlink network, or set up a routed tunnel into the
-  perlink subnet — options and tradeoffs are written up in FLE-588.
+  watch playback anyway, use the WireGuard viewer relay below (alternatives:
+  a Linux machine, or running the browser in a container on the perlink
+  network).
 
 When playback does connect, confirm in `chrome://webrtc-internals` that the
 selected candidate pair uses `10.99.x.x` addresses. If the host can also
 route to the default compose network (e.g. via tooling that exposes all
 container IPs), ICE may select an unimpaired path and the impairment
 profiles will not apply to what you see.
+
+### Watching from macOS: the WireGuard viewer relay
+
+The relay makes the perlink subnet reachable from the host through a scoped
+WireGuard tunnel: a `viewer-relay` container (`10.99.0.60` on perlink, see
+`docker-compose.netem-relay.yml`) terminates the tunnel and masquerades it
+onto perlink, so LiveKit sees the host browser as `10.99.0.60` — a fixed
+destination IP the netem sidecar can shape as the viewer-download link.
+
+Prerequisites, on top of the MCAP streaming prerequisites above:
+
+- `brew install wireguard-tools` on the host.
+- The per-link stack running. For viewer-download impairment to apply to the
+  browser, start the stack with the viewer link pointed at the relay:
+  `NETEM_LINK_VIEWER_DST=10.99.0.60`, plus `NETEM_VIEWER_DOWNLOAD` for the
+  profile (with the DST set but the args empty, the link falls back to the
+  `NETEM_ARGS` default).
+
+```sh
+# Terminal 1: the stream, with the viewer-download link targeting the relay.
+NETEM_LINK_VIEWER_DST=10.99.0.60 \
+NETEM_VIEWER_DOWNLOAD="delay 5ms rate 500mbit" \
+FOXGLOVE_API_URL=http://host.docker.internal:3000/api \
+FOXGLOVE_DEVICE_TOKEN=fox_dt_... \
+yarn stream-mcap /abs/path/to/heavy.mcap
+
+# Terminal 2: generate keys/configs, start the relay, verify the tunnel.
+yarn netem-relay
+```
+
+`yarn netem-relay` generates WireGuard keypairs into the gitignored
+`.netem-relay/` directory on first run, starts the relay container, and
+prints the one command it cannot run for you (sudo prompts for a password):
+
+```sh
+sudo wg-quick up <repo>/.netem-relay/netem-relay.conf
+```
+
+Run that in your own terminal; the script meanwhile polls the relay for the
+WireGuard handshake and then verifies LiveKit (`http://10.99.0.2:7880`) is
+reachable from the host through the tunnel.
+
+Now open `http://localhost:8080` and connect to the device. **Always verify
+the path** in `chrome://webrtc-internals`: the selected candidate pair's
+remote address must be on `10.99.0.0/24`. Any other address means ICE found
+a path that bypasses the impaired perlink network, and netem settings do not
+apply to what you see.
+
+Notes:
+
+- **Route scoping:** the host config routes exactly `10.99.0.0/24` through
+  the tunnel (`AllowedIPs`) and nothing else — `wg-quick up` adds one route.
+  Do not widen it: a broader scope hands ICE an unimpaired path and can
+  hijack unrelated host traffic.
+- **Tunnel subnet:** defaults to `10.200.0.0/24`; override with
+  `NETEM_RELAY_TUNNEL_SUBNET` (a /24) if that collides with your network.
+- **MTU:** the tunnel interface defaults to WireGuard's 1420, slightly below
+  the usual 1500 — expected, not a misconfiguration.
+
+When judging what you see in the browser, two transport behaviors are easy
+to misread as netem impairment:
+
+- `/image_color/compressed` is delivered as a LiveKit H264 **video track**
+  (~2.8 Mbit/s observed), not as data-track messages. Impairment shows up as
+  adaptive video quality (blur, resolution drops), not message loss. With
+  `demo.mcap`, the playback loop's 7.8 s seam also causes a periodic hitch
+  that is not network-related. Data-track topics (e.g. radar, tf) show
+  impairment as cadence stalls instead.
+- Megabyte-class data-track topics never deliver, and starve all other
+  channels while subscribed (tracked in FLE-592) — unsubscribe from them
+  rather than reading that as impairment.
+
+Tear down when done:
+
+```sh
+yarn netem-relay down                                    # stops the relay container
+sudo wg-quick down <repo>/.netem-relay/netem-relay.conf  # removes the host tunnel + route
+```
+
+Keys and configs in `.netem-relay/` persist for the next run.
 
 ## Scenarios
 

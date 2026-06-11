@@ -65,8 +65,11 @@ function waitForInterrupt(files: string[], profileArgs: string[]): void {
 
 function startPerlink(): void {
   // LiveKit auto-detects its IP from the network interfaces (no --node-ip needed).
-  process.env.NETEM_LINK_GATEWAY_DST = "10.99.0.31";
-  process.env.NETEM_LINK_VIEWER_DST = "10.99.0.40";
+  // Overridable so the viewer link can point at a different peer — e.g. the
+  // WireGuard viewer relay (10.99.0.60, see docker-compose.netem-relay.yml)
+  // when a host browser is the viewer.
+  process.env.NETEM_LINK_GATEWAY_DST ??= "10.99.0.31";
+  process.env.NETEM_LINK_VIEWER_DST ??= "10.99.0.40";
 
   for (const [key, defaultValue] of Object.entries(PERLINK_DEFAULTS)) {
     process.env[key] ??= defaultValue;
