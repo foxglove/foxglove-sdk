@@ -36,7 +36,9 @@ def discover_link_handles() -> dict[str, str]:
 
 
 def usage_error() -> None:
-    print("Usage: netem_impair.py [default | link <NAME>] <netem-args>", file=sys.stderr)
+    print(
+        "Usage: netem_impair.py [default | link <NAME>] <netem-args>", file=sys.stderr
+    )
     sys.exit(1)
 
 

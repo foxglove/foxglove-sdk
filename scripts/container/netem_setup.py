@@ -53,7 +53,8 @@ def interfaces() -> list[str]:
     """
     skip_lo = os.environ.get("NETEM_SKIP_LOOPBACK", "") == "1"
     return sorted(
-        p.name for p in Path("/sys/class/net").iterdir()
+        p.name
+        for p in Path("/sys/class/net").iterdir()
         if not (skip_lo and p.name == "lo")
     )
 
@@ -82,7 +83,9 @@ def apply_flat(netem_args: list[str]) -> int:
             print(f"netem (flat) applied to {iface}: {' '.join(netem_args)}")
             applied += 1
         else:
-            print(f"  WARNING: failed to apply netem to {iface} (may be expected for lo)")
+            print(
+                f"  WARNING: failed to apply netem to {iface} (may be expected for lo)"
+            )
     return applied
 
 
@@ -97,17 +100,51 @@ def apply_perlink(netem_args: list[str], links: dict[str, str]) -> int:
         print(f"configuring per-link netem on {iface}...")
 
         # HTB root qdisc. Unclassified traffic goes to default class 1:ff00.
-        if not tc("qdisc", "replace", "dev", iface, "root", "handle", "1:", "htb", "default", "ff00"):
+        if not tc(
+            "qdisc",
+            "replace",
+            "dev",
+            iface,
+            "root",
+            "handle",
+            "1:",
+            "htb",
+            "default",
+            "ff00",
+        ):
             print(f"  WARNING: failed to add HTB root qdisc on {iface} (skipping)")
             continue
 
         # Default class (unclassified traffic).
         ok = True
-        if not tc("class", "add", "dev", iface, "parent", "1:", "classid", "1:ff00", "htb", "rate", "10gbit"):
+        if not tc(
+            "class",
+            "add",
+            "dev",
+            iface,
+            "parent",
+            "1:",
+            "classid",
+            "1:ff00",
+            "htb",
+            "rate",
+            "10gbit",
+        ):
             print(f"  ERROR: failed to add default class on {iface}")
             errors += 1
             ok = False
-        if not tc("qdisc", "add", "dev", iface, "parent", "1:ff00", "handle", "ff00:", "netem", *netem_args):
+        if not tc(
+            "qdisc",
+            "add",
+            "dev",
+            iface,
+            "parent",
+            "1:ff00",
+            "handle",
+            "ff00:",
+            "netem",
+            *netem_args,
+        ):
             print(f"  ERROR: failed to add netem qdisc on default class ({iface})")
             errors += 1
             ok = False
@@ -127,21 +164,63 @@ def apply_perlink(netem_args: list[str], links: dict[str, str]) -> int:
             handle = f"{class_minor:x}:"
 
             link_ok = True
-            if not tc("class", "add", "dev", iface, "parent", "1:", "classid", class_id, "htb", "rate", "10gbit"):
+            if not tc(
+                "class",
+                "add",
+                "dev",
+                iface,
+                "parent",
+                "1:",
+                "classid",
+                class_id,
+                "htb",
+                "rate",
+                "10gbit",
+            ):
                 print(f"  ERROR: failed to add class {class_id} on {iface}")
                 errors += 1
                 link_ok = False
-            if not tc("qdisc", "add", "dev", iface, "parent", class_id, "handle", handle, "netem", *link_args):
-                print(f"  ERROR: failed to add netem qdisc on class {class_id} ({iface})")
+            if not tc(
+                "qdisc",
+                "add",
+                "dev",
+                iface,
+                "parent",
+                class_id,
+                "handle",
+                handle,
+                "netem",
+                *link_args,
+            ):
+                print(
+                    f"  ERROR: failed to add netem qdisc on class {class_id} ({iface})"
+                )
                 errors += 1
                 link_ok = False
-            if not tc("filter", "add", "dev", iface, "parent", "1:", "protocol", "ip", "u32",
-                       "match", "ip", "dst", f"{dst}/32", "flowid", class_id):
+            if not tc(
+                "filter",
+                "add",
+                "dev",
+                iface,
+                "parent",
+                "1:",
+                "protocol",
+                "ip",
+                "u32",
+                "match",
+                "ip",
+                "dst",
+                f"{dst}/32",
+                "flowid",
+                class_id,
+            ):
                 print(f"  ERROR: failed to add u32 filter for {dst} on {iface}")
                 errors += 1
                 link_ok = False
             if link_ok:
-                print(f"  link {name}: class {class_id} -> dst {dst} -> netem {' '.join(link_args)}")
+                print(
+                    f"  link {name}: class {class_id} -> dst {dst} -> netem {' '.join(link_args)}"
+                )
 
             class_minor += 0x10
 
