@@ -494,7 +494,9 @@ fn derive_named_struct_impl(
     let max_field_number = 2047;
 
     // If a struct nests multiple values of the same enum or message type, we
-    // only define them once, based on name.
+    // only define them once, based on name. Use a BTreeMap to collect these
+    // definitions, so that the output will be deterministically ordered by
+    // type name.
     let mut enum_defs: BTreeMap<String, proc_macro2::TokenStream> = BTreeMap::new();
     let mut message_defs: BTreeMap<String, proc_macro2::TokenStream> = BTreeMap::new();
     let mut file_defs: BTreeMap<String, proc_macro2::TokenStream> = BTreeMap::new();
@@ -590,8 +592,6 @@ fn derive_named_struct_impl(
         });
     }
 
-    // Emit definitions in type-token order so macro output is deterministic
-    // across processes.
     let enum_defs = enum_defs.into_values().collect::<Vec<_>>();
     let message_defs = message_defs.into_values().collect::<Vec<_>>();
     let file_defs = file_defs.into_values().collect::<Vec<_>>();
