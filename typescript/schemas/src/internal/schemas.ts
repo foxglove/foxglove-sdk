@@ -714,7 +714,7 @@ const SceneEntity: FoxgloveMessageSchema = {
       name: "frame_locked",
       type: { type: "primitive", name: "boolean" },
       description:
-        "Whether the entity should keep its location in the fixed frame (false) or follow the frame specified in `frame_id` as it moves relative to the fixed frame (true)",
+        "False indicates the entity should keep its location in the fixed frame until a new entity is published. True indicates the entity should follow the frame specified in `frame_id` as it moves relative to the fixed frame when new transform messages are received.",
     },
     {
       name: "metadata",

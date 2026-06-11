@@ -1706,8 +1706,9 @@ struct SceneEntity {
   /// deleted.
   std::optional<Duration> lifetime;
 
-  /// @brief Whether the entity should keep its location in the fixed frame (false) or follow the
-  /// frame specified in `frame_id` as it moves relative to the fixed frame (true)
+  /// @brief False indicates the entity should keep its location in the fixed frame until a new
+  /// entity is published. True indicates the entity should follow the frame specified in `frame_id`
+  /// as it moves relative to the fixed frame when new transform messages are received.
   bool frame_locked = false;
 
   /// @brief Additional user-provided metadata associated with the entity. Keys must be unique.

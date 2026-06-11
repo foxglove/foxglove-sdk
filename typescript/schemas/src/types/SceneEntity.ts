@@ -27,7 +27,7 @@ export type SceneEntity = {
   /** Length of time (relative to `timestamp`) after which the entity should be automatically removed. Zero value indicates the entity should remain visible until it is replaced or deleted. */
   lifetime: Duration;
 
-  /** Whether the entity should keep its location in the fixed frame (false) or follow the frame specified in `frame_id` as it moves relative to the fixed frame (true) */
+  /** False indicates the entity should keep its location in the fixed frame until a new entity is published. True indicates the entity should follow the frame specified in `frame_id` as it moves relative to the fixed frame when new transform messages are received. */
   frame_locked: boolean;
 
   /** Additional user-provided metadata associated with the entity. Keys must be unique. */
