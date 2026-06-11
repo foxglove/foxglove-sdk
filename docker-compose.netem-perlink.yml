@@ -53,8 +53,15 @@ x-echo-target: &echo-target
   volumes:
     - ./scripts/container/udp_echo.py:/udp_echo.py:ro
   healthcheck:
-    # BusyBox nc doesn't support -z; use socat to probe the TCP port instead.
-    test: ["CMD-SHELL", "echo | socat - TCP:localhost:7000,connect-timeout=2"]
+    # BusyBox nc doesn't support -z; use socat to probe both echo servers.
+    # The UDP probe matters: a dead UDP echo server would otherwise present
+    # as near-total packet loss in the tests while the target reports healthy.
+    # ($$ escapes compose interpolation, producing a literal $ for the shell.)
+    test:
+      [
+        "CMD-SHELL",
+        "echo | socat - TCP:localhost:7000,connect-timeout=2 && [ -n \"$$(echo ping | socat -T2 - UDP-CONNECT:127.0.0.1:7001)\" ]",
+      ]
     interval: 2s
     timeout: 5s
     retries: 10

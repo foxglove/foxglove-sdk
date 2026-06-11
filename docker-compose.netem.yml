@@ -76,7 +76,15 @@ services:
         # Keep the container alive so the qdisc rules persist.
         exec sleep infinity
     healthcheck:
-      test: ["CMD-SHELL", "tc qdisc show | grep -q netem"]
+      # Verify both the tc hierarchy and the UDP echo server: a dead echo
+      # server would otherwise present as near-total packet loss in the tests
+      # while the sidecar reports healthy.
+      # ($$ escapes compose interpolation, producing a literal $ for the shell.)
+      test:
+        [
+          "CMD-SHELL",
+          "tc qdisc show | grep -q netem && [ -n \"$$(echo ping | socat -T2 - UDP-CONNECT:127.0.0.1:9999)\" ]",
+        ]
       interval: 2s
       timeout: 5s
       retries: 10
