@@ -26,7 +26,8 @@ pub(crate) fn get_sdk_version() -> &'static str {
     env!("CARGO_PKG_VERSION")
 }
 
-/// Returns an identifier for this library, for use in log sinks.
+/// Returns a user-agent-like identifier for this library, for use in log sinks
+/// and wire-visible metadata.
 /// Note that `set_sdk_language` must be called before this for it to have an effect.
 pub(crate) fn get_library_version() -> String {
     format!(
