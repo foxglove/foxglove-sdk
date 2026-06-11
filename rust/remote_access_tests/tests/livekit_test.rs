@@ -1133,7 +1133,7 @@ impl Drop for EnvVarGuard {
     }
 }
 
-/// FLE-587: the `FOXGLOVE_VIDEO_CODEC` environment variable overrides the per-OS
+/// The `FOXGLOVE_VIDEO_CODEC` environment variable overrides the per-OS
 /// default codec for published video tracks.
 ///
 /// Uses VP8 because it differs from the default on every platform (H.265 on macOS,
