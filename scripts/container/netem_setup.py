@@ -16,12 +16,19 @@ Per-link env vars follow the pattern:
   NETEM_LINK_<NAME>_ARGS  — netem arguments for this link (defaults to NETEM_ARGS)
 """
 
+import json
 import os
 import re
 import shlex
 import subprocess
 import sys
 from pathlib import Path
+
+# Where the per-link name -> qdisc handle map is persisted for live retuning.
+# netem_impair.py reads this back instead of re-deriving the assignment, so
+# the two scripts cannot drift. Lives in the container's own filesystem (this
+# script runs once at sidecar startup; netem_impair.py is exec'd in later).
+LINK_MAP_PATH = Path("/run/netem_links.json")
 
 
 def tc(*args: str) -> bool:
@@ -89,7 +96,14 @@ def apply_flat(netem_args: list[str]) -> int:
     return applied
 
 
-def apply_perlink(netem_args: list[str], links: dict[str, str]) -> int:
+def assign_link_handles(links: dict[str, str]) -> dict[str, str]:
+    """Assign each link's netem qdisc handle: 10:, 20:, ... in `links` order."""
+    return {name: f"{(i + 1) * 0x10:x}:" for i, name in enumerate(links)}
+
+
+def apply_perlink(
+    netem_args: list[str], links: dict[str, str], handles: dict[str, str]
+) -> int:
     """Per-link mode: HTB root with netem leaf classes per destination IP.
 
     Returns the number of errors encountered.
@@ -151,17 +165,14 @@ def apply_perlink(netem_args: list[str], links: dict[str, str]) -> int:
         if ok:
             print(f"  default class 1:ff00 -> netem {' '.join(netem_args)}")
 
-        # Per-link classes. Assign class IDs starting at 1:10, incrementing by
-        # 0x10, in `links` iteration order (sorted env keys — see
-        # discover_links). netem_impair.py's discover_link_handles recomputes
-        # this name -> handle assignment for live retuning; keep them in sync.
-        class_minor = 0x10
+        # Per-link classes, with handles from `assign_link_handles` (10:, 20:,
+        # ... in `links` iteration order — sorted env keys, see discover_links).
         for name, dst in links.items():
             link_args_str = os.environ.get(f"NETEM_LINK_{name}_ARGS", "")
             link_args = shlex.split(link_args_str) if link_args_str else netem_args
 
-            class_id = f"1:{class_minor:x}"
-            handle = f"{class_minor:x}:"
+            handle = handles[name]
+            class_id = f"1:{handle[:-1]}"
 
             link_ok = True
             if not tc(
@@ -222,8 +233,6 @@ def apply_perlink(netem_args: list[str], links: dict[str, str]) -> int:
                     f"  link {name}: class {class_id} -> dst {dst} -> netem {' '.join(link_args)}"
                 )
 
-            class_minor += 0x10
-
     return errors
 
 
@@ -240,7 +249,11 @@ def main() -> None:
     links = discover_links()
 
     if links:
-        errors = apply_perlink(netem_args, links)
+        handles = assign_link_handles(links)
+        # Persist the assignment so netem_impair.py's `link <NAME>` target can
+        # look up the handle setup actually used.
+        LINK_MAP_PATH.write_text(json.dumps(handles))
+        errors = apply_perlink(netem_args, links, handles)
         if errors > 0:
             dump_state()
             print(f"\nERROR: {errors} tc command(s) failed during per-link setup.")

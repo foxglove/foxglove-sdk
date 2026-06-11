@@ -9,30 +9,28 @@ Usage:
   netem_impair.py link <NAME> <netem-args>   Update only the NETEM_LINK_<NAME>_* class
 """
 
-import os
-import re
+import json
 import subprocess
 import sys
 from pathlib import Path
+
+# Written by netem_setup.py at sidecar startup (per-link mode only).
+LINK_MAP_PATH = Path("/run/netem_links.json")
 
 
 def discover_link_handles() -> dict[str, str]:
     """Map link names to their netem qdisc handles.
 
-    Mirrors the assignment in netem_setup.py exactly: links are discovered
-    from NETEM_LINK_<NAME>_DST env vars in sorted-env-key order and get
-    handles 10:, 20:, ... in that order. The sidecar's env is identical to
-    what netem_setup.py saw at startup, so the mapping is deterministic —
-    but keep the two functions in sync.
+    Reads back the map netem_setup.py persisted when it built the hierarchy,
+    so the handle used here is the one setup actually assigned — re-deriving
+    it from env vars could silently retune the wrong class if the two
+    derivations ever drifted. No file means setup ran in flat mode (no link
+    classes exist).
     """
-    handles: dict[str, str] = {}
-    class_minor = 0x10
-    for key, value in sorted(os.environ.items()):
-        m = re.match(r"^NETEM_LINK_(.+)_DST$", key)
-        if m and value:
-            handles[m.group(1)] = f"{class_minor:x}:"
-            class_minor += 0x10
-    return handles
+    try:
+        return json.loads(LINK_MAP_PATH.read_text())
+    except FileNotFoundError:
+        return {}
 
 
 def usage_error() -> None:
