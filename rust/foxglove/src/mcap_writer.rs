@@ -49,7 +49,11 @@ impl Debug for McapWriter {
 
 impl From<McapWriteOptions> for McapWriter {
     fn from(value: McapWriteOptions) -> Self {
-        let options = value.library(get_library_version());
+        let options = value.library(format!(
+            "{} {}",
+            get_library_version(),
+            mcap::LIBRARY_IDENTIFIER
+        ));
         Self {
             options,
             context: Context::get_default(),
@@ -220,5 +224,32 @@ impl<W: Write + Seek + Send + 'static> Drop for McapWriterHandle<W> {
         if let Err(e) = self.finish() {
             tracing::warn!("{e}");
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn mcap_writer_library_identifier_includes_mcap_token() {
+        let temp_file = tempfile::NamedTempFile::new().expect("failed to create tempfile");
+        let temp_path = temp_file.path().to_owned();
+        let writer = McapWriter::new()
+            .create(temp_file)
+            .expect("failed to create writer");
+        let _file = writer.close().expect("failed to close writer");
+
+        let contents = std::fs::read(&temp_path).expect("failed to read mcap");
+        let mut reader =
+            mcap::read::LinearReader::new(&contents[..]).expect("failed to create mcap reader");
+        let Some(Ok(mcap::records::Record::Header(header))) = reader.next() else {
+            panic!("expected mcap header");
+        };
+
+        assert_eq!(
+            header.library,
+            format!("{} {}", get_library_version(), mcap::LIBRARY_IDENTIFIER)
+        );
     }
 }

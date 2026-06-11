@@ -26,16 +26,11 @@ pub(crate) fn get_sdk_version() -> &'static str {
     env!("CARGO_PKG_VERSION")
 }
 
-/// Returns a user-agent-like identifier for this library, for use in log sinks
+/// Returns a user-agent-like SDK identifier for this library, for use in log sinks
 /// and wire-visible metadata.
 /// Note that `set_sdk_language` must be called before this for it to have an effect.
 pub(crate) fn get_library_version() -> String {
-    format!(
-        "foxglove-sdk-{}/{} {}",
-        get_sdk_language(),
-        get_sdk_version(),
-        mcap::LIBRARY_IDENTIFIER
-    )
+    format!("foxglove-sdk-{}/{}", get_sdk_language(), get_sdk_version())
 }
 
 #[cfg(test)]
@@ -43,17 +38,16 @@ mod tests {
     use super::*;
 
     #[test]
-    fn library_version_uses_user_agent_like_tokens() {
+    fn sdk_library_version_uses_user_agent_like_token() {
         let library_version = get_library_version();
         let tokens = library_version.split(' ').collect::<Vec<_>>();
 
-        assert_eq!(tokens.len(), 2);
+        assert_eq!(tokens.len(), 1);
         assert_eq!(
-            tokens[0],
+            library_version,
             concat!("foxglove-sdk-rust/", env!("CARGO_PKG_VERSION"))
         );
-        assert!(!tokens[0].contains("/v"));
-        assert_eq!(tokens[1], mcap::LIBRARY_IDENTIFIER);
-        assert!(tokens[1].starts_with("mcap-rust/"));
+        assert!(!library_version.contains("/v"));
+        assert!(!library_version.contains("mcap-rust/"));
     }
 }
