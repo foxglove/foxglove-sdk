@@ -31,7 +31,7 @@ use super::ws_protocol::server::{
     ConnectionGraphUpdate, FetchAssetResponse, ParameterValues, ServerInfo, ServerMessage,
     ServiceCallFailure, ServiceCallResponse, Status, advertise_services,
 };
-use crate::library_version::get_library_version;
+use crate::library_version::get_library_identifier;
 use crate::testutil::{
     RecordingGetBehavior, RecordingParameterHandler, RecordingServerListener, RecordingSetBehavior,
     assert_eventually,
@@ -116,7 +116,7 @@ async fn test_client_connect() {
     assert_eq!(
         msg,
         ServerInfo::new("mock_server")
-            .with_metadata(maplit::hashmap! {"fg-library".into() => get_library_version()})
+            .with_metadata(maplit::hashmap! {"fg-library".into() => get_library_identifier()})
             .with_session_id("mock_sess_id")
     );
 
@@ -1936,7 +1936,7 @@ async fn test_server_info_metadata_sent_to_client() {
     assert_eq!(
         msg.metadata,
         hashmap! {
-            "fg-library".into() => get_library_version(),
+            "fg-library".into() => get_library_identifier(),
             "key1".into() => "val1".into(),
             "key2".into() => "val2".into(),
         }

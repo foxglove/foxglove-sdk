@@ -14,7 +14,7 @@ use tokio::time::MissedTickBehavior;
 use tokio_tungstenite::tungstenite::Message;
 use tokio_util::sync::CancellationToken;
 
-use crate::library_version::get_library_version;
+use crate::library_version::get_library_identifier;
 use crate::sink_channel_filter::SinkChannelFilter;
 use crate::websocket::connected_client::ShutdownReason;
 use crate::websocket::streams::{Acceptor, StreamConfiguration, TlsIdentity};
@@ -591,7 +591,7 @@ impl Server {
         if metadata.contains_key("fg-library") {
             tracing::warn!("Overwriting reserved server_info key 'fg-library'");
         }
-        metadata.insert("fg-library".into(), get_library_version());
+        metadata.insert("fg-library".into(), get_library_identifier());
 
         ServerInfo::new(&self.name)
             .with_capabilities(

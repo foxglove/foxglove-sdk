@@ -20,7 +20,7 @@ use crate::{
         DeviceResponse, DeviceToken, FoxgloveApiClient, FoxgloveApiClientBuilder, WatchQuery,
         WatchWakeEvent,
     },
-    library_version::get_library_version,
+    library_version::get_library_identifier,
     protocol::v2::{parameter::Parameter, server::ServerInfo},
     remote_access::{
         AssetHandler, Capability, RemoteAccessError,
@@ -616,7 +616,7 @@ impl RemoteAccessConnection {
     fn create_server_info(&self, remote_access_session_id: &str) -> ServerInfo {
         let mut metadata = self.server_info.clone().unwrap_or_default();
         let supported_encodings = self.supported_encodings.clone();
-        metadata.insert("fg-library".into(), get_library_version());
+        metadata.insert("fg-library".into(), get_library_identifier());
 
         // The device context is always initialized before this method is called: it must
         // succeed before any watch stream can open, which must succeed before we can receive

@@ -4,7 +4,7 @@ use reqwest::header::{ACCEPT, AUTHORIZATION, HeaderMap, USER_AGENT};
 use reqwest::{Method, StatusCode};
 use thiserror::Error;
 
-use crate::library_version::get_library_version;
+use crate::library_version::get_library_identifier;
 
 use super::types::{DeviceResponse, ErrorResponse, WatchHeartbeatRequest, WatchQuery};
 
@@ -152,7 +152,7 @@ impl RequestBuilder {
 }
 
 pub(crate) fn default_user_agent() -> String {
-    get_library_version()
+    get_library_identifier()
 }
 
 /// Internal API client for communicating with the Foxglove platform.

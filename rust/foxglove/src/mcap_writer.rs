@@ -6,7 +6,7 @@ use std::path::Path;
 use std::sync::{Arc, Weak};
 use std::{fmt::Debug, io::Write};
 
-use crate::library_version::get_library_version;
+use crate::library_version::get_library_identifier;
 use crate::sink_channel_filter::SinkChannelFilterFn;
 use crate::{ChannelDescriptor, Context, FoxgloveError, Sink, SinkChannelFilter};
 
@@ -51,7 +51,7 @@ impl From<McapWriteOptions> for McapWriter {
     fn from(value: McapWriteOptions) -> Self {
         let options = value.library(format!(
             "{} {}",
-            get_library_version(),
+            get_library_identifier(),
             mcap::LIBRARY_IDENTIFIER
         ));
         Self {
