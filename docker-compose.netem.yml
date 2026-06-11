@@ -79,6 +79,10 @@ services:
       # Verify both the tc hierarchy and the UDP echo server: a dead echo
       # server would otherwise present as near-total packet loss in the tests
       # while the sidecar reports healthy.
+      # The UDP probe rides the shaped loopback (netem applies to all
+      # interfaces in this namespace), so `retries` absorbs the default 2%
+      # simulated loss; an aggressive NETEM_ARGS loss override could make
+      # startup flaky.
       # ($$ escapes compose interpolation, producing a literal $ for the shell.)
       test:
         [
