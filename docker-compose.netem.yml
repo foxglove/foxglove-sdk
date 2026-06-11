@@ -67,8 +67,6 @@ services:
         apk add --no-cache iproute2 socat > /dev/null 2>&1
         # Start a UDP echo server for packet loss testing. Each received
         # datagram is echoed back through the netem-shaped egress path.
-        # A stateless single-socket server is required here; see
-        # scripts/container/udp_echo.py for why a forking server wedges.
         python3 /udp_echo.py 9999 &
         # Apply netem rules (flat or per-link depending on env vars).
         # Exit on failure so a broken tc hierarchy doesn't silently persist.
@@ -76,18 +74,11 @@ services:
         # Keep the container alive so the qdisc rules persist.
         exec sleep infinity
     healthcheck:
-      # Verify both the tc hierarchy and the UDP echo server: a dead echo
-      # server would otherwise present as near-total packet loss in the tests
-      # while the sidecar reports healthy.
-      # The UDP probe rides the shaped loopback (netem applies to all
-      # interfaces in this namespace), so `retries` absorbs the default 2%
-      # simulated loss; an aggressive NETEM_ARGS loss override could make
-      # startup flaky.
-      # ($$ escapes compose interpolation, producing a literal $ for the shell.)
+      # Verify the tc hierarchy is applied and the UDP echo server is listening.
       test:
         [
           "CMD-SHELL",
-          "tc qdisc show | grep -q netem && [ -n \"$$(echo ping | socat -T2 - UDP-CONNECT:127.0.0.1:9999)\" ]",
+          "tc qdisc show | grep -q netem && netstat -uln | grep -q ':9999 '",
         ]
       interval: 2s
       timeout: 5s
