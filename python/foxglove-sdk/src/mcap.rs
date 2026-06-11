@@ -163,7 +163,7 @@ impl PyMcapWriteOptions {
         *,
         compression = PyMcapCompression::Zstd,
         profile = None,
-        chunk_size = 786432,
+        chunk_size = 1048576,
         use_chunks = true,
         emit_statistics = true,
         emit_summary_offsets = true,
