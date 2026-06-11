@@ -229,7 +229,7 @@ pub extern "C" fn foxglove_mcap_options_default() -> FoxgloveMcapOptions {
         custom_writer: std::ptr::null(),
         compression: FoxgloveMcapCompression::Zstd,
         profile: FoxgloveString::default(),
-        chunk_size: 1024 * 768,
+        chunk_size: 1024 * 1024,
         use_chunks: true,
         disable_seeking: false,
         emit_statistics: true,

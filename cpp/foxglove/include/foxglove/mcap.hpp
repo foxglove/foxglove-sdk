@@ -91,7 +91,7 @@ struct McapWriterOptions {
   /// @brief The profile to use for the MCAP file.
   std::string_view profile;
   /// @brief The size of each chunk in the MCAP file.
-  uint64_t chunk_size = static_cast<uint64_t>(1024 * 768);
+  uint64_t chunk_size = static_cast<uint64_t>(1024 * 1024);
   /// @brief The compression algorithm to use for the MCAP file.
   McapCompression compression = McapCompression::Zstd;
   /// @brief Whether to use chunks in the MCAP file.

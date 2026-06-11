@@ -312,7 +312,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9e8318fda24dc135cdd838f57a2b5ccb6e8f04ff6b6c65528c4bd9b5fcdc5cf6"
 dependencies = [
  "array-init",
- "binrw_derive",
+ "binrw_derive 0.12.0",
+ "bytemuck",
+]
+
+[[package]]
+name = "binrw"
+version = "0.15.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d53195f985e88ab94d1cc87e80049dd2929fd39e4a772c5ae96a7e5c4aad3642"
+dependencies = [
+ "array-init",
+ "binrw_derive 0.15.1",
  "bytemuck",
 ]
 
@@ -323,10 +334,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "db0832bed83248115532dfb25af54fae1c83d67a2e4e3e2f591c13062e372e7e"
 dependencies = [
  "either",
- "owo-colors",
+ "owo-colors 3.5.0",
  "proc-macro2",
  "quote",
  "syn 1.0.109",
+]
+
+[[package]]
+name = "binrw_derive"
+version = "0.15.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5910da05ee556b789032c8ff5a61fb99239580aa3fd0bfaa8f4d094b2aee00ad"
+dependencies = [
+ "either",
+ "owo-colors 4.3.0",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.104",
 ]
 
 [[package]]
@@ -1141,7 +1165,7 @@ version = "0.0.0"
 dependencies = [
  "env_logger",
  "foxglove 0.25.1",
- "mcap 0.24.0",
+ "mcap 0.25.0",
  "schemars 1.0.4",
  "serde",
 ]
@@ -1253,7 +1277,7 @@ dependencies = [
  "clap",
  "env_logger",
  "foxglove 0.25.1",
- "mcap 0.24.0",
+ "mcap 0.25.0",
  "tokio",
 ]
 
@@ -1347,7 +1371,7 @@ dependencies = [
  "ctrlc",
  "env_logger",
  "foxglove 0.25.1",
- "mcap 0.24.0",
+ "mcap 0.25.0",
  "tracing",
 ]
 
@@ -1513,7 +1537,7 @@ dependencies = [
  "libwebrtc",
  "livekit",
  "maplit",
- "mcap 0.24.0",
+ "mcap 0.25.0",
  "parking_lot",
  "prost 0.14.3",
  "prost-types 0.14.3",
@@ -1574,7 +1598,7 @@ dependencies = [
  "foxglove 0.25.1",
  "log",
  "maplit",
- "mcap 0.24.0",
+ "mcap 0.25.0",
  "tracing",
 ]
 
@@ -2758,7 +2782,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2a3ca583fed649ed7cd8c976b59422996472c6b08067308443e0b60c56e0a4ca"
 dependencies = [
  "bimap",
- "binrw",
+ "binrw 0.12.0",
  "byteorder",
  "crc32fast",
  "enumset",
@@ -2771,12 +2795,12 @@ dependencies = [
 
 [[package]]
 name = "mcap"
-version = "0.24.0"
+version = "0.25.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "43908ab970f3a880b02834055a1e04221a3056f442a65ae9111f63e550e7daa5"
+checksum = "b215e79631de2a19ed76fda13cd52950c3057b487a2f41d9dc85c4079b969c40"
 dependencies = [
  "bimap",
- "binrw",
+ "binrw 0.15.1",
  "byteorder",
  "crc32fast",
  "enumset",
@@ -2785,7 +2809,7 @@ dependencies = [
  "num_cpus",
  "paste",
  "static_assertions",
- "thiserror 1.0.69",
+ "thiserror 2.0.14",
  "zstd",
 ]
 
@@ -3246,6 +3270,12 @@ name = "owo-colors"
 version = "3.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c1b04fb49957986fdce4d6ee7a65027d55d4b6d2265e5848bbb507b58ccfdb6f"
+
+[[package]]
+name = "owo-colors"
+version = "4.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d211803b9b6b570f68772237e415a029d5a50c65d382910b879fb19d3271f94d"
 
 [[package]]
 name = "p256"
@@ -4004,7 +4034,7 @@ dependencies = [
  "foxglove 0.25.1",
  "jsonschema",
  "libtest-mimic",
- "mcap 0.24.0",
+ "mcap 0.25.0",
  "reqwest 0.13.2",
  "serde_json",
 ]
