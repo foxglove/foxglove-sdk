@@ -311,6 +311,13 @@
 //! # }
 //! ```
 //!
+//! #### Video codec
+//!
+//! The gateway publishes video tracks with a per-OS default codec: H.265 on macOS and H.264
+//! elsewhere. The `FOXGLOVE_VIDEO_CODEC` environment variable overrides this default; it
+//! accepts `vp8`, `h264`, `vp9`, `av1`, or `h265` (case-insensitive). An unrecognized value
+//! logs a warning and the default is used.
+//!
 //! #### NVENC hardware acceleration
 //!
 //! When available, NVIDIA NVENC is used to accelerate H.264 video encoding for the remote

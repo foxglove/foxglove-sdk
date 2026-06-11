@@ -1,6 +1,7 @@
 use std::{collections::HashMap, fmt::Display, future::Future, sync::Arc, time::Duration};
 
 use indexmap::IndexSet;
+use livekit::options::VideoCodec;
 use tokio::runtime::Handle;
 use tokio::task::JoinHandle;
 
@@ -129,6 +130,7 @@ impl GatewayHandle {
             qos_classifier: None,
             server_info: None,
             message_backlog_size: None,
+            video_codec_override: None,
             context: std::sync::Weak::new(),
         };
         let services = Arc::new(parking_lot::RwLock::new(ServiceMap::default()));
@@ -155,6 +157,21 @@ impl GatewayHandle {
 const FOXGLOVE_DEVICE_TOKEN_ENV: &str = "FOXGLOVE_DEVICE_TOKEN";
 const FOXGLOVE_API_URL_ENV: &str = "FOXGLOVE_API_URL";
 const FOXGLOVE_API_TIMEOUT_ENV: &str = "FOXGLOVE_API_TIMEOUT";
+const FOXGLOVE_VIDEO_CODEC_ENV: &str = "FOXGLOVE_VIDEO_CODEC";
+
+/// Parses a codec name from the `FOXGLOVE_VIDEO_CODEC` environment variable.
+///
+/// Accepts the livekit codec names, case-insensitively: "vp8", "h264", "vp9", "av1", "h265".
+fn parse_video_codec(s: &str) -> Option<VideoCodec> {
+    match s.to_ascii_lowercase().as_str() {
+        "vp8" => Some(VideoCodec::VP8),
+        "h264" => Some(VideoCodec::H264),
+        "vp9" => Some(VideoCodec::VP9),
+        "av1" => Some(VideoCodec::AV1),
+        "h265" => Some(VideoCodec::H265),
+        _ => None,
+    }
+}
 
 /// A remote access gateway for live visualization and teleop in Foxglove.
 ///
@@ -424,6 +441,10 @@ impl Gateway {
     ///
     /// Returns an error if no device token is provided and the `FOXGLOVE_DEVICE_TOKEN`
     /// environment variable is not set.
+    ///
+    /// The published video codec defaults to a per-OS choice, and can be overridden with the
+    /// `FOXGLOVE_VIDEO_CODEC` environment variable (one of `vp8`, `h264`, `vp9`, `av1`,
+    /// `h265`, case-insensitive). An unrecognized value logs a warning and the default is used.
     pub fn start(mut self) -> Result<GatewayHandle, FoxgloveError> {
         crate::crypto::install_default_crypto_provider();
 
@@ -443,6 +464,16 @@ impl Gateway {
                 .ok()
                 .and_then(|s| s.parse::<u64>().ok())
                 .map(Duration::from_secs)
+        });
+        let video_codec_override = std::env::var(FOXGLOVE_VIDEO_CODEC_ENV).ok().and_then(|s| {
+            let codec = parse_video_codec(&s);
+            if codec.is_none() {
+                tracing::warn!(
+                    "Ignoring invalid {FOXGLOVE_VIDEO_CODEC_ENV} value {s:?}; \
+                         expected one of: vp8, h264, vp9, av1, h265"
+                );
+            }
+            codec
         });
         // If the gateway was declared with services, automatically add the "services" capability
         // and the set of supported request encodings.
@@ -507,6 +538,7 @@ impl Gateway {
             qos_classifier: self.qos_classifier,
             server_info: self.server_info,
             message_backlog_size: self.message_backlog_size,
+            video_codec_override,
             context: self.context,
         };
         let connection = RemoteAccessConnection::new(params, services);
@@ -562,5 +594,21 @@ mod tests {
             .capabilities([Capability::Assets])
             .start();
         assert!(matches!(result, Err(FoxgloveError::ConfigurationError(_))));
+    }
+
+    #[test]
+    fn test_parse_video_codec() {
+        // All livekit codec names parse, case-insensitively.
+        assert!(matches!(parse_video_codec("vp8"), Some(VideoCodec::VP8)));
+        assert!(matches!(parse_video_codec("h264"), Some(VideoCodec::H264)));
+        assert!(matches!(parse_video_codec("vp9"), Some(VideoCodec::VP9)));
+        assert!(matches!(parse_video_codec("av1"), Some(VideoCodec::AV1)));
+        assert!(matches!(parse_video_codec("h265"), Some(VideoCodec::H265)));
+        assert!(matches!(parse_video_codec("H265"), Some(VideoCodec::H265)));
+        assert!(matches!(parse_video_codec("Vp8"), Some(VideoCodec::VP8)));
+        // Unrecognized values are rejected.
+        assert!(parse_video_codec("").is_none());
+        assert!(parse_video_codec("hevc").is_none());
+        assert!(parse_video_codec("h.264").is_none());
     }
 }

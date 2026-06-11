@@ -256,6 +256,11 @@ struct RemoteAccessGatewayOptions {
 /// The gateway connects to the Foxglove platform and allows remote clients to
 /// subscribe to channels and receive data.
 ///
+/// Published video tracks use a per-OS default codec (H.265 on macOS, H.264 elsewhere). The
+/// `FOXGLOVE_VIDEO_CODEC` environment variable overrides this default; it accepts `vp8`,
+/// `h264`, `vp9`, `av1`, or `h265` (case-insensitive). An unrecognized value logs a warning
+/// and the default is used.
+///
 /// @note RemoteAccessGateway is fully thread-safe, but RemoteAccessGatewayCallbacks may be invoked
 /// concurrently from multiple threads, so you will need to use synchronization in your callbacks.
 class RemoteAccessGateway final {

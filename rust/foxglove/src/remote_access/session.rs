@@ -188,6 +188,9 @@ pub(super) struct RemoteAccessSession {
     /// to the dormant watch phase. Advertised by the API via the `hello` event's
     /// `deviceWaitForViewerMs` field.
     device_wait_for_viewer: Option<Duration>,
+    /// If set (via the `FOXGLOVE_VIDEO_CODEC` environment variable), overrides the per-OS
+    /// default codec for published video tracks.
+    video_codec_override: Option<VideoCodec>,
 }
 
 impl Sink for RemoteAccessSession {
@@ -372,6 +375,7 @@ pub(super) struct SessionParams {
     pub(super) parameter_handler: Option<Arc<dyn ParameterHandler>>,
     pub(super) server_info: ServerInfo,
     pub(super) device_wait_for_viewer: Option<Duration>,
+    pub(super) video_codec_override: Option<VideoCodec>,
 }
 
 impl RemoteAccessSession {
@@ -404,6 +408,7 @@ impl RemoteAccessSession {
             server_info: params.server_info,
             participant_registry,
             device_wait_for_viewer: params.device_wait_for_viewer,
+            video_codec_override: params.video_codec_override,
         })
     }
 
@@ -2191,15 +2196,21 @@ impl RemoteAccessSession {
                 // encode path (FLE-587). The H.264 level default is not macOS-specific
                 // and is tracked separately in FLE-584.
                 //
+                // The `FOXGLOVE_VIDEO_CODEC` environment variable overrides this per-OS
+                // default, e.g. for hosts whose viewers cannot decode the default codec.
+                //
                 // Disable simulcast. We expect viewers will be mostly homogenous, and
                 // simulcast is a lot of work for the robot without much to gain.
                 // We observed that nvenc aggressively enforces the target bitrate,
                 // and combined with simulcast results in very low quality video with compression artifacts.
-                let video_codec = if cfg!(target_os = "macos") {
-                    VideoCodec::H265
-                } else {
-                    VideoCodec::H264
-                };
+                let video_codec =
+                    session
+                        .video_codec_override
+                        .unwrap_or(if cfg!(target_os = "macos") {
+                            VideoCodec::H265
+                        } else {
+                            VideoCodec::H264
+                        });
                 let publish_options = TrackPublishOptions {
                     video_codec,
                     simulcast: false,
