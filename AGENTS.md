@@ -103,11 +103,12 @@ The core SDK is written in Rust, with bindings for Python and C/C++, plus TypeSc
 
 - Use `yarn` to install dependencies and run scripts
 - Prefer explicit types; avoid `any`
+- Run `yarn lint:ci` before building the schemas package: the build copies generated, non-lint-clean JSON Schema files into `typescript/schemas/src/jsonschema/`, so linting afterward yields spurious errors. Full sequence: `yarn install` → `yarn lint:ci` → `yarn workspace @foxglove/schemas build` → `yarn build` → `yarn test`
 
 ### Schema Generation
 
 - Schema definitions are the source of truth in `scripts/generate.ts`
-- After modifying schemas, run `make generate` to regenerate all language-specific outputs
+- After modifying schemas, run `make generate` to regenerate all language-specific outputs (requires `protoc`, `flatc`, and `clang-format` on your `PATH`)
 - Generated files are committed to the repository for ease of access
 
 ### Utility Scripts
@@ -116,6 +117,7 @@ The core SDK is written in Rust, with bindings for Python and C/C++, plus TypeSc
 
 ### Testing
 
+- Binary test fixtures (images, meshes, snapshots) are stored in Git LFS; run `git lfs pull` before testing, or fixture-based tests like the Rust `img2yuv` suite fail reading LFS pointer files
 - Co-locate tests with source files wherever the language/ecosystem convention supports it
 - Use descriptive test names that explain the behavior under test
 - Avoid deleting or changing existing test cases unless it is related to the task at hand
@@ -162,33 +164,3 @@ The core SDK is written in Rust, with bindings for Python and C/C++, plus TypeSc
 - Write tests for new features and bug fixes
 - Run the checks, formatting, and lints for the relevant language(s) specified in this file.
   - **Before pushing**, run applicable tests and auto-fixes on changed files
-
-## Cursor Cloud specific instructions
-
-The dev toolchain is preinstalled in the VM snapshot: Rust (stable + `nightly` + MSRV `1.85.0`,
-with `rustfmt`/`clippy`), `uv`, `protoc` 29.6, Node 22 + `yarn` 4 (via corepack), CMake, g++ 13,
-and clang/clang-format/clang-tidy 19. `~/.local/bin` (uv) and `/usr/lib/llvm-19/bin` (clang 19) are
-on `PATH` via `~/.bashrc`. The startup update script runs `git lfs pull`, `yarn install`, and `uv sync`.
-
-Standard per-language build/test/lint commands live in `Container.mk` and the Development Guidelines
-above. Non-obvious gotchas:
-
-- **Git LFS is required for tests.** Image/STL/`.raw` test fixtures are LFS-tracked. Without
-  `git lfs pull`, `cargo test -p foxglove --features full` fails in `img2yuv` with
-  `BufferTooSmall` (it reads LFS pointer files instead of real images). The update script pulls them.
-- **Keep `c++`/`cc` pointed at g++/gcc, not clang.** The `cxx`/cc-rs based crates fail to find
-  libstdc++ headers (`'algorithm' file not found`) when `c++` resolves to clang. The default
-  alternatives are set to GNU; don't switch them to clang.
-- **TypeScript build order matters.** Run lint *before* building the schemas package:
-  `yarn install` → `yarn lint:ci` → `yarn workspace @foxglove/schemas build` → `yarn build` → `yarn test`.
-  The schemas build copies `schemas/jsonschema` into the gitignored `typescript/schemas/src/jsonschema/`,
-  which is not prettier-clean and yields thousands of false `lint:ci` errors if linted after the copy.
-  If you hit `TS5055: would overwrite input file`, clear stale output: `git clean -Xdf typescript`
-  then `yarn install` and rebuild.
-- **Python SDK is a maturin/PyO3 extension.** Build/test with `make -f Container.mk build-python`
-  / `test-python` (first build is ~3 min; defaults to `--features remote-access`). Reinstall the
-  editable package after any Rust change (see Python guidelines above).
-- **`make generate` / `yarn generate`** needs `clang-format` (installed, v19) and `flatc`
-  (NOT installed; only required to regenerate flatbuffer schemas). `protoc` is installed.
-- **Optional, not set up:** Docker/LiveKit (`docker-compose.yaml`, needed only for remote-access
-  integration tests) and a ROS 2 environment (`ros/`). Core build/test for all languages works without them.
