@@ -25,7 +25,7 @@ license = "MIT"
 bytes = "1.11.1"
 chrono = { version = "0.4.39" }
 log = "0.4.22"
-mcap = { version = "0.25.0", default-features = false }
+mcap = { version = "0.25", default-features = false }
 prost = "0.14"
 prost-build = "0.14"
 prost-types = "0.14"
