@@ -3,6 +3,7 @@
 //! (latency, packet loss, low bandwidth) visually obvious, plus a simple
 //! scrolling gradient for a secondary feed.
 
+use clap::{Parser, builder::RangedU64ValueParser};
 use foxglove::{
     ChannelDescriptor,
     bytes::Bytes,
@@ -13,7 +14,7 @@ use foxglove::{
 };
 use serde_json::Value;
 use std::{
-    sync::Arc,
+    sync::{Arc, LazyLock},
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
@@ -66,10 +67,40 @@ impl Listener for MessageHandler {
     }
 }
 
+/// Command-line arguments for the example.
+#[derive(Parser)]
+struct Args {
+    /// Frame width in pixels. The minimum matches the test-card geometry, which
+    /// assumes at least the default 960x540 frame; the maximum bounds the frame
+    /// allocation at 8K.
+    #[arg(long, default_value_t = 960, value_parser = RangedU64ValueParser::<usize>::new().range(960..=7680))]
+    width: usize,
+
+    /// Frame height in pixels. The minimum matches the test-card geometry, which
+    /// assumes at least the default 960x540 frame; the maximum bounds the frame
+    /// allocation at 8K.
+    #[arg(long, default_value_t = 540, value_parser = RangedU64ValueParser::<usize>::new().range(540..=4320))]
+    height: usize,
+}
+
+/// Parsed command-line arguments, accessible from the free rendering functions
+/// below without threading values through every call.
+static ARGS: LazyLock<Args> = LazyLock::new(Args::parse);
+
 #[tokio::main]
 async fn main() {
+    // Force argument parsing up front so `--help` and validation errors are
+    // handled before any other setup runs.
+    LazyLock::force(&ARGS);
+
     let env = env_logger::Env::default().default_filter_or("info");
     env_logger::init_from_env(env);
+
+    tracing::info!(
+        "streaming video at {}x{} @ {FPS} fps (override with --width / --height)",
+        ARGS.width,
+        ARGS.height
+    );
 
     // Open a gateway for remote visualization and teleop.
     let handle = Gateway::new()
@@ -99,7 +130,8 @@ async fn main() {
 // ---------------------------------------------------------------------------
 // Test card: designed to make network degradation visually obvious.
 //
-// Layout (960x540):
+// Layout (positions are tuned for the default 960x540; at larger configured
+// resolutions the test card renders within the top-left region of the frame):
 //   +---------------------------+------------------+
 //   |                           |  Frame: 00042    |
 //   |    Sweeping clock hand    |  12:34:56.789    |
@@ -118,8 +150,6 @@ async fn main() {
 // - Scrolling ticker: smooth motion becomes jerky with frame drops.
 // ---------------------------------------------------------------------------
 
-const WIDTH: usize = 960;
-const HEIGHT: usize = 540;
 const BYTES_PER_PIXEL: usize = 3;
 const FPS: u32 = 30;
 
@@ -211,8 +241,8 @@ struct Rgb(u8, u8, u8);
 
 /// Set a single pixel in the buffer (bounds-checked).
 fn set_pixel(buf: &mut [u8], x: i32, y: i32, color: Rgb) {
-    if x >= 0 && (x as usize) < WIDTH && y >= 0 && (y as usize) < HEIGHT {
-        let off = y as usize * (WIDTH * BYTES_PER_PIXEL) + x as usize * BYTES_PER_PIXEL;
+    if x >= 0 && (x as usize) < ARGS.width && y >= 0 && (y as usize) < ARGS.height {
+        let off = y as usize * (ARGS.width * BYTES_PER_PIXEL) + x as usize * BYTES_PER_PIXEL;
         buf[off] = color.0;
         buf[off + 1] = color.1;
         buf[off + 2] = color.2;
@@ -228,7 +258,7 @@ fn draw_text(buf: &mut [u8], text: &str, x: i32, y: i32, scale: usize, color: Rg
         if char_x + (GLYPH_W * scale) as i32 <= 0 {
             continue;
         }
-        if char_x >= WIDTH as i32 {
+        if char_x >= ARGS.width as i32 {
             break;
         }
         let rows = glyph_rows(ch);
@@ -392,7 +422,7 @@ fn render_test_card(buf: &mut [u8], frame_number: u64) {
     let check_w: usize = 260;
     let check_h: usize = 270;
     let cell_size: usize = 10;
-    let stride = WIDTH * BYTES_PER_PIXEL;
+    let stride = ARGS.width * BYTES_PER_PIXEL;
     for cy_off in 0..check_h {
         let row_start = (check_y + cy_off) * stride + check_x * BYTES_PER_PIXEL;
         let row_cell = cy_off / cell_size;
@@ -409,7 +439,7 @@ fn render_test_card(buf: &mut [u8], frame_number: u64) {
     }
 
     // --- Scrolling ticker (bottom 80px) ---
-    let ticker_y = HEIGHT - 80;
+    let ticker_y = ARGS.height - 80;
     let ticker_text = "    FOXGLOVE NETWORK TEST CARD \
         :::  Frame drops appear as jumps in the clock hand  :::  \
         Latency visible by comparing timestamp to wall clock  :::  \
@@ -422,9 +452,9 @@ fn render_test_card(buf: &mut [u8], frame_number: u64) {
     let scroll_offset = (frame_number as usize * scroll_speed) % text_pixel_width;
 
     // Draw ticker background.
-    for y in ticker_y..HEIGHT {
+    for y in ticker_y..ARGS.height {
         let row_start = y * stride;
-        for x in 0..WIDTH {
+        for x in 0..ARGS.width {
             let off = row_start + x * BYTES_PER_PIXEL;
             buf[off] = 20;
             buf[off + 1] = 20;
@@ -437,7 +467,7 @@ fn render_test_card(buf: &mut [u8], frame_number: u64) {
     let x_start = -(scroll_offset as i32);
     for pass in 0..2i32 {
         let base_x = x_start + pass * text_pixel_width as i32;
-        if base_x < WIDTH as i32 && base_x + text_pixel_width as i32 > 0 {
+        if base_x < ARGS.width as i32 && base_x + text_pixel_width as i32 > 0 {
             draw_text(
                 buf,
                 ticker_text,
@@ -481,29 +511,29 @@ async fn tf_static_loop() {
 async fn camera_loop() {
     let mut interval = tokio::time::interval(Duration::from_millis(1000 / FPS as u64));
     let mut frame_number: u64 = 0;
-    let mut rgb_buf = vec![0u8; WIDTH * HEIGHT * BYTES_PER_PIXEL];
-    let mut mono_buf = vec![0u8; WIDTH * HEIGHT];
+    let mut rgb_buf = vec![0u8; ARGS.width * ARGS.height * BYTES_PER_PIXEL];
+    let mut mono_buf = vec![0u8; ARGS.width * ARGS.height];
 
     // Pre-compute a double-width gradient lookup table so we can take a
     // width-sized slice at any offset without per-pixel math each frame.
-    let mono_gradient: Vec<u8> = (0..WIDTH * 2)
-        .map(|x| ((x % WIDTH) * 255 / WIDTH) as u8)
+    let mono_gradient: Vec<u8> = (0..ARGS.width * 2)
+        .map(|x| ((x % ARGS.width) * 255 / ARGS.width) as u8)
         .collect();
 
     let calibration = CameraCalibration {
         timestamp: None,
         frame_id: "camera".into(),
-        width: WIDTH as u32,
-        height: HEIGHT as u32,
+        width: ARGS.width as u32,
+        height: ARGS.height as u32,
         distortion_model: String::new(),
         d: vec![],
         k: vec![
             500.0,
             0.0,
-            WIDTH as f64 / 2.0,
+            ARGS.width as f64 / 2.0,
             0.0,
             500.0,
-            HEIGHT as f64 / 2.0,
+            ARGS.height as f64 / 2.0,
             0.0,
             0.0,
             1.0,
@@ -512,11 +542,11 @@ async fn camera_loop() {
         p: vec![
             500.0,
             0.0,
-            WIDTH as f64 / 2.0,
+            ARGS.width as f64 / 2.0,
             0.0,
             0.0,
             500.0,
-            HEIGHT as f64 / 2.0,
+            ARGS.height as f64 / 2.0,
             0.0,
             0.0,
             0.0,
@@ -533,27 +563,27 @@ async fn camera_loop() {
         let rgb_img = RawImage {
             timestamp: Some(Timestamp::now()),
             frame_id: "camera".into(),
-            width: WIDTH as u32,
-            height: HEIGHT as u32,
+            width: ARGS.width as u32,
+            height: ARGS.height as u32,
             encoding: "rgb8".into(),
-            step: (WIDTH * BYTES_PER_PIXEL) as u32,
+            step: (ARGS.width * BYTES_PER_PIXEL) as u32,
             data: Bytes::copy_from_slice(&rgb_buf),
         };
         foxglove::log!("/video/test-card", rgb_img);
 
         // Mono image: scrolling gradient (simple secondary stream).
-        let offset = frame_number as usize % WIDTH;
-        let mono_row = &mono_gradient[offset..offset + WIDTH];
-        for row in mono_buf.chunks_exact_mut(WIDTH) {
+        let offset = frame_number as usize % ARGS.width;
+        let mono_row = &mono_gradient[offset..offset + ARGS.width];
+        for row in mono_buf.chunks_exact_mut(ARGS.width) {
             row.copy_from_slice(mono_row);
         }
         let mono_img = RawImage {
             timestamp: Some(Timestamp::now()),
             frame_id: "camera".into(),
-            width: WIDTH as u32,
-            height: HEIGHT as u32,
+            width: ARGS.width as u32,
+            height: ARGS.height as u32,
             encoding: "mono8".into(),
-            step: WIDTH as u32,
+            step: ARGS.width as u32,
             data: Bytes::copy_from_slice(&mono_buf),
         };
         foxglove::log!("/video/gradient", mono_img);
