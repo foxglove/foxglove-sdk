@@ -29,12 +29,10 @@ pub(crate) fn get_sdk_version() -> &'static str {
 /// Returns an identifier for this library, for use in log sinks.
 /// Note that `set_sdk_language` must be called before this for it to have an effect.
 pub(crate) fn get_library_version() -> String {
-    format_library_version(get_sdk_language(), get_sdk_version())
-}
-
-fn format_library_version(language: &str, sdk_version: &str) -> String {
     format!(
-        "foxglove-sdk-{language}/{sdk_version} {}",
+        "foxglove-sdk-{}/{} {}",
+        get_sdk_language(),
+        get_sdk_version(),
         mcap::LIBRARY_IDENTIFIER
     )
 }
@@ -46,8 +44,13 @@ mod tests {
     #[test]
     fn library_version_uses_user_agent_like_tokens() {
         assert_eq!(
-            format_library_version("python", "1.2.3"),
-            format!("foxglove-sdk-python/1.2.3 {}", mcap::LIBRARY_IDENTIFIER)
+            get_library_version(),
+            format!(
+                "foxglove-sdk-{}/{} {}",
+                get_sdk_language(),
+                get_sdk_version(),
+                mcap::LIBRARY_IDENTIFIER
+            )
         );
     }
 }
