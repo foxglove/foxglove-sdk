@@ -256,6 +256,16 @@ fn perlink_infra_link_a_has_higher_latency_than_link_b() -> Result<()> {
 #[ignore]
 #[test]
 fn perlink_infra_link_a_has_more_packet_loss_than_link_b() -> Result<()> {
+    // Temporarily skipped on CI: runners intermittently stop forwarding the
+    // UDP echo path (~99% loss on both links regardless of the configured
+    // netem profiles), which makes this measurement meaningless and blocks
+    // unrelated PRs. The test still runs locally. Remove this guard when
+    // FLE-595 is resolved. (`CI=true` is set on all GitHub Actions runners.)
+    if std::env::var_os("CI").is_some() {
+        info!("skipping on CI until FLE-595 is resolved");
+        return Ok(());
+    }
+
     let link_a_args =
         std::env::var("NETEM_LINK_A_ARGS").unwrap_or_else(|_| DEFAULT_LINK_A_ARGS.into());
     let link_b_args =
