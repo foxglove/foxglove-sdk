@@ -238,6 +238,33 @@ yarn netem-impair -- delay 500ms loss 10%
 > viewer/download retuning still requires a stack restart with new
 > `NETEM_VIEWER_UPLOAD` / `NETEM_*_DOWNLOAD` env vars.
 
+### Streaming against a deployed Foxglove instance
+
+The recipe above runs everything locally, but nothing requires that: the SDK
+gateway discovers the SFU through whatever API `FOXGLOVE_API_URL` points at,
+and the `gateway-netem` sidecar shapes all of `gateway-runner`'s egress
+regardless of destination. Pointing the streamer at a deployed instance
+(production, or an internal staging environment) exercises the most
+field-realistic shape — an impaired device uplink into the real SFU, with
+viewers on a clean connection — and needs none of the local app/web setup
+from the prerequisites above:
+
+```sh
+FOXGLOVE_API_URL=https://api.foxglove.dev \
+FOXGLOVE_DEVICE_TOKEN=fox_dt_... \
+yarn stream-mcap /abs/path/to/heavy.mcap
+```
+
+- The device token must be issued by that same instance, for a device with
+  remote access enabled in an org whose plan includes it.
+- Watch the device from that instance's web app. `yarn netem-impair` works
+  exactly as in the local flow — it shapes the runner's uplink wherever the
+  traffic is headed.
+- The local LiveKit and viewer containers still start (`gateway-runner`
+  declares a dependency on them) but carry no traffic in this mode.
+- A deployed SFU can behave differently from the local `--dev` LiveKit, which
+  is part of the point of testing this way.
+
 ## Verifying browser playback
 
 The flows above verify the gateway side (stream established, lease granted)
