@@ -120,8 +120,15 @@ jobs:
           -f docker-compose.netem-perlink.yml
           up -d --wait
 
+      - name: Netem per-link diagnostics before tests (FLE-595)
+        run: ./scripts/netem_perlink_diag.sh
+
       - name: Run per-link netem integration tests
         run: cargo test -p remote_access_tests --features require-cuda -- --ignored perlink_
+
+      - name: Netem per-link diagnostics on failure (FLE-595)
+        if: failure()
+        run: ./scripts/netem_perlink_diag.sh
 
       - name: Capture LiveKit logs on failure
         if: failure()
