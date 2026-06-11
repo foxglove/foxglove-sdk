@@ -444,7 +444,8 @@ impl Gateway {
     ///
     /// The published video codec defaults to a per-OS choice, and can be overridden with the
     /// `FOXGLOVE_VIDEO_CODEC` environment variable (one of `vp8`, `h264`, `vp9`, `av1`,
-    /// `h265`, case-insensitive). An unrecognized value logs a warning and the default is used.
+    /// `h265`, case-insensitive; H.265 is the codec also known as HEVC). An unrecognized
+    /// value logs a warning and the default is used.
     /// If the host platform cannot encode the selected codec, viewers receive no video;
     /// the device logs the selected codec when publishing each video track.
     pub fn start(mut self) -> Result<GatewayHandle, FoxgloveError> {
@@ -474,7 +475,7 @@ impl Gateway {
             if codec.is_none() {
                 tracing::warn!(
                     "Ignoring invalid {FOXGLOVE_VIDEO_CODEC_ENV} value {s:?}; \
-                         expected one of: vp8, h264, vp9, av1, h265"
+                         expected one of: vp8, h264, vp9, av1, h265 (HEVC)"
                 );
             }
             codec
