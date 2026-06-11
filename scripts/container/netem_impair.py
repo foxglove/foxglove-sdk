@@ -127,7 +127,8 @@ def main() -> None:
                 text=True,
             )
             if change_result.returncode == 0:
-                print(f"  {iface} {handle}: netem {' '.join(netem_args)}")
+                # `handle` already ends with ":" (e.g. "10:"), so no separator.
+                print(f"  {iface} {handle} netem {' '.join(netem_args)}")
                 updated += 1
             else:
                 print(f"  ERROR: {iface} {handle}", file=sys.stderr)
