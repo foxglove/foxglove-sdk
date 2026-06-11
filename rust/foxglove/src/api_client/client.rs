@@ -4,7 +4,7 @@ use reqwest::header::{ACCEPT, AUTHORIZATION, HeaderMap, USER_AGENT};
 use reqwest::{Method, StatusCode};
 use thiserror::Error;
 
-use crate::library_version::{get_sdk_language, get_sdk_version};
+use crate::library_version::get_library_version;
 
 use super::types::{DeviceResponse, ErrorResponse, WatchHeartbeatRequest, WatchQuery};
 
@@ -152,11 +152,7 @@ impl RequestBuilder {
 }
 
 pub(crate) fn default_user_agent() -> String {
-    format!(
-        "foxglove-sdk/{} ({})",
-        get_sdk_language(),
-        get_sdk_version()
-    )
+    get_library_version()
 }
 
 /// Internal API client for communicating with the Foxglove platform.
@@ -341,7 +337,18 @@ mod tests {
         create_test_server,
     };
 
-    use super::DeviceToken;
+    use super::{DeviceToken, default_user_agent};
+
+    #[test]
+    fn default_user_agent_uses_sdk_library_identifier() {
+        let user_agent = default_user_agent();
+        assert_eq!(
+            user_agent,
+            concat!("foxglove-sdk-rust/", env!("CARGO_PKG_VERSION"))
+        );
+        assert!(!user_agent.contains("/v"));
+        assert!(!user_agent.contains("mcap-rust/"));
+    }
 
     #[tokio::test]
     async fn fetch_device_info_success() {
