@@ -1,12 +1,16 @@
-// Live-update the gateway-upload netem impairment without restarting the
-// per-link stack. Targets the `gateway-netem` sidecar, which shapes the
+// Live-update netem impairment on one link without restarting the per-link
+// stack. By default targets the `gateway-netem` sidecar, which shapes the
 // gateway-runner's egress to LiveKit (the "uplink" in the FLE-372 scenario).
+// With --link, targets a single download class on the LiveKit-side `netem`
+// sidecar instead.
 //
 // Usage:
 //   yarn netem-impair --profile starlink
 //   yarn netem-impair --profile severe
 //   yarn netem-impair --profile pristine
 //   yarn netem-impair -- delay 500ms loss 10%       # raw netem args
+//   yarn netem-impair --link gateway-download --profile severe
+//   yarn netem-impair --link viewer-download -- delay 40ms rate 10mbit
 //
 // Each invocation REPLACES all netem settings on the qdisc — unmentioned
 // settings reset to their defaults. For example, switching from
@@ -16,12 +20,9 @@
 // means "no rate limit", consistent with the other settings. So `pristine`
 // (`delay 0ms`) really does restore an unshaped link.
 //
-// Scope: this wrapper hardcodes the `gateway-netem` sidecar, so it only
-// retunes the gateway-upload link. The underlying `netem_impair.py` is not so
-// limited — exec'd into the LiveKit-side `netem` sidecar it updates all
-// download links at once (see "Changing impairment live" in
-// rust/remote_access_tests/NETEM.md). Per-link viewer/download retuning still
-// requires a stack restart with new NETEM_* env vars.
+// The --link targets exist only when the stack came up in per-link mode
+// (`yarn start-netem --perlink` / `yarn stream-mcap` with NETEM_LINK_* set);
+// on a flat-mode stack `netem_impair.py` reports the sidecar has no links.
 
 import { program } from "commander";
 import { execFileSync } from "node:child_process";
@@ -48,6 +49,54 @@ const PROFILES: Record<string, string> = {
 
 interface Options {
   profile?: string;
+  link?: string;
+}
+
+/** Which sidecar to exec into and how to scope the update inside it. */
+interface Target {
+  /** Compose service name of the netem sidecar. */
+  service: string;
+  /** Arguments placed before the netem args (netem_impair.py target mode). */
+  targetArgs: string[];
+  /** Human-readable link name for the status line. */
+  label: string;
+}
+
+// --link targets: single download classes on the LiveKit-side `netem`
+// sidecar. The names after `link` are the NETEM_LINK_<NAME>_DST link names
+// the sidecar was set up with (see docker-compose.netem-livekit.yml).
+const LINK_TARGETS: Record<string, Target> = {
+  "gateway-download": {
+    service: "netem",
+    targetArgs: ["link", "GATEWAY"],
+    label: "gateway download",
+  },
+  "viewer-download": {
+    service: "netem",
+    targetArgs: ["link", "VIEWER"],
+    label: "viewer download",
+  },
+};
+
+// Without --link: all qdiscs on the gateway-upload sidecar (it runs flat
+// mode, so this is exactly the gateway-upload link).
+const DEFAULT_TARGET: Target = {
+  service: "gateway-netem",
+  targetArgs: [],
+  label: "gateway upload",
+};
+
+function resolveTarget(opts: Options): Target {
+  if (opts.link == null) {
+    return DEFAULT_TARGET;
+  }
+  const target = LINK_TARGETS[opts.link];
+  if (target == null) {
+    const known = Object.keys(LINK_TARGETS).join(", ");
+    console.error(`Error: unknown link '${opts.link}'. Known: ${known}`);
+    process.exit(1);
+  }
+  return target;
 }
 
 function compose(...args: string[]): void {
@@ -93,6 +142,7 @@ function resolveArgs(opts: Options, trailing: string[]): string[] {
 }
 
 function run(opts: Options, trailing: string[]): void {
+  const target = resolveTarget(opts);
   const netemArgs = resolveArgs(opts, trailing);
 
   // Check the sidecar is up front. `ps -q` prints its container ID when
@@ -102,33 +152,45 @@ function run(opts: Options, trailing: string[]): void {
   // python script with its own error already on stderr).
   let sidecarId = "";
   try {
-    sidecarId = composeCapture("ps", "gateway-netem", "-q").trim();
+    sidecarId = composeCapture("ps", target.service, "-q").trim();
   } catch {
     // docker/compose unavailable or the query failed; treat as "not running".
   }
   if (sidecarId === "") {
     console.error(
-      "Error: the gateway-netem sidecar isn't running.\n" +
+      `Error: the ${target.service} sidecar isn't running.\n` +
         "  Start the per-link stack with `yarn stream-mcap` or\n" +
         "  `yarn start-netem --perlink` first.",
     );
     process.exit(1);
   }
 
-  console.log(`gateway upload: netem ${netemArgs.join(" ")}`);
+  console.log(`${target.label}: netem ${netemArgs.join(" ")}`);
   try {
-    compose("exec", "gateway-netem", "python3", "/netem_impair.py", ...netemArgs);
+    compose(
+      "exec",
+      target.service,
+      "python3",
+      "/netem_impair.py",
+      ...target.targetArgs,
+      ...netemArgs,
+    );
   } catch (err) {
     // The sidecar is running, so the failure came from netem_impair.py itself
-    // (most likely rejected args). Its stderr is already inherited, so just
-    // exit with its status instead of dumping a node stack trace on top.
+    // (most likely rejected args, or --link on a flat-mode stack). Its stderr
+    // is already inherited, so just exit with its status instead of dumping a
+    // node stack trace on top.
     process.exit((err as { status?: number }).status ?? 1);
   }
 }
 
 program
-  .description("Live-update the gateway-upload netem impairment on the running per-link stack.")
+  .description("Live-update one link's netem impairment on the running per-link stack.")
   .option("-p, --profile <name>", `Named profile (one of: ${Object.keys(PROFILES).join(", ")})`)
+  .option(
+    "-l, --link <name>",
+    `Target link (one of: ${Object.keys(LINK_TARGETS).join(", ")}); default: gateway upload`,
+  )
   .argument("[netem-args...]", "Raw netem args (after `--`)")
   .action((trailing: string[], opts: Options) => {
     run(opts, trailing);

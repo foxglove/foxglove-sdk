@@ -153,11 +153,18 @@ $COMPOSE exec gateway-netem python3 /netem_impair.py delay 0ms
 
 # Update ALL download links at once (changes every netem qdisc on the LiveKit sidecar)
 $COMPOSE exec netem python3 /netem_impair.py delay 100ms loss 3%
+
+# Update a single download link's class (per-link mode; the name after `link`
+# is the NETEM_LINK_<NAME>_DST link name the sidecar was set up with)
+$COMPOSE exec netem python3 /netem_impair.py link GATEWAY delay 200ms loss 5%
+$COMPOSE exec netem python3 /netem_impair.py link VIEWER delay 40ms rate 10mbit
+
+# Update only the default (unclassified-traffic) class
+$COMPOSE exec netem python3 /netem_impair.py default delay 10ms
 ```
 
-> **Limitation:** Per-link download impairment cannot be updated independently
-> with `netem_impair.py`. It updates all netem qdiscs at once. To change a
-> single link's download, restart the stack with updated env vars.
+`yarn netem-impair --link gateway-download` / `--link viewer-download` wraps
+the single-link form — see "Switch profiles mid-stream" below.
 
 ## Streaming heavy topics under uplink congestion
 
@@ -231,12 +238,20 @@ yarn netem-impair -- delay 500ms loss 10%
 
 `severe` is tuned to saturate heavy-topic uplinks; adjust from there.
 
-> **Scope:** `yarn netem-impair` hardcodes the `gateway-netem` sidecar, so it
-> only retunes the gateway upload link. The underlying `netem_impair.py` is not
-> limited to uploads — exec'd into the LiveKit-side `netem` sidecar it updates
-> all download links at once (see "Changing impairment live" above). Per-link
-> viewer/download retuning still requires a stack restart with new
-> `NETEM_VIEWER_UPLOAD` / `NETEM_*_DOWNLOAD` env vars.
+By default `yarn netem-impair` retunes the gateway upload link (the
+`gateway-netem` sidecar). Pass `--link` to retune a single download class on
+the LiveKit-side `netem` sidecar instead, without touching the other links:
+
+```sh
+yarn netem-impair --link gateway-download --profile severe
+yarn netem-impair --link viewer-download -- delay 40ms rate 10mbit
+```
+
+> **Scope:** the `--link` download targets exist only when the stack came up
+> in per-link mode (they map to the sidecar's `NETEM_LINK_*` classes); on a
+> flat-mode stack the underlying `netem_impair.py` reports that the sidecar
+> has no links. Viewer-upload retuning (the `viewer-netem` sidecar) is not
+> wrapped yet.
 
 ### Streaming against a deployed Foxglove instance
 

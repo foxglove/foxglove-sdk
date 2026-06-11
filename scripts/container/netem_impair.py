@@ -4,26 +4,67 @@
 Runs inside a netem sidecar container.
 
 Usage:
-  netem_impair.py <netem-args>           Update all netem qdiscs
-  netem_impair.py default <netem-args>   Update only the default class (ff00:)
+  netem_impair.py <netem-args>               Update all netem qdiscs
+  netem_impair.py default <netem-args>       Update only the default class (ff00:)
+  netem_impair.py link <NAME> <netem-args>   Update only the NETEM_LINK_<NAME>_* class
 """
 
+import os
+import re
 import subprocess
 import sys
 from pathlib import Path
 
 
+def discover_link_handles() -> dict[str, str]:
+    """Map link names to their netem qdisc handles.
+
+    Mirrors the assignment in netem_setup.py exactly: links are discovered
+    from NETEM_LINK_<NAME>_DST env vars in sorted-env-key order and get
+    handles 10:, 20:, ... in that order. The sidecar's env is identical to
+    what netem_setup.py saw at startup, so the mapping is deterministic —
+    but keep the two functions in sync.
+    """
+    handles: dict[str, str] = {}
+    class_minor = 0x10
+    for key, value in sorted(os.environ.items()):
+        m = re.match(r"^NETEM_LINK_(.+)_DST$", key)
+        if m and value:
+            handles[m.group(1)] = f"{class_minor:x}:"
+            class_minor += 0x10
+    return handles
+
+
+def usage_error() -> None:
+    print("Usage: netem_impair.py [default | link <NAME>] <netem-args>", file=sys.stderr)
+    sys.exit(1)
+
+
 def main() -> None:
     args = sys.argv[1:]
 
+    # `target` is the qdisc handle to update, or "all" for every netem qdisc.
     target = "all"
     if args and args[0] == "default":
-        target = "default"
+        target = "ff00:"
         args = args[1:]
+    elif args and args[0] == "link":
+        if len(args) < 2:
+            usage_error()
+        handles = discover_link_handles()
+        name = args[1]
+        if name not in handles:
+            known = ", ".join(handles) or "(none — this sidecar runs in flat mode)"
+            print(
+                f"ERROR: unknown link '{name}'. Links on this sidecar: {known}",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        target = handles[name]
+        args = args[2:]
 
     if not args:
-        print("Usage: netem_impair.py [default] <netem-args>", file=sys.stderr)
-        sys.exit(1)
+        usage_error()
 
     # Arguments are already a list from sys.argv — no shell parsing needed.
     netem_args = args
@@ -46,6 +87,7 @@ def main() -> None:
         netem_args = [*netem_args, "rate", "1000gbit"]
 
     errors = 0
+    updated = 0
 
     for iface in sorted(p.name for p in Path("/sys/class/net").iterdir()):
         result = subprocess.run(
@@ -65,7 +107,7 @@ def main() -> None:
             else:
                 parent_args = ["parent", parts[4]]
 
-            if target == "default" and handle != "ff00:":
+            if target != "all" and handle != target:
                 continue
 
             change_result = subprocess.run(
@@ -86,12 +128,19 @@ def main() -> None:
             )
             if change_result.returncode == 0:
                 print(f"  {iface} {handle}: netem {' '.join(netem_args)}")
+                updated += 1
             else:
                 print(f"  ERROR: {iface} {handle}", file=sys.stderr)
                 errors += 1
 
     if errors > 0:
         print(f"ERROR: {errors} update(s) failed", file=sys.stderr)
+        sys.exit(1)
+    if updated == 0:
+        # Nothing matched: the hierarchy was never set up, or a targeted
+        # handle has no qdisc (e.g. `default` on a flat-mode sidecar, whose
+        # root netem has a different handle).
+        print("ERROR: no matching netem qdisc found", file=sys.stderr)
         sys.exit(1)
 
 
