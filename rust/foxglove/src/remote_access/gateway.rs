@@ -445,8 +445,8 @@ impl Gateway {
     /// The published video codec defaults to a per-OS choice, and can be overridden with the
     /// `FOXGLOVE_VIDEO_CODEC` environment variable (one of `vp8`, `h264`, `vp9`, `av1`,
     /// `h265`, case-insensitive). An unrecognized value logs a warning and the default is used.
-    /// If the host platform cannot encode the selected codec, the video track fails to
-    /// publish; the failure is logged on the device and viewers receive no video.
+    /// If the host platform cannot encode the selected codec, viewers receive no video;
+    /// the device logs the selected codec when publishing each video track.
     pub fn start(mut self) -> Result<GatewayHandle, FoxgloveError> {
         crate::crypto::install_default_crypto_provider();
 

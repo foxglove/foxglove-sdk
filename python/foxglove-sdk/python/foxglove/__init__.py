@@ -282,8 +282,8 @@ try:
         The ``FOXGLOVE_VIDEO_CODEC`` environment variable overrides this default; it accepts
         ``vp8``, ``h264``, ``vp9``, ``av1``, or ``h265`` (case-insensitive). An unrecognized
         value logs a warning and the default is used. If the host platform cannot encode the
-        selected codec, the video track fails to publish; the failure is logged on the device
-        and viewers receive no video.
+        selected codec, viewers receive no video; the device logs the selected codec when
+        publishing each video track.
 
         :param name: The name of the server. If not set, the device name from the Foxglove
             platform is used.

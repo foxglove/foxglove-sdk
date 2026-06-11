@@ -2222,7 +2222,9 @@ impl RemoteAccessSession {
                 {
                     Ok(publication) => {
                         let sid = publication.sid();
-                        debug!("published video track {sid} for channel {channel_id:?}");
+                        debug!(
+                            "published {video_codec:?} video track {sid} for channel {channel_id:?}"
+                        );
                         // Only store the SID if the publisher in state is still the
                         // one we created. A teardown+resubscribe cycle could have
                         // replaced it with a different publisher.
@@ -2246,7 +2248,9 @@ impl RemoteAccessSession {
                         }
                     }
                     Err(e) => {
-                        error!("failed to publish video track for channel {channel_id:?}: {e:?}");
+                        error!(
+                            "failed to publish {video_codec:?} video track for channel {channel_id:?}: {e:?}"
+                        );
                     }
                 }
             });
