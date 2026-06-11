@@ -2,7 +2,7 @@ extern crate proc_macro;
 
 use proc_macro::TokenStream;
 use quote::quote;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use syn::{
     Data, DataEnum, DataStruct, DeriveInput, Fields, GenericArgument, GenericParam, Generics,
     PathArguments, Type, parse_macro_input, parse_quote,
@@ -495,9 +495,9 @@ fn derive_named_struct_impl(
 
     // If a struct nests multiple values of the same enum or message type, we
     // only define them once, based on name.
-    let mut enum_defs: HashMap<&syn::Type, proc_macro2::TokenStream> = HashMap::new();
-    let mut message_defs: HashMap<&syn::Type, proc_macro2::TokenStream> = HashMap::new();
-    let mut file_defs: HashMap<&syn::Type, proc_macro2::TokenStream> = HashMap::new();
+    let mut enum_defs: BTreeMap<String, proc_macro2::TokenStream> = BTreeMap::new();
+    let mut message_defs: BTreeMap<String, proc_macro2::TokenStream> = BTreeMap::new();
+    let mut file_defs: BTreeMap<String, proc_macro2::TokenStream> = BTreeMap::new();
 
     for (i, field) in fields.iter().enumerate() {
         let field_name = &field.ident.as_ref().unwrap();
@@ -518,19 +518,21 @@ fn derive_named_struct_impl(
             ::foxglove::protobuf::ProtobufField::encoded_len_tagged(&self.#field_name, #field_number)
         });
 
-        enum_defs.entry(field_type).or_insert_with(|| quote! {
+        let field_type_key = quote!(#field_type).to_string();
+
+        enum_defs.entry(field_type_key.clone()).or_insert_with(|| quote! {
             if let Some(enum_desc) = <#field_type as ::foxglove::protobuf::ProtobufField>::enum_descriptor() {
                 enum_type.push(enum_desc);
             }
         });
 
-        message_defs.entry(field_type).or_insert_with(|| quote! {
+        message_defs.entry(field_type_key.clone()).or_insert_with(|| quote! {
             if let Some(message_descriptor) = <#field_type as ::foxglove::protobuf::ProtobufField>::message_descriptor() {
                 nested_type.push(message_descriptor);
             }
         });
 
-        file_defs.entry(field_type).or_insert_with(|| {
+        file_defs.entry(field_type_key).or_insert_with(|| {
             quote! {
                 for fd in <#field_type as ::foxglove::protobuf::ProtobufField>::file_descriptors() {
                     result.push(fd);
@@ -588,18 +590,11 @@ fn derive_named_struct_impl(
         });
     }
 
-    // Emit definitions in a deterministic order: HashMap iteration order is
-    // randomized per process, so splicing `into_values()` directly makes the
-    // generated tokens (and the consuming crate's SVH) differ build-to-build.
-    let mut enum_defs: Vec<_> = enum_defs.into_iter().collect();
-    enum_defs.sort_by_key(|(t, _)| quote::quote!(#t).to_string());
-    let enum_defs = enum_defs.into_iter().map(|(_, d)| d).collect::<Vec<_>>();
-    let mut message_defs: Vec<_> = message_defs.into_iter().collect();
-    message_defs.sort_by_key(|(t, _)| quote::quote!(#t).to_string());
-    let message_defs = message_defs.into_iter().map(|(_, d)| d).collect::<Vec<_>>();
-    let mut file_defs: Vec<_> = file_defs.into_iter().collect();
-    file_defs.sort_by_key(|(t, _)| quote::quote!(#t).to_string());
-    let file_defs = file_defs.into_iter().map(|(_, d)| d).collect::<Vec<_>>();
+    // Emit definitions in type-token order so macro output is deterministic
+    // across processes.
+    let enum_defs = enum_defs.into_values().collect::<Vec<_>>();
+    let message_defs = message_defs.into_values().collect::<Vec<_>>();
+    let file_defs = file_defs.into_values().collect::<Vec<_>>();
     let has_generics = !input.generics.params.is_empty();
 
     // Extract computation bodies so we can conditionally wrap with OnceLock
