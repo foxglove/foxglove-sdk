@@ -43,14 +43,16 @@ mod tests {
 
     #[test]
     fn library_version_uses_user_agent_like_tokens() {
+        let library_version = get_library_version();
+        let tokens = library_version.split(' ').collect::<Vec<_>>();
+
+        assert_eq!(tokens.len(), 2);
         assert_eq!(
-            get_library_version(),
-            format!(
-                "foxglove-sdk-{}/{} {}",
-                get_sdk_language(),
-                get_sdk_version(),
-                mcap::LIBRARY_IDENTIFIER
-            )
+            tokens[0],
+            concat!("foxglove-sdk-rust/", env!("CARGO_PKG_VERSION"))
         );
+        assert!(!tokens[0].contains("/v"));
+        assert_eq!(tokens[1], mcap::LIBRARY_IDENTIFIER);
+        assert!(tokens[1].starts_with("mcap-rust/"));
     }
 }
