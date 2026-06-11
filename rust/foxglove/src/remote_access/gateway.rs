@@ -445,6 +445,8 @@ impl Gateway {
     /// The published video codec defaults to a per-OS choice, and can be overridden with the
     /// `FOXGLOVE_VIDEO_CODEC` environment variable (one of `vp8`, `h264`, `vp9`, `av1`,
     /// `h265`, case-insensitive). An unrecognized value logs a warning and the default is used.
+    /// If the host platform cannot encode the selected codec, the video track fails to
+    /// publish; the failure is logged on the device and viewers receive no video.
     pub fn start(mut self) -> Result<GatewayHandle, FoxgloveError> {
         crate::crypto::install_default_crypto_provider();
 
@@ -465,6 +467,8 @@ impl Gateway {
                 .and_then(|s| s.parse::<u64>().ok())
                 .map(Duration::from_secs)
         });
+        // A builder-level codec override is deferred to FLE-585; this environment variable
+        // is the configuration surface until then.
         let video_codec_override = std::env::var(FOXGLOVE_VIDEO_CODEC_ENV).ok().and_then(|s| {
             let codec = parse_video_codec(&s);
             if codec.is_none() {
