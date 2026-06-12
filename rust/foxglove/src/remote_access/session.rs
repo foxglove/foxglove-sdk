@@ -82,6 +82,26 @@ const ROOM_CLOSE_TIMEOUT: Duration = Duration::from_secs(5);
 
 pub(super) const DEFAULT_MESSAGE_BACKLOG_SIZE: usize = 1024;
 
+/// The default codec for published video tracks.
+///
+/// We prefer H.264 so that the libwebrtc nvenc encoder (H.264-only) can be used on Linux
+/// hosts that have nvenc available. VP8/VP9/AV1 paths are software-only in our builds, so
+/// H.264 is at worst parity elsewhere.
+///
+/// Exception: on macOS we publish VP8 instead. On the macOS VideoToolbox H.264 path we
+/// observed (FLE-579) that the default negotiated H.264 level (Constrained Baseline 3.1)
+/// limits the stream to 720p, and that encoded output paused for several seconds at a
+/// time while the encoder adapted to bitrate changes; VP8 reached full 1080p without
+/// those pauses. The H.264 level default is not macOS-specific and is tracked separately
+/// in FLE-584. We also evaluated H.265 on macOS (FLE-587): it reaches full 1080p with a
+/// VideoToolbox hardware encode path, but browser decode support is not broad enough to
+/// make it the default; it remains reachable via the `FOXGLOVE_VIDEO_CODEC` override.
+const DEFAULT_VIDEO_CODEC: VideoCodec = if cfg!(target_os = "macos") {
+    VideoCodec::VP8
+} else {
+    VideoCodec::H264
+};
+
 /// The operation code for the message framing for protocol v2.
 /// Distinguishes between frames containing JSON messages vs binary messages.
 #[derive(Clone, Copy, Debug)]
@@ -2183,34 +2203,13 @@ impl RemoteAccessSession {
             let session = self.clone();
             tokio::spawn(async move {
                 let local_track = LocalTrack::Video(track);
-                // Prefer H.264 so that the libwebrtc nvenc encoder (H.264-only) can be used
-                // on Linux hosts that have nvenc available. VP8/VP9/AV1 paths
-                // are software-only in our builds, so H.264 is at worst parity elsewhere.
-                //
-                // Exception: on macOS we publish H.265 instead. On the macOS
-                // VideoToolbox H.264 path we observed (FLE-579) that the default
-                // negotiated H.264 level (Constrained Baseline 3.1) limits the stream to
-                // 720p, and that encoded output paused for several seconds at a time
-                // while the encoder adapted to bitrate changes. H.265 delivers full
-                // 1080p without those pauses while keeping a VideoToolbox hardware
-                // encode path (FLE-587). The H.264 level default is not macOS-specific
-                // and is tracked separately in FLE-584.
-                //
-                // The `FOXGLOVE_VIDEO_CODEC` environment variable overrides this per-OS
-                // default, e.g. for hosts whose viewers cannot decode the default codec.
+                // See `DEFAULT_VIDEO_CODEC` for the rationale behind the per-OS default.
                 //
                 // Disable simulcast. We expect viewers will be mostly homogenous, and
                 // simulcast is a lot of work for the robot without much to gain.
                 // We observed that nvenc aggressively enforces the target bitrate,
                 // and combined with simulcast results in very low quality video with compression artifacts.
-                let video_codec =
-                    session
-                        .video_codec_override
-                        .unwrap_or(if cfg!(target_os = "macos") {
-                            VideoCodec::H265
-                        } else {
-                            VideoCodec::H264
-                        });
+                let video_codec = session.video_codec_override.unwrap_or(DEFAULT_VIDEO_CODEC);
                 let publish_options = TrackPublishOptions {
                     video_codec,
                     simulcast: false,

@@ -278,13 +278,10 @@ try:
         """
         Start a remote access gateway for live visualization and teleop in Foxglove.
 
-        Published video tracks use a per-OS default codec (H.265 on macOS, H.264 elsewhere).
-        The ``FOXGLOVE_VIDEO_CODEC`` environment variable overrides this default; it accepts
-        ``vp8``, ``h264``, ``vp9``, ``av1``, or ``h265`` (case-insensitive; H.265 is the
-        codec also known as HEVC). An unrecognized
-        value logs a warning and the default is used. If the host platform cannot encode the
-        selected codec, viewers receive no video; the device logs the selected codec when
-        publishing each video track.
+        The ``FOXGLOVE_VIDEO_CODEC`` environment variable overrides the default codec for
+        published video tracks. This is a developer aid and an escape hatch, not a supported
+        configuration surface; selecting a codec the host cannot encode leaves viewers
+        without video.
 
         :param name: The name of the server. If not set, the device name from the Foxglove
             platform is used.

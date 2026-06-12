@@ -161,14 +161,14 @@ const FOXGLOVE_VIDEO_CODEC_ENV: &str = "FOXGLOVE_VIDEO_CODEC";
 
 /// Parses a codec name from the `FOXGLOVE_VIDEO_CODEC` environment variable.
 ///
-/// Accepts the livekit codec names, case-insensitively: "vp8", "h264", "vp9", "av1", "h265".
+/// Accepts the livekit codec names, case-insensitively: "av1", "h264", "h265", "vp8", "vp9".
 fn parse_video_codec(s: &str) -> Option<VideoCodec> {
     match s.to_ascii_lowercase().as_str() {
-        "vp8" => Some(VideoCodec::VP8),
-        "h264" => Some(VideoCodec::H264),
-        "vp9" => Some(VideoCodec::VP9),
         "av1" => Some(VideoCodec::AV1),
+        "h264" => Some(VideoCodec::H264),
         "h265" => Some(VideoCodec::H265),
+        "vp8" => Some(VideoCodec::VP8),
+        "vp9" => Some(VideoCodec::VP9),
         _ => None,
     }
 }
@@ -442,12 +442,10 @@ impl Gateway {
     /// Returns an error if no device token is provided and the `FOXGLOVE_DEVICE_TOKEN`
     /// environment variable is not set.
     ///
-    /// The published video codec defaults to a per-OS choice, and can be overridden with the
-    /// `FOXGLOVE_VIDEO_CODEC` environment variable (one of `vp8`, `h264`, `vp9`, `av1`,
-    /// `h265`, case-insensitive; H.265 is the codec also known as HEVC). An unrecognized
-    /// value logs a warning and the default is used.
-    /// If the host platform cannot encode the selected codec, viewers receive no video;
-    /// the device logs the selected codec when publishing each video track.
+    /// The `FOXGLOVE_VIDEO_CODEC` environment variable overrides the default codec for
+    /// published video tracks. This is a developer aid and an escape hatch, not a supported
+    /// configuration surface; selecting a codec the host cannot encode leaves viewers
+    /// without video.
     pub fn start(mut self) -> Result<GatewayHandle, FoxgloveError> {
         crate::crypto::install_default_crypto_provider();
 
@@ -475,7 +473,7 @@ impl Gateway {
             if codec.is_none() {
                 tracing::warn!(
                     "Ignoring invalid {FOXGLOVE_VIDEO_CODEC_ENV} value {s:?}; \
-                         expected one of: vp8, h264, vp9, av1, h265 (HEVC)"
+                     expected one of: av1, h264, h265, vp8, vp9"
                 );
             }
             codec
@@ -604,11 +602,11 @@ mod tests {
     #[test]
     fn test_parse_video_codec() {
         // All livekit codec names parse, case-insensitively.
-        assert!(matches!(parse_video_codec("vp8"), Some(VideoCodec::VP8)));
-        assert!(matches!(parse_video_codec("h264"), Some(VideoCodec::H264)));
-        assert!(matches!(parse_video_codec("vp9"), Some(VideoCodec::VP9)));
         assert!(matches!(parse_video_codec("av1"), Some(VideoCodec::AV1)));
+        assert!(matches!(parse_video_codec("h264"), Some(VideoCodec::H264)));
         assert!(matches!(parse_video_codec("h265"), Some(VideoCodec::H265)));
+        assert!(matches!(parse_video_codec("vp8"), Some(VideoCodec::VP8)));
+        assert!(matches!(parse_video_codec("vp9"), Some(VideoCodec::VP9)));
         assert!(matches!(parse_video_codec("H265"), Some(VideoCodec::H265)));
         assert!(matches!(parse_video_codec("Vp8"), Some(VideoCodec::VP8)));
         // Unrecognized values are rejected.
