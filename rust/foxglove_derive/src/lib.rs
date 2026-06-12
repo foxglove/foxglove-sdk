@@ -50,6 +50,16 @@ fn unwrap_array_type(ty: &Type) -> Option<&Type> {
     }
 }
 
+/// Unwrap a container (`Vec<T>`, `Option<T>`, `[T; N]`) to the element type that
+/// owns its descriptors. One level suffices: nested containers are rejected by
+/// `validate_field_type`.
+fn descriptor_type(ty: &Type) -> &Type {
+    unwrap_generic_type(ty, "Vec")
+        .or_else(|| unwrap_generic_type(ty, "Option"))
+        .or_else(|| unwrap_array_type(ty))
+        .unwrap_or(ty)
+}
+
 /// Check if a type is `Vec<Option<T>>`, which is not supported because protobuf
 /// repeated fields cannot represent null/missing elements.
 fn is_vec_of_option(ty: &Type) -> bool {
@@ -520,23 +530,26 @@ fn derive_named_struct_impl(
             ::foxglove::protobuf::ProtobufField::encoded_len_tagged(&self.#field_name, #field_number)
         });
 
-        let field_type_key = quote!(#field_type).to_string();
+        // Dedup on the element type: containers share their element's
+        // descriptors, so `T` and `Vec<T>` must not emit it twice.
+        let descriptor_type = descriptor_type(field_type);
+        let descriptor_type_key = quote!(#descriptor_type).to_string();
 
-        enum_defs.entry(field_type_key.clone()).or_insert_with(|| quote! {
-            if let Some(enum_desc) = <#field_type as ::foxglove::protobuf::ProtobufField>::enum_descriptor() {
+        enum_defs.entry(descriptor_type_key.clone()).or_insert_with(|| quote! {
+            if let Some(enum_desc) = <#descriptor_type as ::foxglove::protobuf::ProtobufField>::enum_descriptor() {
                 enum_type.push(enum_desc);
             }
         });
 
-        message_defs.entry(field_type_key.clone()).or_insert_with(|| quote! {
-            if let Some(message_descriptor) = <#field_type as ::foxglove::protobuf::ProtobufField>::message_descriptor() {
+        message_defs.entry(descriptor_type_key.clone()).or_insert_with(|| quote! {
+            if let Some(message_descriptor) = <#descriptor_type as ::foxglove::protobuf::ProtobufField>::message_descriptor() {
                 nested_type.push(message_descriptor);
             }
         });
 
-        file_defs.entry(field_type_key).or_insert_with(|| {
+        file_defs.entry(descriptor_type_key).or_insert_with(|| {
             quote! {
-                for fd in <#field_type as ::foxglove::protobuf::ProtobufField>::file_descriptors() {
+                for fd in <#descriptor_type as ::foxglove::protobuf::ProtobufField>::file_descriptors() {
                     result.push(fd);
                 }
             }
