@@ -4,7 +4,7 @@ use reqwest::header::{ACCEPT, AUTHORIZATION, HeaderMap, USER_AGENT};
 use reqwest::{Method, StatusCode};
 use thiserror::Error;
 
-use crate::library_version::{get_sdk_language, get_sdk_version};
+use crate::library_version::get_library_identifier;
 
 use super::types::{DeviceResponse, ErrorResponse, WatchHeartbeatRequest, WatchQuery};
 
@@ -151,14 +151,6 @@ impl RequestBuilder {
     }
 }
 
-pub(crate) fn default_user_agent() -> String {
-    format!(
-        "foxglove-sdk/{} ({})",
-        get_sdk_language(),
-        get_sdk_version()
-    )
-}
-
 /// Internal API client for communicating with the Foxglove platform.
 ///
 /// This client is intended for internal use only to support the live visualization feature
@@ -301,7 +293,7 @@ impl<A> FoxgloveApiClientBuilder<A> {
         Self {
             auth,
             base_url: DEFAULT_API_URL.to_string(),
-            user_agent: default_user_agent(),
+            user_agent: get_library_identifier(),
             timeout_duration: Duration::from_secs(30),
         }
     }
