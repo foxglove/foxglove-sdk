@@ -28,6 +28,11 @@ RUN if [ "$USE_ROS_TESTING" = "true" ]; then \
 RUN apt-get update && apt-get -y dist-upgrade && \
     apt-get install -y python3-bloom fakeroot dpkg-dev debhelper
 
+# Authenticate to GitHub using $GITHUB_TOKEN from the env. Used
+# by ros/release-to-ros.bash.
+RUN git config --system 'credential.https://github.com.helper' \
+    '!f() { echo username=x-access-token; echo password=$GITHUB_TOKEN; }; f'
+
 # create foxglove user (or use existing user if UID matches)
 ARG USERNAME=foxglove
 ARG USER_UID=1005

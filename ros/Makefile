@@ -5,6 +5,9 @@ EXTRA_DOCKER_ARGS :=
 DOCKER_USER_ARGS :=
 DOCKER_RUN_ARGS :=
 GTEST_REPEAT := 1
+BLOOM_RELEASE_DISTRO :=
+BLOOM_PRETEND_FLAG :=
+BLOOM_CONFIG := $(HOME)/.config/bloom
 
 ifeq ($(shell uname -s), Linux)
 	DOCKER_USER_ARGS = --build-arg USER_UID=$(shell id -u) --build-arg USER_GID=$(shell id -g)
@@ -135,6 +138,30 @@ docker-deb-bridge: docker-deb-bridge-rolling
 
 .PHONY: docker-deb-msgs
 docker-deb-msgs: docker-deb-msgs-rolling
+
+# Run bloom-release inside the humble image, regardless of the target distro.
+# Invoked by ./release-to-ros.bash; the bloom config is mounted, and GITHUB_TOKEN
+# is consumed by the credential helper baked into the image (see Dockerfile.ros)
+# so bloom's intermediate git push doesn't prompt. Requires
+# BLOOM_RELEASE_DISTRO=<ros-distro> and GITHUB_TOKEN; set
+# BLOOM_PRETEND_FLAG=--pretend for a dry run.
+.PHONY: docker-bloom-release
+docker-bloom-release: docker-build-image-humble
+	@test -n "$(BLOOM_RELEASE_DISTRO)" || { echo "error: BLOOM_RELEASE_DISTRO is required" >&2; exit 1; }
+	@test -n "$$GITHUB_TOKEN" || { echo "error: GITHUB_TOKEN is required" >&2; exit 1; }
+	@test -n "$$GIT_USER_NAME" || { echo "error: GIT_USER_NAME is required" >&2; exit 1; }
+	@test -n "$$GIT_USER_EMAIL" || { echo "error: GIT_USER_EMAIL is required" >&2; exit 1; }
+	docker run --rm -it $(DOCKER_RUN_ARGS) \
+		-e HOME=/home/foxglove \
+		-e GIT_USER_NAME \
+		-e GIT_USER_EMAIL \
+		-e GITHUB_TOKEN \
+		-e BLOOM_RELEASE_DISTRO="$(BLOOM_RELEASE_DISTRO)" \
+		-e BLOOM_PRETEND_FLAG="$(BLOOM_PRETEND_FLAG)" \
+		-v $(BLOOM_CONFIG):/home/foxglove/.config/bloom \
+		-w /tmp \
+		foxglove-sdk-ros-humble \
+		bash -c 'set -euo pipefail; git config --global user.name "$$GIT_USER_NAME"; git config --global user.email "$$GIT_USER_EMAIL"; exec bloom-release foxglove-sdk --ros-distro "$$BLOOM_RELEASE_DISTRO" $$BLOOM_PRETEND_FLAG'
 
 # Merge per-package compile_commands.json and remap container paths to host paths.
 # Run after docker-build to get IDE support (clangd, etc).
