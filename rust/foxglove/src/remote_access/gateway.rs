@@ -443,8 +443,8 @@ impl Gateway {
     /// environment variable is not set.
     ///
     /// The `FOXGLOVE_VIDEO_CODEC` environment variable overrides the default codec for
-    /// published video tracks. This is a developer aid and an escape hatch, not a supported
-    /// configuration surface; selecting a codec the host cannot encode leaves viewers
+    /// published video tracks; this is intended as a developer aid rather than a supported
+    /// configuration surface. Selecting a codec the host cannot encode leaves viewers
     /// without video.
     pub fn start(mut self) -> Result<GatewayHandle, FoxgloveError> {
         crate::crypto::install_default_crypto_provider();

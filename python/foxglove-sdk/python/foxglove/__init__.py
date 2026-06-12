@@ -278,11 +278,6 @@ try:
         """
         Start a remote access gateway for live visualization and teleop in Foxglove.
 
-        The ``FOXGLOVE_VIDEO_CODEC`` environment variable overrides the default codec for
-        published video tracks. This is a developer aid and an escape hatch, not a supported
-        configuration surface; selecting a codec the host cannot encode leaves viewers
-        without video.
-
         :param name: The name of the server. If not set, the device name from the Foxglove
             platform is used.
         :param device_token: The device token for authenticating with the Foxglove platform.

@@ -311,13 +311,6 @@
 //! # }
 //! ```
 //!
-//! #### Video codec
-//!
-//! The `FOXGLOVE_VIDEO_CODEC` environment variable overrides the default codec for
-//! published video tracks. This is a developer aid and an escape hatch, not a supported
-//! configuration surface; selecting a codec the host cannot encode leaves viewers without
-//! video.
-//!
 //! #### NVENC hardware acceleration
 //!
 //! When available, NVIDIA NVENC is used to accelerate H.264 video encoding for the remote

@@ -256,10 +256,6 @@ struct RemoteAccessGatewayOptions {
 /// The gateway connects to the Foxglove platform and allows remote clients to
 /// subscribe to channels and receive data.
 ///
-/// The `FOXGLOVE_VIDEO_CODEC` environment variable overrides the default codec for published
-/// video tracks. This is a developer aid and an escape hatch, not a supported configuration
-/// surface; selecting a codec the host cannot encode leaves viewers without video.
-///
 /// @note RemoteAccessGateway is fully thread-safe, but RemoteAccessGatewayCallbacks may be invoked
 /// concurrently from multiple threads, so you will need to use synchronization in your callbacks.
 class RemoteAccessGateway final {
