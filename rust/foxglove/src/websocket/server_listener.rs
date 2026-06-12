@@ -25,8 +25,10 @@ pub trait ServerListener: Send + Sync {
     /// Callback invoked when a client advertises a client channel. Requires
     /// [`Capability::ClientPublish`][super::Capability::ClientPublish].
     fn on_client_advertise(&self, _client: Client, _channel: &ClientChannel) {}
-    /// Callback invoked when a client unadvertises a client channel. Requires
-    /// [`Capability::ClientPublish`][super::Capability::ClientPublish].
+    /// Callback invoked when a client unadvertises a client channel, or
+    /// disconnects with client channels still advertised (once per such
+    /// channel, before [`on_client_disconnect`][Self::on_client_disconnect]).
+    /// Requires [`Capability::ClientPublish`][super::Capability::ClientPublish].
     fn on_client_unadvertise(&self, _client: Client, _channel: &ClientChannel) {}
     /// Callback invoked when a client requests parameters. Requires
     /// [`Capability::Parameters`][super::Capability::Parameters]. Should return the named
