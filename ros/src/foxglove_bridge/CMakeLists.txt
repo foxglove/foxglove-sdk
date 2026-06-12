@@ -82,14 +82,13 @@ if (ENDIAN)
   add_compile_definitions(ARCH_IS_BIG_ENDIAN=1)
 endif()
 
-# Fetch the released SDK zip from GitHub. To build against a locally-modified SDK,
-# override FETCHCONTENT_SOURCE_DIR_FOXGLOVE_SDK (cmake's standard FetchContent override)
-# to point at a `cpp/dist`-shaped directory — the ros/Makefile's FOXGLOVE_CPP_SDK_DIR
-# variable does this for you (see ros/README.md). The dist directory needs to contain
-# lib/cmake/foxglove-sdk/foxglove-sdkConfig.cmake; release zips built before the SDK's
-# cmake-glue change don't yet, so the FetchContent download path is broken until a
-# release ships with that glue. For local development, point the override at a
-# `make build-cpp-dist`-produced tree.
+# Fetch the released SDK zip from GitHub. It contains the prebuilt C libraries
+# (with remote access), the C++ wrapper sources, and the CMake package config
+# consumed below. To build against a locally-modified SDK instead, override
+# FETCHCONTENT_SOURCE_DIR_FOXGLOVE_SDK (cmake's standard FetchContent override)
+# to point at a `make build-cpp-dist`-produced `cpp/dist` tree — the
+# ros/Makefile's FOXGLOVE_CPP_SDK_DIR variable does this for you (see
+# ros/README.md).
 set(FOXGLOVE_SDK_VERSION "0.25.1")
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
