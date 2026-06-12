@@ -36,7 +36,7 @@ networks:
         - subnet: 10.98.0.0/24
 
 x-echo-target: &echo-target
-  image: alpine:3
+  image: python:3-alpine
   entrypoint: ["/bin/sh", "-c"]
   command:
     - |
@@ -44,11 +44,18 @@ x-echo-target: &echo-target
       # TCP echo server on port 7000 for latency measurement.
       socat TCP-LISTEN:7000,fork,reuseaddr EXEC:/bin/cat &
       # UDP echo server on port 7001 for packet loss measurement.
-      socat UDP-RECVFROM:7001,fork EXEC:/bin/cat &
+      python3 /udp_echo.py 7001 &
       exec sleep infinity
+  volumes:
+    - ./scripts/container/udp_echo.py:/udp_echo.py:ro
   healthcheck:
-    # BusyBox nc doesn't support -z; use socat to probe the TCP port instead.
-    test: ["CMD-SHELL", "echo | socat - TCP:localhost:7000,connect-timeout=2"]
+    # BusyBox nc doesn't support -z; use socat to probe the TCP port, and
+    # netstat to confirm the UDP echo server is listening.
+    test:
+      [
+        "CMD-SHELL",
+        "echo | socat - TCP:localhost:7000,connect-timeout=2 && netstat -uln | grep -q ':7001 '",
+      ]
     interval: 2s
     timeout: 5s
     retries: 10
