@@ -35,7 +35,6 @@ networks:
       config:
         - subnet: 10.98.0.0/24
 
-# The targets use python:3-alpine to run the UDP echo server.
 x-echo-target: &echo-target
   image: python:3-alpine
   entrypoint: ["/bin/sh", "-c"]
