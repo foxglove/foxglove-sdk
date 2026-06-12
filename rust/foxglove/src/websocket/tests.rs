@@ -682,11 +682,10 @@ async fn test_on_client_unadvertise_called_after_disconnect() {
         .expect("Failed to connect");
     expect_recv!(client, ServerMessage::ServerInfo);
 
-    let advertise = client::Advertise::new([client::advertise::Channel::builder(
-        1, "/test", "json",
-    )
-    .build()
-    .unwrap()]);
+    let advertise =
+        client::Advertise::new([client::advertise::Channel::builder(1, "/test", "json")
+            .build()
+            .unwrap()]);
     client.send(&advertise).await.expect("Failed to send");
 
     // Allow the server to process the advertisement
