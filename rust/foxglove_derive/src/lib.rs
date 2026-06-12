@@ -50,14 +50,16 @@ fn unwrap_array_type(ty: &Type) -> Option<&Type> {
     }
 }
 
-/// Unwrap a container (`Vec<T>`, `Option<T>`, `[T; N]`) to the element type that
-/// owns its descriptors. One level suffices: nested containers are rejected by
-/// `validate_field_type`.
+/// Unwrap containers (`Vec<T>`, `Option<T>`, `[T; N]`) to the element type that
+/// owns the descriptors.
 fn descriptor_type(ty: &Type) -> &Type {
-    unwrap_generic_type(ty, "Vec")
+    match unwrap_generic_type(ty, "Vec")
         .or_else(|| unwrap_generic_type(ty, "Option"))
         .or_else(|| unwrap_array_type(ty))
-        .unwrap_or(ty)
+    {
+        Some(inner) => descriptor_type(inner),
+        None => ty,
+    }
 }
 
 /// Check if a type is `Vec<Option<T>>`, which is not supported because protobuf
