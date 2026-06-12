@@ -244,7 +244,7 @@ The recipe above runs everything locally, but nothing requires that: the SDK
 gateway discovers the SFU through whatever API `FOXGLOVE_API_URL` points at,
 and the `gateway-netem` sidecar shapes all of `gateway-runner`'s egress
 regardless of destination. Pointing the streamer at a deployed instance
-(production, or an internal staging environment) exercises the most
+(an internal staging environment, or production) exercises the most
 field-realistic shape — an impaired device uplink into the real SFU, with
 viewers on a clean connection — and needs none of the local app/web setup
 from the prerequisites above:
@@ -255,11 +255,17 @@ FOXGLOVE_DEVICE_TOKEN=fox_dt_... \
 yarn stream-mcap /abs/path/to/heavy.mcap
 ```
 
+- Prefer a staging instance when one is available: streaming a heavy
+  recording deliberately saturates an uplink, and that load lands on the
+  target instance's SFU. Point at production on purpose, not by default.
 - The device token must be issued by that same instance, for a device with
   remote access enabled in an org whose plan includes it.
 - Watch the device from that instance's web app. `yarn netem-impair` works
   exactly as in the local flow — it shapes the runner's uplink wherever the
   traffic is headed.
+- Unlike the local flow, browser playback works from a macOS host here: the
+  deployed SFU's ICE candidates are publicly routable, so the macOS caveat
+  in "Verifying browser playback" below does not apply.
 - The local LiveKit and viewer containers still start (`gateway-runner`
   declares a dependency on them) but carry no traffic in this mode.
 - A deployed SFU can behave differently from the local `--dev` LiveKit, which

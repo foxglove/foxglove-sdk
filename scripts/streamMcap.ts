@@ -73,11 +73,13 @@ function compose(env: NodeJS.ProcessEnv, ...args: string[]): void {
   });
 }
 
-/** True if the error from `execFileSync` means the child was interrupted (Ctrl-C). */
+/** True if the error from `execFileSync` means the child was interrupted (Ctrl-C or SIGTERM). */
 function wasSignaled(err: unknown): boolean {
   const status = (err as { status?: number; signal?: string }).status;
   const signal = (err as { status?: number; signal?: string }).signal;
-  return status === 130 || signal === "SIGINT" || signal === "SIGTERM";
+  // 130/143 are the conventional exit codes for SIGINT/SIGTERM, reported as
+  // a plain status when an intermediary (e.g. docker exec) absorbs the signal.
+  return status === 130 || status === 143 || signal === "SIGINT" || signal === "SIGTERM";
 }
 
 // Best-effort: stop any streamer still running inside gateway-runner. The
@@ -230,8 +232,8 @@ function run(opts: Options, positional: string | undefined): void {
     if (wasSignaled(err)) {
       console.log("\nStreamer stopped.");
       console.log(DOWN_HINT);
-      const { signal } = err as { signal?: string };
-      process.exit(signal === "SIGTERM" ? 143 : 130);
+      const { status, signal } = err as { status?: number; signal?: string };
+      process.exit(signal === "SIGTERM" || status === 143 ? 143 : 130);
     }
     // A non-signal failure (cargo build error, `up --wait` healthcheck
     // timeout, streamer panic) already printed its own error to the inherited
