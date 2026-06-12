@@ -151,10 +151,6 @@ impl RequestBuilder {
     }
 }
 
-pub(crate) fn default_user_agent() -> String {
-    get_library_identifier()
-}
-
 /// Internal API client for communicating with the Foxglove platform.
 ///
 /// This client is intended for internal use only to support the live visualization feature
@@ -297,7 +293,7 @@ impl<A> FoxgloveApiClientBuilder<A> {
         Self {
             auth,
             base_url: DEFAULT_API_URL.to_string(),
-            user_agent: default_user_agent(),
+            user_agent: get_library_identifier(),
             timeout_duration: Duration::from_secs(30),
         }
     }
@@ -337,18 +333,7 @@ mod tests {
         create_test_server,
     };
 
-    use super::{DeviceToken, default_user_agent};
-
-    #[test]
-    fn default_user_agent_uses_sdk_library_identifier() {
-        let user_agent = default_user_agent();
-        assert_eq!(
-            user_agent,
-            concat!("foxglove-sdk-rust/", env!("CARGO_PKG_VERSION"))
-        );
-        assert!(!user_agent.contains("/v"));
-        assert!(!user_agent.contains("mcap-rust/"));
-    }
+    use super::DeviceToken;
 
     #[tokio::test]
     async fn fetch_device_info_success() {

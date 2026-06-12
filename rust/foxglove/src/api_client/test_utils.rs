@@ -1,7 +1,9 @@
-use axum::http::HeaderMap;
+use axum::http::{HeaderMap, header::USER_AGENT};
 use axum::{Json, Router};
 use reqwest::StatusCode;
 use tokio::net::TcpListener;
+
+use crate::library_version::get_library_identifier;
 
 use super::client::{DeviceToken, FoxgloveApiClient, FoxgloveApiClientBuilder};
 use super::types::DeviceResponse;
@@ -56,6 +58,15 @@ pub fn create_test_api_client(
 }
 
 async fn device_info_handler(headers: HeaderMap) -> Result<Json<DeviceResponse>, StatusCode> {
+    let user_agent = headers
+        .get(USER_AGENT)
+        .and_then(|v| v.to_str().ok())
+        .ok_or(StatusCode::BAD_REQUEST)?;
+
+    if user_agent != get_library_identifier() {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
     let auth = headers
         .get("Authorization")
         .and_then(|v| v.to_str().ok())
