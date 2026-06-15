@@ -66,7 +66,7 @@ services:
       # tunnel behind a passing `sleep`.
       - |
         set -e
-        apk add --no-cache wireguard-tools iproute2 iptables > /dev/null 2>&1
+        apk add --no-cache wireguard-tools iproute2 iptables > /dev/null
         ip link add dev wg0 type wireguard
         wg setconf wg0 /etc/wireguard/relay.conf
         ip address add "$$NETEM_RELAY_TUNNEL_ADDR" dev wg0
