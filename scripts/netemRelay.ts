@@ -9,17 +9,12 @@
 //
 // Prerequisites:
 //   - wireguard-tools on the host (brew install wireguard-tools).
-//   - The per-link stack is already running (`yarn stream-mcap` or
-//     `yarn start-netem --perlink`). This script deliberately does not bring
-//     that stack up itself: the stack is owned by those commands, and
-//     recreating its services from here would re-derive their env from this
-//     shell (see the stack-ownership note in scripts/streamMcap.ts).
+//   - The per-link stack already running (`yarn stream-mcap` or
+//     `yarn start-netem --perlink`); this script only manages the relay.
 //
-// The one step this script cannot do for you is `sudo wg-quick up` — sudo
-// needs a password prompt on the user's own terminal. The script prints the
-// exact command and then waits, polling the relay container for the WireGuard
-// handshake (container-side `wg show`; the host-side equivalent would itself
-// need sudo).
+// It cannot run `sudo wg-quick up` for you (sudo needs the user's terminal), so
+// it prints that command and waits, polling the relay container for the
+// handshake.
 
 import { program } from "commander";
 import { execFileSync } from "node:child_process";
