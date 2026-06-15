@@ -82,6 +82,26 @@ const ROOM_CLOSE_TIMEOUT: Duration = Duration::from_secs(5);
 
 pub(super) const DEFAULT_MESSAGE_BACKLOG_SIZE: usize = 1024;
 
+/// The default codec for published video tracks.
+///
+/// We prefer H.264 so that the libwebrtc nvenc encoder (H.264-only) can be used on Linux
+/// hosts that have nvenc available. VP8/VP9/AV1 paths are software-only in our builds, so
+/// H.264 is at worst parity elsewhere.
+///
+/// Exception: on macOS we publish VP8 instead. On the macOS VideoToolbox H.264 path we
+/// observed (FLE-579) that the default negotiated H.264 level (Constrained Baseline 3.1)
+/// limits the stream to 720p, and that encoded output paused for several seconds at a
+/// time while the encoder adapted to bitrate changes; VP8 reached full 1080p without
+/// those pauses. The H.264 level default is not macOS-specific and is tracked separately
+/// in FLE-584. We also evaluated H.265 on macOS (FLE-587): it reaches full 1080p with a
+/// VideoToolbox hardware encode path, but browser decode support is not broad enough to
+/// make it the default; it remains reachable via the `FOXGLOVE_VIDEO_CODEC` override.
+const DEFAULT_VIDEO_CODEC: VideoCodec = if cfg!(target_os = "macos") {
+    VideoCodec::VP8
+} else {
+    VideoCodec::H264
+};
+
 /// The operation code for the message framing for protocol v2.
 /// Distinguishes between frames containing JSON messages vs binary messages.
 #[derive(Clone, Copy, Debug)]
@@ -188,6 +208,9 @@ pub(super) struct RemoteAccessSession {
     /// to the dormant watch phase. Advertised by the API via the `hello` event's
     /// `deviceWaitForViewerMs` field.
     device_wait_for_viewer: Option<Duration>,
+    /// If set (via the `FOXGLOVE_VIDEO_CODEC` environment variable), overrides the per-OS
+    /// default codec for published video tracks.
+    video_codec_override: Option<VideoCodec>,
 }
 
 impl Sink for RemoteAccessSession {
@@ -372,6 +395,7 @@ pub(super) struct SessionParams {
     pub(super) parameter_handler: Option<Arc<dyn ParameterHandler>>,
     pub(super) server_info: ServerInfo,
     pub(super) device_wait_for_viewer: Option<Duration>,
+    pub(super) video_codec_override: Option<VideoCodec>,
 }
 
 impl RemoteAccessSession {
@@ -404,6 +428,7 @@ impl RemoteAccessSession {
             server_info: params.server_info,
             participant_registry,
             device_wait_for_viewer: params.device_wait_for_viewer,
+            video_codec_override: params.video_codec_override,
         })
     }
 
@@ -2178,26 +2203,13 @@ impl RemoteAccessSession {
             let session = self.clone();
             tokio::spawn(async move {
                 let local_track = LocalTrack::Video(track);
-                // Prefer H.264 so that the libwebrtc nvenc encoder (H.264-only) can be used
-                // on Linux hosts that have nvenc available. VP8/VP9/AV1 paths
-                // are software-only in our builds, so H.264 is at worst parity elsewhere.
-                //
-                // Exception: on macOS we publish VP8 instead. On the macOS VideoToolbox
-                // H.264 path we observed (FLE-579) that the default negotiated H.264 level
-                // (Constrained Baseline 3.1) limits the stream to 720p, and that encoded
-                // output paused for several seconds at a time while the encoder adapted to
-                // bitrate changes; VP8 reached full 1080p without those pauses. The H.264
-                // level default is not macOS-specific and is tracked separately in FLE-584.
+                // See `DEFAULT_VIDEO_CODEC` for the rationale behind the per-OS default.
                 //
                 // Disable simulcast. We expect viewers will be mostly homogenous, and
                 // simulcast is a lot of work for the robot without much to gain.
                 // We observed that nvenc aggressively enforces the target bitrate,
                 // and combined with simulcast results in very low quality video with compression artifacts.
-                let video_codec = if cfg!(target_os = "macos") {
-                    VideoCodec::VP8
-                } else {
-                    VideoCodec::H264
-                };
+                let video_codec = session.video_codec_override.unwrap_or(DEFAULT_VIDEO_CODEC);
                 let publish_options = TrackPublishOptions {
                     video_codec,
                     simulcast: false,
@@ -2209,7 +2221,9 @@ impl RemoteAccessSession {
                 {
                     Ok(publication) => {
                         let sid = publication.sid();
-                        debug!("published video track {sid} for channel {channel_id:?}");
+                        debug!(
+                            "published {video_codec:?} video track {sid} for channel {channel_id:?}"
+                        );
                         // Only store the SID if the publisher in state is still the
                         // one we created. A teardown+resubscribe cycle could have
                         // replaced it with a different publisher.
@@ -2233,7 +2247,9 @@ impl RemoteAccessSession {
                         }
                     }
                     Err(e) => {
-                        error!("failed to publish video track for channel {channel_id:?}: {e:?}");
+                        error!(
+                            "failed to publish {video_codec:?} video track for channel {channel_id:?}: {e:?}"
+                        );
                     }
                 }
             });
