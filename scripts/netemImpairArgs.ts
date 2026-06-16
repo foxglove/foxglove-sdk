@@ -27,12 +27,11 @@ export function resolveArgs(opts: ResolveArgsInput, trailing: string[]): string[
   if (opts.profile != null && hasTrailing) {
     throw new Error("pass either --profile or raw netem args, not both.");
   }
+  const known = Object.keys(PROFILES).join(", ");
   if (opts.profile != null) {
     const preset = PROFILES[opts.profile];
     if (preset == null) {
-      throw new Error(
-        `unknown profile '${opts.profile}'. Known: ${Object.keys(PROFILES).join(", ")}`,
-      );
+      throw new Error(`unknown profile '${opts.profile}'. Known: ${known}`);
     }
     return preset.split(" ");
   }
@@ -40,7 +39,7 @@ export function resolveArgs(opts: ResolveArgsInput, trailing: string[]): string[
     return trailing;
   }
   throw new Error(
-    `nothing to apply.\n  Use --profile <name> (one of: ${Object.keys(PROFILES).join(", ")}), or\n` +
+    `nothing to apply.\n  Use --profile <name> (one of: ${known}), or\n` +
       "  pass raw netem args after `--`, e.g.: yarn netem-impair -- delay 500ms loss 10%",
   );
 }

@@ -52,6 +52,8 @@ services:
     cap_add:
       - NET_ADMIN
     environment:
+      # Default mirrors the `starlink` profile in scripts/netemImpairArgs.ts —
+      # keep them in sync. Override with NETEM_EGRESS.
       NETEM_ARGS: "${NETEM_EGRESS:-delay 30ms 10ms loss 2% rate 15mbit}"
       # Skip loopback — the WebRTC stack uses lo internally for ICE.
       NETEM_SKIP_LOOPBACK: "1"

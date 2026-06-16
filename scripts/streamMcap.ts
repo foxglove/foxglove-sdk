@@ -39,11 +39,10 @@ function compose(env: NodeJS.ProcessEnv, ...args: string[]): void {
 
 /** True if the error from `execFileSync` means the child was interrupted (Ctrl-C or SIGTERM). */
 function wasSignaled(err: unknown): boolean {
-  const status = (err as { status?: number; signal?: string }).status;
-  const signal = (err as { status?: number; signal?: string }).signal;
+  const e = err as { status?: number; signal?: string };
   // 130/143 are the conventional exit codes for SIGINT/SIGTERM, reported as
   // a plain status when an intermediary (e.g. docker exec) absorbs the signal.
-  return status === 130 || status === 143 || signal === "SIGINT" || signal === "SIGTERM";
+  return e.status === 130 || e.status === 143 || e.signal === "SIGINT" || e.signal === "SIGTERM";
 }
 
 // Best-effort: kill any streamer still looping inside the runner. An
