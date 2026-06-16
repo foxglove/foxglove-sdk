@@ -23,7 +23,7 @@ impl foxglove::websocket::service::Handler for ServiceHandler {
         let request = PyServiceRequest(request);
         // Punt the callback to a blocking thread.
         tokio::task::spawn_blocking(move || {
-            let result = Python::with_gil(|py| {
+            let result = Python::attach(|py| {
                 handler
                     .bind(py)
                     .call((request,), None)
@@ -116,7 +116,13 @@ impl PyServiceRequest {
 /// :type request: :py:class:`foxglove.MessageSchema` | `None`
 /// :param response: The response schema.
 /// :type response: :py:class:`foxglove.MessageSchema` | `None`
-#[pyclass(name = "ServiceSchema", module = "foxglove", get_all, set_all)]
+#[pyclass(
+    from_py_object,
+    name = "ServiceSchema",
+    module = "foxglove",
+    get_all,
+    set_all
+)]
 #[derive(Clone)]
 pub struct PyServiceSchema {
     /// The name of the service.
@@ -163,7 +169,13 @@ impl From<PyServiceSchema> for foxglove::websocket::service::ServiceSchema {
 /// :type encoding: str
 /// :param schema: The message schema.
 /// :type schema: :py:class:`foxglove.Schema`
-#[pyclass(name = "MessageSchema", module = "foxglove", get_all, set_all)]
+#[pyclass(
+    from_py_object,
+    name = "MessageSchema",
+    module = "foxglove",
+    get_all,
+    set_all
+)]
 #[derive(Clone)]
 pub struct PyMessageSchema {
     /// The encoding of the message.
@@ -200,7 +212,13 @@ impl PyMessageSchema {
 ///
 /// Parameters of other types (integer, bool, string, dict, arrays of these) leave
 /// :py:attr:`Parameter.type` set to ``None``.
-#[pyclass(name = "ParameterType", module = "foxglove", eq, eq_int)]
+#[pyclass(
+    from_py_object,
+    name = "ParameterType",
+    module = "foxglove",
+    eq,
+    eq_int
+)]
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum PyParameterType {
     /// A byte array, transmitted on the wire as a base64-encoded string. The type hint
@@ -256,7 +274,7 @@ impl From<foxglove::websocket::ParameterType> for PyParameterType {
 }
 
 /// A parameter value.
-#[pyclass(name = "ParameterValue", module = "foxglove", eq)]
+#[pyclass(from_py_object, name = "ParameterValue", module = "foxglove", eq)]
 #[derive(Clone, PartialEq)]
 pub enum PyParameterValue {
     /// An integer value.
@@ -320,7 +338,7 @@ impl From<foxglove::websocket::ParameterValue> for PyParameterValue {
 /// :param type: Optional parameter type. This is automatically derived when passing a native
 ///              python object as the value.
 /// :type type: ParameterType|None
-#[pyclass(name = "Parameter", module = "foxglove")]
+#[pyclass(from_py_object, name = "Parameter", module = "foxglove")]
 #[derive(Clone)]
 pub struct PyParameter {
     /// The name of the parameter.
@@ -423,8 +441,10 @@ impl<'py> IntoPyObject<'py> for ParameterValueConverter {
     }
 }
 
-impl<'py> FromPyObject<'py> for ParameterValueConverter {
-    fn extract_bound(obj: &Bound<'py, PyAny>) -> PyResult<Self> {
+impl<'py> FromPyObject<'_, 'py> for ParameterValueConverter {
+    type Error = PyErr;
+
+    fn extract(obj: Borrowed<'_, 'py, PyAny>) -> PyResult<Self> {
         if let Ok(val) = obj.extract::<PyParameterValue>() {
             Ok(Self(val))
         } else if let Ok(val) = obj.extract::<bool>() {
@@ -435,16 +455,16 @@ impl<'py> FromPyObject<'py> for ParameterValueConverter {
             Ok(Self(PyParameterValue::Float64(val)))
         } else if let Ok(val) = obj.extract::<String>() {
             Ok(Self(PyParameterValue::String(val)))
-        } else if let Ok(list) = obj.downcast::<PyList>() {
+        } else if let Ok(list) = obj.cast::<PyList>() {
             let mut values = Vec::with_capacity(list.len());
             for item in list.iter() {
                 let value: ParameterValueConverter = item.extract()?;
                 values.push(value.0);
             }
             Ok(Self(PyParameterValue::Array(values)))
-        } else if let Ok(dict) = obj.downcast::<PyDict>() {
+        } else if let Ok(dict) = obj.cast::<PyDict>() {
             let mut values = HashMap::new();
-            for (key, value) in dict {
+            for (key, value) in dict.iter() {
                 let key: String = key.extract()?;
                 let value: ParameterValueConverter = value.extract()?;
                 values.insert(key, value.0);
@@ -480,8 +500,10 @@ impl<'py> IntoPyObject<'py> for ParameterTypeValueConverter {
     }
 }
 
-impl<'py> FromPyObject<'py> for ParameterTypeValueConverter {
-    fn extract_bound(obj: &Bound<'py, PyAny>) -> PyResult<Self> {
+impl<'py> FromPyObject<'_, 'py> for ParameterTypeValueConverter {
+    type Error = PyErr;
+
+    fn extract(obj: Borrowed<'_, 'py, PyAny>) -> PyResult<Self> {
         if let Ok(val) = obj.extract::<ParameterValueConverter>() {
             let val = val.0;
             let (typ, val) = match val {
@@ -514,9 +536,9 @@ impl<'py> FromPyObject<'py> for ParameterTypeValueConverter {
 }
 
 /// A connection graph.
-#[pyclass(name = "ConnectionGraph", module = "foxglove")]
+#[pyclass(skip_from_py_object, name = "ConnectionGraph", module = "foxglove")]
 #[derive(Clone)]
-pub struct PyConnectionGraph(foxglove::websocket::ConnectionGraph);
+pub struct PyConnectionGraph(pub(crate) foxglove::websocket::ConnectionGraph);
 
 #[pymethods]
 impl PyConnectionGraph {
@@ -574,7 +596,7 @@ impl AssetHandler for CallbackAssetHandler {
         let handler = self.handler.clone();
 
         tokio::task::spawn_blocking(move || {
-            let result = Python::with_gil(|py| {
+            let result = Python::attach(|py| {
                 handler.bind(py).call((uri,), None).and_then(|data| {
                     if data.is_none() {
                         Err(PyIOError::new_err("not found"))
@@ -589,7 +611,13 @@ impl AssetHandler for CallbackAssetHandler {
 }
 
 /// A status message severity level.
-#[pyclass(name = "StatusLevel", module = "foxglove", eq, eq_int)]
+#[pyclass(
+    skip_from_py_object,
+    name = "StatusLevel",
+    module = "foxglove",
+    eq,
+    eq_int
+)]
 #[derive(Clone, PartialEq)]
 pub enum PyStatusLevel {
     Info,

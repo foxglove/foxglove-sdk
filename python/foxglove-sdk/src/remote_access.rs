@@ -39,6 +39,7 @@ impl From<&remote_access::Client> for PyRemoteAccessClient {
 
 /// The status of the remote access gateway connection.
 #[pyclass(
+    skip_from_py_object,
     name = "RemoteAccessConnectionStatus",
     module = "foxglove.remote_access",
     eq,
@@ -92,7 +93,13 @@ impl From<ConnectionStatus> for PyConnectionStatus {
 }
 
 /// A capability that can be advertised by a remote access gateway.
-#[pyclass(name = "Capability", module = "foxglove.remote_access", eq, eq_int)]
+#[pyclass(
+    from_py_object,
+    name = "Capability",
+    module = "foxglove.remote_access",
+    eq,
+    eq_int
+)]
 #[derive(Clone, PartialEq)]
 pub enum PyRemoteAccessCapability {
     /// Allow clients to advertise channels to send data messages to the server.
@@ -148,7 +155,7 @@ pub struct PyRemoteAccessListener {
 
 impl Listener for PyRemoteAccessListener {
     fn on_connection_status_changed(&self, status: ConnectionStatus) {
-        let result: PyResult<()> = Python::with_gil(|py| {
+        let result: PyResult<()> = Python::attach(|py| {
             let py_status = PyConnectionStatus::from(status);
             self.listener.bind(py).call_method(
                 "on_connection_status_changed",
@@ -185,7 +192,7 @@ impl Listener for PyRemoteAccessListener {
         payload: &[u8],
     ) {
         let py_client = PyRemoteAccessClient::from(client);
-        let result: PyResult<()> = Python::with_gil(|py| {
+        let result: PyResult<()> = Python::attach(|py| {
             let py_channel = PyChannelDescriptor(channel.clone());
             let py_payload = PyBytes::new(py, payload);
             self.listener.bind(py).call_method(
@@ -207,7 +214,7 @@ impl Listener for PyRemoteAccessListener {
         request_id: Option<&str>,
     ) -> Vec<foxglove::remote_access::Parameter> {
         let py_client = PyRemoteAccessClient::from(client);
-        let result: PyResult<Vec<foxglove::remote_access::Parameter>> = Python::with_gil(|py| {
+        let result: PyResult<Vec<foxglove::remote_access::Parameter>> = Python::attach(|py| {
             let args = (py_client, param_names, request_id);
             let result = self
                 .listener
@@ -232,7 +239,7 @@ impl Listener for PyRemoteAccessListener {
         request_id: Option<&str>,
     ) -> Vec<foxglove::remote_access::Parameter> {
         let py_client = PyRemoteAccessClient::from(client);
-        let result: PyResult<Vec<foxglove::remote_access::Parameter>> = Python::with_gil(|py| {
+        let result: PyResult<Vec<foxglove::remote_access::Parameter>> = Python::attach(|py| {
             let parameters: Vec<PyParameter> = parameters.into_iter().map(Into::into).collect();
             let args = (py_client, parameters, request_id);
             let result = self
@@ -252,7 +259,7 @@ impl Listener for PyRemoteAccessListener {
     }
 
     fn on_parameters_subscribe(&self, param_names: Vec<String>) {
-        let result: PyResult<()> = Python::with_gil(|py| {
+        let result: PyResult<()> = Python::attach(|py| {
             self.listener
                 .bind(py)
                 .call_method("on_parameters_subscribe", (param_names,), None)?;
@@ -264,7 +271,7 @@ impl Listener for PyRemoteAccessListener {
     }
 
     fn on_parameters_unsubscribe(&self, param_names: Vec<String>) {
-        let result: PyResult<()> = Python::with_gil(|py| {
+        let result: PyResult<()> = Python::attach(|py| {
             self.listener.bind(py).call_method(
                 "on_parameters_unsubscribe",
                 (param_names,),
@@ -278,7 +285,7 @@ impl Listener for PyRemoteAccessListener {
     }
 
     fn on_connection_graph_subscribe(&self) {
-        let result: PyResult<()> = Python::with_gil(|py| {
+        let result: PyResult<()> = Python::attach(|py| {
             self.listener
                 .bind(py)
                 .call_method("on_connection_graph_subscribe", (), None)?;
@@ -290,7 +297,7 @@ impl Listener for PyRemoteAccessListener {
     }
 
     fn on_connection_graph_unsubscribe(&self) {
-        let result: PyResult<()> = Python::with_gil(|py| {
+        let result: PyResult<()> = Python::attach(|py| {
             self.listener
                 .bind(py)
                 .call_method("on_connection_graph_unsubscribe", (), None)?;
@@ -310,7 +317,7 @@ impl PyRemoteAccessListener {
         channel: &ChannelDescriptor,
     ) {
         let py_client = PyRemoteAccessClient::from(client);
-        let result: PyResult<()> = Python::with_gil(|py| {
+        let result: PyResult<()> = Python::attach(|py| {
             let py_channel = PyChannelDescriptor(channel.clone());
             self.listener
                 .bind(py)
@@ -352,7 +359,7 @@ impl PyRemoteAccessGateway {
     /// :type services: list[Service]
     pub fn add_services(&self, py: Python<'_>, services: Vec<PyService>) -> PyResult<()> {
         if let Some(handle) = &self.0 {
-            py.allow_threads(move || {
+            py.detach(move || {
                 handle
                     .add_services(services.into_iter().map(Into::into))
                     .map_err(PyFoxgloveError::from)
@@ -367,7 +374,7 @@ impl PyRemoteAccessGateway {
     /// :type names: list[str]
     pub fn remove_services(&self, py: Python<'_>, names: Vec<String>) {
         if let Some(handle) = &self.0 {
-            py.allow_threads(move || handle.remove_services(names));
+            py.detach(move || handle.remove_services(names));
         }
     }
 
@@ -418,14 +425,13 @@ impl PyRemoteAccessGateway {
     ///
     /// :param graph: The connection graph to publish.
     /// :type graph: ConnectionGraph
-    pub fn publish_connection_graph(&self, graph: Bound<'_, PyConnectionGraph>) -> PyResult<()> {
+    pub fn publish_connection_graph(&self, graph: PyRef<'_, PyConnectionGraph>) -> PyResult<()> {
         let Some(handle) = &self.0 else {
             tracing::debug!("publish_connection_graph called after gateway stopped; ignoring");
             return Ok(());
         };
-        let graph = graph.extract::<PyConnectionGraph>()?;
         handle
-            .publish_connection_graph(graph.into())
+            .publish_connection_graph(graph.0.clone())
             .map_err(PyFoxgloveError::from)
             .map_err(PyErr::from)
     }
@@ -433,13 +439,19 @@ impl PyRemoteAccessGateway {
     /// Gracefully disconnect from the remote access gateway.
     pub fn stop(&mut self, py: Python<'_>) {
         if let Some(handle) = self.0.take() {
-            py.allow_threads(|| handle.stop_blocking())
+            py.detach(|| handle.stop_blocking())
         }
     }
 }
 
 /// The reliability policy for a channel's data delivery.
-#[pyclass(name = "Reliability", module = "foxglove.remote_access", eq, eq_int)]
+#[pyclass(
+    from_py_object,
+    name = "Reliability",
+    module = "foxglove.remote_access",
+    eq,
+    eq_int
+)]
 #[derive(Clone, PartialEq)]
 pub enum PyReliability {
     /// Data is sent over unreliable data tracks. This is the default.
@@ -477,7 +489,7 @@ impl From<PyReliability> for Reliability {
 }
 
 /// Quality-of-service profile for a channel.
-#[pyclass(name = "QosProfile", module = "foxglove.remote_access")]
+#[pyclass(from_py_object, name = "QosProfile", module = "foxglove.remote_access")]
 #[derive(Clone)]
 pub struct PyQosProfile {
     #[pyo3(get, set)]
@@ -508,13 +520,13 @@ pub struct PyQosClassifier(pub Py<PyAny>);
 
 impl foxglove::remote_access::QosClassifier for PyQosClassifier {
     fn classify(&self, channel: &foxglove::ChannelDescriptor) -> QosProfile {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let handler = self.0.clone_ref(py);
             let descriptor = PyChannelDescriptor(channel.clone());
             let result = handler
                 .bind(py)
                 .call((descriptor,), None)
-                .and_then(|f| f.extract::<PyQosProfile>());
+                .and_then(|f| f.extract::<PyQosProfile>().map_err(Into::into));
 
             match result {
                 Ok(profile) => profile.into(),
@@ -605,7 +617,7 @@ pub fn start_gateway(
     }
 
     let handle = py
-        .allow_threads(|| gateway.start())
+        .detach(|| gateway.start())
         .map_err(PyFoxgloveError::from)?;
 
     Ok(PyRemoteAccessGateway(Some(handle)))
