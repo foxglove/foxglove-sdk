@@ -158,14 +158,15 @@ Point it at a deployed instance — its SFU's ICE candidates are publicly
 routable, so a host browser can watch the device directly:
 
 ```sh
-FOXGLOVE_API_URL=https://api.foxglove.dev \
 FOXGLOVE_DEVICE_TOKEN=fox_dt_... \
 yarn stream-mcap /abs/path/to/heavy.mcap
 ```
 
-The device token must come from that instance, for a device with remote access
-enabled in an org whose plan includes it. For a local SFU instead, run the app
-and `--dev` LiveKit yourself and point `FOXGLOVE_API_URL` at them.
+`FOXGLOVE_API_URL` defaults to `https://api.foxglove.dev`; set it to target
+another instance. The device token must come from whichever instance you use,
+for a device with remote access enabled in an org whose plan includes it. For a
+local SFU, run the app and `--dev` LiveKit yourself and point `FOXGLOVE_API_URL`
+at them.
 
 The stack starts shaped at the `starlink` profile (the `NETEM_EGRESS` default).
 Retune live without restarting — each call replaces all settings, and

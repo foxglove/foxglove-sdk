@@ -4,8 +4,10 @@
 // full runbook is in rust/remote_access_tests/NETEM.md.
 //
 // Usage:
-//   FOXGLOVE_API_URL=https://api.foxglove.dev FOXGLOVE_DEVICE_TOKEN=fox_dt_... \
-//     yarn stream-mcap /abs/path/to/heavy.mcap   # or set MCAP_HOST_PATH
+//   FOXGLOVE_DEVICE_TOKEN=fox_dt_... yarn stream-mcap /abs/path/to/heavy.mcap
+//
+//   FOXGLOVE_API_URL defaults to https://api.foxglove.dev; set it to target
+//   another instance. MCAP_HOST_PATH is an alternative to the positional path.
 //
 // It bind-mounts the file at /data/recording.mcap, brings up the runner +
 // sidecar, builds the streamer (slow on a cold cache — native WebRTC), and
@@ -98,20 +100,17 @@ function resolveMcapPath(positional: string | undefined): string {
 function requireEnv(name: string): string {
   const value = process.env[name];
   if (value == null || value === "") {
-    console.error(
-      `Error: ${name} is not set.\n` +
-        "  Both FOXGLOVE_API_URL and FOXGLOVE_DEVICE_TOKEN are required; for example:\n" +
-        "    export FOXGLOVE_API_URL=https://api.foxglove.dev\n" +
-        "    export FOXGLOVE_DEVICE_TOKEN=fox_dt_...",
-    );
+    console.error(`Error: ${name} is not set. Export it before running, e.g. ${name}=...`);
     process.exit(1);
   }
   return value;
 }
 
 function run(opts: Options, positional: string | undefined): void {
-  const apiUrl = requireEnv("FOXGLOVE_API_URL");
   const deviceToken = requireEnv("FOXGLOVE_DEVICE_TOKEN");
+  // Optional: the gateway defaults to https://api.foxglove.dev when this is
+  // unset (see Gateway's foxglove_api_url), so only forward it when provided.
+  const apiUrl = process.env.FOXGLOVE_API_URL;
   const mcapPath = resolveMcapPath(positional);
 
   // Bring up (or refresh) the runner with the bind-mount pointing at the host
@@ -159,25 +158,24 @@ function run(opts: Options, positional: string | undefined): void {
     stopStreamer(upEnv);
 
     // Forward only the env vars the streamer needs; everything else stays in
-    // the container's default environment.
+    // the container's default environment. FOXGLOVE_API_URL is passed only when
+    // set, letting the gateway fall back to its default otherwise.
     console.log("");
     console.log("Starting MCAP stream. Watch the device in your instance's web app.");
     console.log("Switch profiles mid-stream with: yarn netem-impair --profile <name>");
     console.log("");
-    compose(
-      upEnv,
+    const execArgs = [
       "exec",
-      "-e",
-      `FOXGLOVE_API_URL=${apiUrl}`,
       "-e",
       `FOXGLOVE_DEVICE_TOKEN=${deviceToken}`,
       "-e",
       `RUST_LOG=${opts.rustLog}`,
-      "runner",
-      STREAMER_BIN,
-      "--file",
-      "/data/recording.mcap",
-    );
+    ];
+    if (apiUrl != null && apiUrl !== "") {
+      execArgs.push("-e", `FOXGLOVE_API_URL=${apiUrl}`);
+    }
+    execArgs.push("runner", STREAMER_BIN, "--file", "/data/recording.mcap");
+    compose(upEnv, ...execArgs);
   } catch (err) {
     // Also the Ctrl-C path: the signal hits the child first, so execFileSync
     // throws here while the wrapper's own copy is still latched.
