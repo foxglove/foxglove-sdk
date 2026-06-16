@@ -255,21 +255,7 @@ def main() -> None:
         pipeline.start()
         logging.info("OAK pipeline running — Ctrl+C to stop")
 
-        # Static transform: published once is enough, since the camera does
-        # not move relative to its own optical frame.
-        tf_channel.log(
-            FrameTransforms(
-                transforms=[
-                    FrameTransform(
-                        timestamp=Timestamp.now(),
-                        parent_frame_id=CAMERA_FRAME,
-                        child_frame_id=OPTICAL_FRAME,
-                        translation=Vector3(x=0.0, y=0.0, z=0.0),
-                        rotation=OPTICAL_ROTATION,
-                    )
-                ]
-            )
-        )
+
 
         # --------------------------------------------------------------
         # Step 3: publish loop. tryGet() never blocks, so one loop can
@@ -278,6 +264,22 @@ def main() -> None:
         point_cloud_scale: float | None = None
         try:
             while pipeline.isRunning():
+
+                # Keep publishing the optical frame transform
+                tf_channel.log(
+                    FrameTransforms(
+                        transforms=[
+                            FrameTransform(
+                                timestamp=Timestamp.now(),
+                                parent_frame_id=CAMERA_FRAME,
+                                child_frame_id=OPTICAL_FRAME,
+                                translation=Vector3(x=0.0, y=0.0, z=0.0),
+                                rotation=OPTICAL_ROTATION,
+                            )
+                        ]
+                    )
+                )
+
                 frame = rgb_queue.tryGet()
                 if isinstance(frame, dai.ImgFrame):
                     bgr = frame.getCvFrame()
