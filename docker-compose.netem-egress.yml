@@ -1,20 +1,11 @@
-# Compose override that shapes the egress of a single gateway program with
-# netem: a `runner` container plus a `runner-netem` sidecar on its network
-# namespace. This is the common case — a device on a constrained uplink to the
-# SFU — with no per-link network, viewer container, or relay.
-#
-# `yarn stream-mcap` drives this to replay a recording; the same overlay shapes
-# any gateway program you exec into the runner. See the runbook in
-# rust/remote_access_tests/NETEM.md. Tune the impairment with NETEM_EGRESS, or
-# live with `yarn netem-impair`.
-#
-# The runner reaches whatever SFU FOXGLOVE_API_URL resolves: a deployed instance
-# (the recommended path — browser playback works out of the box), or a local
-# --dev LiveKit you bring up yourself.
+# Shapes the egress of a single gateway program with netem: a `runner` plus a
+# `runner-netem` sidecar in its network namespace. The common case — a device on
+# a constrained uplink — with no per-link network, viewer, or relay.
+# `yarn stream-mcap` drives it; the same overlay shapes any program exec'd into
+# the runner. Runbook: rust/remote_access_tests/NETEM.md.
 
 volumes:
-  # Persistent Rust build caches, shared with the other netem runner containers
-  # so builds stay incremental across `docker compose down`.
+  # Persistent Rust build caches so builds stay incremental across `down`.
   netem-cargo-registry:
   netem-cargo-git:
   netem-target:
@@ -28,10 +19,10 @@ services:
       - netem-cargo-registry:/usr/local/cargo/registry
       - netem-cargo-git:/usr/local/cargo/git
       - netem-target:/workspace/target-docker
-      # The mount target lives outside the `.:/workspace` repo bind on purpose —
-      # a target nested under /workspace makes Docker create a stray mountpoint
-      # stub in the repo root. `yarn stream-mcap` sets MCAP_HOST_PATH; with no
-      # override the empty fixture keeps the container coming up cleanly.
+      # Target lives outside the `.:/workspace` bind on purpose — nesting it
+      # under /workspace makes Docker leave a stray mountpoint stub in the repo
+      # root. `yarn stream-mcap` sets MCAP_HOST_PATH; the empty fixture is the
+      # no-override default so the container still comes up.
       - ${MCAP_HOST_PATH:-./scripts/fixtures/empty.mcap}:/data/recording.mcap:ro
     environment:
       CARGO_TARGET_DIR: /workspace/target-docker

@@ -28,20 +28,13 @@ def main() -> None:
     # Arguments are already a list from sys.argv — no shell parsing needed.
     netem_args = args
 
-    # Normalize `rate` so every invocation fully replaces the qdisc settings.
-    #
-    # `tc qdisc change` overwrites delay/loss/jitter unconditionally — they live
-    # in the base tc_netem_qopt struct. But `rate` rides a separate
-    # TCA_NETEM_RATE attribute that the kernel only re-applies when `rate` is on
-    # the command line; a bare change leaves any previous rate cap in place. That
-    # silently breaks A/B comparisons: e.g. `delay 100ms rate 2mbit` followed by
-    # `delay 0ms` leaves the 2mbit cap intact instead of clearing it. When the
-    # caller omits `rate`, append an effectively-uncapped value so "no rate" means
-    # "no rate limit". 1000gbit is deliberately far above the `rate 10gbit` HTB
-    # classes in netem_setup.py: in classful (per-link) mode that HTB ceiling
-    # bounds throughput regardless of this value, while in flat mode netem is the
-    # root qdisc with nothing above it, so this value itself must be high enough
-    # to never be the bottleneck.
+    # `rate` rides a separate netlink attribute the kernel only rewrites when
+    # it's on the command line, so a bare `tc qdisc change` leaves a prior rate
+    # cap in place (delay/loss/jitter are always overwritten). Append an
+    # effectively-uncapped rate when the caller omits one, so "no rate" means
+    # "no limit" — e.g. `delay 0ms` after a capped profile really clears it.
+    # 1000gbit sits well above netem_setup.py's HTB ceilings, so it's never the
+    # bottleneck in either flat or classful mode.
     if "rate" not in netem_args:
         netem_args = [*netem_args, "rate", "1000gbit"]
 

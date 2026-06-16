@@ -1,41 +1,28 @@
-// Replay a host-side MCAP file through a gateway program whose egress to the
-// SFU is shaped by netem, so the operator can experience Foxglove under a
-// constrained uplink. Uses docker-compose.netem-egress.yml (a `runner` plus a
-// `runner-netem` sidecar) — no per-link network or relay.
+// Replay a host-side MCAP through a gateway program whose egress to the SFU is
+// shaped by netem, to experience Foxglove under a constrained uplink. Uses
+// docker-compose.netem-egress.yml (a `runner` + `runner-netem` sidecar); the
+// full runbook is in rust/remote_access_tests/NETEM.md.
 //
 // Usage:
-//   FOXGLOVE_API_URL=https://api.foxglove.dev \
-//   FOXGLOVE_DEVICE_TOKEN=fox_dt_... \
-//   yarn stream-mcap /abs/path/to/heavy.mcap
+//   FOXGLOVE_API_URL=https://api.foxglove.dev FOXGLOVE_DEVICE_TOKEN=fox_dt_... \
+//     yarn stream-mcap /abs/path/to/heavy.mcap   # or set MCAP_HOST_PATH
 //
-//   # MCAP_HOST_PATH is an alternative to the positional path.
-//
-// Prerequisites:
-//   - FOXGLOVE_API_URL and FOXGLOVE_DEVICE_TOKEN set in the environment. A
-//     deployed instance is the simplest target (browser playback works out of
-//     the box); for a local SFU, run the app yourself and point the API URL at
-//     it. See rust/remote_access_tests/NETEM.md.
-//
-// What it does:
-//   1. Resolves and validates the MCAP path.
-//   2. Brings up the runner + netem sidecar with the file bind-mounted at
-//      /data/recording.mcap. Set NETEM_EGRESS for a non-default starting
-//      profile, or retune live with `yarn netem-impair` once it's up.
-//   3. Builds `example_remote_access_stream_mcap` in the container (the first
-//      build from a cold cache is slow — it compiles native WebRTC code; later
-//      builds are incremental via the persistent cargo volumes).
-//   4. Execs the streamer with the bind-mounted file.
-//
-// The stack is LEFT RUNNING when the streamer exits, so `yarn netem-impair`
-// keeps working and re-running is fast. Tear it down with:
-//   docker compose -f docker-compose.yaml -f docker-compose.netem-egress.yml down
+// It bind-mounts the file at /data/recording.mcap, brings up the runner +
+// sidecar, builds the streamer (slow on a cold cache — native WebRTC), and
+// execs it. Set NETEM_EGRESS for a non-default starting profile, or retune live
+// with `yarn netem-impair`. The stack is LEFT RUNNING on exit so retuning and
+// re-runs stay fast; tear down with:
+//   docker compose -f docker-compose.netem-egress.yml down
 
 import { program } from "commander";
 import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
-const COMPOSE_FILES = ["-f", "docker-compose.yaml", "-f", "docker-compose.netem-egress.yml"];
+// The egress overlay is self-contained — it does not need the base
+// docker-compose.yaml (its only service, `livekit`, isn't used here; the runner
+// reaches the SFU via FOXGLOVE_API_URL).
+const COMPOSE_FILES = ["-f", "docker-compose.netem-egress.yml"];
 const DOWN_HINT = `Tear down when done: docker compose ${COMPOSE_FILES.join(" ")} down`;
 const STREAMER_BIN = "/workspace/target-docker/release/example_remote_access_stream_mcap";
 
@@ -59,12 +46,10 @@ function wasSignaled(err: unknown): boolean {
   return status === 130 || status === 143 || signal === "SIGINT" || signal === "SIGTERM";
 }
 
-// Best-effort: stop any streamer still running inside the runner. The
-// streamer runs via `docker compose exec` and loops MCAP playback forever, so an
-// interrupted or hard-killed run can leave it alive — holding the gateway lease
-// and making the next run fail with "another gateway holds the lease". `pkill`
-// exits non-zero when nothing matches, and the exec fails if the stack is down;
-// both mean "no orphan to clean up", so swallow the error.
+// Best-effort: kill any streamer still looping inside the runner. An
+// interrupted or hard-killed run can leave one alive, holding the gateway lease
+// so the next run fails with "another gateway holds the lease". A non-zero exit
+// (nothing matched, or stack down) just means "nothing to clean up".
 function stopStreamer(env: NodeJS.ProcessEnv): void {
   try {
     execFileSync(
@@ -136,17 +121,12 @@ function run(opts: Options, positional: string | undefined): void {
   // also restarts `runner-netem` and resets its qdisc to NETEM_EGRESS.
   const upEnv: NodeJS.ProcessEnv = { ...process.env, MCAP_HOST_PATH: mcapPath };
 
-  // Registering SIGINT/SIGTERM handlers replaces Node's default action (die
-  // immediately), which would otherwise kill this wrapper mid-execFileSync and
-  // orphan the in-container streamer — it keeps looping playback and holds the
-  // gateway lease. The handler body itself almost never runs: while a compose
-  // call is blocking, the wrapper's signal is only latched. The child dies
-  // from its own copy of the signal, execFileSync throws, and the catch below
-  // handles the signaled exit — its process.exit ends the process before the
-  // latched signal is ever dispatched. The body only runs when a signal lands
-  // in one of the brief gaps between compose calls, so it cleans up quietly
-  // and exits with the conventional code. (A hard SIGKILL skips all of this,
-  // but the pre-launch stopStreamer() below covers that on the next run.)
+  // Without these handlers a Ctrl-C mid-`execFileSync` would kill this wrapper
+  // and orphan the looping in-container streamer, which keeps holding the
+  // gateway lease. In practice the child dies from its own copy of the signal
+  // and the catch below cleans up; this body only runs for a signal landing
+  // between compose calls. (SIGKILL skips all of this — the pre-launch
+  // stopStreamer() covers that next run.)
   const onSignal = (signal: NodeJS.Signals): void => {
     stopStreamer(upEnv);
     process.exit(signal === "SIGINT" ? 130 : 143);
@@ -182,7 +162,7 @@ function run(opts: Options, positional: string | undefined): void {
     // Forward only the env vars the streamer needs; everything else stays in
     // the container's default environment.
     console.log("");
-    console.log("Starting MCAP stream. Open http://localhost:8080 to view.");
+    console.log("Starting MCAP stream. Watch the device in your instance's web app.");
     console.log("Switch profiles mid-stream with: yarn netem-impair --profile <name>");
     console.log("");
     compose(
@@ -200,10 +180,8 @@ function run(opts: Options, positional: string | undefined): void {
       "/data/recording.mcap",
     );
   } catch (err) {
-    // Stop the streamer in case the exec died but left it running. This is
-    // also the Ctrl-C path: the signal reaches the child first, execFileSync
-    // throws, and this catch runs while the wrapper's own copy of the signal
-    // is still latched (see the onSignal comment above).
+    // Also the Ctrl-C path: the signal hits the child first, so execFileSync
+    // throws here while the wrapper's own copy is still latched.
     stopStreamer(upEnv);
     if (wasSignaled(err)) {
       console.log("\nStreamer stopped.");
@@ -211,17 +189,14 @@ function run(opts: Options, positional: string | undefined): void {
       const { status, signal } = err as { status?: number; signal?: string };
       process.exit(signal === "SIGTERM" || status === 143 ? 143 : 130);
     }
-    // A non-signal failure (cargo build error, `up --wait` healthcheck
-    // timeout, streamer panic) already printed its own error to the inherited
-    // stderr. Exit with the child's status so that error stays the last thing
-    // the operator sees, instead of throwing and dumping a node stack trace on
-    // top of it.
+    // A real failure (build error, healthcheck timeout, streamer panic) already
+    // printed to the inherited stderr; exit with the child's status so that
+    // stays the last thing on screen rather than a node stack trace.
     console.error("\n" + DOWN_HINT);
     process.exit((err as { status?: number }).status ?? 1);
   }
 
-  // The streamer normally loops forever; reaching here means it exited on its
-  // own, so make sure nothing lingers before pointing at teardown.
+  // The streamer loops forever, so reaching here means it exited on its own.
   stopStreamer(upEnv);
   console.log("");
   console.log(DOWN_HINT);

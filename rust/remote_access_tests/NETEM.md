@@ -150,12 +150,12 @@ $COMPOSE exec netem python3 /netem_impair.py delay 100ms loss 3%
 
 `yarn stream-mcap` replays a recording through a gateway program whose egress to
 the SFU is shaped by netem — the common "device on a constrained uplink" case,
-with no per-link network or relay. It uses `docker-compose.netem-egress.yml`: a
-`runner` container plus a `runner-netem` sidecar on its egress. (The same overlay
-shapes any gateway program — `docker compose -f docker-compose.yaml -f docker-compose.netem-egress.yml exec runner <cmd>`.)
+with no per-link network or relay. It uses `docker-compose.netem-egress.yml` — a
+`runner` plus a `runner-netem` sidecar that shapes the runner's egress; the same
+overlay shapes any gateway program you exec into it.
 
-Point it at a deployed instance — browser playback works out of the box, since
-the SFU's ICE candidates are publicly routable:
+Point it at a deployed instance — its SFU's ICE candidates are publicly
+routable, so a host browser can watch the device directly:
 
 ```sh
 FOXGLOVE_API_URL=https://api.foxglove.dev \
@@ -167,7 +167,9 @@ The device token must come from that instance, for a device with remote access
 enabled in an org whose plan includes it. For a local SFU instead, run the app
 and `--dev` LiveKit yourself and point `FOXGLOVE_API_URL` at them.
 
-Retune the uplink live without restarting (default profile is `starlink`):
+The stack starts shaped at the `starlink` profile (the `NETEM_EGRESS` default).
+Retune live without restarting — each call replaces all settings, and
+`netem-impair` needs an explicit profile or raw args:
 
 ```sh
 yarn netem-impair --profile severe     # delay 100ms 30ms loss 5% rate 2mbit
@@ -175,7 +177,7 @@ yarn netem-impair --profile pristine   # unshaped
 yarn netem-impair -- delay 500ms loss 10%
 ```
 
-Tear down with `docker compose -f docker-compose.yaml -f docker-compose.netem-egress.yml down`.
+Tear down with `docker compose -f docker-compose.netem-egress.yml down`.
 
 ## Scenarios
 
