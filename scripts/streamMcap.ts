@@ -124,7 +124,7 @@ function run(opts: Options, positional: string | undefined): void {
   // gateway lease. In practice the child dies from its own copy of the signal
   // and the catch below cleans up; this body only runs for a signal landing
   // between compose calls. (SIGKILL skips all of this — the pre-launch
-  // stopStreamer() covers that next run.)
+  // stopStreamer() covers that on the next run.)
   const onSignal = (signal: NodeJS.Signals): void => {
     stopStreamer(upEnv);
     process.exit(signal === "SIGINT" ? 130 : 143);
@@ -177,8 +177,8 @@ function run(opts: Options, positional: string | undefined): void {
     execArgs.push("runner", STREAMER_BIN, "--file", "/data/recording.mcap");
     compose(upEnv, ...execArgs);
   } catch (err) {
-    // Also the Ctrl-C path: the signal hits the child first, so execFileSync
-    // throws here while the wrapper's own copy is still latched.
+    // This is also the Ctrl-C path: the signal hits the child first, so
+    // execFileSync throws here while the wrapper's own copy is still latched.
     stopStreamer(upEnv);
     if (wasSignaled(err)) {
       console.log("\nStreamer stopped.");

@@ -162,8 +162,8 @@ FOXGLOVE_DEVICE_TOKEN=fox_dt_... \
 yarn stream-mcap /abs/path/to/heavy.mcap
 ```
 
-`FOXGLOVE_API_URL` defaults to `https://api.foxglove.dev`; set it to target
-another instance. The device token must come from whichever instance you use,
+`FOXGLOVE_API_URL` defaults to `https://api.foxglove.dev`; point it at another
+instance to override. The device token must come from whichever instance you use,
 for a device with remote access enabled in an org whose plan includes it. For a
 local SFU, run the app and `--dev` LiveKit yourself and point `FOXGLOVE_API_URL`
 at them.
