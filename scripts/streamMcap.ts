@@ -1,65 +1,42 @@
-// Stream a host-side MCAP file through the gateway under the per-link netem
-// stack so the operator can experience Foxglove under poor uplink conditions.
+// Replay a host-side MCAP file through a gateway program whose egress to the
+// SFU is shaped by netem, so the operator can experience Foxglove under a
+// constrained uplink. Uses docker-compose.netem-egress.yml (a `runner` plus a
+// `runner-netem` sidecar) — no per-link network or relay.
 //
 // Usage:
-//   MCAP_HOST_PATH=/abs/path/to/heavy.mcap \
-//   FOXGLOVE_API_URL=http://host.docker.internal:3000/api \
+//   FOXGLOVE_API_URL=https://api.foxglove.dev \
 //   FOXGLOVE_DEVICE_TOKEN=fox_dt_... \
-//   yarn stream-mcap
-//
-//   # Or pass the MCAP path positionally:
 //   yarn stream-mcap /abs/path/to/heavy.mcap
 //
+//   # MCAP_HOST_PATH is an alternative to the positional path.
+//
 // Prerequisites:
-//   - FOXGLOVE_API_URL and FOXGLOVE_DEVICE_TOKEN are set in the environment.
-//     The API URL must be reachable from inside `gateway-runner`, which only
-//     joins the `perlink` network — use `http://host.docker.internal:3000/api`,
-//     not `http://localhost:3000/api`.
-//   - The Foxglove app + web frontend are running on the host. See
-//     rust/remote_access_tests/NETEM.md for the full setup.
+//   - FOXGLOVE_API_URL and FOXGLOVE_DEVICE_TOKEN set in the environment. A
+//     deployed instance is the simplest target (browser playback works out of
+//     the box); for a local SFU, run the app yourself and point the API URL at
+//     it. See rust/remote_access_tests/NETEM.md.
 //
 // What it does:
-//   1. Resolves the MCAP path to an absolute path and validates it.
-//   2. Brings up (or refreshes) the per-link stack with MCAP_HOST_PATH exported
-//      so the file is bind-mounted at /data/recording.mcap inside
-//      gateway-runner. This invocation owns the stack — `yarn start-netem
-//      --perlink` from a separate terminal is NOT required, and any
-//      NETEM_GATEWAY_UPLOAD set in that other terminal would be wiped here
-//      when compose recreates the runner. To set a non-default starting
-//      profile, export NETEM_GATEWAY_UPLOAD before invoking this command, or
-//      use `yarn netem-impair --profile <name>` after the stack is up.
-//   3. Builds `example_remote_access_stream_mcap` inside the container.
-//      The first build from a cold cargo cache is slow (it compiles the SDK's
-//      remote-access stack, including native WebRTC code) — cargo's progress
-//      output streams to the terminal, so a quiet-looking wait means it's
-//      still compiling. Later builds are incremental via the persistent
-//      cargo volumes.
+//   1. Resolves and validates the MCAP path.
+//   2. Brings up the runner + netem sidecar with the file bind-mounted at
+//      /data/recording.mcap. Set NETEM_EGRESS for a non-default starting
+//      profile, or retune live with `yarn netem-impair` once it's up.
+//   3. Builds `example_remote_access_stream_mcap` in the container (the first
+//      build from a cold cache is slow — it compiles native WebRTC code; later
+//      builds are incremental via the persistent cargo volumes).
 //   4. Execs the streamer with the bind-mounted file.
 //
-// Unlike `yarn start-netem`, this script intentionally LEAVES THE STACK
-// RUNNING when the streamer exits, so `yarn netem-impair` keeps working and
-// re-running `yarn stream-mcap` is fast. Tear the stack down yourself when
-// done:
-//   docker compose -f docker-compose.yaml -f docker-compose.netem.yml \
-//     -f docker-compose.netem-livekit.yml --profile perlink down
+// The stack is LEFT RUNNING when the streamer exits, so `yarn netem-impair`
+// keeps working and re-running is fast. Tear it down with:
+//   docker compose -f docker-compose.yaml -f docker-compose.netem-egress.yml down
 
 import { program } from "commander";
 import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
-const COMPOSE_FILES = [
-  "-f",
-  "docker-compose.yaml",
-  "-f",
-  "docker-compose.netem.yml",
-  "-f",
-  "docker-compose.netem-livekit.yml",
-];
-const PROFILE_ARGS = ["--profile", "perlink"];
-const DOWN_HINT = `Tear down the stack when done: docker compose ${COMPOSE_FILES.join(
-  " ",
-)} --profile perlink down`;
+const COMPOSE_FILES = ["-f", "docker-compose.yaml", "-f", "docker-compose.netem-egress.yml"];
+const DOWN_HINT = `Tear down when done: docker compose ${COMPOSE_FILES.join(" ")} down`;
 const STREAMER_BIN = "/workspace/target-docker/release/example_remote_access_stream_mcap";
 
 interface Options {
@@ -82,7 +59,7 @@ function wasSignaled(err: unknown): boolean {
   return status === 130 || status === 143 || signal === "SIGINT" || signal === "SIGTERM";
 }
 
-// Best-effort: stop any streamer still running inside gateway-runner. The
+// Best-effort: stop any streamer still running inside the runner. The
 // streamer runs via `docker compose exec` and loops MCAP playback forever, so an
 // interrupted or hard-killed run can leave it alive — holding the gateway lease
 // and making the next run fail with "another gateway holds the lease". `pkill`
@@ -92,7 +69,7 @@ function stopStreamer(env: NodeJS.ProcessEnv): void {
   try {
     execFileSync(
       "docker",
-      ["compose", ...COMPOSE_FILES, "exec", "-T", "gateway-runner", "pkill", "-f", STREAMER_BIN],
+      ["compose", ...COMPOSE_FILES, "exec", "-T", "runner", "pkill", "-f", STREAMER_BIN],
       { stdio: "ignore", env },
     );
   } catch {
@@ -140,7 +117,7 @@ function requireEnv(name: string): string {
     console.error(
       `Error: ${name} is not set.\n` +
         "  Both FOXGLOVE_API_URL and FOXGLOVE_DEVICE_TOKEN are required; for example:\n" +
-        "    export FOXGLOVE_API_URL=http://host.docker.internal:3000/api\n" +
+        "    export FOXGLOVE_API_URL=https://api.foxglove.dev\n" +
         "    export FOXGLOVE_DEVICE_TOKEN=fox_dt_...",
     );
     process.exit(1);
@@ -153,11 +130,10 @@ function run(opts: Options, positional: string | undefined): void {
   const deviceToken = requireEnv("FOXGLOVE_DEVICE_TOKEN");
   const mcapPath = resolveMcapPath(positional);
 
-  // Bring up (or refresh) the stack with the bind-mount pointing at the host
-  // file. Compose expands ${MCAP_HOST_PATH} here; gateway-runner is recreated
-  // if any compose-visible config (including this mount source) changed since
-  // the last `up`. That recreation also restarts `gateway-netem`, resetting
-  // its qdisc to NETEM_GATEWAY_UPLOAD's value in *this* env.
+  // Bring up (or refresh) the runner with the bind-mount pointing at the host
+  // file. Compose expands ${MCAP_HOST_PATH} here; the runner is recreated if
+  // any compose-visible config (including this mount source) changed, which
+  // also restarts `runner-netem` and resets its qdisc to NETEM_EGRESS.
   const upEnv: NodeJS.ProcessEnv = { ...process.env, MCAP_HOST_PATH: mcapPath };
 
   // Registering SIGINT/SIGTERM handlers replaces Node's default action (die
@@ -183,14 +159,14 @@ function run(opts: Options, positional: string | undefined): void {
   // node stack trace.
   try {
     console.log(`Mounting ${mcapPath} -> /data/recording.mcap`);
-    compose(upEnv, ...PROFILE_ARGS, "up", "-d", "--wait");
+    compose(upEnv, "up", "-d", "--wait", "runner", "runner-netem");
 
     console.log("");
-    console.log("Building example_remote_access_stream_mcap inside gateway-runner...");
+    console.log("Building example_remote_access_stream_mcap inside the runner...");
     compose(
       upEnv,
       "exec",
-      "gateway-runner",
+      "runner",
       "cargo",
       "build",
       "-p",
@@ -218,7 +194,7 @@ function run(opts: Options, positional: string | undefined): void {
       `FOXGLOVE_DEVICE_TOKEN=${deviceToken}`,
       "-e",
       `RUST_LOG=${opts.rustLog}`,
-      "gateway-runner",
+      "runner",
       STREAMER_BIN,
       "--file",
       "/data/recording.mcap",
@@ -252,7 +228,7 @@ function run(opts: Options, positional: string | undefined): void {
 }
 
 program
-  .description("Stream a host-side MCAP file through the per-link netem stack's gateway-runner.")
+  .description("Replay a host-side MCAP file through a netem-shaped gateway egress.")
   .argument("[mcap-path]", "Absolute path to an MCAP file (overrides MCAP_HOST_PATH)")
   .option("--rust-log <value>", "RUST_LOG value passed into the container", "foxglove=debug,info")
   .action((positional: string | undefined, opts: Options) => {

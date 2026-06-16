@@ -1,6 +1,6 @@
-// Live-update the gateway-upload netem impairment without restarting the
-// per-link stack. Targets the `gateway-netem` sidecar, which shapes the
-// gateway-runner's egress to LiveKit (the "uplink" in the FLE-372 scenario).
+// Live-update the egress netem impairment on the running netem-egress stack
+// without restarting it. Targets the `runner-netem` sidecar, which shapes the
+// runner's egress to the SFU (the "uplink").
 //
 // Usage:
 //   yarn netem-impair --profile starlink
@@ -15,29 +15,15 @@
 // appends an uncapped rate when none is given; omitting `rate` here therefore
 // means "no rate limit", consistent with the other settings. So `pristine`
 // (`delay 0ms`) really does restore an unshaped link.
-//
-// Scope: this wrapper hardcodes the `gateway-netem` sidecar, so it only
-// retunes the gateway-upload link. The underlying `netem_impair.py` is not so
-// limited — exec'd into the LiveKit-side `netem` sidecar it updates all
-// download links at once (see "Changing impairment live" in
-// rust/remote_access_tests/NETEM.md). Per-link viewer/download retuning still
-// requires a stack restart with new NETEM_* env vars.
 
 import { program } from "commander";
 import { execFileSync } from "node:child_process";
 
-const COMPOSE_FILES = [
-  "-f",
-  "docker-compose.yaml",
-  "-f",
-  "docker-compose.netem.yml",
-  "-f",
-  "docker-compose.netem-livekit.yml",
-];
+const COMPOSE_FILES = ["-f", "docker-compose.yaml", "-f", "docker-compose.netem-egress.yml"];
 
-// Named profiles map to gateway-upload netem args. Presets mirror the
-// scenarios documented in rust/remote_access_tests/NETEM.md; `severe` is
-// tuned to saturate heavy-topic uplinks (FLE-372).
+// Named profiles map to egress netem args. Presets mirror the scenarios
+// documented in rust/remote_access_tests/NETEM.md; `severe` is tuned to
+// saturate heavy-topic uplinks.
 const PROFILES: Record<string, string> = {
   pristine: "delay 0ms",
   starlink: "delay 30ms 10ms loss 2% rate 15mbit",
@@ -102,22 +88,21 @@ function run(opts: Options, trailing: string[]): void {
   // python script with its own error already on stderr).
   let sidecarId = "";
   try {
-    sidecarId = composeCapture("ps", "gateway-netem", "-q").trim();
+    sidecarId = composeCapture("ps", "runner-netem", "-q").trim();
   } catch {
     // docker/compose unavailable or the query failed; treat as "not running".
   }
   if (sidecarId === "") {
     console.error(
-      "Error: the gateway-netem sidecar isn't running.\n" +
-        "  Start the per-link stack with `yarn stream-mcap` or\n" +
-        "  `yarn start-netem --perlink` first.",
+      "Error: the runner-netem sidecar isn't running.\n" +
+        "  Start it with `yarn stream-mcap` first.",
     );
     process.exit(1);
   }
 
-  console.log(`gateway upload: netem ${netemArgs.join(" ")}`);
+  console.log(`egress: netem ${netemArgs.join(" ")}`);
   try {
-    compose("exec", "gateway-netem", "python3", "/netem_impair.py", ...netemArgs);
+    compose("exec", "runner-netem", "python3", "/netem_impair.py", ...netemArgs);
   } catch (err) {
     // The sidecar is running, so the failure came from netem_impair.py itself
     // (most likely rejected args). Its stderr is already inherited, so just
@@ -127,7 +112,7 @@ function run(opts: Options, trailing: string[]): void {
 }
 
 program
-  .description("Live-update the gateway-upload netem impairment on the running per-link stack.")
+  .description("Live-update the egress netem impairment on the running netem-egress stack.")
   .option("-p, --profile <name>", `Named profile (one of: ${Object.keys(PROFILES).join(", ")})`)
   .argument("[netem-args...]", "Raw netem args (after `--`)")
   .action((trailing: string[], opts: Options) => {
