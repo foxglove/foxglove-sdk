@@ -658,6 +658,53 @@ async fn test_on_unsubscribe_called_after_disconnect() {
 }
 
 #[tokio::test]
+async fn test_on_client_unadvertise_called_after_disconnect() {
+    let recording_listener = Arc::new(RecordingServerListener::new());
+
+    let ctx = Context::new();
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            capabilities: Some(IndexSet::from([Capability::ClientPublish])),
+            supported_encodings: Some(IndexSet::from(["json".to_string()])),
+            listener: Some(recording_listener.clone()),
+            ..Default::default()
+        },
+    );
+
+    let addr = server
+        .start("127.0.0.1", 0)
+        .await
+        .expect("Failed to start server");
+
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
+    expect_recv!(client, ServerMessage::ServerInfo);
+
+    let advertise =
+        client::Advertise::new([client::advertise::Channel::builder(1, "/test", "json")
+            .build()
+            .unwrap()]);
+    client.send(&advertise).await.expect("Failed to send");
+
+    // Allow the server to process the advertisement
+    assert_eventually(|| recording_listener.client_advertise_len() == 1).await;
+    assert_eq!(recording_listener.client_unadvertise_len(), 0);
+
+    // Disconnect the client without unadvertising explicitly
+    client.close().await.expect("Failed to close");
+
+    // The unadvertisement is replayed to the listener on disconnect
+    assert_eventually(|| recording_listener.client_unadvertise_len() == 1).await;
+    let unadvertises = recording_listener.take_client_unadvertise();
+    assert_eq!(unadvertises.len(), 1);
+    assert_eq!(unadvertises[0].1.topic, "/test");
+
+    let _ = server.stop();
+}
+
+#[tokio::test]
 async fn test_on_unsubscribe_called_after_channel_removal() {
     let recording_listener = Arc::new(RecordingServerListener::new());
 
