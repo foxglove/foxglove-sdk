@@ -66,7 +66,7 @@ pub struct PySinkChannelFilter(pub Py<PyAny>);
 
 impl foxglove::SinkChannelFilter for PySinkChannelFilter {
     fn should_subscribe(&self, channel: &ChannelDescriptor) -> bool {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let handler = self.0.clone_ref(py);
             let descriptor = PyChannelDescriptor(channel.clone());
             let result = handler

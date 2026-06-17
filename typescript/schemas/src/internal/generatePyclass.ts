@@ -283,7 +283,7 @@ function generateMessageClass(schema: FoxgloveMessageSchema): string {
     ...schema.fields.map((field) => rustDoc(pythonParamDoc(field))),
     `///`,
     `/// See https://docs.foxglove.dev/docs/visualization/message-schemas/${constantToKebabCase(className)}`,
-    `#[pyclass(module = "foxglove.messages")]`,
+    `#[pyclass(from_py_object, module = "foxglove.messages")]`,
     `#[derive(Clone)]`,
     `pub(crate) struct ${className}(pub(crate) foxglove::messages::${className});`,
   ];
@@ -390,7 +390,7 @@ function generateEnumClass(schema: FoxgloveEnumSchema): string {
 
   const enumLines = [
     rustDoc(schema.description),
-    `#[pyclass(eq, eq_int, module = "foxglove.messages")]`,
+    `#[pyclass(eq, eq_int, from_py_object, module = "foxglove.messages")]`,
     `#[derive(PartialEq, Clone)]`,
     `pub(crate) enum ${name} {`,
     ...variants.map((v) => `    ${v.rustName} = ${v.value},`),
@@ -761,7 +761,7 @@ impl ${channelClass} {
         let context = context.map(|c| c.0.clone());
         // Release the GIL before calling build(), which may invoke
         // PySinkChannelFilter::should_subscribe() on registered sinks.
-        let base = py.allow_threads(move || {
+        let base = py.detach(move || {
             let builder = ChannelBuilder::new(&topic).metadata(metadata);
             let builder = if let Some(context) = context {
                 builder.context(&context)
@@ -793,7 +793,7 @@ impl ${channelClass} {
     ///
     /// Note that changes made to the returned dictionary will not be applied to
     /// the channel's metadata.
-    fn metadata(&self, py: Python<'_>) -> PyResult<PyObject> {
+    fn metadata(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
         let dict = PyDict::new(py);
         for (key, value) in self.0.metadata() {
             dict.set_item(key, value)?;
