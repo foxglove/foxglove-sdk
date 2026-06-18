@@ -103,7 +103,7 @@ bimap = "0.6.3"
 bytes.workspace = true
 chrono = { workspace = true, optional = true }
 delegate = "0.13.2"
-flume = { version = "0.11.1", optional = true }
+flume = { version = "0.12", optional = true }
 indexmap = "2"
 foxglove_derive = { version = "0.25.1", path = "../foxglove_derive", optional = true }
 futures = { version = "0.3.31", optional = true }
