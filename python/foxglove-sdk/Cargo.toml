@@ -34,7 +34,7 @@ workspace = true
 base64 = "0.22.1"
 bytes.workspace = true
 log.workspace = true
-prost-types = "0.13"
+prost-types.workspace = true
 pyo3 = { version = "0.29.0", features = ["abi3-py310"] }
 pyo3-log = "0.13.4"
 thiserror.workspace = true
