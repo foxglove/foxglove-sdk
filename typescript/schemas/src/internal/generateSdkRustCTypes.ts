@@ -24,7 +24,7 @@ function primitiveToRust(type: FoxglovePrimitive) {
 function formatComment(comment: string) {
   return comment
     .split("\n")
-    .map((line) => `/// ${line}`)
+    .map((line) => (line === "" ? "///" : `/// ${line}`))
     .join("\n");
 }
 

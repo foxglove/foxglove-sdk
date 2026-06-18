@@ -119,14 +119,185 @@
 #define FOXGLOVE_SERVER_CAPABILITY_PLAYBACK_CONTROL (1 << 6)
 #endif
 
+enum foxglove_error
+#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+  : uint8_t
+#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+ {
+  FOXGLOVE_ERROR_OK,
+  FOXGLOVE_ERROR_UNSPECIFIED,
+  FOXGLOVE_ERROR_VALUE_ERROR,
+  FOXGLOVE_ERROR_UTF8_ERROR,
+  FOXGLOVE_ERROR_SINK_CLOSED,
+  FOXGLOVE_ERROR_SCHEMA_REQUIRED,
+  FOXGLOVE_ERROR_MESSAGE_ENCODING_REQUIRED,
+  FOXGLOVE_ERROR_SERVER_ALREADY_STARTED,
+  FOXGLOVE_ERROR_BIND,
+  FOXGLOVE_ERROR_DUPLICATE_SERVICE,
+  FOXGLOVE_ERROR_MISSING_REQUEST_ENCODING,
+  FOXGLOVE_ERROR_SERVICES_NOT_SUPPORTED,
+  FOXGLOVE_ERROR_CONNECTION_GRAPH_NOT_SUPPORTED,
+  FOXGLOVE_ERROR_IO_ERROR,
+  FOXGLOVE_ERROR_MCAP_ERROR,
+  FOXGLOVE_ERROR_ENCODE_ERROR,
+  FOXGLOVE_ERROR_BUFFER_TOO_SHORT,
+  FOXGLOVE_ERROR_BASE64_DECODE_ERROR,
+  FOXGLOVE_ERROR_CONFIGURATION_ERROR,
+};
+#ifndef __cplusplus
+#if __STDC_VERSION__ >= 202311L
+typedef enum foxglove_error foxglove_error;
+#else
+typedef uint8_t foxglove_error;
+#endif // __STDC_VERSION__ >= 202311L
+#endif // __cplusplus
+
+enum foxglove_numeric_type
+#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+  : int32_t
+#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+ {
+  FOXGLOVE_NUMERIC_TYPE_UNKNOWN = 0,
+  FOXGLOVE_NUMERIC_TYPE_UINT8 = 1,
+  FOXGLOVE_NUMERIC_TYPE_INT8 = 2,
+  FOXGLOVE_NUMERIC_TYPE_UINT16 = 3,
+  FOXGLOVE_NUMERIC_TYPE_INT16 = 4,
+  FOXGLOVE_NUMERIC_TYPE_UINT32 = 5,
+  FOXGLOVE_NUMERIC_TYPE_INT32 = 6,
+  FOXGLOVE_NUMERIC_TYPE_FLOAT32 = 7,
+  FOXGLOVE_NUMERIC_TYPE_FLOAT64 = 8,
+};
+#ifndef __cplusplus
+#if __STDC_VERSION__ >= 202311L
+typedef enum foxglove_numeric_type foxglove_numeric_type;
+#else
+typedef int32_t foxglove_numeric_type;
+#endif // __STDC_VERSION__ >= 202311L
+#endif // __cplusplus
+
+enum foxglove_points_annotation_type
+#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+  : int32_t
+#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+ {
+  FOXGLOVE_POINTS_ANNOTATION_TYPE_UNKNOWN = 0,
+  FOXGLOVE_POINTS_ANNOTATION_TYPE_POINTS = 1,
+  FOXGLOVE_POINTS_ANNOTATION_TYPE_LINE_LOOP = 2,
+  FOXGLOVE_POINTS_ANNOTATION_TYPE_LINE_STRIP = 3,
+  FOXGLOVE_POINTS_ANNOTATION_TYPE_LINE_LIST = 4,
+};
+#ifndef __cplusplus
+#if __STDC_VERSION__ >= 202311L
+typedef enum foxglove_points_annotation_type foxglove_points_annotation_type;
+#else
+typedef int32_t foxglove_points_annotation_type;
+#endif // __STDC_VERSION__ >= 202311L
+#endif // __cplusplus
+
+enum foxglove_line_type
+#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+  : int32_t
+#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+ {
+  FOXGLOVE_LINE_TYPE_LINE_STRIP = 0,
+  FOXGLOVE_LINE_TYPE_LINE_LOOP = 1,
+  FOXGLOVE_LINE_TYPE_LINE_LIST = 2,
+};
+#ifndef __cplusplus
+#if __STDC_VERSION__ >= 202311L
+typedef enum foxglove_line_type foxglove_line_type;
+#else
+typedef int32_t foxglove_line_type;
+#endif // __STDC_VERSION__ >= 202311L
+#endif // __cplusplus
+
+enum foxglove_position_covariance_type
+#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+  : int32_t
+#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+ {
+  FOXGLOVE_POSITION_COVARIANCE_TYPE_UNKNOWN = 0,
+  FOXGLOVE_POSITION_COVARIANCE_TYPE_APPROXIMATED = 1,
+  FOXGLOVE_POSITION_COVARIANCE_TYPE_DIAGONAL_KNOWN = 2,
+  FOXGLOVE_POSITION_COVARIANCE_TYPE_KNOWN = 3,
+};
+#ifndef __cplusplus
+#if __STDC_VERSION__ >= 202311L
+typedef enum foxglove_position_covariance_type foxglove_position_covariance_type;
+#else
+typedef int32_t foxglove_position_covariance_type;
+#endif // __STDC_VERSION__ >= 202311L
+#endif // __cplusplus
+
+enum foxglove_log_level
+#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+  : int32_t
+#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+ {
+  FOXGLOVE_LOG_LEVEL_UNKNOWN = 0,
+  FOXGLOVE_LOG_LEVEL_DEBUG = 1,
+  FOXGLOVE_LOG_LEVEL_INFO = 2,
+  FOXGLOVE_LOG_LEVEL_WARNING = 3,
+  FOXGLOVE_LOG_LEVEL_ERROR = 4,
+  FOXGLOVE_LOG_LEVEL_FATAL = 5,
+};
+#ifndef __cplusplus
+#if __STDC_VERSION__ >= 202311L
+typedef enum foxglove_log_level foxglove_log_level;
+#else
+typedef int32_t foxglove_log_level;
+#endif // __STDC_VERSION__ >= 202311L
+#endif // __cplusplus
+
+enum foxglove_scene_entity_deletion_type
+#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+  : int32_t
+#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+ {
+  FOXGLOVE_SCENE_ENTITY_DELETION_TYPE_MATCHING_ID = 0,
+  FOXGLOVE_SCENE_ENTITY_DELETION_TYPE_ALL = 1,
+};
+#ifndef __cplusplus
+#if __STDC_VERSION__ >= 202311L
+typedef enum foxglove_scene_entity_deletion_type foxglove_scene_entity_deletion_type;
+#else
+typedef int32_t foxglove_scene_entity_deletion_type;
+#endif // __STDC_VERSION__ >= 202311L
+#endif // __cplusplus
+
+#if !defined(__wasm__)
+enum foxglove_mcap_compression
+#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+  : uint8_t
+#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+ {
+#if !defined(__wasm__)
+  FOXGLOVE_MCAP_COMPRESSION_NONE,
+#endif
+#if !defined(__wasm__)
+  FOXGLOVE_MCAP_COMPRESSION_ZSTD,
+#endif
+#if !defined(__wasm__)
+  FOXGLOVE_MCAP_COMPRESSION_LZ4,
+#endif
+};
+#ifndef __cplusplus
+#if __STDC_VERSION__ >= 202311L
+typedef enum foxglove_mcap_compression foxglove_mcap_compression;
+#else
+typedef uint8_t foxglove_mcap_compression;
+#endif // __STDC_VERSION__ >= 202311L
+#endif // __cplusplus
+#endif
+
 #if defined(FOXGLOVE_REMOTE_ACCESS)
 /**
  * The status of the remote access gateway connection.
  */
 enum foxglove_connection_status
-#ifdef __cplusplus
+#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
   : uint8_t
-#endif // __cplusplus
+#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
  {
 #if defined(FOXGLOVE_REMOTE_ACCESS)
   /**
@@ -154,139 +325,13 @@ enum foxglove_connection_status
 #endif
 };
 #ifndef __cplusplus
+#if __STDC_VERSION__ >= 202311L
+typedef enum foxglove_connection_status foxglove_connection_status;
+#else
 typedef uint8_t foxglove_connection_status;
+#endif // __STDC_VERSION__ >= 202311L
 #endif // __cplusplus
 #endif
-
-enum foxglove_error
-#ifdef __cplusplus
-  : uint8_t
-#endif // __cplusplus
- {
-  FOXGLOVE_ERROR_OK,
-  FOXGLOVE_ERROR_UNSPECIFIED,
-  FOXGLOVE_ERROR_VALUE_ERROR,
-  FOXGLOVE_ERROR_UTF8_ERROR,
-  FOXGLOVE_ERROR_SINK_CLOSED,
-  FOXGLOVE_ERROR_SCHEMA_REQUIRED,
-  FOXGLOVE_ERROR_MESSAGE_ENCODING_REQUIRED,
-  FOXGLOVE_ERROR_SERVER_ALREADY_STARTED,
-  FOXGLOVE_ERROR_BIND,
-  FOXGLOVE_ERROR_DUPLICATE_SERVICE,
-  FOXGLOVE_ERROR_MISSING_REQUEST_ENCODING,
-  FOXGLOVE_ERROR_SERVICES_NOT_SUPPORTED,
-  FOXGLOVE_ERROR_CONNECTION_GRAPH_NOT_SUPPORTED,
-  FOXGLOVE_ERROR_IO_ERROR,
-  FOXGLOVE_ERROR_MCAP_ERROR,
-  FOXGLOVE_ERROR_ENCODE_ERROR,
-  FOXGLOVE_ERROR_BUFFER_TOO_SHORT,
-  FOXGLOVE_ERROR_BASE64_DECODE_ERROR,
-  FOXGLOVE_ERROR_CONFIGURATION_ERROR,
-};
-#ifndef __cplusplus
-typedef uint8_t foxglove_error;
-#endif // __cplusplus
-
-enum foxglove_line_type
-#ifdef __cplusplus
-  : int32_t
-#endif // __cplusplus
- {
-  FOXGLOVE_LINE_TYPE_LINE_STRIP = 0,
-  FOXGLOVE_LINE_TYPE_LINE_LOOP = 1,
-  FOXGLOVE_LINE_TYPE_LINE_LIST = 2,
-};
-#ifndef __cplusplus
-typedef int32_t foxglove_line_type;
-#endif // __cplusplus
-
-enum foxglove_log_level
-#ifdef __cplusplus
-  : int32_t
-#endif // __cplusplus
- {
-  FOXGLOVE_LOG_LEVEL_UNKNOWN = 0,
-  FOXGLOVE_LOG_LEVEL_DEBUG = 1,
-  FOXGLOVE_LOG_LEVEL_INFO = 2,
-  FOXGLOVE_LOG_LEVEL_WARNING = 3,
-  FOXGLOVE_LOG_LEVEL_ERROR = 4,
-  FOXGLOVE_LOG_LEVEL_FATAL = 5,
-};
-#ifndef __cplusplus
-typedef int32_t foxglove_log_level;
-#endif // __cplusplus
-
-#if !defined(__wasm__)
-/**
- * Logging level for the Foxglove SDK.
- *
- * Used with `foxglove_set_log_level`.
- */
-enum foxglove_logging_level
-#ifdef __cplusplus
-  : uint8_t
-#endif // __cplusplus
- {
-#if !defined(__wasm__)
-  FOXGLOVE_LOGGING_LEVEL_OFF = 0,
-#endif
-#if !defined(__wasm__)
-  FOXGLOVE_LOGGING_LEVEL_DEBUG = 1,
-#endif
-#if !defined(__wasm__)
-  FOXGLOVE_LOGGING_LEVEL_INFO = 2,
-#endif
-#if !defined(__wasm__)
-  FOXGLOVE_LOGGING_LEVEL_WARN = 3,
-#endif
-#if !defined(__wasm__)
-  FOXGLOVE_LOGGING_LEVEL_ERROR = 4,
-#endif
-};
-#ifndef __cplusplus
-typedef uint8_t foxglove_logging_level;
-#endif // __cplusplus
-#endif
-
-#if !defined(__wasm__)
-enum foxglove_mcap_compression
-#ifdef __cplusplus
-  : uint8_t
-#endif // __cplusplus
- {
-#if !defined(__wasm__)
-  FOXGLOVE_MCAP_COMPRESSION_NONE,
-#endif
-#if !defined(__wasm__)
-  FOXGLOVE_MCAP_COMPRESSION_ZSTD,
-#endif
-#if !defined(__wasm__)
-  FOXGLOVE_MCAP_COMPRESSION_LZ4,
-#endif
-};
-#ifndef __cplusplus
-typedef uint8_t foxglove_mcap_compression;
-#endif // __cplusplus
-#endif
-
-enum foxglove_numeric_type
-#ifdef __cplusplus
-  : int32_t
-#endif // __cplusplus
- {
-  FOXGLOVE_NUMERIC_TYPE_UNKNOWN = 0,
-  FOXGLOVE_NUMERIC_TYPE_UINT8 = 1,
-  FOXGLOVE_NUMERIC_TYPE_INT8 = 2,
-  FOXGLOVE_NUMERIC_TYPE_UINT16 = 3,
-  FOXGLOVE_NUMERIC_TYPE_INT16 = 4,
-  FOXGLOVE_NUMERIC_TYPE_UINT32 = 5,
-  FOXGLOVE_NUMERIC_TYPE_INT32 = 6,
-  FOXGLOVE_NUMERIC_TYPE_FLOAT32 = 7,
-  FOXGLOVE_NUMERIC_TYPE_FLOAT64 = 8,
-};
-#ifndef __cplusplus
-typedef int32_t foxglove_numeric_type;
-#endif // __cplusplus
 
 #if !defined(__wasm__)
 /**
@@ -296,9 +341,9 @@ typedef int32_t foxglove_numeric_type;
  * representation is ambiguous.
  */
 enum foxglove_parameter_type
-#ifdef __cplusplus
+#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
   : uint8_t
-#endif // __cplusplus
+#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
  {
 #if !defined(__wasm__)
   /**
@@ -326,7 +371,11 @@ enum foxglove_parameter_type
 #endif
 };
 #ifndef __cplusplus
+#if __STDC_VERSION__ >= 202311L
+typedef enum foxglove_parameter_type foxglove_parameter_type;
+#else
 typedef uint8_t foxglove_parameter_type;
+#endif // __STDC_VERSION__ >= 202311L
 #endif // __cplusplus
 #endif
 
@@ -335,9 +384,9 @@ typedef uint8_t foxglove_parameter_type;
  * A variant discriminator for `FoxgloveParameterValueData`.
  */
 enum foxglove_parameter_value_tag
-#ifdef __cplusplus
+#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
   : uint8_t
-#endif // __cplusplus
+#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
  {
 #if !defined(__wasm__)
   FOXGLOVE_PARAMETER_VALUE_TAG_FLOAT64,
@@ -359,47 +408,22 @@ enum foxglove_parameter_value_tag
 #endif
 };
 #ifndef __cplusplus
+#if __STDC_VERSION__ >= 202311L
+typedef enum foxglove_parameter_value_tag foxglove_parameter_value_tag;
+#else
 typedef uint8_t foxglove_parameter_value_tag;
+#endif // __STDC_VERSION__ >= 202311L
 #endif // __cplusplus
 #endif
-
-enum foxglove_points_annotation_type
-#ifdef __cplusplus
-  : int32_t
-#endif // __cplusplus
- {
-  FOXGLOVE_POINTS_ANNOTATION_TYPE_UNKNOWN = 0,
-  FOXGLOVE_POINTS_ANNOTATION_TYPE_POINTS = 1,
-  FOXGLOVE_POINTS_ANNOTATION_TYPE_LINE_LOOP = 2,
-  FOXGLOVE_POINTS_ANNOTATION_TYPE_LINE_STRIP = 3,
-  FOXGLOVE_POINTS_ANNOTATION_TYPE_LINE_LIST = 4,
-};
-#ifndef __cplusplus
-typedef int32_t foxglove_points_annotation_type;
-#endif // __cplusplus
-
-enum foxglove_position_covariance_type
-#ifdef __cplusplus
-  : int32_t
-#endif // __cplusplus
- {
-  FOXGLOVE_POSITION_COVARIANCE_TYPE_UNKNOWN = 0,
-  FOXGLOVE_POSITION_COVARIANCE_TYPE_APPROXIMATED = 1,
-  FOXGLOVE_POSITION_COVARIANCE_TYPE_DIAGONAL_KNOWN = 2,
-  FOXGLOVE_POSITION_COVARIANCE_TYPE_KNOWN = 3,
-};
-#ifndef __cplusplus
-typedef int32_t foxglove_position_covariance_type;
-#endif // __cplusplus
 
 #if defined(FOXGLOVE_REMOTE_ACCESS)
 /**
  * The reliability policy for a channel's data delivery.
  */
 enum foxglove_reliability
-#ifdef __cplusplus
+#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
   : uint8_t
-#endif // __cplusplus
+#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
  {
 #if defined(FOXGLOVE_REMOTE_ACCESS)
   /**
@@ -415,30 +439,22 @@ enum foxglove_reliability
 #endif
 };
 #ifndef __cplusplus
+#if __STDC_VERSION__ >= 202311L
+typedef enum foxglove_reliability foxglove_reliability;
+#else
 typedef uint8_t foxglove_reliability;
+#endif // __STDC_VERSION__ >= 202311L
 #endif // __cplusplus
 #endif
-
-enum foxglove_scene_entity_deletion_type
-#ifdef __cplusplus
-  : int32_t
-#endif // __cplusplus
- {
-  FOXGLOVE_SCENE_ENTITY_DELETION_TYPE_MATCHING_ID = 0,
-  FOXGLOVE_SCENE_ENTITY_DELETION_TYPE_ALL = 1,
-};
-#ifndef __cplusplus
-typedef int32_t foxglove_scene_entity_deletion_type;
-#endif // __cplusplus
 
 #if !defined(__wasm__)
 /**
  * Level indicator for a server status message.
  */
 enum foxglove_server_status_level
-#ifdef __cplusplus
+#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
   : uint8_t
-#endif // __cplusplus
+#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
  {
 #if !defined(__wasm__)
   FOXGLOVE_SERVER_STATUS_LEVEL_INFO,
@@ -451,7 +467,47 @@ enum foxglove_server_status_level
 #endif
 };
 #ifndef __cplusplus
+#if __STDC_VERSION__ >= 202311L
+typedef enum foxglove_server_status_level foxglove_server_status_level;
+#else
 typedef uint8_t foxglove_server_status_level;
+#endif // __STDC_VERSION__ >= 202311L
+#endif // __cplusplus
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Logging level for the Foxglove SDK.
+ *
+ * Used with `foxglove_set_log_level`.
+ */
+enum foxglove_logging_level
+#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+  : uint8_t
+#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+ {
+#if !defined(__wasm__)
+  FOXGLOVE_LOGGING_LEVEL_OFF = 0,
+#endif
+#if !defined(__wasm__)
+  FOXGLOVE_LOGGING_LEVEL_DEBUG = 1,
+#endif
+#if !defined(__wasm__)
+  FOXGLOVE_LOGGING_LEVEL_INFO = 2,
+#endif
+#if !defined(__wasm__)
+  FOXGLOVE_LOGGING_LEVEL_WARN = 3,
+#endif
+#if !defined(__wasm__)
+  FOXGLOVE_LOGGING_LEVEL_ERROR = 4,
+#endif
+};
+#ifndef __cplusplus
+#if __STDC_VERSION__ >= 202311L
+typedef enum foxglove_logging_level foxglove_logging_level;
+#else
+typedef uint8_t foxglove_logging_level;
+#endif // __STDC_VERSION__ >= 202311L
 #endif // __cplusplus
 #endif
 
