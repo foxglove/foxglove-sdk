@@ -119,14 +119,185 @@
 #define FOXGLOVE_SERVER_CAPABILITY_PLAYBACK_CONTROL (1 << 6)
 #endif
 
+enum foxglove_error
+#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+  : uint8_t
+#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+ {
+  FOXGLOVE_ERROR_OK,
+  FOXGLOVE_ERROR_UNSPECIFIED,
+  FOXGLOVE_ERROR_VALUE_ERROR,
+  FOXGLOVE_ERROR_UTF8_ERROR,
+  FOXGLOVE_ERROR_SINK_CLOSED,
+  FOXGLOVE_ERROR_SCHEMA_REQUIRED,
+  FOXGLOVE_ERROR_MESSAGE_ENCODING_REQUIRED,
+  FOXGLOVE_ERROR_SERVER_ALREADY_STARTED,
+  FOXGLOVE_ERROR_BIND,
+  FOXGLOVE_ERROR_DUPLICATE_SERVICE,
+  FOXGLOVE_ERROR_MISSING_REQUEST_ENCODING,
+  FOXGLOVE_ERROR_SERVICES_NOT_SUPPORTED,
+  FOXGLOVE_ERROR_CONNECTION_GRAPH_NOT_SUPPORTED,
+  FOXGLOVE_ERROR_IO_ERROR,
+  FOXGLOVE_ERROR_MCAP_ERROR,
+  FOXGLOVE_ERROR_ENCODE_ERROR,
+  FOXGLOVE_ERROR_BUFFER_TOO_SHORT,
+  FOXGLOVE_ERROR_BASE64_DECODE_ERROR,
+  FOXGLOVE_ERROR_CONFIGURATION_ERROR,
+};
+#ifndef __cplusplus
+#if __STDC_VERSION__ >= 202311L
+typedef enum foxglove_error foxglove_error;
+#else
+typedef uint8_t foxglove_error;
+#endif // __STDC_VERSION__ >= 202311L
+#endif // __cplusplus
+
+enum foxglove_numeric_type
+#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+  : int32_t
+#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+ {
+  FOXGLOVE_NUMERIC_TYPE_UNKNOWN = 0,
+  FOXGLOVE_NUMERIC_TYPE_UINT8 = 1,
+  FOXGLOVE_NUMERIC_TYPE_INT8 = 2,
+  FOXGLOVE_NUMERIC_TYPE_UINT16 = 3,
+  FOXGLOVE_NUMERIC_TYPE_INT16 = 4,
+  FOXGLOVE_NUMERIC_TYPE_UINT32 = 5,
+  FOXGLOVE_NUMERIC_TYPE_INT32 = 6,
+  FOXGLOVE_NUMERIC_TYPE_FLOAT32 = 7,
+  FOXGLOVE_NUMERIC_TYPE_FLOAT64 = 8,
+};
+#ifndef __cplusplus
+#if __STDC_VERSION__ >= 202311L
+typedef enum foxglove_numeric_type foxglove_numeric_type;
+#else
+typedef int32_t foxglove_numeric_type;
+#endif // __STDC_VERSION__ >= 202311L
+#endif // __cplusplus
+
+enum foxglove_points_annotation_type
+#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+  : int32_t
+#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+ {
+  FOXGLOVE_POINTS_ANNOTATION_TYPE_UNKNOWN = 0,
+  FOXGLOVE_POINTS_ANNOTATION_TYPE_POINTS = 1,
+  FOXGLOVE_POINTS_ANNOTATION_TYPE_LINE_LOOP = 2,
+  FOXGLOVE_POINTS_ANNOTATION_TYPE_LINE_STRIP = 3,
+  FOXGLOVE_POINTS_ANNOTATION_TYPE_LINE_LIST = 4,
+};
+#ifndef __cplusplus
+#if __STDC_VERSION__ >= 202311L
+typedef enum foxglove_points_annotation_type foxglove_points_annotation_type;
+#else
+typedef int32_t foxglove_points_annotation_type;
+#endif // __STDC_VERSION__ >= 202311L
+#endif // __cplusplus
+
+enum foxglove_line_type
+#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+  : int32_t
+#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+ {
+  FOXGLOVE_LINE_TYPE_LINE_STRIP = 0,
+  FOXGLOVE_LINE_TYPE_LINE_LOOP = 1,
+  FOXGLOVE_LINE_TYPE_LINE_LIST = 2,
+};
+#ifndef __cplusplus
+#if __STDC_VERSION__ >= 202311L
+typedef enum foxglove_line_type foxglove_line_type;
+#else
+typedef int32_t foxglove_line_type;
+#endif // __STDC_VERSION__ >= 202311L
+#endif // __cplusplus
+
+enum foxglove_position_covariance_type
+#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+  : int32_t
+#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+ {
+  FOXGLOVE_POSITION_COVARIANCE_TYPE_UNKNOWN = 0,
+  FOXGLOVE_POSITION_COVARIANCE_TYPE_APPROXIMATED = 1,
+  FOXGLOVE_POSITION_COVARIANCE_TYPE_DIAGONAL_KNOWN = 2,
+  FOXGLOVE_POSITION_COVARIANCE_TYPE_KNOWN = 3,
+};
+#ifndef __cplusplus
+#if __STDC_VERSION__ >= 202311L
+typedef enum foxglove_position_covariance_type foxglove_position_covariance_type;
+#else
+typedef int32_t foxglove_position_covariance_type;
+#endif // __STDC_VERSION__ >= 202311L
+#endif // __cplusplus
+
+enum foxglove_log_level
+#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+  : int32_t
+#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+ {
+  FOXGLOVE_LOG_LEVEL_UNKNOWN = 0,
+  FOXGLOVE_LOG_LEVEL_DEBUG = 1,
+  FOXGLOVE_LOG_LEVEL_INFO = 2,
+  FOXGLOVE_LOG_LEVEL_WARNING = 3,
+  FOXGLOVE_LOG_LEVEL_ERROR = 4,
+  FOXGLOVE_LOG_LEVEL_FATAL = 5,
+};
+#ifndef __cplusplus
+#if __STDC_VERSION__ >= 202311L
+typedef enum foxglove_log_level foxglove_log_level;
+#else
+typedef int32_t foxglove_log_level;
+#endif // __STDC_VERSION__ >= 202311L
+#endif // __cplusplus
+
+enum foxglove_scene_entity_deletion_type
+#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+  : int32_t
+#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+ {
+  FOXGLOVE_SCENE_ENTITY_DELETION_TYPE_MATCHING_ID = 0,
+  FOXGLOVE_SCENE_ENTITY_DELETION_TYPE_ALL = 1,
+};
+#ifndef __cplusplus
+#if __STDC_VERSION__ >= 202311L
+typedef enum foxglove_scene_entity_deletion_type foxglove_scene_entity_deletion_type;
+#else
+typedef int32_t foxglove_scene_entity_deletion_type;
+#endif // __STDC_VERSION__ >= 202311L
+#endif // __cplusplus
+
+#if !defined(__wasm__)
+enum foxglove_mcap_compression
+#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+  : uint8_t
+#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+ {
+#if !defined(__wasm__)
+  FOXGLOVE_MCAP_COMPRESSION_NONE,
+#endif
+#if !defined(__wasm__)
+  FOXGLOVE_MCAP_COMPRESSION_ZSTD,
+#endif
+#if !defined(__wasm__)
+  FOXGLOVE_MCAP_COMPRESSION_LZ4,
+#endif
+};
+#ifndef __cplusplus
+#if __STDC_VERSION__ >= 202311L
+typedef enum foxglove_mcap_compression foxglove_mcap_compression;
+#else
+typedef uint8_t foxglove_mcap_compression;
+#endif // __STDC_VERSION__ >= 202311L
+#endif // __cplusplus
+#endif
+
 #if defined(FOXGLOVE_REMOTE_ACCESS)
 /**
  * The status of the remote access gateway connection.
  */
 enum foxglove_connection_status
-#ifdef __cplusplus
+#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
   : uint8_t
-#endif // __cplusplus
+#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
  {
 #if defined(FOXGLOVE_REMOTE_ACCESS)
   /**
@@ -154,139 +325,13 @@ enum foxglove_connection_status
 #endif
 };
 #ifndef __cplusplus
+#if __STDC_VERSION__ >= 202311L
+typedef enum foxglove_connection_status foxglove_connection_status;
+#else
 typedef uint8_t foxglove_connection_status;
+#endif // __STDC_VERSION__ >= 202311L
 #endif // __cplusplus
 #endif
-
-enum foxglove_error
-#ifdef __cplusplus
-  : uint8_t
-#endif // __cplusplus
- {
-  FOXGLOVE_ERROR_OK,
-  FOXGLOVE_ERROR_UNSPECIFIED,
-  FOXGLOVE_ERROR_VALUE_ERROR,
-  FOXGLOVE_ERROR_UTF8_ERROR,
-  FOXGLOVE_ERROR_SINK_CLOSED,
-  FOXGLOVE_ERROR_SCHEMA_REQUIRED,
-  FOXGLOVE_ERROR_MESSAGE_ENCODING_REQUIRED,
-  FOXGLOVE_ERROR_SERVER_ALREADY_STARTED,
-  FOXGLOVE_ERROR_BIND,
-  FOXGLOVE_ERROR_DUPLICATE_SERVICE,
-  FOXGLOVE_ERROR_MISSING_REQUEST_ENCODING,
-  FOXGLOVE_ERROR_SERVICES_NOT_SUPPORTED,
-  FOXGLOVE_ERROR_CONNECTION_GRAPH_NOT_SUPPORTED,
-  FOXGLOVE_ERROR_IO_ERROR,
-  FOXGLOVE_ERROR_MCAP_ERROR,
-  FOXGLOVE_ERROR_ENCODE_ERROR,
-  FOXGLOVE_ERROR_BUFFER_TOO_SHORT,
-  FOXGLOVE_ERROR_BASE64_DECODE_ERROR,
-  FOXGLOVE_ERROR_CONFIGURATION_ERROR,
-};
-#ifndef __cplusplus
-typedef uint8_t foxglove_error;
-#endif // __cplusplus
-
-enum foxglove_line_type
-#ifdef __cplusplus
-  : int32_t
-#endif // __cplusplus
- {
-  FOXGLOVE_LINE_TYPE_LINE_STRIP = 0,
-  FOXGLOVE_LINE_TYPE_LINE_LOOP = 1,
-  FOXGLOVE_LINE_TYPE_LINE_LIST = 2,
-};
-#ifndef __cplusplus
-typedef int32_t foxglove_line_type;
-#endif // __cplusplus
-
-enum foxglove_log_level
-#ifdef __cplusplus
-  : int32_t
-#endif // __cplusplus
- {
-  FOXGLOVE_LOG_LEVEL_UNKNOWN = 0,
-  FOXGLOVE_LOG_LEVEL_DEBUG = 1,
-  FOXGLOVE_LOG_LEVEL_INFO = 2,
-  FOXGLOVE_LOG_LEVEL_WARNING = 3,
-  FOXGLOVE_LOG_LEVEL_ERROR = 4,
-  FOXGLOVE_LOG_LEVEL_FATAL = 5,
-};
-#ifndef __cplusplus
-typedef int32_t foxglove_log_level;
-#endif // __cplusplus
-
-#if !defined(__wasm__)
-/**
- * Logging level for the Foxglove SDK.
- *
- * Used with `foxglove_set_log_level`.
- */
-enum foxglove_logging_level
-#ifdef __cplusplus
-  : uint8_t
-#endif // __cplusplus
- {
-#if !defined(__wasm__)
-  FOXGLOVE_LOGGING_LEVEL_OFF = 0,
-#endif
-#if !defined(__wasm__)
-  FOXGLOVE_LOGGING_LEVEL_DEBUG = 1,
-#endif
-#if !defined(__wasm__)
-  FOXGLOVE_LOGGING_LEVEL_INFO = 2,
-#endif
-#if !defined(__wasm__)
-  FOXGLOVE_LOGGING_LEVEL_WARN = 3,
-#endif
-#if !defined(__wasm__)
-  FOXGLOVE_LOGGING_LEVEL_ERROR = 4,
-#endif
-};
-#ifndef __cplusplus
-typedef uint8_t foxglove_logging_level;
-#endif // __cplusplus
-#endif
-
-#if !defined(__wasm__)
-enum foxglove_mcap_compression
-#ifdef __cplusplus
-  : uint8_t
-#endif // __cplusplus
- {
-#if !defined(__wasm__)
-  FOXGLOVE_MCAP_COMPRESSION_NONE,
-#endif
-#if !defined(__wasm__)
-  FOXGLOVE_MCAP_COMPRESSION_ZSTD,
-#endif
-#if !defined(__wasm__)
-  FOXGLOVE_MCAP_COMPRESSION_LZ4,
-#endif
-};
-#ifndef __cplusplus
-typedef uint8_t foxglove_mcap_compression;
-#endif // __cplusplus
-#endif
-
-enum foxglove_numeric_type
-#ifdef __cplusplus
-  : int32_t
-#endif // __cplusplus
- {
-  FOXGLOVE_NUMERIC_TYPE_UNKNOWN = 0,
-  FOXGLOVE_NUMERIC_TYPE_UINT8 = 1,
-  FOXGLOVE_NUMERIC_TYPE_INT8 = 2,
-  FOXGLOVE_NUMERIC_TYPE_UINT16 = 3,
-  FOXGLOVE_NUMERIC_TYPE_INT16 = 4,
-  FOXGLOVE_NUMERIC_TYPE_UINT32 = 5,
-  FOXGLOVE_NUMERIC_TYPE_INT32 = 6,
-  FOXGLOVE_NUMERIC_TYPE_FLOAT32 = 7,
-  FOXGLOVE_NUMERIC_TYPE_FLOAT64 = 8,
-};
-#ifndef __cplusplus
-typedef int32_t foxglove_numeric_type;
-#endif // __cplusplus
 
 #if !defined(__wasm__)
 /**
@@ -296,9 +341,9 @@ typedef int32_t foxglove_numeric_type;
  * representation is ambiguous.
  */
 enum foxglove_parameter_type
-#ifdef __cplusplus
+#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
   : uint8_t
-#endif // __cplusplus
+#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
  {
 #if !defined(__wasm__)
   /**
@@ -326,7 +371,11 @@ enum foxglove_parameter_type
 #endif
 };
 #ifndef __cplusplus
+#if __STDC_VERSION__ >= 202311L
+typedef enum foxglove_parameter_type foxglove_parameter_type;
+#else
 typedef uint8_t foxglove_parameter_type;
+#endif // __STDC_VERSION__ >= 202311L
 #endif // __cplusplus
 #endif
 
@@ -335,9 +384,9 @@ typedef uint8_t foxglove_parameter_type;
  * A variant discriminator for `FoxgloveParameterValueData`.
  */
 enum foxglove_parameter_value_tag
-#ifdef __cplusplus
+#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
   : uint8_t
-#endif // __cplusplus
+#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
  {
 #if !defined(__wasm__)
   FOXGLOVE_PARAMETER_VALUE_TAG_FLOAT64,
@@ -359,47 +408,22 @@ enum foxglove_parameter_value_tag
 #endif
 };
 #ifndef __cplusplus
+#if __STDC_VERSION__ >= 202311L
+typedef enum foxglove_parameter_value_tag foxglove_parameter_value_tag;
+#else
 typedef uint8_t foxglove_parameter_value_tag;
+#endif // __STDC_VERSION__ >= 202311L
 #endif // __cplusplus
 #endif
-
-enum foxglove_points_annotation_type
-#ifdef __cplusplus
-  : int32_t
-#endif // __cplusplus
- {
-  FOXGLOVE_POINTS_ANNOTATION_TYPE_UNKNOWN = 0,
-  FOXGLOVE_POINTS_ANNOTATION_TYPE_POINTS = 1,
-  FOXGLOVE_POINTS_ANNOTATION_TYPE_LINE_LOOP = 2,
-  FOXGLOVE_POINTS_ANNOTATION_TYPE_LINE_STRIP = 3,
-  FOXGLOVE_POINTS_ANNOTATION_TYPE_LINE_LIST = 4,
-};
-#ifndef __cplusplus
-typedef int32_t foxglove_points_annotation_type;
-#endif // __cplusplus
-
-enum foxglove_position_covariance_type
-#ifdef __cplusplus
-  : int32_t
-#endif // __cplusplus
- {
-  FOXGLOVE_POSITION_COVARIANCE_TYPE_UNKNOWN = 0,
-  FOXGLOVE_POSITION_COVARIANCE_TYPE_APPROXIMATED = 1,
-  FOXGLOVE_POSITION_COVARIANCE_TYPE_DIAGONAL_KNOWN = 2,
-  FOXGLOVE_POSITION_COVARIANCE_TYPE_KNOWN = 3,
-};
-#ifndef __cplusplus
-typedef int32_t foxglove_position_covariance_type;
-#endif // __cplusplus
 
 #if defined(FOXGLOVE_REMOTE_ACCESS)
 /**
  * The reliability policy for a channel's data delivery.
  */
 enum foxglove_reliability
-#ifdef __cplusplus
+#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
   : uint8_t
-#endif // __cplusplus
+#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
  {
 #if defined(FOXGLOVE_REMOTE_ACCESS)
   /**
@@ -415,30 +439,22 @@ enum foxglove_reliability
 #endif
 };
 #ifndef __cplusplus
+#if __STDC_VERSION__ >= 202311L
+typedef enum foxglove_reliability foxglove_reliability;
+#else
 typedef uint8_t foxglove_reliability;
+#endif // __STDC_VERSION__ >= 202311L
 #endif // __cplusplus
 #endif
-
-enum foxglove_scene_entity_deletion_type
-#ifdef __cplusplus
-  : int32_t
-#endif // __cplusplus
- {
-  FOXGLOVE_SCENE_ENTITY_DELETION_TYPE_MATCHING_ID = 0,
-  FOXGLOVE_SCENE_ENTITY_DELETION_TYPE_ALL = 1,
-};
-#ifndef __cplusplus
-typedef int32_t foxglove_scene_entity_deletion_type;
-#endif // __cplusplus
 
 #if !defined(__wasm__)
 /**
  * Level indicator for a server status message.
  */
 enum foxglove_server_status_level
-#ifdef __cplusplus
+#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
   : uint8_t
-#endif // __cplusplus
+#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
  {
 #if !defined(__wasm__)
   FOXGLOVE_SERVER_STATUS_LEVEL_INFO,
@@ -451,7 +467,47 @@ enum foxglove_server_status_level
 #endif
 };
 #ifndef __cplusplus
+#if __STDC_VERSION__ >= 202311L
+typedef enum foxglove_server_status_level foxglove_server_status_level;
+#else
 typedef uint8_t foxglove_server_status_level;
+#endif // __STDC_VERSION__ >= 202311L
+#endif // __cplusplus
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Logging level for the Foxglove SDK.
+ *
+ * Used with `foxglove_set_log_level`.
+ */
+enum foxglove_logging_level
+#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+  : uint8_t
+#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+ {
+#if !defined(__wasm__)
+  FOXGLOVE_LOGGING_LEVEL_OFF = 0,
+#endif
+#if !defined(__wasm__)
+  FOXGLOVE_LOGGING_LEVEL_DEBUG = 1,
+#endif
+#if !defined(__wasm__)
+  FOXGLOVE_LOGGING_LEVEL_INFO = 2,
+#endif
+#if !defined(__wasm__)
+  FOXGLOVE_LOGGING_LEVEL_WARN = 3,
+#endif
+#if !defined(__wasm__)
+  FOXGLOVE_LOGGING_LEVEL_ERROR = 4,
+#endif
+};
+#ifndef __cplusplus
+#if __STDC_VERSION__ >= 202311L
+typedef enum foxglove_logging_level foxglove_logging_level;
+#else
+typedef uint8_t foxglove_logging_level;
+#endif // __STDC_VERSION__ >= 202311L
 #endif // __cplusplus
 #endif
 
@@ -712,7 +768,7 @@ typedef struct foxglove_camera_calibration {
   uint32_t height;
   /**
    * Name of distortion model
-   *
+   * 
    * Supported parameters: `plumb_bob` (k1, k2, p1, p2, k3), `rational_polynomial` (k1, k2, p1, p2, k3, k4, k5, k6), and `kannala_brandt` (k1, k2, k3, k4), and `fisheye62` (k0, k1, k2, k3, p0, p1, crit_theta [optional]). `plumb_bob` and `rational_polynomial` models are based on the pinhole model [OpenCV's](https://docs.opencv.org/4.11.0/d9/d0c/group__calib3d.html) [pinhole camera model](https://en.wikipedia.org/wiki/Distortion_%28optics%29#Software_correction). The `kannala_brandt` model matches the [OpenvCV fisheye](https://docs.opencv.org/4.11.0/db/d58/group__calib3d__fisheye.html) model. The `fisheye62` model matches the [Project Aria's Fisheye62 Model](https://facebookresearch.github.io/projectaria_tools/docs/tech_insights/camera_intrinsic_models).
    */
   struct foxglove_string distortion_model;
@@ -723,54 +779,54 @@ typedef struct foxglove_camera_calibration {
   size_t d_count;
   /**
    * Intrinsic camera matrix (3x3 row-major matrix)
-   *
+   * 
    * A 3x3 row-major matrix for the raw (distorted) image.
-   *
+   * 
    * Projects 3D points in the camera coordinate frame to 2D pixel coordinates using the focal lengths (fx, fy) and principal point (cx, cy).
-   *
+   * 
    * ```
    *     [fx  0 cx]
    * K = [ 0 fy cy]
    *     [ 0  0  1]
    * ```
-   *
+   * 
    * **Uncalibrated cameras:** Following ROS conventions for [CameraInfo](https://docs.ros.org/en/noetic/api/sensor_msgs/html/msg/CameraInfo.html), Foxglove also treats K[0] == 0.0 as indicating an uncalibrated camera, and calibration data will be ignored.
-   *
+   * 
    */
   double k[9];
   /**
    * Rectification matrix (stereo cameras only, 3x3 row-major matrix)
-   *
+   * 
    * A rotation matrix aligning the camera coordinate system to the ideal stereo image plane so that epipolar lines in both stereo images are parallel.
    */
   double r[9];
   /**
    * Projection/camera matrix (3x4 row-major matrix)
-   *
+   * 
    * ```
    *     [fx'  0  cx' Tx]
    * P = [ 0  fy' cy' Ty]
    *     [ 0   0   1   0]
    * ```
-   *
+   * 
    * By convention, this matrix specifies the intrinsic (camera) matrix of the processed (rectified) image. That is, the left 3x3 portion is the normal camera intrinsic matrix for the rectified image.
-   *
+   * 
    * It projects 3D points in the camera coordinate frame to 2D pixel coordinates using the focal lengths (fx', fy') and principal point (cx', cy') - these may differ from the values in K.
-   *
+   * 
    * For monocular cameras, Tx = Ty = 0. Normally, monocular cameras will also have R = the identity and P[1:3,1:3] = K.
-   *
+   * 
    * Foxglove currently does not support displaying stereo images, so Tx and Ty are ignored.
-   *
+   * 
    * Given a 3D point [X Y Z]', the projection (x, y) of the point onto the rectified image is given by:
-   *
+   * 
    * ```
    * [u v w]' = P * [X Y Z 1]'
    *        x = u / w
    *        y = v / w
    * ```
-   *
+   * 
    * This holds for both images of a stereo pair.
-   *
+   * 
    */
   double p[12];
 } foxglove_camera_calibration;
@@ -849,7 +905,7 @@ typedef struct foxglove_compressed_audio {
   const struct foxglove_timestamp *timestamp;
   /**
    * Compressed audio data. Packet duration is determined by the codec during encoding. Messages should generally contain approximately 20 ms of audio.
-   *
+   * 
    * - `opus`
    *   - Each message must contain a complete raw Opus packet, without Ogg, WebM, or other container framing, as described in [RFC 6716 section 3](https://datatracker.ietf.org/doc/html/rfc6716#section-3).
    *   - Each packet contains all information necessary for decoding, and may be decoded at any sample rate supported by Opus (8, 12, 16, 24, or 48 kHz).
@@ -885,7 +941,7 @@ typedef struct foxglove_compressed_image {
   size_t data_len;
   /**
    * Image format
-   *
+   * 
    * Supported values: `jpeg`, `png`, `webp`, `avif`
    */
   struct foxglove_string format;
@@ -914,7 +970,7 @@ typedef struct foxglove_compressed_point_cloud {
   size_t data_len;
   /**
    * Point cloud compression format.
-   *
+   * 
    * Supported values: `draco` ([Google Draco](https://google.github.io/draco/)).
    */
   struct foxglove_string format;
@@ -930,30 +986,30 @@ typedef struct foxglove_compressed_video {
   const struct foxglove_timestamp *timestamp;
   /**
    * Frame of reference for the video.
-   *
+   * 
    * The origin of the frame is the optical center of the camera. +x points to the right in the video, +y points down, and +z points into the plane of the video.
    */
   struct foxglove_string frame_id;
   /**
    * Compressed video frame data.
-   *
+   * 
    * For packet-based video codecs this data must begin and end on packet boundaries (no partial packets), and must contain enough video packets to decode exactly one image (either a keyframe or delta frame). Note: Foxglove does not support video streams that include B frames because they require lookahead.
-   *
+   * 
    * Specifically, the requirements for different `format` values are:
-   *
+   * 
    * - `h264`
    *   - Use Annex B formatted data
    *   - Each CompressedVideo message should contain enough NAL units to decode exactly one video frame
    *   - Each message containing a key frame (IDR) must also include a SPS NAL unit
-   *
+   * 
    * - `h265` (HEVC)
    *   - Use Annex B formatted data
    *   - Each CompressedVideo message should contain enough NAL units to decode exactly one video frame
    *   - Each message containing a key frame (IRAP) must also include relevant VPS/SPS/PPS NAL units
-   *
+   * 
    * - `vp9`
    *   - Each CompressedVideo message should contain exactly one video frame
-   *
+   * 
    * - `av1`
    *   - Use the "Low overhead bitstream format" (section 5.2)
    *   - Each CompressedVideo message should contain enough OBUs to decode exactly one video frame
@@ -963,9 +1019,9 @@ typedef struct foxglove_compressed_video {
   size_t data_len;
   /**
    * Video format.
-   *
+   * 
    * Supported values: `h264`, `h265`, `vp9`, `av1`.
-   *
+   * 
    * Note: compressed video support is subject to hardware limitations and patent licensing, so not all encodings may be supported on all platforms. See more about [H.265 support](https://caniuse.com/hevc), [VP9 support](https://caniuse.com/webm), and [AV1 support](https://caniuse.com/av1).
    */
   struct foxglove_string format;
@@ -1017,11 +1073,11 @@ typedef struct foxglove_cube_primitive {
 
 /**
  * A transform between two reference frames in 3D space. The transform defines the position and orientation of a child frame within a parent frame. Translation moves the origin of the child frame relative to the parent origin. The rotation changes the orientation of the child frame around its origin.
- *
+ * 
  * Examples:
- *
+ * 
  * - With translation (x=1, y=0, z=0) and identity rotation (x=0, y=0, z=0, w=1), a point at (x=0, y=0, z=0) in the child frame maps to (x=1, y=0, z=0) in the parent frame.
- *
+ * 
  * - With translation (x=1, y=2, z=0) and a 90-degree rotation around the z-axis (x=0, y=0, z=0.707, w=0.707), a point at (x=1, y=0, z=0) in the child frame maps to (x=-1, y=3, z=0) in the parent frame.
  */
 typedef struct foxglove_frame_transform {
@@ -1135,20 +1191,20 @@ typedef struct foxglove_grid {
   /**
    * Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
    * To enable RGB color visualization in the [3D panel](https://docs.foxglove.dev/docs/visualization/panels/3d#rgba-separate-fields-color-mode), include **all four** of these fields in your `fields` array:
-   *
+   * 
    * - `red` - Red channel value
    * - `green` - Green channel value
    * - `blue` - Blue channel value
    * - `alpha` - Alpha/transparency channel value
-   *
+   * 
    * **note:** All four fields must be present with these exact names for RGB visualization to work. The order of fields doesn't matter, but the names must match exactly.
-   *
+   * 
    * Recommended type: `UINT8` (0-255 range) for standard 8-bit color channels.
-   *
+   * 
    * Example field definitions:
-   *
+   * 
    * **RGB color only:**
-   *
+   * 
    * ```javascript
    * fields: [
    *  { name: "red", offset: 0, type: NumericType.UINT8 },
@@ -1157,9 +1213,9 @@ typedef struct foxglove_grid {
    *  { name: "alpha", offset: 3, type: NumericType.UINT8 },
    * ];
    * ```
-   *
+   * 
    * **RGB color with elevation (for 3D terrain visualization):**
-   *
+   * 
    * ```javascript
    * fields: [
    *  { name: "red", offset: 0, type: NumericType.UINT8 },
@@ -1169,7 +1225,7 @@ typedef struct foxglove_grid {
    *  { name: "elevation", offset: 4, type: NumericType.FLOAT32 },
    * ];
    * ```
-   *
+   * 
    * When these fields are present, the 3D panel will offer additional "Color Mode" options including "RGBA (separate fields)" to visualize the RGB data directly. For elevation visualization, set the "Elevation field" to your elevation layer name.
    */
   const struct foxglove_packed_element_field *fields;
@@ -1177,7 +1233,7 @@ typedef struct foxglove_grid {
   /**
    * Grid cell data, interpreted using `fields`, in row-major (y-major) order.
    * For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
-   *
+   * 
    * - y = i / row_stride * cell_size.y
    * - x = (i % row_stride) / cell_stride * cell_size.x
    */
@@ -1233,7 +1289,7 @@ typedef struct foxglove_voxel_grid {
   /**
    * Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.
    * For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
-   *
+   * 
    * - z = i / slice_stride * cell_size.z
    * - y = (i % slice_stride) / row_stride * cell_size.y
    * - x = (i % row_stride) / cell_stride * cell_size.x
@@ -1481,7 +1537,7 @@ typedef struct foxglove_line_primitive {
   size_t colors_count;
   /**
    * Indices into the `points` and `colors` attribute arrays, which can be used to avoid duplicating attribute data.
-   *
+   * 
    * If omitted or empty, indexing will not be used. This default behavior is equivalent to specifying [0, 1, ..., N-1] for the indices (where N is the number of `points` provided).
    */
   const uint32_t *indices;
@@ -1657,7 +1713,7 @@ typedef struct foxglove_triangle_list_primitive {
   size_t colors_count;
   /**
    * Indices into the `points` and `colors` attribute arrays, which can be used to avoid duplicating attribute data.
-   *
+   * 
    * If omitted or empty, indexing will not be used. This default behavior is equivalent to specifying [0, 1, ..., N-1] for the indices (where N is the number of `points` provided).
    */
   const uint32_t *indices;
@@ -2003,9 +2059,9 @@ typedef struct foxglove_raw_image {
   uint32_t step;
   /**
    * Raw image data.
-   *
+   * 
    * For each `encoding` value, the `data` field contains image pixel data serialized as follows:
-   *
+   * 
    * - `yuv422` or `uyvy`:
    *   - Pixel colors are decomposed into [Y'UV](https://en.wikipedia.org/wiki/Y%E2%80%B2UV) channels.
    *   - Pixel channel values are represented as unsigned 8-bit integers.
@@ -2064,7 +2120,7 @@ typedef struct foxglove_raw_image {
    * - `mono16` or `16UC1`:
    *   - Pixel brightness is represented as 16-bit unsigned little-endian integers. Rendering of these values is controlled in [Image panel color mode settings](https://docs.foxglove.dev/docs/visualization/panels/image#general).
    *   - `step` must be greater than or equal to `width` * 2.
-   *
+   * 
    */
   const unsigned char *data;
   size_t data_len;
