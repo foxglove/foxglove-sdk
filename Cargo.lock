@@ -1422,15 +1422,11 @@ dependencies = [
  "bytes",
  "foxglove 0.25.1",
  "log",
- "prost-types 0.13.5",
  "pyo3",
  "pyo3-log",
  "thiserror 2.0.14",
  "tokio",
- "tokio-tungstenite 0.28.0",
- "tokio-util",
  "tracing",
- "walkdir",
 ]
 
 [[package]]
