@@ -1,5 +1,5 @@
 //! Provides an identifier for the library used as a log source.
-use std::sync::{LazyLock, OnceLock};
+use std::sync::{LazyLock, OnceLock, RwLock};
 
 static COMPILED_SDK_LANGUAGE: LazyLock<String> = LazyLock::new(|| {
     option_env!("FOXGLOVE_SDK_LANGUAGE")
@@ -8,7 +8,8 @@ static COMPILED_SDK_LANGUAGE: LazyLock<String> = LazyLock::new(|| {
 });
 
 static CELL: OnceLock<&'static str> = OnceLock::new();
-static LIBRARY_IDENTIFIER_PREFIX: OnceLock<String> = OnceLock::new();
+static LIBRARY_IDENTIFIER_PREFIX: LazyLock<RwLock<Option<String>>> =
+    LazyLock::new(|| RwLock::new(None));
 
 /// Sets the language of the SDK. This should be called as soon as possible by an implementation,
 /// otherwise the compiled language will be used when reporting the library version.
@@ -19,11 +20,13 @@ pub fn set_sdk_language(language: &'static str) {
 /// Sets a product token to prepend to this library's identifier.
 ///
 /// This should be called as soon as possible by wrappers that identify a product built on top of
-/// the SDK.
-///
-/// Only the first call to this function has an effect.
+/// the SDK. Calling this function updates the token used for subsequently generated identifiers.
 pub fn set_library_identifier_prefix(prefix: impl Into<String>) {
-    LIBRARY_IDENTIFIER_PREFIX.get_or_init(|| prefix.into());
+    let prefix = prefix.into();
+    let prefix = (!prefix.is_empty()).then_some(prefix);
+    *LIBRARY_IDENTIFIER_PREFIX
+        .write()
+        .expect("library identifier prefix lock poisoned") = prefix;
 }
 
 /// Get the language of the SDK.
@@ -41,11 +44,10 @@ pub(crate) fn get_sdk_version() -> &'static str {
 /// and wire-visible metadata.
 /// Note that `set_sdk_language` must be called before this for it to have an effect.
 pub(crate) fn get_library_identifier() -> String {
-    format_library_identifier(
-        LIBRARY_IDENTIFIER_PREFIX.get().map(String::as_str),
-        get_sdk_language(),
-        get_sdk_version(),
-    )
+    let prefix = LIBRARY_IDENTIFIER_PREFIX
+        .read()
+        .expect("library identifier prefix lock poisoned");
+    format_library_identifier(prefix.as_deref(), get_sdk_language(), get_sdk_version())
 }
 
 fn format_library_identifier(
