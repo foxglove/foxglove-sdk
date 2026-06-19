@@ -3205,6 +3205,13 @@ extern "C" {
 void foxglove_internal_register_cpp_wrapper(void);
 #endif
 
+#if !defined(__wasm__)
+/**
+ * For use by wrappers built on top of the SDK. Prepends a product token to library identifiers.
+ */
+void foxglove_internal_set_library_identifier_prefix(struct foxglove_string prefix);
+#endif
+
 /**
  * Convert a `FoxgloveError` code to a C string.
  */

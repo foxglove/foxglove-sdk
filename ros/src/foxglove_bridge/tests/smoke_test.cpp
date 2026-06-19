@@ -1,6 +1,7 @@
 #include <chrono>
 #include <filesystem>
 #include <future>
+#include <string>
 #include <thread>
 
 #include <gtest/gtest.h>
@@ -187,7 +188,22 @@ std::shared_ptr<T> deserializeMsg(const rcl_serialized_message_t* msg) {
 
 TEST(SmokeTest, testConnection) {
   foxglove::test::Client<websocketpp::config::asio_client> wsClient;
-  EXPECT_EQ(std::future_status::ready, wsClient.connect(URI).wait_for(DEFAULT_TIMEOUT));
+  auto promise = std::make_shared<std::promise<nlohmann::json>>();
+  auto serverInfoFuture = promise->get_future();
+  wsClient.setTextMessageHandler([promise = std::move(promise)](const std::string& payload) {
+    const auto msg = nlohmann::json::parse(payload);
+    if (msg.value("op", "") == "serverInfo") {
+      promise->set_value(msg);
+    }
+  });
+
+  ASSERT_EQ(std::future_status::ready, wsClient.connect(URI).wait_for(DEFAULT_TIMEOUT));
+  ASSERT_EQ(std::future_status::ready, serverInfoFuture.wait_for(DEFAULT_TIMEOUT));
+
+  const auto serverInfo = serverInfoFuture.get();
+  const auto library = serverInfo["metadata"]["fg-library"].get<std::string>();
+  EXPECT_EQ(library.rfind("foxglove-bridge/", 0), 0);
+  EXPECT_NE(library.find(" foxglove-sdk-cpp/"), std::string::npos);
 }
 
 TEST(SmokeTest, testConnectionGraphSubscribeUnsubscribe) {

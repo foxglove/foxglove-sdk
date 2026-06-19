@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <string_view>
 
 namespace foxglove {
 
@@ -41,5 +42,13 @@ enum class LogLevel : uint8_t {
 ///
 /// @note This is thread-safe, but only the first call to this function will have an effect.
 void setLogLevel(LogLevel level);
+
+namespace internal {
+
+/// @cond foxglove_internal
+void setLibraryIdentifierPrefix(std::string_view prefix);
+/// @endcond
+
+}  // namespace internal
 
 }  // namespace foxglove
