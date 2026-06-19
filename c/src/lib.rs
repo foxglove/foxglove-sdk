@@ -259,9 +259,11 @@ pub extern "C" fn foxglove_internal_register_cpp_wrapper() {
 #[cfg(not(target_family = "wasm"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_internal_set_library_identifier_prefix(prefix: FoxgloveString) {
-    if let Ok(prefix) = unsafe { prefix.as_utf8_str() } {
-        foxglove::library_version::set_library_identifier_prefix(prefix.to_string());
-    }
+    let Ok(prefix) = (unsafe { prefix.as_utf8_str() }) else {
+        tracing::warn!("Ignoring invalid UTF-8 library identifier prefix");
+        return;
+    };
+    foxglove::library_version::set_library_identifier_prefix(prefix.to_string());
 }
 
 #[repr(u8)]

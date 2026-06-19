@@ -20,6 +20,8 @@ pub fn set_sdk_language(language: &'static str) {
 ///
 /// This should be called as soon as possible by wrappers that identify a product built on top of
 /// the SDK.
+///
+/// Only the first call to this function has an effect.
 pub fn set_library_identifier_prefix(prefix: impl Into<String>) {
     LIBRARY_IDENTIFIER_PREFIX.get_or_init(|| prefix.into());
 }
