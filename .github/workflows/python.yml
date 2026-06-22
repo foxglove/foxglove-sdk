@@ -53,6 +53,25 @@ jobs:
 
       - run: make -f Container.mk test-python
 
+  test-sdk-ray:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - name: Install common dependencies
+        uses: ./.github/actions/common-deps
+
+      - run: corepack enable
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: yarn
+
+      # Exercises the optional `ray` integration in isolation. Kept out of `test-python` because
+      # the ray dependencies are heavy and pull in numpy stubs that break our mypy config.
+      - run: make -f Container.mk test-python-ray
+
   playground-wasm:
     runs-on: ubuntu-latest
     needs: [sdist]
@@ -571,7 +590,7 @@ jobs:
   # individual matrix jobs.
   python-status:
     name: python-status
-    needs: [changes, lint, lint-and-test-sdk, schemas, sdist, linux, musllinux, windows, macos, playground-wasm, playground, test-sdk-examples]
+    needs: [changes, lint, lint-and-test-sdk, test-sdk-ray, schemas, sdist, linux, musllinux, windows, macos, playground-wasm, playground, test-sdk-examples]
     if: always()
     runs-on: ubuntu-latest
     steps:

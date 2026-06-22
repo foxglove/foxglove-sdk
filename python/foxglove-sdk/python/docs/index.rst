@@ -105,6 +105,12 @@ Notebook integration
 
 See :doc:`../notebook/index` for details on using Foxglove with Python/Jupyter notebooks.
 
+Ray Data integration
+^^^^^^^^^^^^^^^^^^^^
+
+See :doc:`../ray/index` for details on loading Foxglove recordings as a `Ray Data
+<https://docs.ray.io/en/latest/data/data.html>`__ dataset.
+
 Playground
 ^^^^^^^^^^
 
@@ -125,3 +131,4 @@ Table of contents
    examples
    api/index
    notebook/index
+   ray/index
