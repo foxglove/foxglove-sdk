@@ -27,7 +27,7 @@ jobs:
     runs-on: ${{ matrix.runs-on }}
     name: "build-cpp-dist (${{ matrix.arch }})"
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - run: |
           sudo apt-get update
@@ -67,7 +67,7 @@ jobs:
     runs-on: ${{ matrix.runs-on }}
     name: "build-deb (${{ matrix.distro }}, ${{ matrix.arch }}, ${{ matrix.package }})"
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Download C++ SDK artifact
         if: ${{ inputs.use_branch_sdk && matrix.package == 'bridge' }}
@@ -101,7 +101,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Download all .deb artifacts
         uses: actions/download-artifact@v8
