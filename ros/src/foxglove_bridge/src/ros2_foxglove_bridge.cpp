@@ -147,6 +147,8 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
   if (debug) {
     foxglove::setLogLevel(foxglove::LogLevel::Debug);
     this->get_logger().set_level(rclcpp::Logger::Level::Debug);
+  } else {
+    foxglove::setLogLevel(foxglove::LogLevel::Info);
   }
 
   _serverContext = foxglove::Context::create();
