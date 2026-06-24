@@ -255,6 +255,17 @@ pub extern "C" fn foxglove_internal_register_cpp_wrapper() {
     }
 }
 
+/// For use by wrappers built on top of the SDK. Prepends a product token to library identifiers.
+#[cfg(not(target_family = "wasm"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_internal_set_library_identifier_prefix(prefix: FoxgloveString) {
+    let Ok(prefix) = (unsafe { prefix.as_utf8_str() }) else {
+        tracing::warn!("Ignoring invalid UTF-8 library identifier prefix");
+        return;
+    };
+    foxglove::library_version::set_library_identifier_prefix(prefix.to_string());
+}
+
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FoxgloveError {
