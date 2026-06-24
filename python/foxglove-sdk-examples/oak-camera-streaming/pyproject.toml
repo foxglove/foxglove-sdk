@@ -1,7 +1,7 @@
 [project]
 name = "oak-camera-streaming"
 version = "0.1.0"
-description = "Stream Luxonis OAK raw video, point cloud, and IMU to Foxglove"
+description = "Stream Luxonis OAK raw video, depth, and IMU to Foxglove"
 requires-python = ">=3.10"
 dependencies = [
     "foxglove-sdk>=0.9.0",

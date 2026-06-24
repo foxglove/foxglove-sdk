@@ -3,19 +3,23 @@
 Stream a Luxonis OAK camera to Foxglove.
 
 This tutorial example runs a DepthAI v3 pipeline on an OAK camera (e.g. the
-OAK-4 D) and publishes three live streams over the Foxglove WebSocket server:
+OAK-4 D) and publishes the following live streams over the Foxglove WebSocket
+server:
 
-- ``/oak/rgb/image``   raw color video      (``foxglove.RawImage``)
-- ``/oak/points``      stereo point cloud   (``foxglove.PointCloud``)
-- ``/oak/imu``         accelerometer + gyro (JSON, ``sensor_msgs``-like)
+- ``/oak/rgb/image``         raw color video         (``foxglove.RawImage``)
+- ``/oak/rgb/calibration``   intrinsics + distortion (``foxglove.CameraCalibration``)
+- ``/oak/depth/image``       aligned depth (uint16)  (``foxglove.RawImage``, ``16UC1``)
+- ``/oak/imu``               accelerometer + gyro    (JSON, ``sensor_msgs``-like)
 
-A single static transform on ``/tf`` orients the camera's optical frame so the
-point cloud appears upright in Foxglove's 3D panel.
+Depth is aligned to the color camera on the device, so the depth image and
+calibration all share CAM_A's optical frame and intrinsics. A rotation between
+that optical frame and the upright "oak" frame is published on the ``/tf``
+topic.
 
 The code is organized in the same order you would write it:
 
 1. Create one Foxglove channel per stream.
-2. Build the DepthAI pipeline (color camera, stereo depth -> point cloud, IMU).
+2. Build the DepthAI pipeline (color camera, stereo depth, IMU).
 3. Loop: convert each DepthAI packet to a Foxglove message and log it.
 """
 
@@ -32,17 +36,14 @@ import foxglove
 import numpy as np
 from foxglove import Channel, Schema
 from foxglove.channels import (
+    CameraCalibrationChannel,
     FrameTransformsChannel,
-    PointCloudChannel,
     RawImageChannel,
 )
 from foxglove.messages import (
+    CameraCalibration,
     FrameTransform,
     FrameTransforms,
-    PackedElementField,
-    PackedElementFieldNumericType,
-    PointCloud,
-    Pose,
     Quaternion,
     RawImage,
     Timestamp,
@@ -91,22 +92,9 @@ IMU_SCHEMA: dict[str, Any] = {
     },
 }
 
-# A Foxglove PointCloud is a packed binary buffer plus a description of its
-# layout: here, three consecutive float32 values (x, y, z) per point.
-POINT_STRIDE = 12  # 3 * sizeof(float32)
-POINT_FIELDS = [
-    PackedElementField(name="x", offset=0, type=PackedElementFieldNumericType.Float32),
-    PackedElementField(name="y", offset=4, type=PackedElementFieldNumericType.Float32),
-    PackedElementField(name="z", offset=8, type=PackedElementFieldNumericType.Float32),
-]
-IDENTITY_POSE = Pose(
-    position=Vector3(x=0.0, y=0.0, z=0.0),
-    orientation=Quaternion(x=0.0, y=0.0, z=0.0, w=1.0),
-)
-
 # Standard ROS rotation from a body frame (X forward, Z up) to a camera
 # optical frame (Z forward, Y down). Publishing it lets the 3D panel render
-# the optical-frame point cloud upright when "oak" is the display frame.
+# the optical-frame data upright when "oak" is the display frame.
 OPTICAL_ROTATION = Quaternion(x=-0.5, y=0.5, z=-0.5, w=0.5)
 
 
@@ -119,43 +107,61 @@ def to_timestamp(td: Any) -> Timestamp:
         return Timestamp.now()
 
 
-def point_cloud_to_msg(
-    pcl_data: dai.PointCloudData, scale_to_meters: float
-) -> PointCloud | None:
-    """Convert device-generated ``dai.PointCloudData`` to ``foxglove.PointCloud``."""
-    points = pcl_data.getPoints()  # (N, 3) float32 array
-    if not isinstance(points, np.ndarray) or points.size == 0:
-        return None
-    xyz = points.reshape(-1, points.shape[-1])[:, :3]
-    xyz = xyz[np.isfinite(xyz).all(axis=1)]
-    if xyz.size == 0:
-        return None
-    xyz = xyz.astype(np.float32, copy=False) * np.float32(scale_to_meters)
-    return PointCloud(
-        timestamp=to_timestamp(pcl_data.getTimestamp()),
-        frame_id=OPTICAL_FRAME,
-        pose=IDENTITY_POSE,
-        point_stride=POINT_STRIDE,
-        fields=POINT_FIELDS,
-        data=np.ascontiguousarray(xyz).tobytes(),
-    )
+# Foxglove supports a fixed set of distortion models. The DepthAI v3 Perspective
+# model is OpenCV's 14-parameter rational polynomial; Foxglove's
+# `rational_polynomial` uses only the first 8 (k1..k6, p1, p2). The Fisheye
+# model maps to Kannala-Brandt with 4 coefficients.
+_DISTORTION_MODELS = {
+    "Perspective": ("rational_polynomial", 8),
+    "Fisheye": ("kannala_brandt", 4),
+}
 
 
-def detect_point_cloud_scale(pcl_data: dai.PointCloudData) -> float:
+def build_camera_calibration_kwargs(
+    calib: dai.CalibrationHandler,
+    socket: dai.CameraBoardSocket,
+    width: int,
+    height: int,
+    frame_id: str,
+) -> dict[str, Any]:
     """
-    Return the factor that converts this device's point coordinates to meters.
+    Pull intrinsics from a DepthAI calibration handler into the kwargs needed
+    to build a Foxglove ``CameraCalibration``.
 
-    We request meters from DepthAI, but some device-side PointCloud builds
-    still emit millimeters, so check the actual depth magnitude once: a median
-    distance beyond 50 m means the values can only be millimeters.
+    Returns everything but ``timestamp`` — the caller stamps each message at
+    publish time so MCAP replay can locate a recent calibration when scrubbing.
     """
-    points = pcl_data.getPoints()
-    z = np.abs(points.reshape(-1, points.shape[-1])[:, 2])
-    z = z[np.isfinite(z) & (z > 0)]
-    if z.size > 0 and float(np.median(z)) > 50.0:
-        logging.info("Point cloud is in millimeters; converting to meters")
-        return 0.001
-    return 1.0
+    K = np.asarray(calib.getCameraIntrinsics(socket, width, height)).flatten().tolist()
+    fx, _, cx, _, fy, cy, _, _, _ = K
+    P = [
+        fx, 0.0, cx, 0.0,
+        0.0, fy, cy, 0.0,
+        0.0, 0.0, 1.0, 0.0,
+    ]
+    R = [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]
+
+    model_name = str(calib.getDistortionModel(socket)).rsplit(".", 1)[-1]
+    if model_name in _DISTORTION_MODELS:
+        distortion_model, n_params = _DISTORTION_MODELS[model_name]
+        D = list(map(float, calib.getDistortionCoefficients(socket)))[:n_params]
+    else:
+        logging.warning(
+            "Unsupported DepthAI distortion model %r; publishing intrinsics only",
+            model_name,
+        )
+        distortion_model = ""
+        D = []
+
+    return {
+        "frame_id": frame_id,
+        "width": width,
+        "height": height,
+        "distortion_model": distortion_model,
+        "D": D,
+        "K": K,
+        "R": R,
+        "P": P,
+    }
 
 
 def parse_args() -> argparse.Namespace:
@@ -180,12 +186,13 @@ def main() -> None:
     # ------------------------------------------------------------------
     # Step 1: Foxglove channels — one per stream.
     #
-    # Channels with a well-known Foxglove schema (RawImage, PointCloud, ...)
+    # Channels with a well-known Foxglove schema (RawImage, CameraCalibration, ...)
     # have typed classes. The IMU uses a generic JSON channel with a
     # sensor_msgs-like schema.
     # ------------------------------------------------------------------
     rgb_channel = RawImageChannel(topic="/oak/rgb/image")
-    point_cloud_channel = PointCloudChannel(topic="/oak/points")
+    cal_channel = CameraCalibrationChannel(topic="/oak/rgb/calibration")
+    depth_channel = RawImageChannel(topic="/oak/depth/image")
     imu_channel = Channel(
         topic="/oak/imu",
         message_encoding="json",
@@ -209,7 +216,7 @@ def main() -> None:
     # Step 2: DepthAI pipeline.
     #
     #   CAM_A (color) ── NV12 ──> host (raw video)
-    #   CAM_B + CAM_C ──> StereoDepth ──> PointCloud ──> host
+    #   CAM_B + CAM_C ──> StereoDepth ──> host (aligned depth)
     #   IMU ──> host
     # ------------------------------------------------------------------
     with dai.Pipeline() as pipeline:
@@ -223,7 +230,7 @@ def main() -> None:
         )
         rgb_queue = color_out.createOutputQueue(maxSize=2, blocking=False)
 
-        # Stereo pair -> depth -> point cloud, all computed on the device.
+        # Stereo pair -> depth, all computed on the device.
         left = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B)
         right = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_C)
         stereo = pipeline.create(dai.node.StereoDepth)
@@ -236,10 +243,17 @@ def main() -> None:
         stereo.setRectification(True)
         stereo.setLeftRightCheck(True)
 
-        point_cloud = pipeline.create(dai.node.PointCloud)
-        point_cloud.initialConfig.setLengthUnit(dai.LengthUnit.METER)
-        stereo.depth.link(point_cloud.inputDepth)
-        point_cloud_queue = point_cloud.outputPointCloud.createOutputQueue(
+        # Align depth to the color camera and emit it at the RGB resolution so
+        # the depth image and CameraCalibration share one frame (CAM_A's
+        # optical frame) and one set of intrinsics. ImageAlign works on both
+        # RVC2 and RVC4 — on RVC4, StereoDepth.setOutputSize is not supported,
+        # so the resize must happen in ImageAlign.
+        align = pipeline.create(dai.node.ImageAlign)
+        align.setOutputSize(args.rgb_width, args.rgb_height)
+        stereo.depth.link(align.input)
+        color_out.link(align.inputAlignTo)
+
+        depth_queue = align.outputAligned.createOutputQueue(
             maxSize=2, blocking=False
         )
 
@@ -255,13 +269,22 @@ def main() -> None:
         pipeline.start()
         logging.info("OAK pipeline running — Ctrl+C to stop")
 
-
+        # Read factory calibration for the color camera once. Intrinsics do
+        # not change at runtime, so we cache the static fields and stamp a
+        # fresh CameraCalibration per frame inside the loop.
+        device = pipeline.getDefaultDevice()
+        rgb_calibration_kwargs = build_camera_calibration_kwargs(
+            device.readCalibration(),
+            dai.CameraBoardSocket.CAM_A,
+            args.rgb_width,
+            args.rgb_height,
+            OPTICAL_FRAME,
+        )
 
         # --------------------------------------------------------------
         # Step 3: publish loop. tryGet() never blocks, so one loop can
-        # service all three queues at their own rates.
+        # service all queues at their own rates.
         # --------------------------------------------------------------
-        point_cloud_scale: float | None = None
         try:
             while pipeline.isRunning():
 
@@ -284,9 +307,10 @@ def main() -> None:
                 if isinstance(frame, dai.ImgFrame):
                     bgr = frame.getCvFrame()
                     height, width = bgr.shape[:2]
+                    stamp = to_timestamp(frame.getTimestamp())
                     rgb_channel.log(
                         RawImage(
-                            timestamp=to_timestamp(frame.getTimestamp()),
+                            timestamp=stamp,
                             frame_id=OPTICAL_FRAME,
                             width=width,
                             height=height,
@@ -295,14 +319,32 @@ def main() -> None:
                             data=bgr.tobytes(),
                         )
                     )
+                    # Re-emit the calibration with a fresh timestamp so MCAP
+                    # replay can scrub to any time and still find a recent one.
+                    cal_channel.log(
+                        CameraCalibration(timestamp=stamp, **rgb_calibration_kwargs)
+                    )
 
-                pcl_data = point_cloud_queue.tryGet()
-                if isinstance(pcl_data, dai.PointCloudData):
-                    if point_cloud_scale is None:
-                        point_cloud_scale = detect_point_cloud_scale(pcl_data)
-                    message = point_cloud_to_msg(pcl_data, point_cloud_scale)
-                    if message is not None:
-                        point_cloud_channel.log(message)
+                depth_frame = depth_queue.tryGet()
+                if isinstance(depth_frame, dai.ImgFrame):
+                    depth = np.ascontiguousarray(
+                        depth_frame.getFrame(), dtype=np.uint16
+                    )
+                    d_height, d_width = depth.shape[:2]
+                    depth_channel.log(
+                        RawImage(
+                            timestamp=to_timestamp(depth_frame.getTimestamp()),
+                            frame_id=OPTICAL_FRAME,
+                            width=d_width,
+                            height=d_height,
+                            # StereoDepth's `depth` output is uint16 millimetres,
+                            # which matches Foxglove's default depth scale for
+                            # 16UC1 (0.001 → meters).
+                            encoding="16UC1",
+                            step=d_width * 2,
+                            data=depth.tobytes(),
+                        )
+                    )
 
                 imu_data = imu_queue.tryGet()
                 if isinstance(imu_data, dai.IMUData):
