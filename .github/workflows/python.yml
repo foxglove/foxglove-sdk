@@ -533,17 +533,15 @@ jobs:
       - uses: actions/download-artifact@v8
         with:
           path: python/foxglove-sdk
+      - uses: astral-sh/setup-uv@v7
       - run: find python/foxglove-sdk/wheels-*
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v4
         with:
           subject-path: "python/foxglove-sdk/wheels-*/*"
       - name: Publish to PyPI
-        uses: PyO3/maturin-action@v1
-        with:
-          command: upload
-          working-directory: python/foxglove-sdk
-          args: --non-interactive --skip-existing wheels-*/*
+        run: uv publish --check-url https://pypi.org/simple/ wheels-*/*
+        working-directory: python/foxglove-sdk
 
   test-sdk-examples:
     runs-on: ubuntu-latest
