@@ -2,6 +2,12 @@
 Changelog for package foxglove_bridge
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+3.4.2 (2026-06-24)
+------------------
+* Fix a bug where the bridge would not initialize SDK logging unless ``debug:=true``
+* ROS bridge connections now identify themselves as ``foxglove-bridge/<version>`` in library headers
+* Update Foxglove SDK version to 0.25.3
+
 3.4.1 (2026-06-01)
 ------------------
 * Fix an issue with video publication over remote access for certain formats and encoders
