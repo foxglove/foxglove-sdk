@@ -447,6 +447,65 @@ typedef uint8_t foxglove_reliability;
 #endif // __cplusplus
 #endif
 
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
+ * The preferred backend for encoding published video tracks.
+ *
+ * `Auto` lets the SDK choose, and also defers to the `FOXGLOVE_VIDEO_ENCODER` environment
+ * variable when set. If the requested backend is unavailable on the host, the SDK falls back
+ * to another compatible encoder.
+ */
+enum foxglove_video_encoder_backend
+#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+  : uint8_t
+#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+ {
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+  /**
+   * Let the SDK choose the encoder backend (and honor `FOXGLOVE_VIDEO_ENCODER`).
+   */
+  FOXGLOVE_VIDEO_ENCODER_BACKEND_AUTO = 0,
+#endif
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+  /**
+   * Prefer a software encoder.
+   */
+  FOXGLOVE_VIDEO_ENCODER_BACKEND_SOFTWARE = 1,
+#endif
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+  /**
+   * Prefer any available hardware encoder.
+   */
+  FOXGLOVE_VIDEO_ENCODER_BACKEND_HARDWARE = 2,
+#endif
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+  /**
+   * Prefer NVIDIA NVENC when available.
+   */
+  FOXGLOVE_VIDEO_ENCODER_BACKEND_NVENC = 3,
+#endif
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+  /**
+   * Prefer VAAPI when available.
+   */
+  FOXGLOVE_VIDEO_ENCODER_BACKEND_VAAPI = 4,
+#endif
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+  /**
+   * Prefer VideoToolbox on Apple platforms when available.
+   */
+  FOXGLOVE_VIDEO_ENCODER_BACKEND_VIDEO_TOOLBOX = 5,
+#endif
+};
+#ifndef __cplusplus
+#if __STDC_VERSION__ >= 202311L
+typedef enum foxglove_video_encoder_backend foxglove_video_encoder_backend;
+#else
+typedef uint8_t foxglove_video_encoder_backend;
+#endif // __STDC_VERSION__ >= 202311L
+#endif // __cplusplus
+#endif
+
 #if !defined(__wasm__)
 /**
  * Level indicator for a server status message.
@@ -2786,6 +2845,17 @@ typedef struct foxglove_gateway_options {
    * `foxglove_gateway_start` returns `FOXGLOVE_ERROR_VALUE_ERROR`.
    */
   const struct foxglove_parameter_handler *parameter_handler;
+  /**
+   * Preferred backend for encoding published video tracks.
+   *
+   * Defaults to `FOXGLOVE_VIDEO_ENCODER_BACKEND_AUTO` (0), which lets the SDK choose and
+   * honors the `FOXGLOVE_VIDEO_ENCODER` environment variable. Any other value overrides the
+   * environment variable.
+   *
+   * This field is last in the struct so that adding it preserves the memory offsets of all
+   * pre-existing fields.
+   */
+  foxglove_video_encoder_backend video_encoder;
 } foxglove_gateway_options;
 #endif
 

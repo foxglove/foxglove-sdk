@@ -108,6 +108,41 @@ impl From<foxglove::remote_access::ConnectionStatus> for FoxgloveConnectionStatu
     }
 }
 
+/// The preferred backend for encoding published video tracks.
+///
+/// `Auto` lets the SDK choose, and also defers to the `FOXGLOVE_VIDEO_ENCODER` environment
+/// variable when set. If the requested backend is unavailable on the host, the SDK falls back
+/// to another compatible encoder.
+#[repr(u8)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FoxgloveVideoEncoderBackend {
+    /// Let the SDK choose the encoder backend (and honor `FOXGLOVE_VIDEO_ENCODER`).
+    Auto = 0,
+    /// Prefer a software encoder.
+    Software = 1,
+    /// Prefer any available hardware encoder.
+    Hardware = 2,
+    /// Prefer NVIDIA NVENC when available.
+    Nvenc = 3,
+    /// Prefer VAAPI when available.
+    Vaapi = 4,
+    /// Prefer VideoToolbox on Apple platforms when available.
+    VideoToolbox = 5,
+}
+
+impl From<FoxgloveVideoEncoderBackend> for foxglove::remote_access::VideoEncoderBackend {
+    fn from(backend: FoxgloveVideoEncoderBackend) -> Self {
+        match backend {
+            FoxgloveVideoEncoderBackend::Auto => Self::Auto,
+            FoxgloveVideoEncoderBackend::Software => Self::Software,
+            FoxgloveVideoEncoderBackend::Hardware => Self::Hardware,
+            FoxgloveVideoEncoderBackend::Nvenc => Self::Nvenc,
+            FoxgloveVideoEncoderBackend::Vaapi => Self::Vaapi,
+            FoxgloveVideoEncoderBackend::VideoToolbox => Self::VideoToolbox,
+        }
+    }
+}
+
 // Capabilities
 // ============
 
@@ -609,6 +644,16 @@ pub struct FoxgloveGatewayOptions<'a> {
     /// When provided, both `get` and `set` on the handler are required; otherwise
     /// `foxglove_gateway_start` returns `FOXGLOVE_ERROR_VALUE_ERROR`.
     pub parameter_handler: Option<&'a FoxgloveParameterHandler>,
+
+    /// Preferred backend for encoding published video tracks.
+    ///
+    /// Defaults to `FOXGLOVE_VIDEO_ENCODER_BACKEND_AUTO` (0), which lets the SDK choose and
+    /// honors the `FOXGLOVE_VIDEO_ENCODER` environment variable. Any other value overrides the
+    /// environment variable.
+    ///
+    /// This field is last in the struct so that adding it preserves the memory offsets of all
+    /// pre-existing fields.
+    pub video_encoder: FoxgloveVideoEncoderBackend,
 }
 
 // Handle
@@ -772,6 +817,12 @@ unsafe fn do_foxglove_gateway_start(
     // Message backlog size
     if options.message_backlog_size != 0 {
         gateway = gateway.message_backlog_size(options.message_backlog_size);
+    }
+
+    // Preferred video encoder backend. Leave `Auto` unset so the
+    // `FOXGLOVE_VIDEO_ENCODER` environment variable can still take effect.
+    if options.video_encoder != FoxgloveVideoEncoderBackend::Auto {
+        gateway = gateway.video_encoder(options.video_encoder.into());
     }
 
     let handle = gateway.start()?;

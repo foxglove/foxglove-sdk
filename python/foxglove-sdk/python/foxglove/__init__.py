@@ -258,6 +258,7 @@ try:
         QosProfile,
         RemoteAccessGateway,
         RemoteAccessListener,
+        VideoEncoderBackend,
     )
 
     def start_gateway(
@@ -274,6 +275,7 @@ try:
         message_backlog_size: int | None = None,
         foxglove_api_url: str | None = None,
         foxglove_api_timeout: float | None = None,
+        video_encoder: VideoEncoderBackend | None = None,
     ) -> RemoteAccessGateway:
         """
         Start a remote access gateway for live visualization and teleop in Foxglove.
@@ -298,6 +300,10 @@ try:
             the slow client. Defaults to 1024.
         :param foxglove_api_url: Override the Foxglove API base URL.
         :param foxglove_api_timeout: Timeout for Foxglove API requests, in seconds.
+        :param video_encoder: Preferred backend for encoding published video tracks. If not set,
+            or set to :py:attr:`~foxglove.remote_access.VideoEncoderBackend.Auto`, the SDK chooses
+            (honoring the ``FOXGLOVE_VIDEO_ENCODER`` environment variable). If the requested
+            backend is unavailable, the SDK falls back to another compatible encoder.
         """
         return _foxglove.start_gateway(
             name=name,
@@ -312,6 +318,7 @@ try:
             message_backlog_size=message_backlog_size,
             foxglove_api_url=foxglove_api_url,
             foxglove_api_timeout=foxglove_api_timeout,
+            video_encoder=video_encoder,
         )
 
     __all__ += ["start_gateway"]

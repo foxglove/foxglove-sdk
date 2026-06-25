@@ -25,7 +25,7 @@ pub use crate::remote_common::{
 pub use capability::Capability;
 pub use client::Client;
 pub use connection::ConnectionStatus;
-pub use gateway::{Gateway, GatewayHandle};
+pub use gateway::{Gateway, GatewayHandle, VideoEncoderBackend};
 pub use listener::Listener;
 pub use qos::{QosClassifier, QosProfile, QosProfileBuilder, Reliability};
 

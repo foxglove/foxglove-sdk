@@ -192,6 +192,27 @@ struct QosProfile {
 /// Accepts any callable with signature `QosProfile(const ChannelDescriptor&)`.
 using QosClassifierFn = std::function<QosProfile(const ChannelDescriptor&)>;
 
+/// @brief Preferred backend for encoding published video tracks.
+///
+/// This preference applies to every video track the gateway publishes. If the requested
+/// backend is unavailable on the host, the SDK falls back to another compatible encoder.
+/// @ref VideoEncoderBackend::Auto lets the SDK choose (and honors the `FOXGLOVE_VIDEO_ENCODER`
+/// environment variable); any other value overrides that environment variable.
+enum class VideoEncoderBackend : uint8_t {
+  /// Let the SDK choose the encoder backend. This is the default.
+  Auto = 0,
+  /// Prefer a software encoder.
+  Software = 1,
+  /// Prefer any available hardware encoder.
+  Hardware = 2,
+  /// Prefer NVIDIA NVENC when available.
+  Nvenc = 3,
+  /// Prefer VAAPI when available.
+  Vaapi = 4,
+  /// Prefer VideoToolbox on Apple platforms when available.
+  VideoToolbox = 5,
+};
+
 /// @brief Options for creating a remote access gateway.
 struct RemoteAccessGatewayOptions {
   /// @brief The logging context for this gateway.
@@ -249,6 +270,14 @@ struct RemoteAccessGatewayOptions {
   ///
   /// By default, each participant gets a queue of 1024 messages.
   std::optional<size_t> message_backlog_size = std::nullopt;
+  /// @brief Preferred backend for encoding published video tracks.
+  ///
+  /// Defaults to @ref VideoEncoderBackend::Auto, which lets the SDK choose and honors the
+  /// `FOXGLOVE_VIDEO_ENCODER` environment variable.
+  ///
+  /// This field is last in the struct so that adding it preserves the layout of pre-existing
+  /// fields.
+  VideoEncoderBackend video_encoder = VideoEncoderBackend::Auto;
 };
 
 /// @brief A remote access gateway for live visualization and teleop in Foxglove.
