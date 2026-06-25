@@ -25,9 +25,27 @@ endif
 .PHONY: all
 all: deps build
 
+define clean_deb_bridge =
+rm -rf src/foxglove_bridge/debian src/foxglove_bridge/.obj-*
+rm -f src/ros-*-foxglove-bridge*
+endef
+
+define clean_deb_msgs =
+rm -rf src/foxglove_msgs/debian src/foxglove_msgs/.obj-*
+rm -f src/ros-*-foxglove-msgs*
+endef
+
 .PHONY: clean
-clean:
+clean: clean-deb-bridge clean-deb-msgs
 	rm -rf build dist install log
+
+.PHONY: clean-deb-bridge
+clean-deb-bridge:
+	$(clean_deb_bridge)
+
+.PHONY: clean-deb-msgs
+clean-deb-msgs:
+	$(clean_deb_msgs)
 
 .PHONY: deps
 deps:
@@ -56,22 +74,20 @@ BLOOM_BRIDGE_CMAKE_ARGS := \
 	$(if $(FOXGLOVE_CPP_SDK_DIR),-DFETCHCONTENT_SOURCE_DIR_FOXGLOVE_SDK=$(FOXGLOVE_CPP_SDK_DIR))
 
 .PHONY: deb-bridge
-deb-bridge:
+deb-bridge: clean-deb-bridge
 	cd src/foxglove_bridge && bloom-generate rosdebian
 	sed -i 's|dh_auto_configure --|dh_auto_configure -- $(BLOOM_BRIDGE_CMAKE_ARGS)|' \
 		src/foxglove_bridge/debian/rules
 	cd src/foxglove_bridge && fakeroot debian/rules binary
 	mkdir -p dist && mv src/ros-*-foxglove-bridge*.deb dist/
-	rm -rf src/foxglove_bridge/debian src/foxglove_bridge/.obj-*
-	rm -f src/ros-*-foxglove-bridge*
+	$(clean_deb_bridge)
 
 .PHONY: deb-msgs
-deb-msgs:
+deb-msgs: clean-deb-msgs
 	cd src/foxglove_msgs && bloom-generate rosdebian
 	cd src/foxglove_msgs && fakeroot debian/rules binary
 	mkdir -p dist && mv src/ros-*-foxglove-msgs*.deb dist/
-	rm -rf src/foxglove_msgs/debian src/foxglove_msgs/.obj-*
-	rm -f src/ros-*-foxglove-msgs*
+	$(clean_deb_msgs)
 
 .PHONY: deb
 deb: deb-bridge deb-msgs
