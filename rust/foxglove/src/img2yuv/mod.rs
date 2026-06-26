@@ -3,7 +3,13 @@
 #![warn(missing_docs)]
 
 mod compressed;
+#[cfg(feature = "img2yuv-flatbuffer")]
+pub mod flatbuffer;
+#[cfg(feature = "img2yuv-json")]
+pub mod json;
 mod message;
+#[cfg(feature = "img2yuv-omgidl")]
+pub mod omgidl;
 mod raw;
 #[cfg(feature = "img2yuv-ros1")]
 pub mod ros1;
