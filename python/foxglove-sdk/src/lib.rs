@@ -46,7 +46,14 @@ mod websocket;
 /// :type encoding: str
 /// :param data: Schema data.
 /// :type data: bytes
-#[pyclass(name = "Schema", module = "foxglove", get_all, set_all, eq)]
+#[pyclass(
+    from_py_object,
+    name = "Schema",
+    module = "foxglove",
+    get_all,
+    set_all,
+    eq
+)]
 #[derive(Clone, PartialEq, Eq)]
 pub struct PySchema {
     /// The name of the schema.
@@ -100,13 +107,13 @@ impl BaseChannel {
     ) -> PyResult<Self> {
         // Release the GIL before calling build_raw(), which may invoke
         // PySinkChannelFilter::should_subscribe() on registered sinks. That callback needs to
-        // re-acquire the GIL via Python::with_gil(); if we still hold it here, we deadlock.
+        // re-acquire the GIL via Python::attach(); if we still hold it here, we deadlock.
         let topic = topic.to_owned();
         let message_encoding = message_encoding.to_owned();
         let schema = schema.map(Schema::from);
         let metadata = metadata.unwrap_or_default();
         let channel = py
-            .allow_threads(move || {
+            .detach(move || {
                 ChannelBuilder::new(&topic)
                     .message_encoding(&message_encoding)
                     .schema(schema)
@@ -139,7 +146,7 @@ impl BaseChannel {
         self.0.message_encoding()
     }
 
-    fn metadata(&self, py: Python<'_>) -> PyResult<PyObject> {
+    fn metadata(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
         let dict = PyDict::new(py);
         for (key, value) in self.0.metadata() {
             dict.set_item(key, value)?;
@@ -207,14 +214,14 @@ impl PyContext {
     ) -> PyResult<BaseChannel> {
         // Release the GIL before calling build_raw(), which may invoke
         // PySinkChannelFilter::should_subscribe() on registered sinks. That callback needs to
-        // re-acquire the GIL via Python::with_gil(); if we still hold it here, we deadlock.
+        // re-acquire the GIL via Python::attach(); if we still hold it here, we deadlock.
         let context = self.0.clone();
         let topic = topic.to_owned();
         let message_encoding = message_encoding.to_owned();
         let schema = schema.map(Schema::from);
         let metadata = metadata.unwrap_or_default();
         let channel = py
-            .allow_threads(move || {
+            .detach(move || {
                 context
                     .channel_builder(&topic)
                     .message_encoding(&message_encoding)
@@ -288,9 +295,9 @@ fn open_mcap(
 
     // Release the GIL before calling create(), which calls context.add_sink() and may invoke
     // PySinkChannelFilter::should_subscribe() on existing channels. That callback needs to
-    // re-acquire the GIL via Python::with_gil(); if we still hold it here, we deadlock.
+    // re-acquire the GIL via Python::attach(); if we still hold it here, we deadlock.
     let handle = py
-        .allow_threads(move || handle.create(writer))
+        .detach(move || handle.create(writer))
         .map_err(PyFoxgloveError::from)?;
     Ok(PyMcapWriter(Some(handle)))
 }
@@ -329,7 +336,7 @@ fn disable_logging() -> PyResult<()> {
 #[pyfunction]
 fn shutdown(#[allow(unused_variables)] py: Python<'_>) {
     #[cfg(not(target_family = "wasm"))]
-    py.allow_threads(foxglove::shutdown_runtime);
+    py.detach(foxglove::shutdown_runtime);
 }
 
 /// Our public API is in the `python` directory.

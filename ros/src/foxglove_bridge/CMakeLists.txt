@@ -9,7 +9,7 @@ if(POLICY CMP0024)
   set(CMAKE_POLICY_DEFAULT_CMP0024 NEW)
 endif()
 
-project(foxglove_bridge LANGUAGES CXX VERSION 3.4.1)
+project(foxglove_bridge LANGUAGES CXX VERSION 3.4.2)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -82,22 +82,21 @@ if (ENDIAN)
   add_compile_definitions(ARCH_IS_BIG_ENDIAN=1)
 endif()
 
-# Fetch the released SDK zip from GitHub. To build against a locally-modified SDK,
-# override FETCHCONTENT_SOURCE_DIR_FOXGLOVE_SDK (cmake's standard FetchContent override)
-# to point at a `cpp/dist`-shaped directory — the ros/Makefile's FOXGLOVE_CPP_SDK_DIR
-# variable does this for you (see ros/README.md). The dist directory needs to contain
-# lib/cmake/foxglove-sdk/foxglove-sdkConfig.cmake; release zips built before the SDK's
-# cmake-glue change don't yet, so the FetchContent download path is broken until a
-# release ships with that glue. For local development, point the override at a
-# `make build-cpp-dist`-produced tree.
-set(FOXGLOVE_SDK_VERSION "0.25.1")
+# Fetch the released SDK zip from GitHub. It contains the prebuilt C libraries
+# (with remote access), the C++ wrapper sources, and the CMake package config
+# consumed below. To build against a locally-modified SDK instead, override
+# FETCHCONTENT_SOURCE_DIR_FOXGLOVE_SDK (cmake's standard FetchContent override)
+# to point at a `make build-cpp-dist`-produced `cpp/dist` tree — the
+# ros/Makefile's FOXGLOVE_CPP_SDK_DIR variable does this for you (see
+# ros/README.md).
+set(FOXGLOVE_SDK_VERSION "0.25.3")
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
   set(FOXGLOVE_SDK_PLATFORM "aarch64-unknown-linux-gnu")
-  set(FOXGLOVE_SDK_SHA "c70e35c78f0e37f3ba8d0251cd31f353bb10b1fd106200dc6c5f409ed4df1918")
+  set(FOXGLOVE_SDK_SHA "c2223dcb29b0534b31cc9ed1a51fec93863c102de5a0a1fa749f70f21170fcd9")
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
   set(FOXGLOVE_SDK_PLATFORM "x86_64-unknown-linux-gnu")
-  set(FOXGLOVE_SDK_SHA "0b9d348df3a8e98d2c2cee2360cc9f52e83bb3445044debd771d1b46dc358be4")
+  set(FOXGLOVE_SDK_SHA "d48b53f142e9d91a497bde63c030b0120f376be569a4315decc034da019e5aa7")
 else()
   message(FATAL_ERROR "Unsupported platform/architecture combination: ${CMAKE_SYSTEM_PROCESSOR}-${CMAKE_SYSTEM_NAME}")
 endif()

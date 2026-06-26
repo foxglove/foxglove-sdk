@@ -5,6 +5,9 @@ EXTRA_DOCKER_ARGS :=
 DOCKER_USER_ARGS :=
 DOCKER_RUN_ARGS :=
 GTEST_REPEAT := 1
+BLOOM_RELEASE_DISTRO :=
+BLOOM_PRETEND_FLAG :=
+BLOOM_CONFIG := $(HOME)/.config/bloom
 
 ifeq ($(shell uname -s), Linux)
 	DOCKER_USER_ARGS = --build-arg USER_UID=$(shell id -u) --build-arg USER_GID=$(shell id -g)
@@ -22,9 +25,27 @@ endif
 .PHONY: all
 all: deps build
 
+define clean_deb_bridge =
+rm -rf src/foxglove_bridge/debian src/foxglove_bridge/.obj-*
+rm -f src/ros-*-foxglove-bridge*
+endef
+
+define clean_deb_msgs =
+rm -rf src/foxglove_msgs/debian src/foxglove_msgs/.obj-*
+rm -f src/ros-*-foxglove-msgs*
+endef
+
 .PHONY: clean
-clean:
+clean: clean-deb-bridge clean-deb-msgs
 	rm -rf build dist install log
+
+.PHONY: clean-deb-bridge
+clean-deb-bridge:
+	$(clean_deb_bridge)
+
+.PHONY: clean-deb-msgs
+clean-deb-msgs:
+	$(clean_deb_msgs)
 
 .PHONY: deps
 deps:
@@ -53,22 +74,20 @@ BLOOM_BRIDGE_CMAKE_ARGS := \
 	$(if $(FOXGLOVE_CPP_SDK_DIR),-DFETCHCONTENT_SOURCE_DIR_FOXGLOVE_SDK=$(FOXGLOVE_CPP_SDK_DIR))
 
 .PHONY: deb-bridge
-deb-bridge:
+deb-bridge: clean-deb-bridge
 	cd src/foxglove_bridge && bloom-generate rosdebian
 	sed -i 's|dh_auto_configure --|dh_auto_configure -- $(BLOOM_BRIDGE_CMAKE_ARGS)|' \
 		src/foxglove_bridge/debian/rules
 	cd src/foxglove_bridge && fakeroot debian/rules binary
 	mkdir -p dist && mv src/ros-*-foxglove-bridge*.deb dist/
-	rm -rf src/foxglove_bridge/debian src/foxglove_bridge/.obj-*
-	rm -f src/ros-*-foxglove-bridge*
+	$(clean_deb_bridge)
 
 .PHONY: deb-msgs
-deb-msgs:
+deb-msgs: clean-deb-msgs
 	cd src/foxglove_msgs && bloom-generate rosdebian
 	cd src/foxglove_msgs && fakeroot debian/rules binary
 	mkdir -p dist && mv src/ros-*-foxglove-msgs*.deb dist/
-	rm -rf src/foxglove_msgs/debian src/foxglove_msgs/.obj-*
-	rm -f src/ros-*-foxglove-msgs*
+	$(clean_deb_msgs)
 
 .PHONY: deb
 deb: deb-bridge deb-msgs
@@ -135,6 +154,30 @@ docker-deb-bridge: docker-deb-bridge-rolling
 
 .PHONY: docker-deb-msgs
 docker-deb-msgs: docker-deb-msgs-rolling
+
+# Run bloom-release inside the humble image, regardless of the target distro.
+# Invoked by ./release-to-ros.bash; the bloom config is mounted, and GITHUB_TOKEN
+# is consumed by the credential helper baked into the image (see Dockerfile.ros)
+# so bloom's intermediate git push doesn't prompt. Requires
+# BLOOM_RELEASE_DISTRO=<ros-distro> and GITHUB_TOKEN; set
+# BLOOM_PRETEND_FLAG=--pretend for a dry run.
+.PHONY: docker-bloom-release
+docker-bloom-release: docker-build-image-humble
+	@test -n "$(BLOOM_RELEASE_DISTRO)" || { echo "error: BLOOM_RELEASE_DISTRO is required" >&2; exit 1; }
+	@test -n "$$GITHUB_TOKEN" || { echo "error: GITHUB_TOKEN is required" >&2; exit 1; }
+	@test -n "$$GIT_USER_NAME" || { echo "error: GIT_USER_NAME is required" >&2; exit 1; }
+	@test -n "$$GIT_USER_EMAIL" || { echo "error: GIT_USER_EMAIL is required" >&2; exit 1; }
+	docker run --rm -it $(DOCKER_RUN_ARGS) \
+		-e HOME=/home/foxglove \
+		-e GIT_USER_NAME \
+		-e GIT_USER_EMAIL \
+		-e GITHUB_TOKEN \
+		-e BLOOM_RELEASE_DISTRO="$(BLOOM_RELEASE_DISTRO)" \
+		-e BLOOM_PRETEND_FLAG="$(BLOOM_PRETEND_FLAG)" \
+		-v $(BLOOM_CONFIG):/home/foxglove/.config/bloom \
+		-w /tmp \
+		foxglove-sdk-ros-humble \
+		bash -c 'set -euo pipefail; git config --global user.name "$$GIT_USER_NAME"; git config --global user.email "$$GIT_USER_EMAIL"; exec bloom-release foxglove-sdk --ros-distro "$$BLOOM_RELEASE_DISTRO" $$BLOOM_PRETEND_FLAG'
 
 # Merge per-package compile_commands.json and remap container paths to host paths.
 # Run after docker-build to get IDE support (clangd, etc).

@@ -2,7 +2,7 @@ extern crate proc_macro;
 
 use proc_macro::TokenStream;
 use quote::quote;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use syn::{
     Data, DataEnum, DataStruct, DeriveInput, Fields, GenericArgument, GenericParam, Generics,
     PathArguments, Type, parse_macro_input, parse_quote,
@@ -47,6 +47,18 @@ fn unwrap_array_type(ty: &Type) -> Option<&Type> {
     match ty {
         Type::Array(arr) => Some(&arr.elem),
         _ => None,
+    }
+}
+
+/// Unwrap containers (`Vec<T>`, `Option<T>`, `[T; N]`) to the element type that
+/// owns the descriptors.
+fn descriptor_type(ty: &Type) -> &Type {
+    match unwrap_generic_type(ty, "Vec")
+        .or_else(|| unwrap_generic_type(ty, "Option"))
+        .or_else(|| unwrap_array_type(ty))
+    {
+        Some(inner) => descriptor_type(inner),
+        None => ty,
     }
 }
 
@@ -494,10 +506,12 @@ fn derive_named_struct_impl(
     let max_field_number = 2047;
 
     // If a struct nests multiple values of the same enum or message type, we
-    // only define them once, based on name.
-    let mut enum_defs: HashMap<&syn::Type, proc_macro2::TokenStream> = HashMap::new();
-    let mut message_defs: HashMap<&syn::Type, proc_macro2::TokenStream> = HashMap::new();
-    let mut file_defs: HashMap<&syn::Type, proc_macro2::TokenStream> = HashMap::new();
+    // only define them once, based on name. Use a BTreeMap to collect these
+    // definitions, so that the output will be deterministically ordered by
+    // type name.
+    let mut enum_defs: BTreeMap<String, proc_macro2::TokenStream> = BTreeMap::new();
+    let mut message_defs: BTreeMap<String, proc_macro2::TokenStream> = BTreeMap::new();
+    let mut file_defs: BTreeMap<String, proc_macro2::TokenStream> = BTreeMap::new();
 
     for (i, field) in fields.iter().enumerate() {
         let field_name = &field.ident.as_ref().unwrap();
@@ -518,21 +532,26 @@ fn derive_named_struct_impl(
             ::foxglove::protobuf::ProtobufField::encoded_len_tagged(&self.#field_name, #field_number)
         });
 
-        enum_defs.entry(field_type).or_insert_with(|| quote! {
-            if let Some(enum_desc) = <#field_type as ::foxglove::protobuf::ProtobufField>::enum_descriptor() {
+        // Dedup on the element type: containers share their element's
+        // descriptors, so `T` and `Vec<T>` must not emit it twice.
+        let descriptor_type = descriptor_type(field_type);
+        let descriptor_type_key = quote!(#descriptor_type).to_string();
+
+        enum_defs.entry(descriptor_type_key.clone()).or_insert_with(|| quote! {
+            if let Some(enum_desc) = <#descriptor_type as ::foxglove::protobuf::ProtobufField>::enum_descriptor() {
                 enum_type.push(enum_desc);
             }
         });
 
-        message_defs.entry(field_type).or_insert_with(|| quote! {
-            if let Some(message_descriptor) = <#field_type as ::foxglove::protobuf::ProtobufField>::message_descriptor() {
+        message_defs.entry(descriptor_type_key.clone()).or_insert_with(|| quote! {
+            if let Some(message_descriptor) = <#descriptor_type as ::foxglove::protobuf::ProtobufField>::message_descriptor() {
                 nested_type.push(message_descriptor);
             }
         });
 
-        file_defs.entry(field_type).or_insert_with(|| {
+        file_defs.entry(descriptor_type_key).or_insert_with(|| {
             quote! {
-                for fd in <#field_type as ::foxglove::protobuf::ProtobufField>::file_descriptors() {
+                for fd in <#descriptor_type as ::foxglove::protobuf::ProtobufField>::file_descriptors() {
                     result.push(fd);
                 }
             }

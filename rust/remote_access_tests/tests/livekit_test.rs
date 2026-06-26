@@ -958,9 +958,9 @@ fn encode_raw_image_sized(frame_id: &str, width: u32, height: u32, seq: u32) -> 
 }
 
 /// FLE-579 regression: verify the per-platform video codec selection, and that the
-/// macOS path is no longer resolution-capped.
+/// macOS path is no longer 720p-capped.
 ///
-/// On macOS the gateway publishes VP8 (`start_video_tracks`) to avoid the H.264 /
+/// On macOS the gateway publishes VP8 (`DEFAULT_VIDEO_CODEC`) to avoid the H.264 /
 /// VideoToolbox level-3.1 720p cap; VP8 has no level cap, so 1080p is delivered. On
 /// other platforms (e.g. Linux/nvenc) it keeps H.264, which is still level-capped until
 /// FLE-584. So this asserts the codec on every platform, and the full-resolution payoff
@@ -1102,6 +1102,124 @@ async fn livekit_video_1080p_resolution_not_capped() -> Result<()> {
             "non-macOS should publish H.264, got {last_codec}"
         );
     }
+
+    viewer.close().await?;
+    gw.stop().await?;
+    Ok(())
+}
+
+/// Sets an environment variable for the duration of a test, removing it on drop
+/// (including on panic) so later tests never observe it.
+struct EnvVarGuard(&'static str);
+
+impl EnvVarGuard {
+    fn set(name: &'static str, value: &str) -> Self {
+        // SAFETY: tests in this file are serialized via `#[serial(livekit)]`, and the
+        // variable is set before this test starts the gateway and its worker threads
+        // and removed after they stop, so no thread reads the environment concurrently.
+        unsafe { std::env::set_var(name, value) };
+        Self(name)
+    }
+}
+
+impl Drop for EnvVarGuard {
+    fn drop(&mut self) {
+        // SAFETY: see `set`.
+        unsafe { std::env::remove_var(self.0) };
+    }
+}
+
+/// The `FOXGLOVE_VIDEO_CODEC` environment variable overrides the per-OS
+/// default codec for published video tracks.
+///
+/// Uses VP9 because it differs from the default on every platform (VP8 on macOS,
+/// H.264 elsewhere) and encodes in software everywhere, so this exercises the
+/// override end-to-end (gateway → connection → session → publish) on all platforms.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_video_codec_env_override() -> Result<()> {
+    let _codec_env = EnvVarGuard::set("FOXGLOVE_VIDEO_CODEC", "vp9");
+
+    let ctx = foxglove::Context::new();
+
+    let video_channel = ctx
+        .channel_builder("/camera")
+        .message_encoding("protobuf")
+        .schema(Schema::new("foxglove.RawImage", "protobuf", &b""[..]))
+        .build_raw()
+        .context("create video channel")?;
+
+    let gw = TestGateway::start(&ctx).await?;
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+
+    let _server_info = viewer.expect_server_info().await?;
+    let advertise = viewer.expect_advertise().await?;
+    let channel_id = advertise.channels[0].id;
+
+    viewer
+        .subscribe_video_and_wait(&[channel_id], &video_channel)
+        .await?;
+    let (track_name, track) = viewer.expect_track_subscribed().await?;
+    let livekit::track::RemoteTrack::Video(track) = track else {
+        bail!("expected a video track, got {track_name}");
+    };
+    info!("subscribed to video track {track_name}");
+
+    // Pump small frames with motion until the viewer reports the negotiated codec.
+    let frames: Vec<Vec<u8>> = (0u32..8)
+        .map(|seq| encode_raw_image_sized("camera_optical_frame", 640, 360, seq))
+        .collect();
+    let stop = Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let pump = {
+        let video_channel = video_channel.clone();
+        let stop = stop.clone();
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(Duration::from_millis(33));
+            let mut i = 0usize;
+            while !stop.load(std::sync::atomic::Ordering::Relaxed) {
+                interval.tick().await;
+                video_channel.log(&frames[i % frames.len()]);
+                i += 1;
+            }
+        })
+    };
+
+    let deadline = tokio::time::Instant::now() + Duration::from_secs(30);
+    let mut frames_received = 0u64;
+    let mut codec = String::new();
+    while tokio::time::Instant::now() < deadline {
+        tokio::time::sleep(Duration::from_millis(500)).await;
+        let stats = track.get_stats().await.context("get_stats")?;
+        for s in &stats {
+            match s {
+                livekit::webrtc::stats::RtcStats::Codec(c) => {
+                    codec = c.codec.mime_type.clone();
+                }
+                livekit::webrtc::stats::RtcStats::InboundRtp(rtp) => {
+                    frames_received = rtp.inbound.frames_received;
+                }
+                _ => {}
+            }
+        }
+        if !codec.is_empty() && frames_received > 0 {
+            break;
+        }
+    }
+
+    stop.store(true, std::sync::atomic::Ordering::Relaxed);
+    pump.await.expect("stopping frame pump");
+
+    info!("inbound video: codec={codec}, frames_received={frames_received}");
+    assert!(
+        frames_received > 0,
+        "viewer should have decoded at least one frame"
+    );
+    assert!(
+        codec.eq_ignore_ascii_case("video/VP9"),
+        "FOXGLOVE_VIDEO_CODEC=vp9 should override the default codec, got {codec}"
+    );
 
     viewer.close().await?;
     gw.stop().await?;

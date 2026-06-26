@@ -9,7 +9,7 @@ use std::{
 
 use indexmap::IndexSet;
 
-use livekit::{Room, RoomEvent, RoomOptions};
+use livekit::{Room, RoomEvent, RoomOptions, options::VideoCodec};
 use tokio::{runtime::Handle, sync::OnceCell, sync::mpsc::UnboundedReceiver, task::JoinHandle};
 use tokio_util::sync::CancellationToken;
 use tracing::{error, info, warn};
@@ -20,7 +20,7 @@ use crate::{
         DeviceResponse, DeviceToken, FoxgloveApiClient, FoxgloveApiClientBuilder, WatchQuery,
         WatchWakeEvent,
     },
-    library_version::get_library_version,
+    library_version::get_library_identifier,
     protocol::v2::{parameter::Parameter, server::ServerInfo},
     remote_access::{
         AssetHandler, Capability, RemoteAccessError,
@@ -99,6 +99,7 @@ pub(super) struct ConnectionParams {
     pub(super) qos_classifier: Option<Arc<dyn QosClassifier>>,
     pub(super) server_info: Option<HashMap<String, String>>,
     pub(super) message_backlog_size: Option<usize>,
+    pub(super) video_codec_override: Option<VideoCodec>,
     pub(super) context: Weak<Context>,
 }
 
@@ -135,6 +136,7 @@ pub(super) struct RemoteAccessConnection {
     qos_classifier: Option<Arc<dyn QosClassifier>>,
     server_info: Option<HashMap<String, String>>,
     message_backlog_size: Option<usize>,
+    video_codec_override: Option<VideoCodec>,
     context: Weak<Context>,
     cancellation_token: CancellationToken,
     services: Arc<parking_lot::RwLock<ServiceMap>>,
@@ -165,6 +167,7 @@ impl RemoteAccessConnection {
             qos_classifier: params.qos_classifier,
             server_info: params.server_info,
             message_backlog_size: params.message_backlog_size,
+            video_codec_override: params.video_codec_override,
             context: params.context,
             cancellation_token: CancellationToken::new(),
             services,
@@ -318,6 +321,7 @@ impl RemoteAccessConnection {
             message_backlog_size: self
                 .message_backlog_size
                 .unwrap_or(DEFAULT_MESSAGE_BACKLOG_SIZE),
+            video_codec_override: self.video_codec_override,
             services: self.services.clone(),
             connection_graph: self.connection_graph.clone(),
             remote_access_session_id: remote_access_session_id.map(str::to_string),
@@ -616,7 +620,7 @@ impl RemoteAccessConnection {
     fn create_server_info(&self, remote_access_session_id: &str) -> ServerInfo {
         let mut metadata = self.server_info.clone().unwrap_or_default();
         let supported_encodings = self.supported_encodings.clone();
-        metadata.insert("fg-library".into(), get_library_version());
+        metadata.insert("fg-library".into(), get_library_identifier());
 
         // The device context is always initialized before this method is called: it must
         // succeed before any watch stream can open, which must succeed before we can receive

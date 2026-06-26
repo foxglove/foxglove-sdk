@@ -1,0 +1,76 @@
+# Shapes the egress of a single gateway program with netem: a `runner` plus a
+# `runner-netem` sidecar in its network namespace. The common case — a device on
+# a constrained uplink — with no per-link network, viewer, or relay.
+# `yarn stream-mcap` drives it; the same overlay shapes any program exec'd into
+# the runner. Runbook: rust/remote_access_tests/NETEM.md.
+
+volumes:
+  # Persistent Rust build caches so builds stay incremental across `down`.
+  netem-cargo-registry:
+  netem-cargo-git:
+  netem-target:
+
+services:
+  runner:
+    image: rust:1.93.0-bookworm
+    working_dir: /workspace
+    volumes:
+      - .:/workspace
+      - netem-cargo-registry:/usr/local/cargo/registry
+      - netem-cargo-git:/usr/local/cargo/git
+      - netem-target:/workspace/target-docker
+      # Target lives outside the `.:/workspace` bind on purpose — nesting it
+      # under /workspace makes Docker leave a stray mountpoint stub in the repo
+      # root. `yarn stream-mcap` sets MCAP_HOST_PATH; the empty fixture is the
+      # no-override default so the container still comes up.
+      - ${MCAP_HOST_PATH:-./scripts/fixtures/empty.mcap}:/data/recording.mcap:ro
+    environment:
+      CARGO_TARGET_DIR: /workspace/target-docker
+      CARGO_TERM_COLOR: always
+      # The webrtc-sys crate compiles C++ code that requires Clang.
+      CXX: clang++
+      CC: clang
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        if ! command -v clang++ > /dev/null 2>&1; then
+          apt-get update -qq && apt-get install -y -qq clang libva-dev libprotobuf-dev protobuf-compiler libglib2.0-dev > /dev/null 2>&1
+        fi
+        exec sleep infinity
+    healthcheck:
+      test: ["CMD-SHELL", "command -v clang++ && test -d /workspace/rust"]
+      interval: 5s
+      timeout: 10s
+      retries: 12
+      start_period: 30s
+
+  # Shares the runner's network namespace and shapes its egress (= the gateway
+  # program's uplink to the SFU).
+  runner-netem:
+    image: python:3-alpine
+    network_mode: "service:runner"
+    cap_add:
+      - NET_ADMIN
+    environment:
+      # Default mirrors the `starlink` profile in scripts/netemImpairArgs.ts —
+      # keep them in sync. Override with NETEM_EGRESS.
+      NETEM_ARGS: "${NETEM_EGRESS:-delay 30ms 10ms loss 2% rate 15mbit}"
+      # Skip loopback — the WebRTC stack uses lo internally for ICE.
+      NETEM_SKIP_LOOPBACK: "1"
+    volumes:
+      - ./scripts/container/netem_setup.py:/netem_setup.py:ro
+      - ./scripts/container/netem_impair.py:/netem_impair.py:ro
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        apk add --no-cache iproute2 > /dev/null 2>&1
+        python3 /netem_setup.py || exit 1
+        exec sleep infinity
+    healthcheck:
+      test: ["CMD-SHELL", "tc qdisc show | grep -q netem"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+    depends_on:
+      runner:
+        condition: service_healthy

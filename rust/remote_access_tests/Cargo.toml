@@ -9,8 +9,8 @@ require-cuda = ["foxglove/require-cuda"]
 
 [dependencies]
 foxglove = { path = "../foxglove", features = ["remote-access", "_protocol"] }
-livekit = { version = "0.7.37", features = ["rustls-tls-native-roots"] }
-livekit-api = { version = "0.4", default-features = false, features = ["access-token"] }
+livekit = { workspace = true }
+livekit-api = { workspace = true }
 axum = "0.8"
 reqwest = { workspace = true, features = ["http2", "json", "rustls", "system-proxy"] }
 tokio.workspace = true

@@ -4,13 +4,29 @@ use reqwest::header::{ACCEPT, AUTHORIZATION, HeaderMap, USER_AGENT};
 use reqwest::{Method, StatusCode};
 use thiserror::Error;
 
-use crate::library_version::{get_sdk_language, get_sdk_version};
+use crate::library_version::get_library_identifier;
 
 use super::types::{DeviceResponse, ErrorResponse, WatchHeartbeatRequest, WatchQuery};
 
 const DEFAULT_API_URL: &str = "https://api.foxglove.dev";
 
 const MAX_ERROR_RESPONSE_LEN: u64 = 16_384;
+
+/// Renders an error followed by its `source()` chain, joined with ": ".
+///
+/// `reqwest::Error`'s own `Display` omits the underlying cause (the transport/IO error), so
+/// logging it directly hides why a request failed. Walking the chain surfaces the root cause
+/// (e.g. DNS resolution or socket creation failures).
+fn format_source_chain(err: &dyn std::error::Error) -> String {
+    let mut out = err.to_string();
+    let mut source = err.source();
+    while let Some(cause) = source {
+        out.push_str(": ");
+        out.push_str(&cause.to_string());
+        source = cause.source();
+    }
+    out
+}
 
 #[derive(Clone)]
 pub(crate) struct DeviceToken(String);
@@ -28,10 +44,10 @@ impl DeviceToken {
 #[derive(Error, Debug)]
 #[non_exhaustive]
 pub(crate) enum RequestError {
-    #[error("failed to send request: {0}")]
+    #[error("failed to send request: {}", format_source_chain(.0))]
     SendRequest(#[source] reqwest::Error),
 
-    #[error("failed to load response bytes: {0}")]
+    #[error("failed to load response bytes: {}", format_source_chain(.0))]
     LoadResponseBytes(#[source] reqwest::Error),
 
     #[error("received error response {status}: {error:?}")]
@@ -64,7 +80,7 @@ pub(crate) enum FoxgloveApiClientError {
     #[error(transparent)]
     Request(#[from] RequestError),
 
-    #[error("failed to build client: {0}")]
+    #[error("failed to build client: {}", format_source_chain(.0))]
     BuildClient(#[from] reqwest::Error),
 }
 
@@ -149,14 +165,6 @@ impl RequestBuilder {
 
         Ok(response)
     }
-}
-
-pub(crate) fn default_user_agent() -> String {
-    format!(
-        "foxglove-sdk/{} ({})",
-        get_sdk_language(),
-        get_sdk_version()
-    )
 }
 
 /// Internal API client for communicating with the Foxglove platform.
@@ -301,7 +309,7 @@ impl<A> FoxgloveApiClientBuilder<A> {
         Self {
             auth,
             base_url: DEFAULT_API_URL.to_string(),
-            user_agent: default_user_agent(),
+            user_agent: get_library_identifier(),
             timeout_duration: Duration::from_secs(30),
         }
     }

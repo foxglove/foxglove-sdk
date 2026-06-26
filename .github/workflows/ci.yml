@@ -10,7 +10,7 @@ jobs:
   rust:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           lfs: true
 
@@ -70,7 +70,7 @@ jobs:
     needs: rust
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - id: detect-version
         name: Detect local Cargo version
         run: |
@@ -95,7 +95,7 @@ jobs:
     env:
       github_ref: ${{ github.ref }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - id: detect-version
         name: Detect local Cargo version
         run: |
@@ -125,7 +125,7 @@ jobs:
       id-token: write
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - run: corepack enable
 

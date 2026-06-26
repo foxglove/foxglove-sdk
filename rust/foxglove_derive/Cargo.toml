@@ -13,8 +13,7 @@ proc-macro = true
 [dependencies]
 proc-macro2 = "1.0"
 quote = "1.0"
-syn = { version = "2.0", features = ["full", "extra-traits"] }
-prost-types.workspace = true
+syn = { version = "2.0", features = ["full"] }
 
 [dev-dependencies]
 bytes = "1.4"
@@ -22,5 +21,6 @@ chrono = "0.4"
 foxglove = { path = "../foxglove", features = ["chrono"] }
 prost.workspace = true
 prost-reflect = "0.16.3"
+prost-types.workspace = true
 tracing.workspace = true
 tracing-test = { workspace = true, features = ["no-env-filter"] }

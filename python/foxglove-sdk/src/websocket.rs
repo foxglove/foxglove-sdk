@@ -57,7 +57,13 @@ impl From<Client> for PyClient {
     }
 }
 
-#[pyclass(name = "PlaybackStatus", module = "foxglove.websocket", eq, eq_int)]
+#[pyclass(
+    from_py_object,
+    name = "PlaybackStatus",
+    module = "foxglove.websocket",
+    eq,
+    eq_int
+)]
 #[derive(Clone, PartialEq)]
 #[repr(u8)]
 pub enum PyPlaybackStatus {
@@ -101,7 +107,13 @@ impl From<PyPlaybackStatus> for PlaybackStatus {
     }
 }
 
-#[pyclass(name = "PlaybackState", module = "foxglove.websocket", eq, get_all)]
+#[pyclass(
+    from_py_object,
+    name = "PlaybackState",
+    module = "foxglove.websocket",
+    eq,
+    get_all
+)]
 #[derive(Clone, PartialEq)]
 /// The status playback of data that the server is providing
 pub struct PyPlaybackState {
@@ -151,7 +163,13 @@ impl From<PyPlaybackState> for PlaybackState {
     }
 }
 
-#[pyclass(name = "PlaybackCommand", module = "foxglove.websocket", eq, eq_int)]
+#[pyclass(
+    skip_from_py_object,
+    name = "PlaybackCommand",
+    module = "foxglove.websocket",
+    eq,
+    eq_int
+)]
 #[derive(Clone, PartialEq)]
 #[repr(u8)]
 pub enum PyPlaybackCommand {
@@ -244,7 +262,7 @@ impl ServerListener for PyServerListener {
             id: client.id().into(),
         };
 
-        let result: PyResult<()> = Python::with_gil(|py| {
+        let result: PyResult<()> = Python::attach(|py| {
             let py_channel = PyClientChannel {
                 id: channel.id.into(),
                 topic: PyString::new(py, channel.topic.as_str()).into(),
@@ -280,7 +298,7 @@ impl ServerListener for PyServerListener {
             id: client.id().into(),
         };
 
-        let result: PyResult<()> = Python::with_gil(|py| {
+        let result: PyResult<()> = Python::attach(|py| {
             // client, client_channel_id
             let args = (client_info, u32::from(channel.id));
             self.listener
@@ -301,7 +319,7 @@ impl ServerListener for PyServerListener {
             id: client.id().into(),
         };
 
-        let result: PyResult<()> = Python::with_gil(|py| {
+        let result: PyResult<()> = Python::attach(|py| {
             // client, client_channel_id, data
             let args = (
                 client_info,
@@ -330,7 +348,7 @@ impl ServerListener for PyServerListener {
             id: client.id().into(),
         };
 
-        let result: PyResult<Vec<foxglove::websocket::Parameter>> = Python::with_gil(|py| {
+        let result: PyResult<Vec<foxglove::websocket::Parameter>> = Python::attach(|py| {
             let args = (client_info, param_names, request_id);
 
             let result = self
@@ -362,7 +380,7 @@ impl ServerListener for PyServerListener {
             id: client.id().into(),
         };
 
-        let result: PyResult<Vec<foxglove::websocket::Parameter>> = Python::with_gil(|py| {
+        let result: PyResult<Vec<foxglove::websocket::Parameter>> = Python::attach(|py| {
             let parameters: Vec<PyParameter> = parameters.into_iter().map(Into::into).collect();
             let args = (client_info, parameters, request_id);
 
@@ -386,7 +404,7 @@ impl ServerListener for PyServerListener {
     }
 
     fn on_parameters_subscribe(&self, param_names: Vec<String>) {
-        let result: PyResult<()> = Python::with_gil(|py| {
+        let result: PyResult<()> = Python::attach(|py| {
             let args = (param_names,);
             self.listener
                 .bind(py)
@@ -401,7 +419,7 @@ impl ServerListener for PyServerListener {
     }
 
     fn on_parameters_unsubscribe(&self, param_names: Vec<String>) {
-        let result: PyResult<()> = Python::with_gil(|py| {
+        let result: PyResult<()> = Python::attach(|py| {
             let args = (param_names,);
             self.listener
                 .bind(py)
@@ -416,7 +434,7 @@ impl ServerListener for PyServerListener {
     }
 
     fn on_connection_graph_subscribe(&self) {
-        let result: PyResult<()> = Python::with_gil(|py| {
+        let result: PyResult<()> = Python::attach(|py| {
             self.listener
                 .bind(py)
                 .call_method("on_connection_graph_subscribe", (), None)?;
@@ -430,7 +448,7 @@ impl ServerListener for PyServerListener {
     }
 
     fn on_connection_graph_unsubscribe(&self) {
-        let result: PyResult<()> = Python::with_gil(|py| {
+        let result: PyResult<()> = Python::attach(|py| {
             self.listener
                 .bind(py)
                 .call_method("on_connection_graph_unsubscribe", (), None)?;
@@ -448,14 +466,16 @@ impl ServerListener for PyServerListener {
         playback_control_request: PlaybackControlRequest,
     ) -> Option<PlaybackState> {
         let py_playback_control_request: PyPlaybackControlRequest = playback_control_request.into();
-        let result: PyResult<Option<PyPlaybackState>> = Python::with_gil(|py| {
+        let result: PyResult<Option<PyPlaybackState>> = Python::attach(|py| {
             let result = self.listener.bind(py).call_method(
                 "on_playback_control_request",
                 (py_playback_control_request,),
                 None,
             )?;
 
-            result.extract::<Option<PyPlaybackState>>()
+            result
+                .extract::<Option<PyPlaybackState>>()
+                .map_err(Into::into)
         });
 
         match result {
@@ -483,7 +503,7 @@ impl PyServerListener {
             id: client.id().into(),
         };
 
-        let result: PyResult<()> = Python::with_gil(|py| {
+        let result: PyResult<()> = Python::attach(|py| {
             let channel_view = PyChannelView {
                 id: channel_id,
                 topic: PyString::new(py, topic).into(),
@@ -583,7 +603,7 @@ pub fn start_server(
     }
 
     let handle = py
-        .allow_threads(|| server.start_blocking())
+        .detach(|| server.start_blocking())
         .map_err(PyFoxgloveError::from)?;
 
     Ok(PyWebSocketServer(Some(handle)))
@@ -598,7 +618,7 @@ impl PyWebSocketServer {
     /// Explicitly stop the server.
     pub fn stop(&mut self, py: Python<'_>) {
         if let Some(server) = self.0.take() {
-            py.allow_threads(|| server.stop().wait_blocking())
+            py.detach(|| server.stop().wait_blocking())
         }
     }
 
@@ -722,7 +742,7 @@ impl PyWebSocketServer {
     /// :type services: list[Service]
     pub fn add_services(&self, py: Python<'_>, services: Vec<PyService>) -> PyResult<()> {
         if let Some(server) = &self.0 {
-            py.allow_threads(move || {
+            py.detach(move || {
                 server
                     .add_services(services.into_iter().map(|s| s.into()))
                     .map_err(PyFoxgloveError::from)
@@ -737,7 +757,7 @@ impl PyWebSocketServer {
     /// :type names: list[str]
     pub fn remove_services(&self, py: Python<'_>, names: Vec<String>) {
         if let Some(server) = &self.0 {
-            py.allow_threads(move || server.remove_services(names));
+            py.detach(move || server.remove_services(names));
         }
     }
 
@@ -749,13 +769,12 @@ impl PyWebSocketServer {
     ///
     /// :param graph: The connection graph to publish.
     /// :type graph: ConnectionGraph
-    pub fn publish_connection_graph(&self, graph: Bound<'_, PyConnectionGraph>) -> PyResult<()> {
+    pub fn publish_connection_graph(&self, graph: PyRef<'_, PyConnectionGraph>) -> PyResult<()> {
         let Some(server) = &self.0 else {
             return Ok(());
         };
-        let graph = graph.extract::<PyConnectionGraph>()?;
         server
-            .publish_connection_graph(graph.into())
+            .publish_connection_graph(graph.0.clone())
             .map_err(PyFoxgloveError::from)
             .map_err(PyErr::from)
     }
@@ -765,7 +784,13 @@ impl PyWebSocketServer {
 ///
 /// Specify the capabilities you support when calling :py:func:`start_server`. These will be
 /// advertised to the Foxglove app when connected as a WebSocket client.
-#[pyclass(name = "Capability", module = "foxglove.websocket", eq, eq_int)]
+#[pyclass(
+    from_py_object,
+    name = "Capability",
+    module = "foxglove.websocket",
+    eq,
+    eq_int
+)]
 #[derive(Clone, PartialEq)]
 pub enum PyCapability {
     /// Allow clients to advertise channels to send data messages to the server.

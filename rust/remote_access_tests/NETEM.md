@@ -146,6 +146,40 @@ $COMPOSE exec netem python3 /netem_impair.py delay 100ms loss 3%
 > with `netem_impair.py`. It updates all netem qdiscs at once. To change a
 > single link's download, restart the stack with updated env vars.
 
+## Replaying an MCAP under a shaped uplink
+
+`yarn stream-mcap` replays a recording through a gateway program whose egress to
+the SFU is shaped by netem — the common "device on a constrained uplink" case,
+with no per-link network or relay. It uses `docker-compose.netem-egress.yml` — a
+`runner` plus a `runner-netem` sidecar that shapes the runner's egress; the same
+overlay shapes any gateway program you exec into it.
+
+Point it at a deployed instance — its SFU's ICE candidates are publicly
+routable, so a host browser can watch the device directly:
+
+```sh
+FOXGLOVE_DEVICE_TOKEN=fox_dt_... \
+yarn stream-mcap /abs/path/to/heavy.mcap
+```
+
+`FOXGLOVE_API_URL` defaults to `https://api.foxglove.dev`; point it at another
+instance to override. The device token must come from whichever instance you use,
+for a device with remote access enabled in an org whose plan includes it. For a
+local SFU, run the app and `--dev` LiveKit yourself and point `FOXGLOVE_API_URL`
+at them.
+
+The stack starts shaped at the `starlink` profile (the `NETEM_EGRESS` default).
+Retune live without restarting — each call replaces all settings, and
+`netem-impair` needs an explicit profile or raw args:
+
+```sh
+yarn netem-impair --profile severe     # delay 100ms 30ms loss 5% rate 2mbit
+yarn netem-impair --profile pristine   # unshaped
+yarn netem-impair -- delay 500ms loss 10%
+```
+
+Tear down with `docker compose -f docker-compose.netem-egress.yml down`.
+
 ## Scenarios
 
 ### Robot on Starlink, operator on fiber

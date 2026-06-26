@@ -312,6 +312,26 @@ impl ConnectedClient {
     pub fn on_disconnect(&self) {
         let channel_ids = self.subscriptions.lock().left_values().copied().collect();
         self.unsubscribe_channel_ids(channel_ids);
+
+        // Unadvertise any client channels the client was still advertising,
+        // mirroring the unsubscribe replay above (and the remote-access
+        // gateway's behavior on participant removal), so that ServerListener
+        // implementations can release per-channel state. Drained under the
+        // lock; the handler is called after releasing it.
+        let client_channels: Vec<_> = {
+            let mut advertised_channels = self.advertised_channels.lock();
+            advertised_channels.drain().map(|(_, c)| c).collect()
+        };
+        if client_channels.is_empty() {
+            return;
+        }
+        let server = self.server.upgrade();
+        let Some(handler) = server.as_ref().and_then(|s| s.listener()) else {
+            return;
+        };
+        for client_channel in client_channels {
+            handler.on_client_unadvertise(Client::new(self), &client_channel);
+        }
     }
 
     fn on_message_data(&self, server: Arc<Server>, message: ws_protocol::client::MessageData) {

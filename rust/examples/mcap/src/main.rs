@@ -16,7 +16,7 @@ struct Cli {
     #[arg(long)]
     overwrite: bool,
     /// Chunk size.
-    #[arg(long, default_value_t = 1024 * 768)]
+    #[arg(long, default_value_t = 1024 * 1024)]
     chunk_size: u64,
     /// Compression algorithm to use.
     #[arg(long, default_value = "zstd")]

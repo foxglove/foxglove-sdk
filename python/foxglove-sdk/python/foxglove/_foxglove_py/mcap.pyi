@@ -50,7 +50,7 @@ class MCAPWriteOptions:
         *,
         compression: MCAPCompression | None = MCAPCompression.Zstd,
         profile: str | None = None,
-        chunk_size: int | None = 786432,
+        chunk_size: int | None = 1048576,
         use_chunks: bool = True,
         emit_statistics: bool = True,
         emit_summary_offsets: bool = True,

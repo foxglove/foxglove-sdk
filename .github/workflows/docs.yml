@@ -10,7 +10,7 @@ jobs:
   build-cpp-docs:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: ssciwr/doxygen-install@v2
         with:
           version: "1.13.2"
@@ -27,7 +27,7 @@ jobs:
   build-python-docs:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - name: Install common dependencies
         uses: ./.github/actions/common-deps

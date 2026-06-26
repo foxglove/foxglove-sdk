@@ -158,7 +158,7 @@ def test_channel_metadata(new_topic: str) -> None:
 
 
 def test_channel_metadata_mistyped(new_topic: str) -> None:
-    with pytest.raises(TypeError, match="argument 'metadata'"):
+    with pytest.raises(TypeError, match="is not an instance of 'str'"):
         Channel(new_topic, metadata={"1": 1})  # type: ignore
 
 
@@ -170,7 +170,7 @@ def test_typed_channel_metadata(new_topic: str) -> None:
 
 
 def test_typed_channel_metadata_mistyped(new_topic: str) -> None:
-    with pytest.raises(TypeError, match="argument 'metadata'"):
+    with pytest.raises(TypeError, match="is not an instance of 'str'"):
         LogChannel(new_topic, metadata={"1": 1})  # type: ignore
 
 

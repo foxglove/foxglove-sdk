@@ -34,9 +34,8 @@ workspace = true
 base64 = "0.22.1"
 bytes.workspace = true
 log.workspace = true
-prost-types = "0.13"
-pyo3 = { version = "0.25.1", features = ["abi3-py310"] }
-pyo3-log = "0.12.3"
+pyo3 = { version = "0.29.0", features = ["abi3-py310"] }
+pyo3-log = "0.13.4"
 thiserror.workspace = true
 tracing.workspace = true
 
@@ -44,8 +43,6 @@ tracing.workspace = true
 foxglove = { path = "../../rust/foxglove", default-features = false, features = ["lz4", "zstd"] }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
-tokio-tungstenite.workspace = true
-tokio-util.workspace = true
 tokio.workspace = true
 foxglove = { path = "../../rust/foxglove", default-features = false, features = [
   "lz4",
@@ -53,6 +50,3 @@ foxglove = { path = "../../rust/foxglove", default-features = false, features = 
   "websocket",
   "zstd",
 ] }
-
-[build-dependencies]
-walkdir = "2.5.0"

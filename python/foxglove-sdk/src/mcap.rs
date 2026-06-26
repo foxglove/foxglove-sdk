@@ -12,7 +12,7 @@ pub(crate) struct PyFileLikeWriter(pub(crate) Py<PyAny>);
 
 impl Write for PyFileLikeWriter {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let bytes = PyBytes::new(py, buf);
             self.0
                 .call_method1(py, "write", (bytes,))
@@ -22,7 +22,7 @@ impl Write for PyFileLikeWriter {
     }
 
     fn flush(&mut self) -> std::io::Result<()> {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             self.0
                 .call_method0(py, "flush")
                 .map(|_| ())
@@ -33,7 +33,7 @@ impl Write for PyFileLikeWriter {
 
 impl std::io::Seek for PyFileLikeWriter {
     fn seek(&mut self, pos: SeekFrom) -> std::io::Result<u64> {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let (offset, whence): (i64, i32) = match pos {
                 SeekFrom::Start(n) => (n as i64, 0),
                 SeekFrom::Current(n) => (n, 1),
@@ -79,7 +79,13 @@ impl std::io::Seek for WriterInner {
 }
 
 /// Compression algorithm to use for MCAP writing.
-#[pyclass(eq, eq_int, name = "MCAPCompression", module = "foxglove.mcap")]
+#[pyclass(
+    from_py_object,
+    eq,
+    eq_int,
+    name = "MCAPCompression",
+    module = "foxglove.mcap"
+)]
 #[derive(PartialEq, Clone)]
 pub enum PyMcapCompression {
     Zstd = 0,
@@ -153,7 +159,7 @@ impl From<PyMcapCompression> for McapCompression {
 /// :param compression_threads: Specifies how many threads to use for zstd compression. None uses the number of physical CPUs. 0 disables multithreaded compression.
 /// :type compression_threads: int | None
 #[derive(Clone)]
-#[pyclass(name = "MCAPWriteOptions", module = "foxglove.mcap")]
+#[pyclass(from_py_object, name = "MCAPWriteOptions", module = "foxglove.mcap")]
 pub(crate) struct PyMcapWriteOptions(McapWriteOptions);
 
 #[pymethods]
@@ -163,7 +169,7 @@ impl PyMcapWriteOptions {
         *,
         compression = PyMcapCompression::Zstd,
         profile = None,
-        chunk_size = 786432,
+        chunk_size = 1048576,
         use_chunks = true,
         emit_statistics = true,
         emit_summary_offsets = true,
@@ -387,11 +393,11 @@ mod tests {
     /// the new Rust defaults.
     #[test]
     fn python_defaults_match_rust_defaults() {
-        pyo3::prepare_freethreaded_python();
-        Python::with_gil(|py| {
+        pyo3::Python::initialize();
+        Python::attach(|py| {
             let ty = py.get_type::<PyMcapWriteOptions>();
             let obj = ty.call0().unwrap();
-            let cell = obj.downcast::<PyMcapWriteOptions>().unwrap();
+            let cell = obj.cast::<PyMcapWriteOptions>().unwrap();
             let py_debug = format!("{:?}", cell.borrow().0);
 
             let rust_default = McapWriteOptions::default();

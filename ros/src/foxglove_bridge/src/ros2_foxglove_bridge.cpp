@@ -1,5 +1,6 @@
 #include <filesystem>
 #include <fstream>
+#include <string>
 #include <type_traits>
 #include <unordered_set>
 
@@ -17,6 +18,10 @@ inline bool isHiddenTopicOrService(const std::string& name) {
     throw std::invalid_argument("Topic or service name can't be empty");
   }
   return name.front() == '_' || name.find("/_") != std::string::npos;
+}
+
+std::string bridgeLibraryIdentifier() {
+  return std::string("foxglove-bridge/") + foxglove_bridge::FOXGLOVE_BRIDGE_VERSION;
 }
 
 inline foxglove::WebSocketServerCapabilities processCapabilities(
@@ -100,6 +105,8 @@ using namespace std::placeholders;
 
 FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
     : Node("foxglove_bridge", options) {
+  foxglove::internal::setLibraryIdentifierPrefix(bridgeLibraryIdentifier());
+
   const char* rosDistro = std::getenv("ROS_DISTRO");
   RCLCPP_INFO(this->get_logger(), "Starting foxglove_bridge (%s, %s@%s)", rosDistro,
               foxglove_bridge::FOXGLOVE_BRIDGE_VERSION, foxglove_bridge::FOXGLOVE_BRIDGE_GIT_HASH);
@@ -147,6 +154,8 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
   if (debug) {
     foxglove::setLogLevel(foxglove::LogLevel::Debug);
     this->get_logger().set_level(rclcpp::Logger::Level::Debug);
+  } else {
+    foxglove::setLogLevel(foxglove::LogLevel::Info);
   }
 
   _serverContext = foxglove::Context::create();

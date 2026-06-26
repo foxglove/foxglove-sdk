@@ -31,7 +31,7 @@ use super::ws_protocol::server::{
     ConnectionGraphUpdate, FetchAssetResponse, ParameterValues, ServerInfo, ServerMessage,
     ServiceCallFailure, ServiceCallResponse, Status, advertise_services,
 };
-use crate::library_version::get_library_version;
+use crate::library_version::get_library_identifier;
 use crate::testutil::{
     RecordingGetBehavior, RecordingParameterHandler, RecordingServerListener, RecordingSetBehavior,
     assert_eventually,
@@ -116,7 +116,7 @@ async fn test_client_connect() {
     assert_eq!(
         msg,
         ServerInfo::new("mock_server")
-            .with_metadata(maplit::hashmap! {"fg-library".into() => get_library_version()})
+            .with_metadata(maplit::hashmap! {"fg-library".into() => get_library_identifier()})
             .with_session_id("mock_sess_id")
     );
 
@@ -653,6 +653,53 @@ async fn test_on_unsubscribe_called_after_disconnect() {
 
     let unsubscriptions = recording_listener.take_unsubscribe();
     assert_eq!(unsubscriptions.len(), 1);
+
+    let _ = server.stop();
+}
+
+#[tokio::test]
+async fn test_on_client_unadvertise_called_after_disconnect() {
+    let recording_listener = Arc::new(RecordingServerListener::new());
+
+    let ctx = Context::new();
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            capabilities: Some(IndexSet::from([Capability::ClientPublish])),
+            supported_encodings: Some(IndexSet::from(["json".to_string()])),
+            listener: Some(recording_listener.clone()),
+            ..Default::default()
+        },
+    );
+
+    let addr = server
+        .start("127.0.0.1", 0)
+        .await
+        .expect("Failed to start server");
+
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
+    expect_recv!(client, ServerMessage::ServerInfo);
+
+    let advertise =
+        client::Advertise::new([client::advertise::Channel::builder(1, "/test", "json")
+            .build()
+            .unwrap()]);
+    client.send(&advertise).await.expect("Failed to send");
+
+    // Allow the server to process the advertisement
+    assert_eventually(|| recording_listener.client_advertise_len() == 1).await;
+    assert_eq!(recording_listener.client_unadvertise_len(), 0);
+
+    // Disconnect the client without unadvertising explicitly
+    client.close().await.expect("Failed to close");
+
+    // The unadvertisement is replayed to the listener on disconnect
+    assert_eventually(|| recording_listener.client_unadvertise_len() == 1).await;
+    let unadvertises = recording_listener.take_client_unadvertise();
+    assert_eq!(unadvertises.len(), 1);
+    assert_eq!(unadvertises[0].1.topic, "/test");
 
     let _ = server.stop();
 }
@@ -1936,7 +1983,7 @@ async fn test_server_info_metadata_sent_to_client() {
     assert_eq!(
         msg.metadata,
         hashmap! {
-            "fg-library".into() => get_library_version(),
+            "fg-library".into() => get_library_identifier(),
             "key1".into() => "val1".into(),
             "key2".into() => "val2".into(),
         }
