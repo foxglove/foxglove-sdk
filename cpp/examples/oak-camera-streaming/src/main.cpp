@@ -140,8 +140,7 @@ std::string_view toString(PointUnit point_unit) {
 
 uint64_t systemTimeNanos(std::chrono::system_clock::time_point time) {
   return static_cast<uint64_t>(
-    std::chrono::duration_cast<std::chrono::nanoseconds>(time.time_since_epoch())
-      .count()
+    std::chrono::duration_cast<std::chrono::nanoseconds>(time.time_since_epoch()).count()
   );
 }
 
@@ -217,9 +216,7 @@ float pointScaleForUnit(const std::vector<dai::Point3fRGBA>& points, PointUnit p
   return *median > kAutoMillimeterZThreshold ? kMillimetersToMeters : 1.0F;
 }
 
-foxglove::messages::PointCloud pointCloudToMessage(
-  dai::PointCloudData& pcl, PointUnit point_unit
-) {
+foxglove::messages::PointCloud pointCloudToMessage(dai::PointCloudData& pcl, PointUnit point_unit) {
   auto points = pcl.getPointsRGB();
   const float scale = pointScaleForUnit(points, point_unit);
 
@@ -336,11 +333,10 @@ std::string imuJson(const dai::IMUPacket& packet) {
 
   return "{\"header\":{\"stamp\":{\"sec\":" + std::to_string(stamp.sec) +
          ",\"nsec\":" + std::to_string(stamp.nsec) + "},\"frame_id\":\"" +
-         std::string(kOpticalFrame) + "\"},\"angular_velocity\":{\"x\":" +
-         std::to_string(gyro.x) + ",\"y\":" + std::to_string(gyro.y) +
-         ",\"z\":" + std::to_string(gyro.z) + "},\"linear_acceleration\":{\"x\":" +
-         std::to_string(accel.x) + ",\"y\":" + std::to_string(accel.y) +
-         ",\"z\":" + std::to_string(accel.z) + "}}";
+         std::string(kOpticalFrame) + "\"},\"angular_velocity\":{\"x\":" + std::to_string(gyro.x) +
+         ",\"y\":" + std::to_string(gyro.y) + ",\"z\":" + std::to_string(gyro.z) +
+         "},\"linear_acceleration\":{\"x\":" + std::to_string(accel.x) +
+         ",\"y\":" + std::to_string(accel.y) + ",\"z\":" + std::to_string(accel.z) + "}}";
 }
 
 foxglove::RawChannel createImuChannel() {
@@ -451,7 +447,8 @@ PipelineOutputs buildPipeline(dai::Pipeline& pipeline, DepthSource depth_source)
     left->build(dai::CameraBoardSocket::CAM_B, std::nullopt, fps);
     right->build(dai::CameraBoardSocket::CAM_C, std::nullopt, fps);
     neural_depth->build(
-      *left->requestFullResolutionOutput(), *right->requestFullResolutionOutput(),
+      *left->requestFullResolutionOutput(),
+      *right->requestFullResolutionOutput(),
       dai::DeviceModelZoo::NEURAL_DEPTH_LARGE
     );
     depth_node = neural_depth;
@@ -489,16 +486,14 @@ int main(int argc, char** argv) {
     ws_options.port = args.port;
     auto server_result = foxglove::WebSocketServer::create(std::move(ws_options));
     if (!server_result.has_value()) {
-      std::cerr << "Failed to create server: " << foxglove::strerror(server_result.error())
-                << '\n';
+      std::cerr << "Failed to create server: " << foxglove::strerror(server_result.error()) << '\n';
       return 1;
     }
     auto server = std::move(server_result.value());
 
     auto points_result = foxglove::messages::PointCloudChannel::create("/oak/points");
     auto rgb_result = foxglove::messages::RawImageChannel::create("/oak/rgb/image");
-    auto cal_result =
-      foxglove::messages::CameraCalibrationChannel::create("/oak/rgb/calibration");
+    auto cal_result = foxglove::messages::CameraCalibrationChannel::create("/oak/rgb/calibration");
     auto tf_result = foxglove::messages::FrameTransformsChannel::create("/tf");
     if (!points_result.has_value() || !rgb_result.has_value() || !cal_result.has_value() ||
         !tf_result.has_value()) {
@@ -548,9 +543,7 @@ int main(int argc, char** argv) {
       if (auto imu_data = imu_queue->tryGet<dai::IMUData>(); imu_data != nullptr) {
         for (const auto& packet : imu_data->packets) {
           const auto payload = imuJson(packet);
-          imu_channel.log(
-            reinterpret_cast<const std::byte*>(payload.data()), payload.size()
-          );
+          imu_channel.log(reinterpret_cast<const std::byte*>(payload.data()), payload.size());
         }
       }
 

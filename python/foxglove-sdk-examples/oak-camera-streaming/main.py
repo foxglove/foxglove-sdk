@@ -29,8 +29,8 @@ import time
 from typing import Any
 
 import depthai as dai
-import numpy as np
 import foxglove
+import numpy as np
 from foxglove import Channel, Schema
 from foxglove.channels import (
     CameraCalibrationChannel,
