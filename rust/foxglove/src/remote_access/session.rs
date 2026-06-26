@@ -87,9 +87,10 @@ pub(super) const DEFAULT_MESSAGE_BACKLOG_SIZE: usize = 1024;
 /// cannot monopolize the shared data channel and starve the others (see FLE-592).
 pub(super) const DEFAULT_MAX_DATA_TRACK_MESSAGE_SIZE: usize = 100 * 1024;
 
-/// Minimum configurable data-track message limit, in bytes. Below one transport
-/// packet (livekit-datatrack's 16,000-byte MTU) the limit would shed messages
-/// that already fit in a single packet, which is never the intent.
+/// Minimum configurable data-track message limit, in bytes. Below one packet
+/// (livekit-datatrack's 16,000-byte max packet size, its `TRANSPORT_MTU`) the
+/// limit would shed messages that already fit in a single packet, which is never
+/// the intent.
 pub(super) const MIN_DATA_TRACK_MESSAGE_SIZE: usize = 16_000;
 
 /// The default codec for published video tracks.

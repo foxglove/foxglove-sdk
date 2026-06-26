@@ -867,6 +867,7 @@ pub struct TestGatewayOptions {
     pub capabilities: Vec<foxglove::remote_access::Capability>,
     pub services: Vec<Service>,
     pub qos_classifier: Option<QosClassifierFn>,
+    pub max_data_track_message_size: Option<usize>,
 }
 
 /// A test gateway backed by a mock Foxglove API server and a LiveKit room.
@@ -949,6 +950,9 @@ impl TestGateway {
         }
         if let Some(classifier) = options.qos_classifier {
             gateway = gateway.qos_classifier_fn(classifier);
+        }
+        if let Some(size) = options.max_data_track_message_size {
+            gateway = gateway.max_data_track_message_size(size);
         }
 
         let handle = gateway.start().context("start Gateway")?;

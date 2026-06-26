@@ -138,6 +138,76 @@ async fn livekit_viewer_receives_message_after_subscribe() -> Result<()> {
     Ok(())
 }
 
+/// Test that a message exceeding the configured data-track size limit is dropped
+/// at the gateway, while smaller messages on the same channel are delivered. The
+/// viewer receives the two small payloads and never the oversized one logged
+/// between them, proving the oversized message was shed at publish rather than
+/// merely delayed (FLE-592).
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_oversized_data_track_message_is_dropped() -> Result<()> {
+    let ctx = foxglove::Context::new();
+    let channel = ctx
+        .channel_builder("/test")
+        .message_encoding("json")
+        .build_raw()
+        .context("create channel")?;
+
+    // Use the minimum allowed limit (one transport packet). Messages larger than
+    // this are dropped before publish; smaller ones flow normally.
+    let limit = 16_000;
+    let gw = TestGateway::start_with_options(
+        &ctx,
+        TestGatewayOptions {
+            max_data_track_message_size: Some(limit),
+            ..Default::default()
+        },
+    )
+    .await?;
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+
+    let _server_info = viewer.expect_server_info().await?;
+    let advertise = viewer.expect_advertise().await?;
+    let channel_id = advertise.channels[0].id;
+
+    viewer.subscribe_and_wait(&[channel_id], &channel).await?;
+    let mut ch_reader = viewer.expect_device_channel_data_track(channel_id).await?;
+
+    // Each message is awaited before the next is logged, so LiveKit's own
+    // single-frame send queue never evicts one — any loss is attributable to the
+    // gateway-side size gate.
+
+    // 1. A small message is delivered, proving the channel works.
+    channel.log(b"before");
+    let before = ch_reader.next_message_data().await?;
+    assert_eq!(before.data.as_ref(), b"before");
+
+    // 2. An oversized message logged on its own must be dropped at the gateway
+    //    and never reach the viewer. Nothing else is in flight, so if the gate
+    //    were absent this lone message would be delivered like the others.
+    let oversized = vec![0xAB_u8; limit + 1];
+    channel.log(&oversized);
+    let res = tokio::time::timeout(Duration::from_secs(3), ch_reader.next_message_data()).await;
+    assert!(
+        res.is_err(),
+        "oversized message must be dropped at the gateway, but the viewer \
+         received a frame"
+    );
+
+    // 3. A later small message is delivered, confirming the stream is still
+    //    healthy — the absence above was the drop, not a broken channel.
+    channel.log(b"after");
+    let after = ch_reader.next_message_data().await?;
+    assert_eq!(after.data.as_ref(), b"after");
+    info!("oversized data-track message correctly dropped at the gateway");
+
+    viewer.close().await?;
+    gw.stop().await?;
+    Ok(())
+}
+
 /// Test that messages logged before the viewer subscribes are not delivered.
 #[traced_test]
 #[ignore]
