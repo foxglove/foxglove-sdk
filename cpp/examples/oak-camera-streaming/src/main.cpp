@@ -12,6 +12,7 @@
 #include <array>
 #include <atomic>
 #include <chrono>
+#include <cmath>
 #include <csignal>
 #include <cstddef>
 #include <cstdint>
@@ -326,7 +327,19 @@ foxglove::messages::FrameTransforms makeStaticTransform() {
   return foxglove::messages::FrameTransforms{{std::move(transform)}};
 }
 
-std::string imuJson(const dai::IMUPacket& packet) {
+bool isFiniteImuPacket(const dai::IMUPacket& packet) {
+  const auto& accel = packet.acceleroMeter;
+  const auto& gyro = packet.gyroscope;
+  return std::isfinite(accel.x) && std::isfinite(accel.y) && std::isfinite(accel.z) &&
+         std::isfinite(gyro.x) && std::isfinite(gyro.y) && std::isfinite(gyro.z);
+}
+
+std::optional<std::string> imuJson(const dai::IMUPacket& packet) {
+  if (!isFiniteImuPacket(packet)) {
+    std::cerr << "Skipping IMU packet with non-finite values\n";
+    return std::nullopt;
+  }
+
   const auto stamp = toTimestamp(packet.acceleroMeter.getTimestamp());
   const auto& accel = packet.acceleroMeter;
   const auto& gyro = packet.gyroscope;
@@ -543,7 +556,9 @@ int main(int argc, char** argv) {
       if (auto imu_data = imu_queue->tryGet<dai::IMUData>(); imu_data != nullptr) {
         for (const auto& packet : imu_data->packets) {
           const auto payload = imuJson(packet);
-          imu_channel.log(reinterpret_cast<const std::byte*>(payload.data()), payload.size());
+          if (payload.has_value()) {
+            imu_channel.log(reinterpret_cast<const std::byte*>(payload->data()), payload->size());
+          }
         }
       }
 

@@ -2,11 +2,10 @@
 """
 Publish OAK RGBD camera data to Foxglove using the Foxglove SDK.
 
-This reuses the depth pipeline from ``test_depth_cam.py`` (a color camera plus
-a stereo / neural depth source feeding a DepthAI ``RGBD`` node), but
-instead of streaming through DepthAI's ``RemoteConnection`` it converts camera,
-point cloud, calibration, and IMU packets into Foxglove messages and logs them
-to a Foxglove WebSocket server.
+The pipeline combines a color camera with either stereo or neural depth, feeds
+both into a DepthAI ``RGBD`` node, then converts camera, point cloud,
+calibration, and IMU packets into Foxglove messages and logs them to a
+Foxglove WebSocket server.
 
 Topics:
 
@@ -132,11 +131,8 @@ MONOTONIC_TO_UNIX_EPOCH_NS = time.time_ns() - time.monotonic_ns()
 
 def to_timestamp(td: Any) -> Timestamp:
     """Convert a DepthAI monotonic timestamp to a Unix-epoch Foxglove Timestamp."""
-    try:
-        total_ns = MONOTONIC_TO_UNIX_EPOCH_NS + int(td.total_seconds() * 1e9)
-        return Timestamp(sec=total_ns // 1_000_000_000, nsec=total_ns % 1_000_000_000)
-    except Exception:
-        return Timestamp.now()
+    total_ns = MONOTONIC_TO_UNIX_EPOCH_NS + int(td.total_seconds() * 1e9)
+    return Timestamp(sec=total_ns // 1_000_000_000, nsec=total_ns % 1_000_000_000)
 
 
 def point_scale_for_unit(points: np.ndarray, point_unit: str) -> float:
@@ -271,10 +267,7 @@ def build_pipeline(pipeline: dai.Pipeline, depth_source: str) -> tuple[
     dai.CameraBoardSocket,
     tuple[int, int],
 ]:
-    """Build the color + depth + RGBD graph, returning the RGBD node.
-
-    This mirrors the working pipeline in ``test_depth_cam.py``.
-    """
+    """Build the color + depth + RGBD graph, returning the RGBD node."""
     size = (640, 400)
     if depth_source == "neural":
         fps = NEURAL_FPS

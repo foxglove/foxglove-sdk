@@ -85,7 +85,7 @@ IMU ─────────────────────────�
 
 - The **color camera** outputs frames for `/oak/rgb/image` and provides RGB color for the `RGBD` point cloud.
 - The **depth source** is either stereo depth or neural depth. It feeds the `RGBD` node, which publishes colored point cloud packets.
-- The **IMU** node batches samples on the device (`setBatchReportThreshold`) so the host isn't flooded with one tiny packet per sample at 100 Hz.
+- The **IMU** node batches samples on the device (`setBatchReportThreshold`) so the host isn't flooded with one tiny packet per sample at 50 Hz.
 - The **calibration** is read once from the device (`device.readCalibration()`) and republished as a `foxglove.CameraCalibration` on every RGB frame. Foxglove uses it to draw the camera frustum and undistort the live image in the Image panel.
 
 ### 3. Convert packets to Foxglove messages
