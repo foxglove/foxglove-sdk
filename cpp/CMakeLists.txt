@@ -492,6 +492,13 @@ if(FOXGLOVE_BUILD_EXAMPLES)
     message(STATUS "OpenCV not found; skipping example_rgb_camera_visualization")
   endif()
 
+  find_package(depthai CONFIG QUIET)
+  if(depthai_FOUND)
+    add_foxglove_example(example_oak_camera_streaming SOURCES examples/oak-camera-streaming/src/main.cpp LIBS depthai::core)
+  else()
+    message(STATUS "DepthAI not found; skipping example_oak_camera_streaming")
+  endif()
+
   add_foxglove_example(example_remote_data_loader_backend SOURCES examples/remote-data-loader-backend/src/main.cpp LIBS nlohmann_json::nlohmann_json httplib::httplib base64 date::date)
 
   add_foxglove_example(example_ws_stream_mcap
