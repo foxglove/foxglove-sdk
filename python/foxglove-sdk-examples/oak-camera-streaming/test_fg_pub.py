@@ -20,21 +20,30 @@ printed link), then add a 3D panel with the display frame set to ``oak``.
 from __future__ import annotations
 
 import argparse
+import json
 import logging
 import time
 from typing import Any
 
 import depthai as dai
-import foxglove
 import numpy as np
-from foxglove.channels import FrameTransformsChannel, PointCloudChannel
+import foxglove
+from foxglove import Channel, Schema
+from foxglove.channels import (
+    CameraCalibrationChannel,
+    FrameTransformsChannel,
+    PointCloudChannel,
+    RawImageChannel,
+)
 from foxglove.messages import (
+    CameraCalibration,
     FrameTransform,
     FrameTransforms,
     PackedElementField,
     PackedElementFieldNumericType,
     PointCloud,
     Quaternion,
+    RawImage,
     Timestamp,
     Vector3,
 )
@@ -42,6 +51,7 @@ from foxglove.messages import (
 NEURAL_FPS = 8
 STEREO_DEFAULT_FPS = 30
 TOF_DEFAULT_FPS = 30
+IMU_HZ = 50
 
 # DepthAI emits points in the camera optical frame (X right, Y down, Z forward).
 # Publishing this rotation lets the 3D panel render the cloud upright when the
@@ -69,6 +79,48 @@ POINT_FIELDS = [
 # the default below infers whether a packet is meter-scale or millimeter-scale.
 MILLIMETERS_TO_METERS = 0.001
 AUTO_MILLIMETER_Z_THRESHOLD = 50.0
+
+# Foxglove supports a fixed set of distortion models. DepthAI's Perspective
+# model is OpenCV's rational polynomial model; Foxglove uses the first 8 params.
+_DISTORTION_MODELS = {
+    "Perspective": ("rational_polynomial", 8),
+    "Fisheye": ("kannala_brandt", 4),
+}
+
+IMU_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "header": {
+            "type": "object",
+            "properties": {
+                "stamp": {
+                    "type": "object",
+                    "properties": {
+                        "sec": {"type": "integer"},
+                        "nsec": {"type": "integer"},
+                    },
+                },
+                "frame_id": {"type": "string"},
+            },
+        },
+        "angular_velocity": {
+            "type": "object",
+            "properties": {
+                "x": {"type": "number"},
+                "y": {"type": "number"},
+                "z": {"type": "number"},
+            },
+        },
+        "linear_acceleration": {
+            "type": "object",
+            "properties": {
+                "x": {"type": "number"},
+                "y": {"type": "number"},
+                "z": {"type": "number"},
+            },
+        },
+    },
+}
 
 
 def to_timestamp(td: Any) -> Timestamp:
@@ -132,6 +184,55 @@ def pointcloud_to_message(pcl: dai.PointCloudData, point_unit: str) -> PointClou
     )
 
 
+def build_camera_calibration_kwargs(
+    calib: dai.CalibrationHandler,
+    socket: dai.CameraBoardSocket,
+    width: int,
+    height: int,
+    frame_id: str,
+) -> dict[str, Any]:
+    K = np.asarray(calib.getCameraIntrinsics(socket, width, height)).flatten().tolist()
+    fx, _, cx, _, fy, cy, _, _, _ = K
+    P = [
+        fx,
+        0.0,
+        cx,
+        0.0,
+        0.0,
+        fy,
+        cy,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+    ]
+    R = [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]
+
+    model_name = str(calib.getDistortionModel(socket)).rsplit(".", 1)[-1]
+    if model_name in _DISTORTION_MODELS:
+        distortion_model, n_params = _DISTORTION_MODELS[model_name]
+        D = list(map(float, calib.getDistortionCoefficients(socket)))[:n_params]
+    else:
+        logging.warning(
+            "Unsupported DepthAI distortion model %r; publishing intrinsics only",
+            model_name,
+        )
+        distortion_model = ""
+        D = []
+
+    return {
+        "frame_id": frame_id,
+        "width": width,
+        "height": height,
+        "distortion_model": distortion_model,
+        "D": D,
+        "K": K,
+        "R": R,
+        "P": P,
+    }
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--port", type=int, default=8765, help="WebSocket port")
@@ -156,9 +257,13 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def build_pipeline(
-    pipeline: dai.Pipeline, depth_source: str
-) -> dai.node.RGBD:
+def build_pipeline(pipeline: dai.Pipeline, depth_source: str) -> tuple[
+    dai.node.RGBD,
+    dai.Node.Output,
+    dai.Node.Output,
+    dai.CameraBoardSocket,
+    tuple[int, int],
+]:
     """Build the color + depth + RGBD graph, returning the RGBD node.
 
     This mirrors the working pipeline in ``test_depth_cam.py``.
@@ -172,6 +277,7 @@ def build_pipeline(
         fps = STEREO_DEFAULT_FPS
 
     if depth_source == "stereo":
+        color_socket = dai.CameraBoardSocket.CAM_A
         color = pipeline.create(dai.node.Camera).build(sensorFps=fps)
         left = pipeline.create(dai.node.Camera).build(
             dai.CameraBoardSocket.CAM_B, sensorFps=fps
@@ -186,6 +292,7 @@ def build_pipeline(
         left.requestOutput(size).link(depth.left)
         right.requestOutput(size).link(depth.right)
     elif depth_source == "neural":
+        color_socket = dai.CameraBoardSocket.CAM_A
         color = pipeline.create(dai.node.Camera).build(sensorFps=fps)
         left = pipeline.create(dai.node.Camera).build(
             dai.CameraBoardSocket.CAM_B, sensorFps=fps
@@ -199,6 +306,7 @@ def build_pipeline(
             dai.DeviceModelZoo.NEURAL_DEPTH_LARGE,
         )
     elif depth_source == "tof":
+        color_socket = dai.CameraBoardSocket.CAM_C
         color = pipeline.create(dai.node.Camera).build(
             dai.CameraBoardSocket.CAM_C, sensorFps=fps
         )
@@ -211,11 +319,19 @@ def build_pipeline(
         raise ValueError(f"Invalid depth source: {depth_source}")
 
     rgbd = pipeline.create(dai.node.RGBD).build(color, depth, size, fps)
+    color_out = color.requestOutput(size, type=dai.ImgFrame.Type.NV12, fps=fps)
     # Ask DepthAI for meter-scale output. The host-side conversion still has an
     # auto mode because some DepthAI versions/devices appear to emit the point
     # cloud in millimeters despite this setting.
     rgbd.setDepthUnits(dai.LengthUnit.METER)
-    return rgbd
+
+    imu = pipeline.create(dai.node.IMU)
+    imu.enableIMUSensor(dai.IMUSensor.ACCELEROMETER_UNCALIBRATED, IMU_HZ)
+    imu.enableIMUSensor(dai.IMUSensor.GYROSCOPE_UNCALIBRATED, IMU_HZ)
+    imu.setBatchReportThreshold(5)
+    imu.setMaxBatchReports(20)
+
+    return rgbd, color_out, imu.out, color_socket, size
 
 
 def main() -> None:
@@ -223,6 +339,17 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 
     points_channel = PointCloudChannel(topic="/oak/points")
+    rgb_channel = RawImageChannel(topic="/oak/rgb/image")
+    cal_channel = CameraCalibrationChannel(topic="/oak/rgb/calibration")
+    imu_channel = Channel(
+        topic="/oak/imu",
+        message_encoding="json",
+        schema=Schema(
+            name="sensor_msgs.msg.ImuLike",
+            encoding="jsonschema",
+            data=json.dumps(IMU_SCHEMA).encode("utf-8"),
+        ),
+    )
     tf_channel = FrameTransformsChannel(topic="/tf")
 
     writer = foxglove.open_mcap(args.record) if args.record else None
@@ -231,14 +358,28 @@ def main() -> None:
     logging.info("Foxglove server: %s", server.app_url())
 
     with dai.Pipeline() as pipeline:
-        rgbd = build_pipeline(pipeline, args.depth_source)
+        rgbd, color_out, imu_out, color_socket, color_size = build_pipeline(
+            pipeline, args.depth_source
+        )
         pcl_queue = rgbd.pcl.createOutputQueue(maxSize=4, blocking=False)
+        rgb_queue = color_out.createOutputQueue(maxSize=2, blocking=False)
+        imu_queue = imu_out.createOutputQueue(maxSize=50, blocking=False)
 
         pipeline.start()
         logging.info(
-            "Pipeline running with depth source %r, point unit %r — Ctrl+C to stop",
+            "Pipeline running with depth source %r, point unit %r, IMU %dHz — Ctrl+C to stop",
             args.depth_source,
             args.point_unit,
+            IMU_HZ,
+        )
+
+        device = pipeline.getDefaultDevice()
+        rgb_calibration_kwargs = build_camera_calibration_kwargs(
+            device.readCalibration(),
+            color_socket,
+            color_size[0],
+            color_size[1],
+            OPTICAL_FRAME,
         )
 
         try:
@@ -262,6 +403,53 @@ def main() -> None:
                 pcl = pcl_queue.tryGet()
                 if isinstance(pcl, dai.PointCloudData):
                     points_channel.log(pointcloud_to_message(pcl, args.point_unit))
+
+                frame = rgb_queue.tryGet()
+                if isinstance(frame, dai.ImgFrame):
+                    bgr = frame.getCvFrame()
+                    height, width = bgr.shape[:2]
+                    stamp = to_timestamp(frame.getTimestamp())
+                    rgb_channel.log(
+                        RawImage(
+                            timestamp=stamp,
+                            frame_id=OPTICAL_FRAME,
+                            width=width,
+                            height=height,
+                            encoding="bgr8",
+                            step=width * 3,
+                            data=bgr.tobytes(),
+                        )
+                    )
+                    cal_channel.log(
+                        CameraCalibration(timestamp=stamp, **rgb_calibration_kwargs)
+                    )
+
+                imu_data = imu_queue.tryGet()
+                if isinstance(imu_data, dai.IMUData):
+                    for packet in imu_data.packets:
+                        accel = packet.acceleroMeter
+                        gyro = packet.gyroscope
+                        stamp = to_timestamp(accel.getTimestamp())
+                        imu_channel.log(
+                            json.dumps(
+                                {
+                                    "header": {
+                                        "stamp": {"sec": stamp.sec, "nsec": stamp.nsec},
+                                        "frame_id": OPTICAL_FRAME,
+                                    },
+                                    "angular_velocity": {
+                                        "x": float(gyro.x),
+                                        "y": float(gyro.y),
+                                        "z": float(gyro.z),
+                                    },
+                                    "linear_acceleration": {
+                                        "x": float(accel.x),
+                                        "y": float(accel.y),
+                                        "z": float(accel.z),
+                                    },
+                                }
+                            ).encode("utf-8")
+                        )
 
                 time.sleep(0.001)
         except KeyboardInterrupt:
