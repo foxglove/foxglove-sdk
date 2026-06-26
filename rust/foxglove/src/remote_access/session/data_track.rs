@@ -52,10 +52,6 @@ impl DataTrack {
         session_cancel: CancellationToken,
         max_message_size: usize,
     ) -> Self {
-        debug_assert!(
-            max_message_size >= super::MIN_DATA_TRACK_MESSAGE_SIZE,
-            "data-track message size limit must be at least one transport packet"
-        );
         let track = Arc::new(OnceLock::new());
         let track_clone = Arc::clone(&track);
         let close = CancellationToken::new();
