@@ -3,7 +3,7 @@
 Publish OAK RGBD camera data to Foxglove using the Foxglove SDK.
 
 This reuses the depth pipeline from ``test_depth_cam.py`` (a color camera plus
-a stereo / neural / ToF depth source feeding a DepthAI ``RGBD`` node), but
+a stereo / neural depth source feeding a DepthAI ``RGBD`` node), but
 instead of streaming through DepthAI's ``RemoteConnection`` it converts camera,
 point cloud, calibration, and IMU packets into Foxglove messages and logs them
 to a Foxglove WebSocket server.
@@ -245,7 +245,7 @@ def parse_args() -> argparse.Namespace:
         "--depth-source",
         type=str,
         default="stereo",
-        choices=["stereo", "neural", "tof"],
+        choices=["stereo", "neural"],
     )
     parser.add_argument(
         "--record", default="", help="Also record to an MCAP file at this path"
@@ -276,8 +276,6 @@ def build_pipeline(pipeline: dai.Pipeline, depth_source: str) -> tuple[
     size = (640, 400)
     if depth_source == "neural":
         fps = NEURAL_FPS
-    elif depth_source == "tof":
-        fps = TOF_DEFAULT_FPS
     else:
         fps = STEREO_DEFAULT_FPS
 
@@ -310,16 +308,6 @@ def build_pipeline(pipeline: dai.Pipeline, depth_source: str) -> tuple[
             right.requestOutput(size),
             dai.DeviceModelZoo.NEURAL_DEPTH_LARGE,
         )
-    elif depth_source == "tof":
-        color_socket = dai.CameraBoardSocket.CAM_C
-        color = pipeline.create(dai.node.Camera).build(
-            dai.CameraBoardSocket.CAM_C, sensorFps=fps
-        )
-        socket, preset_mode = (
-            dai.CameraBoardSocket.AUTO,
-            dai.ImageFiltersPresetMode.TOF_MID_RANGE,
-        )
-        depth = pipeline.create(dai.node.ToF).build(socket, preset_mode)
     else:
         raise ValueError(f"Invalid depth source: {depth_source}")
 
