@@ -1,17 +1,20 @@
 #!/usr/bin/env python3
 """
-Publish an OAK depth point cloud to Foxglove using the Foxglove SDK.
+Publish OAK RGBD camera data to Foxglove using the Foxglove SDK.
 
 This reuses the depth pipeline from ``test_depth_cam.py`` (a color camera plus
 a stereo / neural / ToF depth source feeding a DepthAI ``RGBD`` node), but
-instead of streaming through DepthAI's ``RemoteConnection`` it converts each
-``PointCloudData`` packet into a ``foxglove.PointCloud`` message and logs it to
-a Foxglove WebSocket server.
+instead of streaming through DepthAI's ``RemoteConnection`` it converts camera,
+point cloud, calibration, and IMU packets into Foxglove messages and logs them
+to a Foxglove WebSocket server.
 
 Topics:
 
-- ``/oak/points``  colored point cloud (``foxglove.PointCloud``)
-- ``/tf``          static optical -> upright transform (``foxglove.FrameTransforms``)
+- ``/oak/points``           colored point cloud (``foxglove.PointCloud``)
+- ``/oak/rgb/image``        RGB image (``foxglove.RawImage``)
+- ``/oak/rgb/calibration``  RGB camera calibration (``foxglove.CameraCalibration``)
+- ``/oak/imu``              IMU samples (JSON, ``sensor_msgs.msg.ImuLike``)
+- ``/tf``                   optical -> upright transform (``foxglove.FrameTransforms``)
 
 Open https://app.foxglove.dev and connect to ws://localhost:8765 (or follow the
 printed link), then add a 3D panel with the display frame set to ``oak``.
@@ -60,17 +63,20 @@ CAMERA_FRAME = "oak"
 OPTICAL_FRAME = "oak_optical"
 OPTICAL_ROTATION = Quaternion(x=-0.5, y=0.5, z=-0.5, w=0.5)
 
-# One colored point is 16 bytes: three float32 (x, y, z) followed by a packed
-# uint32 holding the bytes B, G, R, A in memory order. This is the layout the
-# Foxglove 3D panel expects for an "rgba" field.
+# One colored point is 16 bytes: three float32 (x, y, z) followed by separate
+# uint8 red, green, blue, and alpha fields. This is the color layout the
+# Foxglove 3D panel supports for foxglove.PointCloud.
 POINT_STRIDE = 16
 _F32 = PackedElementFieldNumericType.Float32
-_U32 = PackedElementFieldNumericType.Uint32
+_U8 = PackedElementFieldNumericType.Uint8
 POINT_FIELDS = [
     PackedElementField(name="x", offset=0, type=_F32),
     PackedElementField(name="y", offset=4, type=_F32),
     PackedElementField(name="z", offset=8, type=_F32),
-    PackedElementField(name="rgba", offset=12, type=_U32),
+    PackedElementField(name="red", offset=12, type=_U8),
+    PackedElementField(name="green", offset=13, type=_U8),
+    PackedElementField(name="blue", offset=14, type=_U8),
+    PackedElementField(name="alpha", offset=15, type=_U8),
 ]
 
 # Foxglove's 3D panel expects point coordinates in meters. Luxonis docs say
@@ -148,9 +154,9 @@ def pointcloud_to_message(pcl: dai.PointCloudData, point_unit: str) -> PointClou
     """Convert DepthAI colored point cloud data into a Foxglove PointCloud.
 
     ``getPointsRGB`` returns an (N, 3) float32 array of XYZ in DepthAI's
-    configured length unit and an (N, 4) uint8 array of RGBA colors. Foxglove
-    expects meters, so ``point_unit`` controls or infers the scale. Invalid
-    points sit at the origin, so we drop them.
+    configured length unit and an (N, 4) uint8 array of RGB color bytes plus an
+    unused fourth byte. Foxglove expects meters, so ``point_unit`` controls or
+    infers the scale. Invalid points sit at the origin, so we drop them.
     """
     points, colors = pcl.getPointsRGB()
     points = np.asarray(points, dtype=np.float32).reshape(-1, 3)
@@ -168,12 +174,12 @@ def pointcloud_to_message(pcl: dai.PointCloudData, point_unit: str) -> PointClou
     n = points.shape[0]
     buffer = np.zeros((n, POINT_STRIDE), dtype=np.uint8)
     buffer[:, 0:12] = points.view(np.uint8).reshape(n, 12)
-    # Source colors are RGBA; pack as B, G, R, A so the little-endian uint32
-    # decodes correctly in the Foxglove 3D panel.
-    buffer[:, 12] = colors[:, 2]
+    # Source colors are RGB plus an unused fourth byte; publish opaque alpha
+    # because Foxglove uses the alpha field directly in rgba-fields mode.
+    buffer[:, 12] = colors[:, 0]
     buffer[:, 13] = colors[:, 1]
-    buffer[:, 14] = colors[:, 0]
-    buffer[:, 15] = colors[:, 3]
+    buffer[:, 14] = colors[:, 2]
+    buffer[:, 15] = 255
 
     return PointCloud(
         timestamp=to_timestamp(pcl.getTimestamp()),
