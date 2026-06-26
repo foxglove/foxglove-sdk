@@ -1,4 +1,4 @@
-use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
@@ -6,7 +6,7 @@ use livekit::prelude::{DataTrackFrame, LocalDataTrack, LocalParticipant, Publish
 use tokio::runtime::Handle;
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
-use tracing::{debug, error};
+use tracing::{debug, error, warn};
 
 use crate::{ChannelId, Metadata};
 
@@ -26,6 +26,13 @@ pub(crate) struct DataTrack {
     sequence: AtomicU32,
     /// Throttles debug log messages when data track messages are dropped.
     drop_throttler: parking_lot::Mutex<crate::throttler::Throttler>,
+    /// Per-message size limit in bytes; messages larger than this are dropped
+    /// before publish. See `DEFAULT_MAX_DATA_TRACK_MESSAGE_SIZE` for the rationale.
+    max_message_size: usize,
+    /// Count of messages dropped for exceeding [`max_message_size`](Self::max_message_size).
+    oversized_dropped: AtomicU64,
+    /// Throttles warnings emitted when oversized messages are dropped.
+    oversized_throttler: parking_lot::Mutex<crate::throttler::Throttler>,
 }
 
 impl DataTrack {
@@ -43,7 +50,12 @@ impl DataTrack {
         local_participant: LocalParticipant,
         channel_id: ChannelId,
         session_cancel: CancellationToken,
+        max_message_size: usize,
     ) -> Self {
+        debug_assert!(
+            max_message_size >= super::MIN_DATA_TRACK_MESSAGE_SIZE,
+            "data-track message size limit must be at least one transport packet"
+        );
         let track = Arc::new(OnceLock::new());
         let track_clone = Arc::clone(&track);
         let close = CancellationToken::new();
@@ -99,12 +111,32 @@ impl DataTrack {
             drop_throttler: parking_lot::Mutex::new(crate::throttler::Throttler::new(
                 Duration::from_secs(30),
             )),
+            max_message_size,
+            oversized_dropped: AtomicU64::new(0),
+            oversized_throttler: parking_lot::Mutex::new(crate::throttler::Throttler::new(
+                Duration::from_secs(30),
+            )),
         }
     }
 
     /// Build a sequenced frame and push it to the data track.
-    /// Drops with a throttled debug log if the track is not ready or full.
+    ///
+    /// Drops the message (with a throttled warning) if it exceeds
+    /// [`max_message_size`](Self::max_message_size), or with a throttled debug
+    /// log if the track is not ready or full.
     pub fn log(&self, channel_id: ChannelId, msg: &[u8], metadata: &Metadata) {
+        if msg.len() > self.max_message_size {
+            let dropped = self.oversized_dropped.fetch_add(1, Ordering::Relaxed) + 1;
+            if self.oversized_throttler.lock().try_acquire() {
+                warn!(
+                    "dropping {}-byte message on channel {channel_id:?}: exceeds \
+                     data-track limit of {} bytes ({dropped} dropped on this channel so far)",
+                    msg.len(),
+                    self.max_message_size
+                );
+            }
+            return;
+        }
         let Some(track) = self.track.get() else {
             if self.drop_throttler.lock().try_acquire() {
                 debug!("data track not ready, dropping message for channel {channel_id:?}");
@@ -128,6 +160,12 @@ impl DataTrack {
         }
     }
 
+    /// Number of messages dropped for exceeding [`max_message_size`](Self::max_message_size).
+    #[cfg(test)]
+    pub fn oversized_dropped(&self) -> u64 {
+        self.oversized_dropped.load(Ordering::Relaxed)
+    }
+
     /// Close the data track: stop retrying, wait for any in-flight publish to
     /// complete, then unpublish the track if it was successfully published.
     pub async fn close(&mut self) {
@@ -145,5 +183,47 @@ impl DataTrack {
 impl Drop for DataTrack {
     fn drop(&mut self) {
         self.close.cancel();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    impl DataTrack {
+        /// Builds a `DataTrack` with no live LiveKit track, so the size gate in
+        /// [`log`](Self::log) can be exercised without a room or participant.
+        fn for_test(max_message_size: usize) -> Self {
+            Self {
+                track: Arc::new(OnceLock::new()),
+                close: CancellationToken::new(),
+                task: None,
+                sequence: AtomicU32::new(0),
+                drop_throttler: parking_lot::Mutex::new(crate::throttler::Throttler::new(
+                    Duration::from_secs(30),
+                )),
+                max_message_size,
+                oversized_dropped: AtomicU64::new(0),
+                oversized_throttler: parking_lot::Mutex::new(crate::throttler::Throttler::new(
+                    Duration::from_secs(30),
+                )),
+            }
+        }
+    }
+
+    #[test]
+    fn drops_oversized_message_and_counts_it() {
+        let track = DataTrack::for_test(16);
+        let channel_id = ChannelId::new(1);
+        let metadata = Metadata::default();
+
+        // An over-limit message is dropped and counted.
+        track.log(channel_id, &[0u8; 17], &metadata);
+        assert_eq!(track.oversized_dropped(), 1);
+
+        // An at-limit message takes the normal path (the track is not ready, so
+        // it is dropped downstream) and does not touch the oversized counter.
+        track.log(channel_id, &[0u8; 16], &metadata);
+        assert_eq!(track.oversized_dropped(), 1);
     }
 }
