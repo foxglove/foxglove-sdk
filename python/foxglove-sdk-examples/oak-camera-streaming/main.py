@@ -127,11 +127,13 @@ IMU_SCHEMA: dict[str, Any] = {
     },
 }
 
+MONOTONIC_TO_UNIX_EPOCH_NS = time.time_ns() - time.monotonic_ns()
+
 
 def to_timestamp(td: Any) -> Timestamp:
-    """Convert a DepthAI timestamp (a timedelta) to a Foxglove Timestamp."""
+    """Convert a DepthAI monotonic timestamp to a Unix-epoch Foxglove Timestamp."""
     try:
-        total_ns = int(td.total_seconds() * 1e9)
+        total_ns = MONOTONIC_TO_UNIX_EPOCH_NS + int(td.total_seconds() * 1e9)
         return Timestamp(sec=total_ns // 1_000_000_000, nsec=total_ns % 1_000_000_000)
     except Exception:
         return Timestamp.now()

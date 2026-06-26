@@ -138,13 +138,15 @@ std::string_view toString(PointUnit point_unit) {
   return "auto";
 }
 
-uint64_t nowNanos() {
+uint64_t systemTimeNanos(std::chrono::system_clock::time_point time) {
   return static_cast<uint64_t>(
-    std::chrono::duration_cast<std::chrono::nanoseconds>(
-      std::chrono::system_clock::now().time_since_epoch()
-    )
+    std::chrono::duration_cast<std::chrono::nanoseconds>(time.time_since_epoch())
       .count()
   );
+}
+
+uint64_t nowNanos() {
+  return systemTimeNanos(std::chrono::system_clock::now());
 }
 
 foxglove::messages::Timestamp timestampFromNanos(uint64_t nanos) {
@@ -154,9 +156,18 @@ foxglove::messages::Timestamp timestampFromNanos(uint64_t nanos) {
   return timestamp;
 }
 
-template<typename Clock, typename Duration>
-foxglove::messages::Timestamp toTimestamp(const std::chrono::time_point<Clock, Duration>& time) {
-  const auto nanos = std::chrono::duration_cast<std::chrono::nanoseconds>(time.time_since_epoch());
+template<typename Duration>
+foxglove::messages::Timestamp toTimestamp(
+  const std::chrono::time_point<std::chrono::steady_clock, Duration>& time
+) {
+  static const auto steady_reference = std::chrono::steady_clock::now();
+  static const auto system_reference = std::chrono::system_clock::now();
+
+  const auto delta = time - steady_reference;
+  const auto system_time =
+    system_reference + std::chrono::duration_cast<std::chrono::system_clock::duration>(delta);
+  const auto nanos =
+    std::chrono::duration_cast<std::chrono::nanoseconds>(system_time.time_since_epoch());
   if (nanos.count() < 0) {
     return timestampFromNanos(nowNanos());
   }

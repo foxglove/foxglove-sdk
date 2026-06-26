@@ -32,6 +32,12 @@ From the C++ build directory:
 ./example_oak_camera_streaming
 ```
 
+If your system has another `libfoxglove.so` installed, such as from a ROS environment, make sure the dynamic linker uses the SDK libraries from the build directory:
+
+```bash
+LD_LIBRARY_PATH="$PWD:$LD_LIBRARY_PATH" ./example_oak_camera_streaming
+```
+
 Useful options:
 
 ```bash
