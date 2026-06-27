@@ -364,9 +364,9 @@ impl Gateway {
     /// warning, rather than allowed to monopolize the shared data channel and
     /// starve other channels.
     ///
-    /// The limit must be at least one transport packet (16,000 bytes); a smaller
-    /// limit would drop messages that already fit in a single packet, and
-    /// [`start`](Self::start) rejects it. By default, the limit is 100 KiB.
+    /// The limit must be at least 1200 bytes (one WebRTC data-channel packet);
+    /// [`start`](Self::start) rejects anything smaller. By default, the limit is
+    /// 100 KiB.
     pub fn max_data_track_message_size(mut self, size: usize) -> Self {
         self.max_data_track_message_size = Some(size);
         self
@@ -547,7 +547,7 @@ impl Gateway {
             if size < MIN_DATA_TRACK_MESSAGE_SIZE {
                 return Err(FoxgloveError::ConfigurationError(format!(
                     "max_data_track_message_size ({size} bytes) is below the minimum of \
-                     {MIN_DATA_TRACK_MESSAGE_SIZE} bytes (one transport packet)."
+                     {MIN_DATA_TRACK_MESSAGE_SIZE} bytes (one data-channel packet)."
                 )));
             }
         }

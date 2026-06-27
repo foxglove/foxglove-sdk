@@ -29,7 +29,8 @@ pub(crate) struct DataTrack {
     /// Per-message size limit in bytes; messages larger than this are dropped
     /// before publish. See `DEFAULT_MAX_DATA_TRACK_MESSAGE_SIZE` for the rationale.
     max_message_size: usize,
-    /// Count of messages dropped for exceeding [`max_message_size`](Self::max_message_size).
+    /// Oversized messages dropped since the last warning was logged; reset to
+    /// zero each time the throttled warning fires.
     oversized_dropped: AtomicU64,
     /// Throttles warnings emitted when oversized messages are dropped.
     oversized_throttler: parking_lot::Mutex<crate::throttler::Throttler>,
@@ -122,14 +123,16 @@ impl DataTrack {
     /// log if the track is not ready or full.
     pub fn log(&self, channel_id: ChannelId, msg: &[u8], metadata: &Metadata) {
         if msg.len() > self.max_message_size {
-            let dropped = self.oversized_dropped.fetch_add(1, Ordering::Relaxed) + 1;
             if self.oversized_throttler.lock().try_acquire() {
+                let dropped = 1 + self.oversized_dropped.swap(0, Ordering::Relaxed);
                 warn!(
                     "dropping {}-byte message on channel {channel_id:?}: exceeds \
-                     data-track limit of {} bytes ({dropped} dropped on this channel so far)",
+                     data-track limit of {} bytes ({dropped} dropped since last warning)",
                     msg.len(),
                     self.max_message_size
                 );
+            } else {
+                self.oversized_dropped.fetch_add(1, Ordering::Relaxed);
             }
             return;
         }
@@ -156,7 +159,7 @@ impl DataTrack {
         }
     }
 
-    /// Number of messages dropped for exceeding [`max_message_size`](Self::max_message_size).
+    /// Oversized messages dropped since the last warning was logged (test-only).
     #[cfg(test)]
     pub fn oversized_dropped(&self) -> u64 {
         self.oversized_dropped.load(Ordering::Relaxed)
@@ -213,12 +216,13 @@ mod tests {
         let channel_id = ChannelId::new(1);
         let metadata = Metadata::default();
 
-        // An over-limit message is dropped and counted.
+        // The first oversized message fires the throttled warning, which resets
+        // the pending counter, so send a second to leave one pending drop.
+        track.log(channel_id, &[0u8; 17], &metadata);
         track.log(channel_id, &[0u8; 17], &metadata);
         assert_eq!(track.oversized_dropped(), 1);
 
-        // An at-limit message takes the normal path (the track is not ready, so
-        // it is dropped downstream) and does not touch the oversized counter.
+        // An at-limit message takes the normal path and is not counted.
         track.log(channel_id, &[0u8; 16], &metadata);
         assert_eq!(track.oversized_dropped(), 1);
     }
