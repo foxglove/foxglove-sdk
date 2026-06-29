@@ -644,8 +644,8 @@ mod tests {
 
     #[test]
     fn max_data_track_message_size_below_minimum_rejected() {
-        // A limit smaller than one transport packet is a misconfiguration and
-        // must be rejected at startup.
+        // A limit below the minimum is a misconfiguration and must be rejected
+        // at startup.
         let result = Gateway::new()
             .device_token("test-token")
             .max_data_track_message_size(MIN_DATA_TRACK_MESSAGE_SIZE - 1)

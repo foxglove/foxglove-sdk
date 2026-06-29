@@ -87,12 +87,15 @@ pub(super) const DEFAULT_MESSAGE_BACKLOG_SIZE: usize = 1024;
 /// cannot monopolize the shared data channel and starve the others (see FLE-592).
 pub(super) const DEFAULT_MAX_DATA_TRACK_MESSAGE_SIZE: usize = 100 * 1024;
 
-/// Minimum configurable data-track message limit, in bytes. ~1200 bytes fits in
-/// a single WebRTC data-channel packet — LiveKit's recommended maximum frame
-/// size, above which a frame is segmented and, since delivery is unreliable, lost
-/// whole if any segment is lost. A smaller limit only sheds more aggressively
-/// without improving reliability.
+/// Minimum configurable data-track message limit, in bytes. A message of ~1200
+/// bytes fits in a single WebRTC data-channel packet — LiveKit's recommended
+/// maximum frame size, above which a frame is segmented and, since delivery is
+/// unreliable, lost whole if any segment is lost. A smaller limit only sheds
+/// more aggressively without improving reliability.
 pub(super) const MIN_DATA_TRACK_MESSAGE_SIZE: usize = 1200;
+
+// The default must satisfy the configurable minimum.
+const _: () = assert!(DEFAULT_MAX_DATA_TRACK_MESSAGE_SIZE >= MIN_DATA_TRACK_MESSAGE_SIZE);
 
 /// The default codec for published video tracks.
 ///

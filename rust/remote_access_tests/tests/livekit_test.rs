@@ -155,9 +155,10 @@ async fn livekit_oversized_data_track_message_is_dropped() -> Result<()> {
         .build_raw()
         .context("create channel")?;
 
-    // A representative limit; messages above it are dropped before publish,
-    // smaller ones flow normally.
-    let limit = 16_000;
+    // Use the minimum allowed limit: a message of limit+1 bytes is still small
+    // enough that LiveKit would deliver it if it weren't dropped, so the absence
+    // checked below is attributable to the gateway gate, not LiveKit's own queue.
+    let limit = 1200;
     let gw = TestGateway::start_with_options(
         &ctx,
         TestGatewayOptions {
