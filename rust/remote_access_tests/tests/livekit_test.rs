@@ -155,8 +155,8 @@ async fn livekit_oversized_data_track_message_is_dropped() -> Result<()> {
         .build_raw()
         .context("create channel")?;
 
-    // Use the minimum allowed limit (one transport packet). Messages larger than
-    // this are dropped before publish; smaller ones flow normally.
+    // A representative limit; messages above it are dropped before publish,
+    // smaller ones flow normally.
     let limit = 16_000;
     let gw = TestGateway::start_with_options(
         &ctx,
