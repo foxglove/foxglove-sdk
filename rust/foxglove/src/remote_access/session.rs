@@ -82,6 +82,21 @@ const ROOM_CLOSE_TIMEOUT: Duration = Duration::from_secs(5);
 
 pub(super) const DEFAULT_MESSAGE_BACKLOG_SIZE: usize = 1024;
 
+/// Default per-message size limit for lossy data-track channels, in bytes.
+/// Messages larger than this are dropped before publish so one oversized channel
+/// cannot monopolize the shared data channel and starve the others (see FLE-592).
+pub(super) const DEFAULT_MAX_DATA_TRACK_MESSAGE_SIZE: usize = 100 * 1024;
+
+/// Minimum configurable data-track message limit, in bytes. A message of ~1200
+/// bytes fits in a single WebRTC data-channel packet — LiveKit's recommended
+/// maximum frame size, above which a frame is segmented and, since delivery is
+/// unreliable, lost whole if any segment is lost. A smaller limit only sheds
+/// more aggressively without improving reliability.
+pub(super) const MIN_DATA_TRACK_MESSAGE_SIZE: usize = 1200;
+
+// The default must satisfy the configurable minimum.
+const _: () = assert!(DEFAULT_MAX_DATA_TRACK_MESSAGE_SIZE >= MIN_DATA_TRACK_MESSAGE_SIZE);
+
 /// The default codec for published video tracks.
 ///
 /// We prefer H.264 so that the libwebrtc nvenc encoder (H.264-only) can be used on Linux
@@ -211,6 +226,8 @@ pub(super) struct RemoteAccessSession {
     /// If set (via the `FOXGLOVE_VIDEO_CODEC` environment variable), overrides the per-OS
     /// default codec for published video tracks.
     video_codec_override: Option<VideoCodec>,
+    /// Per-message size limit for lossy data-track channels; larger messages are dropped.
+    max_data_track_message_size: usize,
 }
 
 impl Sink for RemoteAccessSession {
@@ -388,6 +405,7 @@ pub(super) struct SessionParams {
     pub(super) runtime: Handle,
     pub(super) cancellation_token: CancellationToken,
     pub(super) message_backlog_size: usize,
+    pub(super) max_data_track_message_size: usize,
     pub(super) services: Arc<parking_lot::RwLock<ServiceMap>>,
     pub(super) connection_graph: Arc<parking_lot::Mutex<ConnectionGraph>>,
     pub(super) remote_access_session_id: Option<String>,
@@ -429,6 +447,7 @@ impl RemoteAccessSession {
             participant_registry,
             device_wait_for_viewer: params.device_wait_for_viewer,
             video_codec_override: params.video_codec_override,
+            max_data_track_message_size: params.max_data_track_message_size,
         })
     }
 
@@ -2302,6 +2321,7 @@ impl RemoteAccessSession {
                 self.room.local_participant(),
                 *channel_id,
                 self.cancellation_token.clone(),
+                self.max_data_track_message_size,
             );
             self.channel_registry
                 .write()

@@ -19,6 +19,7 @@ use crate::{
 use super::qos::{QosClassifier, QosClassifierFn, QosProfile};
 
 use super::connection::{ConnectionParams, ConnectionStatus, RemoteAccessConnection};
+use super::session::MIN_DATA_TRACK_MESSAGE_SIZE;
 use super::{Capability, Listener};
 use crate::remote_common::parameters::ParameterHandler;
 
@@ -130,6 +131,7 @@ impl GatewayHandle {
             qos_classifier: None,
             server_info: None,
             message_backlog_size: None,
+            max_data_track_message_size: None,
             video_codec_override: None,
             context: std::sync::Weak::new(),
         };
@@ -193,6 +195,7 @@ pub struct Gateway {
     qos_classifier: Option<Arc<dyn QosClassifier>>,
     server_info: Option<HashMap<String, String>>,
     message_backlog_size: Option<usize>,
+    max_data_track_message_size: Option<usize>,
     context: std::sync::Weak<Context>,
 }
 
@@ -214,6 +217,7 @@ impl Default for Gateway {
             qos_classifier: None,
             server_info: None,
             message_backlog_size: None,
+            max_data_track_message_size: None,
             context: Arc::downgrade(&Context::get_default()),
         }
     }
@@ -240,6 +244,10 @@ impl std::fmt::Debug for Gateway {
             .field("has_qos_classifier", &self.qos_classifier.is_some())
             .field("server_info", &self.server_info)
             .field("message_backlog_size", &self.message_backlog_size)
+            .field(
+                "max_data_track_message_size",
+                &self.max_data_track_message_size,
+            )
             .field("has_context", &(self.context.strong_count() > 0));
         dbg.finish()
     }
@@ -348,6 +356,19 @@ impl Gateway {
     /// By default, each participant gets a queue of 1024 messages.
     pub fn message_backlog_size(mut self, size: usize) -> Self {
         self.message_backlog_size = Some(size);
+        self
+    }
+
+    /// Sets the maximum size in bytes of a single message published to a lossy
+    /// channel's data track. Larger messages are dropped, with a throttled
+    /// warning, rather than allowed to monopolize the shared data channel and
+    /// starve other channels.
+    ///
+    /// The limit must be at least 1200 bytes (one WebRTC data-channel packet);
+    /// [`start`](Self::start) rejects anything smaller. By default, the limit is
+    /// 100 KiB.
+    pub fn max_data_track_message_size(mut self, size: usize) -> Self {
+        self.max_data_track_message_size = Some(size);
         self
     }
 
@@ -522,6 +543,14 @@ impl Gateway {
                     .to_string(),
             ));
         }
+        if let Some(size) = self.max_data_track_message_size {
+            if size < MIN_DATA_TRACK_MESSAGE_SIZE {
+                return Err(FoxgloveError::ConfigurationError(format!(
+                    "max_data_track_message_size ({size} bytes) is below the minimum of \
+                     {MIN_DATA_TRACK_MESSAGE_SIZE} bytes (one data-channel packet)."
+                )));
+            }
+        }
         let runtime = self.runtime.unwrap_or_else(get_runtime_handle);
         let services = Arc::new(parking_lot::RwLock::new(ServiceMap::from_iter(
             self.services.into_values(),
@@ -541,6 +570,7 @@ impl Gateway {
             qos_classifier: self.qos_classifier,
             server_info: self.server_info,
             message_backlog_size: self.message_backlog_size,
+            max_data_track_message_size: self.max_data_track_message_size,
             video_codec_override,
             context: self.context,
         };
@@ -595,6 +625,30 @@ mod tests {
         let result = Gateway::new()
             .device_token("test-token")
             .capabilities([Capability::Assets])
+            .start();
+        assert!(matches!(result, Err(FoxgloveError::ConfigurationError(_))));
+    }
+
+    #[test]
+    fn max_data_track_message_size_builder() {
+        // Unset by default; the default value is applied downstream when building
+        // SessionParams (see DEFAULT_MAX_DATA_TRACK_MESSAGE_SIZE).
+        assert_eq!(Gateway::new().max_data_track_message_size, None);
+        assert_eq!(
+            Gateway::new()
+                .max_data_track_message_size(64 * 1024)
+                .max_data_track_message_size,
+            Some(64 * 1024)
+        );
+    }
+
+    #[test]
+    fn max_data_track_message_size_below_minimum_rejected() {
+        // A limit below the minimum is a misconfiguration and must be rejected
+        // at startup.
+        let result = Gateway::new()
+            .device_token("test-token")
+            .max_data_track_message_size(MIN_DATA_TRACK_MESSAGE_SIZE - 1)
             .start();
         assert!(matches!(result, Err(FoxgloveError::ConfigurationError(_))));
     }

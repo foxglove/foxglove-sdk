@@ -42,7 +42,7 @@ use crate::{
 
 type Result<T> = std::result::Result<T, Box<RemoteAccessError>>;
 
-use super::session::DEFAULT_MESSAGE_BACKLOG_SIZE;
+use super::session::{DEFAULT_MAX_DATA_TRACK_MESSAGE_SIZE, DEFAULT_MESSAGE_BACKLOG_SIZE};
 
 /// The status of the remote access gateway connection.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -99,6 +99,7 @@ pub(super) struct ConnectionParams {
     pub(super) qos_classifier: Option<Arc<dyn QosClassifier>>,
     pub(super) server_info: Option<HashMap<String, String>>,
     pub(super) message_backlog_size: Option<usize>,
+    pub(super) max_data_track_message_size: Option<usize>,
     pub(super) video_codec_override: Option<VideoCodec>,
     pub(super) context: Weak<Context>,
 }
@@ -136,6 +137,7 @@ pub(super) struct RemoteAccessConnection {
     qos_classifier: Option<Arc<dyn QosClassifier>>,
     server_info: Option<HashMap<String, String>>,
     message_backlog_size: Option<usize>,
+    max_data_track_message_size: Option<usize>,
     video_codec_override: Option<VideoCodec>,
     context: Weak<Context>,
     cancellation_token: CancellationToken,
@@ -167,6 +169,7 @@ impl RemoteAccessConnection {
             qos_classifier: params.qos_classifier,
             server_info: params.server_info,
             message_backlog_size: params.message_backlog_size,
+            max_data_track_message_size: params.max_data_track_message_size,
             video_codec_override: params.video_codec_override,
             context: params.context,
             cancellation_token: CancellationToken::new(),
@@ -321,6 +324,9 @@ impl RemoteAccessConnection {
             message_backlog_size: self
                 .message_backlog_size
                 .unwrap_or(DEFAULT_MESSAGE_BACKLOG_SIZE),
+            max_data_track_message_size: self
+                .max_data_track_message_size
+                .unwrap_or(DEFAULT_MAX_DATA_TRACK_MESSAGE_SIZE),
             video_codec_override: self.video_codec_override,
             services: self.services.clone(),
             connection_graph: self.connection_graph.clone(),
