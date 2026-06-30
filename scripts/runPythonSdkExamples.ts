@@ -40,7 +40,7 @@ async function main(opts: { timeout: string; installSdkFromPath: boolean }) {
     }
 
     // Skip examples that require external credentials or services.
-    const skipList = ["remote-access"];
+    const skipList = ["remote-access", "ray-datasource"];
     if (skipList.includes(entry.name)) {
       console.debug(`Skipping example ${entry.name} (requires external credentials)`);
       continue;

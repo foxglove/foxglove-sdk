@@ -35,12 +35,24 @@ lint-python:
 	uv run flake8 python
 
 .PHONY: test-python
+# Note: the `ray` extra is intentionally NOT installed here. Its dependencies (ray, pandas, numpy)
+# are heavyweight and numpy's installed stubs are incompatible with our mypy `python_version`
+# target. The ray integration is exercised separately by the `test-python-ray` target.
 test-python:
 	uv --directory python/foxglove-sdk lock --check
-	uv --directory python/foxglove-sdk sync --all-extras
+	uv --directory python/foxglove-sdk sync --extra notebook
 	MATURIN_PEP517_ARGS="$(MATURIN_PEP517_ARGS)" uv --directory python/foxglove-sdk pip install --editable '.[notebook]'
 	uv --directory python/foxglove-sdk run mypy .
 	FOXGLOVE_TEST_REQUIRE_REMOTE_ACCESS="$(FOXGLOVE_TEST_REQUIRE_REMOTE_ACCESS)" uv --directory python/foxglove-sdk run pytest
+
+.PHONY: test-python-ray
+# Exercises the optional `ray` integration. Kept separate from `test-python` because the ray
+# dependencies are heavy and pull in numpy stubs that break our mypy config (so mypy is not run
+# here). test_ray.py skips its ray-dependent cases when the extra is absent.
+test-python-ray:
+	uv --directory python/foxglove-sdk sync --extra ray
+	MATURIN_PEP517_ARGS="$(MATURIN_PEP517_ARGS)" uv --directory python/foxglove-sdk pip install --editable '.[ray]'
+	uv --directory python/foxglove-sdk run pytest python/foxglove/tests/test_ray.py
 
 .PHONY: benchmark-python
 benchmark-python:
