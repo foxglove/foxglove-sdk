@@ -57,7 +57,7 @@ EXCLUDED_CLASSES = {
     "UserScript",
 }
 # Map of panel base name -> prefix for related classes that don't follow the standard naming
-RELATED_PREFIXES_BY_PANEL_BASENAME = {"ThreeDee": ["BaseRenderer"]}
+RELATED_PREFIXES_BY_PANEL_BASENAME = {"ThreeDee": ["BaseRenderer", "TreeScopedFrameId"]}
 
 
 def _get_panel_groups() -> dict[str, PanelGroup]:
