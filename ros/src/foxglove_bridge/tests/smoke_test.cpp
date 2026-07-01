@@ -846,6 +846,40 @@ TEST(FetchAssetTest, fetchNonExistingAsset) {
   EXPECT_FALSE(response.errorMessage.empty());
 }
 
+// Verify that rclcpp::exceptions::RCLError is thrown from MultiThreadedExecutor::spin() when the
+// context is shut down externally. This is the condition caught in ros2_foxglove_bridge_node.cpp's
+// main() — if the exception were not thrown the catch would be dead code; if it propagated
+// uncaught the process would call std::terminate() (exit code -6).
+TEST(SmokeTest, spinThrowsRCLErrorOnContextShutdown) {
+  auto context = std::make_shared<rclcpp::Context>();
+  context->init(0, nullptr);
+
+  rclcpp::ExecutorOptions execOpts;
+  execOpts.context = context;
+  auto executor = std::make_shared<rclcpp::executors::MultiThreadedExecutor>(execOpts);
+
+  rclcpp::NodeOptions nodeOpts;
+  nodeOpts.context(context);
+  nodeOpts.append_parameter_override("port", 8766);
+  auto bridge = std::make_shared<foxglove_bridge::FoxgloveBridge>(nodeOpts);
+  executor->add_node(bridge->get_node_base_interface());
+
+  bool caughtRCLError = false;
+  std::thread spinThread([&]() {
+    try {
+      executor->spin();
+    } catch (const rclcpp::exceptions::RCLError&) {
+      caughtRCLError = true;
+    }
+  });
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(200));
+  context->shutdown("test shutdown");
+  spinThread.join();
+
+  EXPECT_TRUE(caughtRCLError);
+}
+
 // Run all the tests that were declared with TEST()
 int main(int argc, char** argv) {
   testing::InitGoogleTest(&argc, argv);
