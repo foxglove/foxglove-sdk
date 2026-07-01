@@ -133,7 +133,7 @@ impl GatewayHandle {
             message_backlog_size: None,
             max_data_track_message_size: None,
             video_codec_override: None,
-            video_encoder_override: VideoEncoderBackend::Auto,
+            video_encoder: VideoEncoderBackend::Auto,
             context: std::sync::Weak::new(),
         };
         let services = Arc::new(parking_lot::RwLock::new(ServiceMap::default()));
@@ -251,7 +251,7 @@ pub struct Gateway {
     server_info: Option<HashMap<String, String>>,
     message_backlog_size: Option<usize>,
     max_data_track_message_size: Option<usize>,
-    video_encoder_override: VideoEncoderBackend,
+    video_encoder: VideoEncoderBackend,
     context: std::sync::Weak<Context>,
 }
 
@@ -274,7 +274,7 @@ impl Default for Gateway {
             server_info: None,
             message_backlog_size: None,
             max_data_track_message_size: None,
-            video_encoder_override: VideoEncoderBackend::Auto,
+            video_encoder: VideoEncoderBackend::Auto,
             context: Arc::downgrade(&Context::get_default()),
         }
     }
@@ -305,7 +305,7 @@ impl std::fmt::Debug for Gateway {
                 "max_data_track_message_size",
                 &self.max_data_track_message_size,
             )
-            .field("video_encoder_override", &self.video_encoder_override)
+            .field("video_encoder", &self.video_encoder)
             .field("has_context", &(self.context.strong_count() > 0));
         dbg.finish()
     }
@@ -439,7 +439,7 @@ impl Gateway {
     /// `FOXGLOVE_VIDEO_ENCODER` environment variable (one of: `auto`, `software`, `hardware`,
     /// `nvenc`, `vaapi`, `videotoolbox`), ultimately falling back to [`VideoEncoderBackend::Auto`].
     pub fn video_encoder(mut self, backend: VideoEncoderBackend) -> Self {
-        self.video_encoder_override = backend;
+        self.video_encoder = backend;
         self
     }
 
@@ -577,8 +577,8 @@ impl Gateway {
         // `Auto` means "no explicit preference", so it defers to the environment variable,
         // ultimately falling back to `Auto`; this matches how the C, C++, and ROS layers
         // treat `Auto`.
-        let video_encoder_override = if self.video_encoder_override != VideoEncoderBackend::Auto {
-            self.video_encoder_override
+        let video_encoder = if self.video_encoder != VideoEncoderBackend::Auto {
+            self.video_encoder
         } else {
             std::env::var(FOXGLOVE_VIDEO_ENCODER_ENV)
                 .ok()
@@ -667,7 +667,7 @@ impl Gateway {
             message_backlog_size: self.message_backlog_size,
             max_data_track_message_size: self.max_data_track_message_size,
             video_codec_override,
-            video_encoder_override,
+            video_encoder,
             context: self.context,
         };
         let connection = RemoteAccessConnection::new(params, services);
