@@ -70,8 +70,9 @@ impl Listener for MessageHandler {
 
 /// Preferred video encoder backend, selectable from the command line. Mirrors
 /// [`VideoEncoderBackend`] so the example can exercise the gateway builder option.
-#[derive(Clone, Copy, ValueEnum)]
+#[derive(Clone, Copy, Default, ValueEnum)]
 enum VideoEncoderArg {
+    #[default]
     Auto,
     Software,
     Hardware,
@@ -108,11 +109,11 @@ struct Args {
     #[arg(long, default_value_t = 540, value_parser = RangedU64ValueParser::<usize>::new().range(540..=4320))]
     height: usize,
 
-    /// Preferred video encoder backend for published video tracks. If omitted, the SDK
-    /// chooses (honoring the `FOXGLOVE_VIDEO_ENCODER` environment variable). If the requested
-    /// backend is unavailable, the SDK falls back to another compatible encoder.
-    #[arg(long, value_enum)]
-    video_encoder: Option<VideoEncoderArg>,
+    /// Preferred video encoder backend for published video tracks. Defaults to `auto`, which
+    /// honors the `FOXGLOVE_VIDEO_ENCODER` environment variable. If the requested backend is
+    /// unavailable, the SDK falls back to another compatible encoder.
+    #[arg(long, value_enum, default_value_t)]
+    video_encoder: VideoEncoderArg,
 }
 
 /// Parsed command-line arguments, accessible from the free rendering functions
@@ -148,11 +149,9 @@ async fn main() {
                 QosProfile::default()
             }
         });
-    // When --video-encoder is given, set the gateway-wide preference via the builder. Otherwise
-    // the SDK chooses (and honors the FOXGLOVE_VIDEO_ENCODER environment variable).
-    if let Some(backend) = ARGS.video_encoder {
-        gateway = gateway.video_encoder(backend.into());
-    }
+    // Set the gateway-wide encoder preference via the builder. `auto` (the default) defers to
+    // the FOXGLOVE_VIDEO_ENCODER environment variable, then lets the SDK choose.
+    gateway = gateway.video_encoder(ARGS.video_encoder.into());
     let handle = gateway
         .start()
         .expect("Failed to start remote access gateway");

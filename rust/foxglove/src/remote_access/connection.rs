@@ -101,7 +101,7 @@ pub(super) struct ConnectionParams {
     pub(super) message_backlog_size: Option<usize>,
     pub(super) max_data_track_message_size: Option<usize>,
     pub(super) video_codec_override: Option<VideoCodec>,
-    pub(super) video_encoder_override: Option<super::gateway::VideoEncoderBackend>,
+    pub(super) video_encoder_override: super::gateway::VideoEncoderBackend,
     pub(super) context: Weak<Context>,
 }
 
@@ -140,7 +140,7 @@ pub(super) struct RemoteAccessConnection {
     message_backlog_size: Option<usize>,
     max_data_track_message_size: Option<usize>,
     video_codec_override: Option<VideoCodec>,
-    video_encoder_override: Option<super::gateway::VideoEncoderBackend>,
+    video_encoder_override: super::gateway::VideoEncoderBackend,
     context: Weak<Context>,
     cancellation_token: CancellationToken,
     services: Arc<parking_lot::RwLock<ServiceMap>>,
