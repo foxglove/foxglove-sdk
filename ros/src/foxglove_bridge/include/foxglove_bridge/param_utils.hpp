@@ -37,6 +37,7 @@ constexpr char PARAM_MESSAGE_BACKLOG_SIZE[] = "message_backlog_size";
 constexpr char PARAM_REMOTE_ACCESS[] = "remote_access";
 constexpr char PARAM_DEVICE_TOKEN[] = "device_token";
 constexpr char PARAM_FOXGLOVE_API_URL[] = "foxglove_api_url";
+constexpr char PARAM_VIDEO_ENCODER[] = "video_encoder";
 
 constexpr int64_t DEFAULT_PORT = 8765;
 constexpr char DEFAULT_ADDRESS[] = "0.0.0.0";

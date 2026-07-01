@@ -50,6 +50,32 @@ class Capability(Enum):
     Services = ...
     """Allow clients to call services."""
 
+class VideoEncoderBackend(Enum):
+    """
+    The preferred backend for encoding published video tracks.
+
+    This is a gateway-wide preference applied to every published video track. If the requested
+    backend is unavailable on the host, the SDK falls back to another compatible encoder.
+    """
+
+    Auto = ...
+    """Let the SDK choose the encoder backend (honoring ``FOXGLOVE_VIDEO_ENCODER``). The default."""
+
+    Software = ...
+    """Prefer a software encoder."""
+
+    Hardware = ...
+    """Prefer any available hardware encoder."""
+
+    Nvenc = ...
+    """Prefer NVIDIA NVENC when available."""
+
+    Vaapi = ...
+    """Prefer VAAPI when available."""
+
+    VideoToolbox = ...
+    """Prefer VideoToolbox on Apple platforms when available."""
+
 class Client:
     """
     A client connected to a running remote access gateway.

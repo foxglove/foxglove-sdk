@@ -228,6 +228,10 @@ pub(super) struct RemoteAccessSession {
     video_codec_override: Option<VideoCodec>,
     /// Per-message size limit for lossy data-track channels; larger messages are dropped.
     max_data_track_message_size: usize,
+    /// The preferred encoder backend applied to published video tracks.
+    /// [`VideoEncoderBackend::Auto`](super::gateway::VideoEncoderBackend::Auto) leaves the
+    /// choice to libwebrtc.
+    video_encoder: super::gateway::VideoEncoderBackend,
 }
 
 impl Sink for RemoteAccessSession {
@@ -414,6 +418,7 @@ pub(super) struct SessionParams {
     pub(super) server_info: ServerInfo,
     pub(super) device_wait_for_viewer: Option<Duration>,
     pub(super) video_codec_override: Option<VideoCodec>,
+    pub(super) video_encoder: super::gateway::VideoEncoderBackend,
 }
 
 impl RemoteAccessSession {
@@ -448,6 +453,7 @@ impl RemoteAccessSession {
             device_wait_for_viewer: params.device_wait_for_viewer,
             video_codec_override: params.video_codec_override,
             max_data_track_message_size: params.max_data_track_message_size,
+            video_encoder: params.video_encoder,
         })
     }
 
@@ -2229,8 +2235,14 @@ impl RemoteAccessSession {
                 // We observed that nvenc aggressively enforces the target bitrate,
                 // and combined with simulcast results in very low quality video with compression artifacts.
                 let video_codec = session.video_codec_override.unwrap_or(DEFAULT_VIDEO_CODEC);
+                let video_encoder_backend = session.video_encoder;
+                debug!(
+                    "publishing video track for channel {channel_id:?} with codec {video_codec:?} \
+                     and preferred encoder backend {video_encoder_backend:?}"
+                );
                 let publish_options = TrackPublishOptions {
                     video_codec,
+                    video_encoder: video_encoder_backend.into(),
                     simulcast: false,
                     ..Default::default()
                 };
