@@ -3,13 +3,14 @@
 //! (latency, packet loss, low bandwidth) visually obvious, plus a simple
 //! scrolling gradient for a secondary feed.
 
-use clap::{Parser, builder::RangedU64ValueParser};
+use clap::{Parser, ValueEnum, builder::RangedU64ValueParser};
 use foxglove::{
     ChannelDescriptor,
     bytes::Bytes,
     messages::{CameraCalibration, FrameTransform, Quaternion, RawImage, Timestamp, Vector3},
     remote_access::{
         Capability, Client, ConnectionStatus, Gateway, Listener, QosProfile, Reliability,
+        VideoEncoderBackend,
     },
 };
 use serde_json::Value;
@@ -67,6 +68,32 @@ impl Listener for MessageHandler {
     }
 }
 
+/// Preferred video encoder backend, selectable from the command line. Mirrors
+/// [`VideoEncoderBackend`] so the example can exercise the gateway builder option.
+#[derive(Clone, Copy, Default, ValueEnum)]
+enum VideoEncoderArg {
+    #[default]
+    Auto,
+    Software,
+    Hardware,
+    Nvenc,
+    Vaapi,
+    VideoToolbox,
+}
+
+impl From<VideoEncoderArg> for VideoEncoderBackend {
+    fn from(arg: VideoEncoderArg) -> Self {
+        match arg {
+            VideoEncoderArg::Auto => VideoEncoderBackend::Auto,
+            VideoEncoderArg::Software => VideoEncoderBackend::Software,
+            VideoEncoderArg::Hardware => VideoEncoderBackend::Hardware,
+            VideoEncoderArg::Nvenc => VideoEncoderBackend::Nvenc,
+            VideoEncoderArg::Vaapi => VideoEncoderBackend::Vaapi,
+            VideoEncoderArg::VideoToolbox => VideoEncoderBackend::VideoToolbox,
+        }
+    }
+}
+
 /// Command-line arguments for the example.
 #[derive(Parser)]
 struct Args {
@@ -81,6 +108,12 @@ struct Args {
     /// allocation at 8K.
     #[arg(long, default_value_t = 540, value_parser = RangedU64ValueParser::<usize>::new().range(540..=4320))]
     height: usize,
+
+    /// Preferred video encoder backend for published video tracks. Defaults to `auto`, which
+    /// honors the `FOXGLOVE_VIDEO_ENCODER` environment variable. If the requested backend is
+    /// unavailable, the SDK falls back to another compatible encoder.
+    #[arg(long, value_enum, default_value_t)]
+    video_encoder: VideoEncoderArg,
 }
 
 /// Parsed command-line arguments, accessible from the free rendering functions
@@ -103,7 +136,7 @@ async fn main() {
     );
 
     // Open a gateway for remote visualization and teleop.
-    let handle = Gateway::new()
+    let mut gateway = Gateway::new()
         .capabilities([Capability::ClientPublish])
         .supported_encodings(["json"])
         .listener(Arc::new(MessageHandler))
@@ -115,7 +148,11 @@ async fn main() {
             } else {
                 QosProfile::default()
             }
-        })
+        });
+    // Set the gateway-wide encoder preference via the builder. `auto` (the default) defers to
+    // the FOXGLOVE_VIDEO_ENCODER environment variable, then lets the SDK choose.
+    gateway = gateway.video_encoder(ARGS.video_encoder.into());
+    let handle = gateway
         .start()
         .expect("Failed to start remote access gateway");
 

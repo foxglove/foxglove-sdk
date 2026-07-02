@@ -272,6 +272,17 @@ void declareParameters(rclcpp::Node* node) {
     "Override the Foxglove API base URL. If empty, the SDK default is used.";
   foxgloveApiUrlDescription.read_only = true;
   node->declare_parameter(PARAM_FOXGLOVE_API_URL, "", foxgloveApiUrlDescription);
+
+  auto videoEncoderDescription = rcl_interfaces::msg::ParameterDescriptor{};
+  videoEncoderDescription.name = PARAM_VIDEO_ENCODER;
+  videoEncoderDescription.type = rcl_interfaces::msg::ParameterType::PARAMETER_STRING;
+  videoEncoderDescription.description =
+    "Preferred backend for encoding published video tracks: one of 'auto', 'software', "
+    "'hardware', 'nvenc', 'vaapi', 'videotoolbox'. With 'auto' (the default) the SDK chooses, "
+    "and honors the FOXGLOVE_VIDEO_ENCODER environment variable. If the requested backend is "
+    "unavailable, the SDK falls back to another compatible encoder.";
+  videoEncoderDescription.read_only = true;
+  node->declare_parameter(PARAM_VIDEO_ENCODER, "auto", videoEncoderDescription);
 }
 
 std::vector<std::regex> parseRegexStrings(rclcpp::Node* node,

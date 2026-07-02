@@ -1,5 +1,8 @@
+#include <algorithm>
+#include <cctype>
 #include <filesystem>
 #include <fstream>
+#include <optional>
 #include <string>
 #include <type_traits>
 #include <unordered_set>
@@ -48,6 +51,30 @@ inline bool hasCapability(const foxglove::WebSocketServerCapabilities& capabilit
                           foxglove::WebSocketServerCapabilities capability) {
   return (capabilities & capability) == capability;
 }
+
+#ifdef FOXGLOVE_REMOTE_ACCESS
+// Parses a preferred video encoder backend name (case-insensitively). Returns std::nullopt for
+// an unrecognized value so the caller can warn and leave the SDK default in place.
+inline std::optional<foxglove::VideoEncoderBackend> parseVideoEncoderBackend(std::string value) {
+  std::transform(value.begin(), value.end(), value.begin(), [](unsigned char c) {
+    return static_cast<char>(std::tolower(c));
+  });
+  if (value == "auto") {
+    return foxglove::VideoEncoderBackend::Auto;
+  } else if (value == "software") {
+    return foxglove::VideoEncoderBackend::Software;
+  } else if (value == "hardware") {
+    return foxglove::VideoEncoderBackend::Hardware;
+  } else if (value == "nvenc") {
+    return foxglove::VideoEncoderBackend::Nvenc;
+  } else if (value == "vaapi") {
+    return foxglove::VideoEncoderBackend::Vaapi;
+  } else if (value == "videotoolbox") {
+    return foxglove::VideoEncoderBackend::VideoToolbox;
+  }
+  return std::nullopt;
+}
+#endif
 
 inline std::vector<std::byte> readFile(const std::string& filepath) {
   std::ifstream file(filepath, std::ios::binary | std::ios::ate);
@@ -317,6 +344,19 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
     const auto foxgloveApiUrl = this->get_parameter(PARAM_FOXGLOVE_API_URL).as_string();
     if (!foxgloveApiUrl.empty()) {
       gatewayOptions.foxglove_api_url = foxgloveApiUrl;
+    }
+
+    // Preferred video encoder backend. The default "auto" parses to Auto, which the SDK treats
+    // as "no explicit preference", so the FOXGLOVE_VIDEO_ENCODER environment variable can still
+    // take effect.
+    const auto videoEncoder = this->get_parameter(PARAM_VIDEO_ENCODER).as_string();
+    if (const auto backend = parseVideoEncoderBackend(videoEncoder)) {
+      gatewayOptions.video_encoder = *backend;
+    } else {
+      RCLCPP_WARN(this->get_logger(),
+                  "Ignoring invalid %s value \"%s\"; expected one of: auto, software, "
+                  "hardware, nvenc, vaapi, videotoolbox",
+                  PARAM_VIDEO_ENCODER, videoEncoder.c_str());
     }
 
     // Map WebSocket server capabilities to gateway capabilities

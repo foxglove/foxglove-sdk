@@ -4,7 +4,7 @@ use std::time::Duration;
 use foxglove::ChannelDescriptor;
 use foxglove::remote_access::{
     self, Capability, ConnectionStatus, Gateway, GatewayHandle, Listener, QosProfile, Reliability,
-    Status,
+    Status, VideoEncoderBackend,
 };
 use pyo3::prelude::*;
 use pyo3::types::PyBytes;
@@ -142,6 +142,75 @@ impl From<PyRemoteAccessCapability> for Capability {
             PyRemoteAccessCapability::ConnectionGraph => Capability::ConnectionGraph,
             PyRemoteAccessCapability::Parameters => Capability::Parameters,
             PyRemoteAccessCapability::Services => Capability::Services,
+        }
+    }
+}
+
+/// The preferred backend for encoding published video tracks.
+///
+/// This is a gateway-wide preference applied to every published video track. If the requested
+/// backend is unavailable on the host, the SDK falls back to another compatible encoder.
+/// `Auto` leaves the choice to the SDK (and honors the `FOXGLOVE_VIDEO_ENCODER` environment
+/// variable).
+#[pyclass(
+    from_py_object,
+    name = "VideoEncoderBackend",
+    module = "foxglove.remote_access",
+    eq,
+    eq_int
+)]
+#[derive(Clone, PartialEq)]
+pub enum PyVideoEncoderBackend {
+    /// Let the SDK choose the encoder backend. This is the default.
+    Auto,
+    /// Prefer a software encoder.
+    Software,
+    /// Prefer any available hardware encoder.
+    Hardware,
+    /// Prefer NVIDIA NVENC when available.
+    Nvenc,
+    /// Prefer VAAPI when available.
+    Vaapi,
+    /// Prefer VideoToolbox on Apple platforms when available.
+    VideoToolbox,
+}
+
+#[pymethods]
+impl PyVideoEncoderBackend {
+    #[getter]
+    fn name(&self) -> &'static str {
+        match self {
+            Self::Auto => "Auto",
+            Self::Software => "Software",
+            Self::Hardware => "Hardware",
+            Self::Nvenc => "Nvenc",
+            Self::Vaapi => "Vaapi",
+            Self::VideoToolbox => "VideoToolbox",
+        }
+    }
+
+    #[getter]
+    fn value(&self) -> i32 {
+        match self {
+            Self::Auto => 0,
+            Self::Software => 1,
+            Self::Hardware => 2,
+            Self::Nvenc => 3,
+            Self::Vaapi => 4,
+            Self::VideoToolbox => 5,
+        }
+    }
+}
+
+impl From<PyVideoEncoderBackend> for VideoEncoderBackend {
+    fn from(value: PyVideoEncoderBackend) -> Self {
+        match value {
+            PyVideoEncoderBackend::Auto => VideoEncoderBackend::Auto,
+            PyVideoEncoderBackend::Software => VideoEncoderBackend::Software,
+            PyVideoEncoderBackend::Hardware => VideoEncoderBackend::Hardware,
+            PyVideoEncoderBackend::Nvenc => VideoEncoderBackend::Nvenc,
+            PyVideoEncoderBackend::Vaapi => VideoEncoderBackend::Vaapi,
+            PyVideoEncoderBackend::VideoToolbox => VideoEncoderBackend::VideoToolbox,
         }
     }
 }
@@ -541,7 +610,7 @@ impl foxglove::remote_access::QosClassifier for PyQosClassifier {
 
 /// Start a remote access gateway for live visualization and teleop in Foxglove.
 #[pyfunction]
-#[pyo3(signature = (*, name=None, device_token=None, capabilities=None, listener=None, supported_encodings=None, services=None, context=None, channel_filter=None, qos_classifier=None, message_backlog_size=None, foxglove_api_url=None, foxglove_api_timeout=None))]
+#[pyo3(signature = (*, name=None, device_token=None, capabilities=None, listener=None, supported_encodings=None, services=None, context=None, channel_filter=None, qos_classifier=None, message_backlog_size=None, foxglove_api_url=None, foxglove_api_timeout=None, video_encoder=None))]
 #[allow(clippy::too_many_arguments)]
 pub fn start_gateway(
     py: Python<'_>,
@@ -557,6 +626,7 @@ pub fn start_gateway(
     message_backlog_size: Option<usize>,
     foxglove_api_url: Option<String>,
     foxglove_api_timeout: Option<f64>,
+    video_encoder: Option<PyVideoEncoderBackend>,
 ) -> PyResult<PyRemoteAccessGateway> {
     init_logging(py, None);
 
@@ -616,6 +686,10 @@ pub fn start_gateway(
         gateway = gateway.foxglove_api_timeout(duration);
     }
 
+    if let Some(video_encoder) = video_encoder {
+        gateway = gateway.video_encoder(video_encoder.into());
+    }
+
     let handle = py
         .detach(|| gateway.start())
         .map_err(PyFoxgloveError::from)?;
@@ -628,6 +702,7 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
 
     module.add_class::<PyRemoteAccessGateway>()?;
     module.add_class::<PyRemoteAccessCapability>()?;
+    module.add_class::<PyVideoEncoderBackend>()?;
     module.add_class::<PyRemoteAccessClient>()?;
     module.add_class::<PyConnectionStatus>()?;
     module.add_class::<PyReliability>()?;

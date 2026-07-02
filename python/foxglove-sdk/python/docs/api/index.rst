@@ -130,7 +130,7 @@ foxglove.remote_access
 .. Enums are excluded and manually documented, since pyo3 only emulates them. (https://github.com/PyO3/pyo3/issues/2887)
 .. automodule:: foxglove.remote_access
    :members:
-   :exclude-members: Capability, RemoteAccessConnectionStatus, MessageSchema, Parameter, ParameterType, ParameterValue, Service, ServiceRequest, ServiceSchema, StatusLevel
+   :exclude-members: Capability, RemoteAccessConnectionStatus, VideoEncoderBackend, MessageSchema, Parameter, ParameterType, ParameterValue, Service, ServiceRequest, ServiceSchema, StatusLevel
 
 
 Enums
@@ -178,6 +178,38 @@ Enums
    .. py:data:: Shutdown
 
       The gateway has been shut down. No further listener callbacks will be invoked.
+
+
+.. py:enum:: VideoEncoderBackend
+
+   The preferred backend for encoding published video tracks.
+
+   This is a gateway-wide preference applied to every published video track. If the requested
+   backend is unavailable on the host, the SDK falls back to another compatible encoder.
+
+   .. py:data:: Auto
+
+      Let the SDK choose the encoder backend (honoring ``FOXGLOVE_VIDEO_ENCODER``). The default.
+
+   .. py:data:: Software
+
+      Prefer a software encoder.
+
+   .. py:data:: Hardware
+
+      Prefer any available hardware encoder.
+
+   .. py:data:: Nvenc
+
+      Prefer NVIDIA NVENC when available.
+
+   .. py:data:: Vaapi
+
+      Prefer VAAPI when available.
+
+   .. py:data:: VideoToolbox
+
+      Prefer VideoToolbox on Apple platforms when available.
 
 
 foxglove.websocket

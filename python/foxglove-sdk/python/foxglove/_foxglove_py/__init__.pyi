@@ -28,6 +28,7 @@ from .remote_access import (
     QosProfile,
     RemoteAccessConnectionStatus,
     RemoteAccessGateway,
+    VideoEncoderBackend,
 )
 from .websocket import Capability as WebSocketCapability
 from .websocket import WebSocketServer
@@ -378,6 +379,7 @@ def start_gateway(
     message_backlog_size: int | None = None,
     foxglove_api_url: str | None = None,
     foxglove_api_timeout: float | None = None,
+    video_encoder: VideoEncoderBackend | None = None,
 ) -> RemoteAccessGateway:
     """
     Start a remote access gateway for live visualization and teleop in Foxglove.

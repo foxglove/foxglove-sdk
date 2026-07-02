@@ -203,6 +203,7 @@ FoxgloveResult<RemoteAccessGateway> RemoteAccessGateway::create(
   c_options.capabilities = {
     static_cast<std::underlying_type_t<decltype(options.capabilities)>>(options.capabilities)
   };
+  c_options.video_encoder = static_cast<foxglove_video_encoder_backend>(options.video_encoder);
 
   // Supported encodings
   std::vector<foxglove_string> supported_encodings;

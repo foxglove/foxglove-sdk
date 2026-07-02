@@ -101,6 +101,7 @@ pub(super) struct ConnectionParams {
     pub(super) message_backlog_size: Option<usize>,
     pub(super) max_data_track_message_size: Option<usize>,
     pub(super) video_codec_override: Option<VideoCodec>,
+    pub(super) video_encoder: super::gateway::VideoEncoderBackend,
     pub(super) context: Weak<Context>,
 }
 
@@ -139,6 +140,7 @@ pub(super) struct RemoteAccessConnection {
     message_backlog_size: Option<usize>,
     max_data_track_message_size: Option<usize>,
     video_codec_override: Option<VideoCodec>,
+    video_encoder: super::gateway::VideoEncoderBackend,
     context: Weak<Context>,
     cancellation_token: CancellationToken,
     services: Arc<parking_lot::RwLock<ServiceMap>>,
@@ -171,6 +173,7 @@ impl RemoteAccessConnection {
             message_backlog_size: params.message_backlog_size,
             max_data_track_message_size: params.max_data_track_message_size,
             video_codec_override: params.video_codec_override,
+            video_encoder: params.video_encoder,
             context: params.context,
             cancellation_token: CancellationToken::new(),
             services,
@@ -328,6 +331,7 @@ impl RemoteAccessConnection {
                 .max_data_track_message_size
                 .unwrap_or(DEFAULT_MAX_DATA_TRACK_MESSAGE_SIZE),
             video_codec_override: self.video_codec_override,
+            video_encoder: self.video_encoder,
             services: self.services.clone(),
             connection_graph: self.connection_graph.clone(),
             remote_access_session_id: remote_access_session_id.map(str::to_string),
