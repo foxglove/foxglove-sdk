@@ -17,6 +17,11 @@
 
 namespace foxglove_bridge {
 namespace {
+// SDK channel-metadata key (kept in sync with the Rust
+// foxglove::remote_access::SUPPRESS_VIDEO_TRANSCODE_METADATA_KEY) that opts a channel out of
+// video transcoding, so it is delivered as data instead.
+constexpr char kSuppressVideoTranscodeKey[] = "foxglove.suppressVideoTranscode";
+
 inline bool isHiddenTopicOrService(const std::string& name) {
   if (name.empty()) {
     throw std::invalid_argument("Topic or service name can't be empty");
@@ -604,13 +609,13 @@ void FoxgloveBridge::updateAdvertisedTopics(
         continue;
       }
 
-      // Create the new SDK channel. Compressed depth maps must not be transcoded to video over
-      // remote access (their pixel values encode depth); mark them so the SDK delivers them as
-      // data. The key is kept in sync with the Rust SDK's
-      // foxglove::remote_access::SUPPRESS_VIDEO_TRANSCODE_METADATA_KEY.
+      // Compressed depth maps must be delivered as data, not transcoded to video.
       std::optional<std::map<std::string, std::string>> metadata;
       if (isCompressedDepthTopic(schemaName, topic)) {
-        metadata = std::map<std::string, std::string>{{"foxglove.suppressVideoTranscode", "true"}};
+        metadata = std::map<std::string, std::string>{{kSuppressVideoTranscodeKey, "true"}};
+        RCLCPP_INFO(this->get_logger(),
+                    "Delivering compressed-depth topic \"%s\" as data (no video transcoding)",
+                    topic.c_str());
       }
       auto channelResult =
         foxglove::RawChannel::create(topic, messageEncoding, schema, _serverContext, metadata);
