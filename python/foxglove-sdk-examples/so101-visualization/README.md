@@ -1,25 +1,37 @@
 # SO-101 Visualization
 
-An example from the Foxglove SDK demonstrating real-time visualization of the SO-101 robot arm.
+An example from the Foxglove SDK demonstrating real-time 3D visualization of the SO-101 robot arm.
 
-This example connects to a SO-101 Follower arm, reads joint positions, and publishes the robot's
-configuration and camera feeds to Foxglove for real-time visualization. The example is based on
-SO-101 arm, but you should be able to modify the exapmle to use SO-100 example, quite easily.
+This example connects to a SO-101 Follower arm, reads joint positions, computes forward
+kinematics from the robot's URDF, and publishes the resulting frame transforms — along with joint
+states and camera feeds — to Foxglove. The example is based on the SO-101 arm, but you should be
+able to modify the example to use the SO-100 quite easily.
+
+> [!NOTE]
+> [LeRobot](https://github.com/huggingface/lerobot) now supports Foxglove as a native
+> visualization backend: pass `--display_mode=foxglove` to `lerobot-record`, `lerobot-teleoperate`,
+> or `lerobot-dataset-viz` and connect the Foxglove app to `ws://localhost:8765` to see camera
+> feeds and observation/action series — no extra code required. This example builds on top of that:
+> it adds what the built-in integration doesn't provide, a live 3D kinematic model of the arm
+> driven by the URDF. It publishes to the same topics as LeRobot (`/observation/state`,
+> `/observation/images/<camera>`), so the included layout works with either data source.
 
 ## Prepare Dependencies
 
-Follow the [LeRobot installation instructions](https://huggingface.co/docs/lerobot/en/installation) to create a `lerobot` conda environment and install it:
+LeRobot requires Python 3.12+. Create a `lerobot` conda environment and install LeRobot with the
+Feetech motor and dataset visualization extras:
 
 ```bash
-sudo apt-get install cmake build-essential python-dev pkg-config libavformat-dev libavcodec-dev libavdevice-dev libavutil-dev libswscale-dev libswresample-dev libavfilter-dev pkg-config
-git clone https://github.com/huggingface/lerobot.git
-cd lerobot
-conda create -y -n lerobot python=3.10
+conda create -y -n lerobot python=3.12
 conda activate lerobot
 conda install ffmpeg -c conda-forge
-pip install -e .
-pip install -e ".[feetech]"
+pip install "lerobot[feetech,dataset_viz] @ git+https://github.com/huggingface/lerobot.git"
 ```
+
+> [!NOTE]
+> LeRobot's Foxglove support is not yet in a PyPI release, so the command above installs LeRobot
+> from source. Once the release following v0.5.1 is published, a plain
+> `pip install 'lerobot[feetech,dataset_viz]'` works too.
 
 Now, install dependencies for this example:
 ```bash
@@ -75,3 +87,27 @@ python main.py \
 3. Open the layout included with the example. In the layout dropdown in the application toolbar, select _Import from file..._, and select `foxglove-sdk/python/foxglove-sdk-examples/so101-visualization/foxglove/lerobot_layout.json`.
 
 You should now see your robot's data streaming live!
+
+## Replaying recorded datasets
+
+LeRobot's Foxglove integration also supports seekable playback of recorded datasets, built on the
+SDK's `PlaybackControl` capability: the Foxglove app's playback bar drives play/pause/seek/speed,
+and frames are read from the dataset on demand, stamped at their original timestamps.
+
+`dataset_playback.py` demonstrates using this programmatically. Serve an episode of a dataset from
+the Hugging Face Hub (or one you recorded yourself with `lerobot-record`):
+
+```bash
+# A public SO-101 pick-and-place dataset (the default)
+python dataset_playback.py --repo-id lerobot/svla_so101_pickplace --episode-index 0
+
+# A local dataset recorded with lerobot-record
+python dataset_playback.py --repo-id my_user/my_dataset --root ~/my_dataset --episode-index 2
+```
+
+Then connect the Foxglove app to `ws://localhost:8765` as above, and scrub through the episode
+using the playback controls. The same functionality is available from the LeRobot CLI:
+
+```bash
+lerobot-dataset-viz --repo-id lerobot/svla_so101_pickplace --episode-index 0 --display-mode foxglove
+```

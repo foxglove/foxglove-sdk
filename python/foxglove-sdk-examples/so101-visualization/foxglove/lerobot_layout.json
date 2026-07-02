@@ -84,7 +84,7 @@
         "poseEstimateThetaDeviation": 0.26179939
       },
       "imageMode": {
-        "imageTopic": "env_image"
+        "imageTopic": "/observation/images/env"
       }
     },
     "3D!30jhgcb": {
@@ -357,8 +357,26 @@
         "poseEstimateThetaDeviation": 0.26179939
       },
       "imageMode": {
-        "imageTopic": "wrist_image"
+        "imageTopic": "/observation/images/wrist"
       }
+    },
+    "Plot!3xvhkul": {
+      "paths": [
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/observation/state.scalars[:].value",
+          "enabled": true
+        }
+      ],
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "showPlotValuesInLegend": false,
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "sidebarDimension": 240,
+      "followingViewWidth": 30
     }
   },
   "globalVariables": {},
@@ -373,7 +391,12 @@
       "direction": "column",
       "splitPercentage": 32.859680284191825
     },
-    "second": "Image!2mvy40",
+    "second": {
+      "first": "Image!2mvy40",
+      "second": "Plot!3xvhkul",
+      "direction": "column",
+      "splitPercentage": 55
+    },
     "direction": "row",
     "splitPercentage": 55.83808791284483
   }
