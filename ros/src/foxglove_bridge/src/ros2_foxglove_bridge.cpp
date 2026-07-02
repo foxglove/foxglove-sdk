@@ -2,6 +2,7 @@
 #include <cctype>
 #include <filesystem>
 #include <fstream>
+#include <map>
 #include <optional>
 #include <string>
 #include <type_traits>
@@ -603,9 +604,16 @@ void FoxgloveBridge::updateAdvertisedTopics(
         continue;
       }
 
-      // Create the new SDK channel
+      // Create the new SDK channel. Compressed depth maps must not be transcoded to video over
+      // remote access (their pixel values encode depth); mark them so the SDK delivers them as
+      // data. The key is kept in sync with the Rust SDK's
+      // foxglove::remote_access::SUPPRESS_VIDEO_TRANSCODE_METADATA_KEY.
+      std::optional<std::map<std::string, std::string>> metadata;
+      if (isCompressedDepthTopic(schemaName, topic)) {
+        metadata = std::map<std::string, std::string>{{"foxglove.suppressVideoTranscode", "true"}};
+      }
       auto channelResult =
-        foxglove::RawChannel::create(topic, messageEncoding, schema, _serverContext);
+        foxglove::RawChannel::create(topic, messageEncoding, schema, _serverContext, metadata);
       if (!channelResult.has_value()) {
         RCLCPP_ERROR(this->get_logger(), "Failed to create channel for topic \"%s\" (%s)",
                      topic.c_str(), foxglove::strerror(channelResult.error()));

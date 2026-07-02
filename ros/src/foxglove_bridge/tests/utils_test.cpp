@@ -5,6 +5,7 @@
 
 #include <foxglove_bridge/utils.hpp>
 
+using foxglove_bridge::isCompressedDepthTopic;
 using foxglove_bridge::saturatingToSizeT;
 
 TEST(saturatingToSizeTTest, InRangeValuesPassThrough) {
@@ -46,6 +47,25 @@ TEST(saturatingToSizeTTest, ValueAtSizeTMaxIsPreserved) {
   } else {
     EXPECT_EQ(saturatingToSizeT(kLargeInput), std::numeric_limits<size_t>::max());
   }
+}
+
+TEST(IsCompressedDepthTopicTest, MatchesRosCompressedDepthTransport) {
+  EXPECT_TRUE(isCompressedDepthTopic("sensor_msgs/msg/CompressedImage",
+                                     "/camera/depth/image_raw/compressedDepth"));
+}
+
+TEST(IsCompressedDepthTopicTest, RejectsRegularCompressedImage) {
+  EXPECT_FALSE(
+    isCompressedDepthTopic("sensor_msgs/msg/CompressedImage", "/camera/image_raw/compressed"));
+}
+
+TEST(IsCompressedDepthTopicTest, RejectsNonCompressedImageSchema) {
+  EXPECT_FALSE(
+    isCompressedDepthTopic("sensor_msgs/msg/Image", "/camera/depth/image_raw/compressedDepth"));
+}
+
+TEST(IsCompressedDepthTopicTest, RequiresSuffixNotSubstring) {
+  EXPECT_FALSE(isCompressedDepthTopic("sensor_msgs/msg/CompressedImage", "/compressedDepth/extra"));
 }
 
 TEST(SplitDefinitionsTest, EmptyMessageDefinition) {

@@ -65,4 +65,15 @@ inline std::vector<std::string> splitMessageDefinitions(std::istream& stream) {
   return definitions;
 }
 
+/// Returns true if a channel carries ROS compressed depth images, which must not be transcoded
+/// to video over remote access (their pixel values encode depth). The
+/// `compressed_depth_image_transport` transport publishes depth maps as
+/// `sensor_msgs/msg/CompressedImage` on a `.../compressedDepth` topic.
+inline bool isCompressedDepthTopic(const std::string& schemaName, const std::string& topic) {
+  constexpr char suffix[] = "/compressedDepth";
+  constexpr size_t suffixLen = sizeof(suffix) - 1;
+  return schemaName == "sensor_msgs/msg/CompressedImage" && topic.size() >= suffixLen &&
+         topic.compare(topic.size() - suffixLen, suffixLen, suffix) == 0;
+}
+
 }  // namespace foxglove_bridge
