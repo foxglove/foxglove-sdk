@@ -31,9 +31,12 @@ pub fn decode_raw_image(data: &[u8]) -> Result<ImageMessage<'static>, JsonDecode
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::img2yuv::{Compression, Image, RawImageEncoding};
+    #[cfg(feature = "img2yuv-png")]
+    use crate::img2yuv::Compression;
+    use crate::img2yuv::{Image, RawImageEncoding};
 
     #[test]
+    #[cfg(feature = "img2yuv-png")]
     fn test_decode_compressed_image() {
         let json = serde_json::json!({
             "timestamp": { "sec": 100, "nsec": 200 },
