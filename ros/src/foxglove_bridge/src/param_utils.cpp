@@ -295,7 +295,8 @@ void declareParameters(rclcpp::Node* node) {
   maxDataTrackMessageSizeDescription.read_only = true;
   maxDataTrackMessageSizeDescription.integer_range.resize(1);
   maxDataTrackMessageSizeDescription.integer_range[0].from_value = 1200;
-  maxDataTrackMessageSizeDescription.integer_range[0].to_value = std::numeric_limits<int64_t>::max();
+  maxDataTrackMessageSizeDescription.integer_range[0].to_value =
+    std::numeric_limits<int64_t>::max();
   maxDataTrackMessageSizeDescription.integer_range[0].step = 1;
   node->declare_parameter(PARAM_MAX_DATA_TRACK_MESSAGE_SIZE, DEFAULT_MAX_DATA_TRACK_MESSAGE_SIZE,
                           maxDataTrackMessageSizeDescription);
