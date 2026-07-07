@@ -2854,9 +2854,8 @@ typedef struct foxglove_gateway_options {
    */
   foxglove_video_encoder_backend video_encoder;
   /**
-   * Maximum size, in bytes, of a lossy data-track message. Larger messages are dropped
-   * before publishing so one high-bandwidth channel cannot starve the others. A value of 0
-   * means use the default (102400). Must be at least 1200 (one data-channel packet).
+   * Maximum lossy data-track message size in bytes. A value of 0 means use the default
+   * (102400). Must be at least 1200.
    *
    * New fields are appended last so that adding them preserves the memory offsets of all
    * pre-existing fields.
