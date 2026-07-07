@@ -127,11 +127,6 @@ fn load_summary<R: Read + Seek>(file: &mut R) -> Result<Option<Summary>> {
 
 /// Creates foxglove channels from the MCAP summary, forwarding each channel's
 /// metadata verbatim.
-///
-/// Preserving channel metadata keeps replay faithful to the original producer: a
-/// recording that declared channel-level metadata (e.g. remote-access delivery
-/// hints such as `foxglove.suppressVideoTranscode`) is replayed with that
-/// metadata intact, with no per-channel logic in the example.
 fn create_channels(summary: &Summary) -> Result<HashMap<u16, Arc<RawChannel>>> {
     let mut channels = HashMap::new();
     for (&id, mcap_channel) in &summary.channels {
