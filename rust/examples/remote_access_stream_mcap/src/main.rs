@@ -125,8 +125,7 @@ fn load_summary<R: Read + Seek>(file: &mut R) -> Result<Option<Summary>> {
     Ok(reader.finish())
 }
 
-/// Creates foxglove channels from the MCAP summary, forwarding each channel's
-/// metadata verbatim.
+/// Creates foxglove channels from the MCAP summary.
 fn create_channels(summary: &Summary) -> Result<HashMap<u16, Arc<RawChannel>>> {
     let mut channels = HashMap::new();
     for (&id, mcap_channel) in &summary.channels {
