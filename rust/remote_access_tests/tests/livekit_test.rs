@@ -210,7 +210,7 @@ async fn livekit_oversized_data_track_message_is_dropped() -> Result<()> {
         Some(format!("channel-drops-{channel_id}").as_str())
     );
     assert!(
-        status.message.contains("data-track size limit"),
+        status.message.contains("per-message size limit"),
         "unexpected status message: {}",
         status.message
     );

@@ -169,11 +169,44 @@ fn drop_status_id(channel_id: ChannelId) -> String {
     format!("channel-drops-{}", u64::from(channel_id))
 }
 
+/// Formats a byte count human-readably (bytes / KiB / MiB) so viewers don't
+/// have to divide by 1024. Uses the largest binary unit that keeps the value
+/// at least 1, with up to two decimal places and trailing zeros trimmed
+/// (e.g. `102400` → `100 KiB`, `1200` → `1.17 KiB`, `512` → `512 bytes`).
+fn format_byte_size(bytes: usize) -> String {
+    const KIB: f64 = 1024.0;
+    const MIB: f64 = 1024.0 * 1024.0;
+    let bytes_f = bytes as f64;
+    if bytes_f >= MIB {
+        format!("{} MiB", trim_trailing_zeros(bytes_f / MIB))
+    } else if bytes_f >= KIB {
+        format!("{} KiB", trim_trailing_zeros(bytes_f / KIB))
+    } else {
+        format!("{bytes} bytes")
+    }
+}
+
+/// Renders `value` with up to two decimal places, dropping any trailing zeros
+/// and a bare trailing decimal point (`100.00` → `100`, `1.50` → `1.5`).
+fn trim_trailing_zeros(value: f64) -> String {
+    let formatted = format!("{value:.2}");
+    formatted
+        .trim_end_matches('0')
+        .trim_end_matches('.')
+        .to_string()
+}
+
 /// Builds the viewer-facing warning for a throttled oversized data-track drop.
 fn build_drop_status(channel_id: ChannelId, topic: &str, report: OversizedDropReport) -> Status {
+    let messages = if report.dropped_since_last == 1 {
+        "message"
+    } else {
+        "messages"
+    };
     Status::warning(format!(
-        "Dropped {} message(s) on topic {topic}: exceeds the data-track size limit of {} bytes",
-        report.dropped_since_last, report.size_limit,
+        "Dropped {} {messages} on topic {topic}: exceeds {} per-message size limit",
+        report.dropped_since_last,
+        format_byte_size(report.size_limit),
     ))
     .with_id(drop_status_id(channel_id))
 }
@@ -582,6 +615,17 @@ impl RemoteAccessSession {
         report: OversizedDropReport,
         subscriber_sids: SmallVec<[ParticipantSid; 4]>,
     ) {
+        // The registry read lock is released before we get here, so a
+        // concurrent `remove_channel` may have unadvertised the channel and run
+        // its eager clear in the meantime. Skip emitting in that case so we
+        // don't resurrect a `Status` for a topic that's already gone. A much
+        // narrower window remains (removal's `RemoveStatus` racing ahead of the
+        // `Status` we're about to send); the quiet-period sweeper is the
+        // backstop that clears any such straggler.
+        if !self.channel_registry.read().has_channel(&channel_id) {
+            return;
+        }
+
         self.active_drop_statuses
             .lock()
             .insert(channel_id, std::time::Instant::now());
@@ -2993,7 +3037,7 @@ mod tests {
         let channel_id = ChannelId::new(7);
         let report = OversizedDropReport {
             dropped_since_last: 3,
-            size_limit: 1200,
+            size_limit: 100 * 1024,
         };
         let status = build_drop_status(channel_id, "/points", report);
 
@@ -3001,8 +3045,30 @@ mod tests {
         assert_eq!(status.id.as_deref(), Some("channel-drops-7"));
         assert_eq!(
             status.message,
-            "Dropped 3 message(s) on topic /points: exceeds the data-track size limit of 1200 bytes"
+            "Dropped 3 messages on topic /points: exceeds 100 KiB per-message size limit"
         );
+    }
+
+    #[test]
+    fn build_drop_status_uses_singular_for_one_dropped_message() {
+        let report = OversizedDropReport {
+            dropped_since_last: 1,
+            size_limit: 1200,
+        };
+        let status = build_drop_status(ChannelId::new(1), "/points", report);
+        assert_eq!(
+            status.message,
+            "Dropped 1 message on topic /points: exceeds 1.17 KiB per-message size limit"
+        );
+    }
+
+    #[test]
+    fn format_byte_size_renders_human_readable_units() {
+        assert_eq!(format_byte_size(512), "512 bytes");
+        assert_eq!(format_byte_size(1200), "1.17 KiB");
+        assert_eq!(format_byte_size(1536), "1.5 KiB");
+        assert_eq!(format_byte_size(100 * 1024), "100 KiB");
+        assert_eq!(format_byte_size(2 * 1024 * 1024), "2 MiB");
     }
 
     #[test]
