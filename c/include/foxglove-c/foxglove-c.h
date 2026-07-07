@@ -2851,11 +2851,17 @@ typedef struct foxglove_gateway_options {
    * Defaults to `FOXGLOVE_VIDEO_ENCODER_BACKEND_AUTO` (0), which lets the SDK choose and
    * honors the `FOXGLOVE_VIDEO_ENCODER` environment variable. Any other value overrides the
    * environment variable.
-   *
-   * This field is last in the struct so that adding it preserves the memory offsets of all
-   * pre-existing fields.
    */
   foxglove_video_encoder_backend video_encoder;
+  /**
+   * Maximum size, in bytes, of a lossy data-track message. Larger messages are dropped
+   * before publishing so one high-bandwidth channel cannot starve the others. A value of 0
+   * means use the default (102400). Must be at least 1200 (one data-channel packet).
+   *
+   * New fields are appended last so that adding them preserves the memory offsets of all
+   * pre-existing fields.
+   */
+  size_t max_data_track_message_size;
 } foxglove_gateway_options;
 #endif
 

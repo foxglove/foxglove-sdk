@@ -138,6 +138,7 @@ Parameters are provided to configure the behavior of the bridge. These parameter
 - **remote_access**: Enable the remote access gateway, allowing the bridge to be reached through Foxglove's platform without exposing a port on the device. Requires the bridge to be built with `FOXGLOVE_BRIDGE_REMOTE_ACCESS=ON` (the default for our published Docker images). Defaults to `false`.
 - **device_token**: Foxglove device token used to authenticate with the Foxglove platform when `remote_access` is enabled. If empty, the bridge falls back to the `FOXGLOVE_DEVICE_TOKEN` environment variable.
 - **video_encoder**: Preferred backend for encoding published video tracks when `remote_access` is enabled: one of `auto`, `software`, `hardware`, `nvenc`, `vaapi`, `videotoolbox`. With `auto` (the default) the SDK chooses the backend and honors the `FOXGLOVE_VIDEO_ENCODER` environment variable. If the requested backend is unavailable on the host, the SDK falls back to another compatible encoder.
+- **max_data_track_message_size**: Maximum size, in bytes, of a lossy data-track message sent by the remote access gateway when `remote_access` is enabled. Larger messages are dropped before publishing, with a throttled warning, so one high-bandwidth channel cannot starve the others. Must be at least `1200` (one data-channel packet). Defaults to `102400` (100 KiB).
 
 #### Capabilities
 

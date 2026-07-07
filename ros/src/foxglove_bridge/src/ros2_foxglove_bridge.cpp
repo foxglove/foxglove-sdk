@@ -340,6 +340,8 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
     gatewayOptions.supported_encodings = {"cdr", "json"};
     gatewayOptions.server_info = std::move(rosServerInfo);
     gatewayOptions.message_backlog_size = messageBacklogSize;
+    gatewayOptions.max_data_track_message_size =
+      saturatingToSizeT(this->get_parameter(PARAM_MAX_DATA_TRACK_MESSAGE_SIZE).as_int(), 1200);
 
     const auto foxgloveApiUrl = this->get_parameter(PARAM_FOXGLOVE_API_URL).as_string();
     if (!foxgloveApiUrl.empty()) {
