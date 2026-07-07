@@ -8,7 +8,7 @@ states and camera feeds — to Foxglove. The example is based on the SO-101 arm,
 able to modify the example to use the SO-100 quite easily.
 
 > [!NOTE]
-> [LeRobot](https://github.com/huggingface/lerobot) now supports Foxglove as a native
+> As of [LeRobot](https://github.com/huggingface/lerobot) v0.6.0, Foxglove is a natively supported
 > visualization backend: pass `--display_mode=foxglove` to `lerobot-record`, `lerobot-teleoperate`,
 > or `lerobot-dataset-viz` and connect the Foxglove app to `ws://localhost:8765` to see camera
 > feeds and observation/action series — no extra code required. This example builds on top of that:
@@ -25,13 +25,8 @@ Feetech motor and dataset visualization extras:
 conda create -y -n lerobot python=3.12
 conda activate lerobot
 conda install ffmpeg -c conda-forge
-pip install "lerobot[feetech,dataset_viz] @ git+https://github.com/huggingface/lerobot.git"
+pip install 'lerobot[feetech,dataset_viz]'
 ```
-
-> [!NOTE]
-> LeRobot's Foxglove support is not yet in a PyPI release, so the command above installs LeRobot
-> from source. Once the release following v0.5.1 is published, a plain
-> `pip install 'lerobot[feetech,dataset_viz]'` works too.
 
 Now, install dependencies for this example:
 ```bash

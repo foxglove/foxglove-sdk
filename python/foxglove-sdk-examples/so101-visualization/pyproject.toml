@@ -8,9 +8,7 @@ dependencies = [
     "foxglove-sdk>=0.25.1,<0.26.0",
     "scipy~=1.0",
     "yourdfpy",
-    # LeRobot's native Foxglove support (used by dataset_playback.py) is not yet in a
-    # PyPI release; switch to "lerobot[feetech,dataset_viz]>=0.5.2" once it ships.
-    "lerobot[feetech,dataset_viz] @ git+https://github.com/huggingface/lerobot.git",
+    "lerobot[feetech,dataset_viz]>=0.6.0",
 ]
 
 [dependency-groups]
