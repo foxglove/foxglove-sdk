@@ -139,13 +139,11 @@ fn create_channels(summary: &Summary) -> Result<HashMap<u16, Arc<RawChannel>>> {
             .schema
             .as_ref()
             .map(|s| Schema::new(s.name.as_str(), s.encoding.as_str(), s.data.to_vec()));
-        let mut builder = ChannelBuilder::new(&mcap_channel.topic)
+        let channel = ChannelBuilder::new(&mcap_channel.topic)
             .message_encoding(&mcap_channel.message_encoding)
-            .schema(schema);
-        for (key, value) in &mcap_channel.metadata {
-            builder = builder.add_metadata(key, value);
-        }
-        let channel = builder.build_raw()?;
+            .schema(schema)
+            .metadata(mcap_channel.metadata.clone())
+            .build_raw()?;
         channels.insert(id, channel);
     }
     Ok(channels)
