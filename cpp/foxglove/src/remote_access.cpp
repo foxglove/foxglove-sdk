@@ -251,6 +251,7 @@ FoxgloveResult<RemoteAccessGateway> RemoteAccessGateway::create(
   }
 
   c_options.message_backlog_size = options.message_backlog_size.value_or(0);
+  c_options.max_data_track_message_size = options.max_data_track_message_size.value_or(0);
 
   std::vector<foxglove_key_value> server_info;
   if (options.server_info) {
