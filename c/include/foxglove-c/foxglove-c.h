@@ -2856,9 +2856,6 @@ typedef struct foxglove_gateway_options {
   /**
    * Maximum lossy data-track message size in bytes. A value of 0 means use the default
    * (102400). Must be at least 1200.
-   *
-   * New fields are appended last so that adding them preserves the memory offsets of all
-   * pre-existing fields.
    */
   size_t max_data_track_message_size;
 } foxglove_gateway_options;

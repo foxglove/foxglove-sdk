@@ -282,9 +282,8 @@ struct RemoteAccessGatewayOptions {
   /// 1200 bytes (one data-channel packet).
   ///
   /// By default, the limit is 102400 bytes (100 KiB).
-  ///
-  /// New fields are appended last so that adding them preserves the layout of pre-existing fields.
   std::optional<size_t> max_data_track_message_size = std::nullopt;
+  // New fields are appended last so that adding them preserves the layout of pre-existing fields.
 };
 
 /// @brief A remote access gateway for live visualization and teleop in Foxglove.

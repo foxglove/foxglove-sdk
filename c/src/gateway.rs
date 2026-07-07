@@ -654,10 +654,9 @@ pub struct FoxgloveGatewayOptions<'a> {
 
     /// Maximum lossy data-track message size in bytes. A value of 0 means use the default
     /// (102400). Must be at least 1200.
-    ///
-    /// New fields are appended last so that adding them preserves the memory offsets of all
-    /// pre-existing fields.
     pub max_data_track_message_size: usize,
+    // New fields are appended last so that adding them preserves the memory offsets of all
+    // pre-existing fields.
 }
 
 // Handle
@@ -823,7 +822,7 @@ unsafe fn do_foxglove_gateway_start(
         gateway = gateway.message_backlog_size(options.message_backlog_size);
     }
 
-    // Max data-track message size
+    // A value of 0 means "unset" — leave it off so the SDK applies its default.
     if options.max_data_track_message_size != 0 {
         gateway = gateway.max_data_track_message_size(options.max_data_track_message_size);
     }
