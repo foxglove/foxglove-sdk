@@ -197,6 +197,25 @@ async fn livekit_oversized_data_track_message_is_dropped() -> Result<()> {
          received a frame"
     );
 
+    // The drop is surfaced to the subscribed viewer as a throttled Status
+    // warning on the control channel, with a stable per-channel id so repeated
+    // reports replace rather than accumulate in the Problems panel.
+    let status = viewer.expect_status().await?;
+    assert_eq!(
+        status.level,
+        foxglove::protocol::v2::server::status::Level::Warning
+    );
+    assert_eq!(
+        status.id.as_deref(),
+        Some(format!("channel-drops-{channel_id}").as_str())
+    );
+    assert!(
+        status.message.contains("data-track size limit"),
+        "unexpected status message: {}",
+        status.message
+    );
+    info!("viewer received oversized-drop status warning");
+
     // 3. A later small message is delivered, confirming the stream is still
     //    healthy — the absence above was the drop, not a broken channel.
     channel.log(b"after");

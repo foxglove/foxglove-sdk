@@ -54,7 +54,7 @@ use crate::{
 };
 
 mod data_track;
-pub(super) use data_track::DataTrack;
+pub(super) use data_track::{DataTrack, OversizedDropReport};
 mod video_track;
 pub(super) use video_track::{
     VideoInputSchema, VideoMetadata, VideoPublisher, get_video_input_schema,
@@ -81,6 +81,15 @@ const MAX_MESSAGE_SIZE: usize = 16 * 1024 * 1024; // 16 MiB
 const ROOM_CLOSE_TIMEOUT: Duration = Duration::from_secs(5);
 
 pub(super) const DEFAULT_MESSAGE_BACKLOG_SIZE: usize = 1024;
+
+/// Quiet period after a channel's last oversized-drop report before its
+/// viewer-facing `Status` warning is auto-cleared via `RemoveStatus`. Set to
+/// 2× the 30s drop-warning throttle window so a channel under continuous drops
+/// (reported at most every 30s) never flaps between warned and cleared.
+const DROP_STATUS_QUIET_PERIOD: Duration = Duration::from_secs(60);
+
+/// How often the drop-status sweeper checks for expired drop statuses.
+const DROP_STATUS_SWEEP_INTERVAL: Duration = Duration::from_secs(15);
 
 /// Default per-message size limit for lossy data-track channels, in bytes.
 /// Messages larger than this are dropped before publish so one oversized channel
@@ -151,6 +160,42 @@ pub(super) fn encode_binary_message<'a>(message: &impl BinaryMessage<'a>) -> Byt
     );
     message.encode(&mut buf);
     Bytes::from(buf)
+}
+
+/// Stable per-channel id for the oversized-drop `Status`, so each throttled
+/// report replaces the previous Problems-panel entry rather than accumulating,
+/// and a later `RemoveStatus` clears exactly that entry.
+fn drop_status_id(channel_id: ChannelId) -> String {
+    format!("channel-drops-{}", u64::from(channel_id))
+}
+
+/// Builds the viewer-facing warning for a throttled oversized data-track drop.
+fn build_drop_status(channel_id: ChannelId, topic: &str, report: OversizedDropReport) -> Status {
+    Status::warning(format!(
+        "Dropped {} message(s) on topic {topic}: exceeds the data-track size limit of {} bytes",
+        report.dropped_since_last, report.size_limit,
+    ))
+    .with_id(drop_status_id(channel_id))
+}
+
+/// Drains and returns the channels whose most recent drop report is at least
+/// `quiet_period` old, leaving fresher entries in place. Pure and timer-free so
+/// the sweeper's expiry logic can be unit-tested with a synthetic `now`.
+fn drain_expired_drop_statuses(
+    statuses: &mut HashMap<ChannelId, std::time::Instant>,
+    now: std::time::Instant,
+    quiet_period: Duration,
+) -> Vec<ChannelId> {
+    let mut expired = Vec::new();
+    statuses.retain(|channel_id, last_report| {
+        if now.duration_since(*last_report) >= quiet_period {
+            expired.push(*channel_id);
+            false
+        } else {
+            true
+        }
+    });
+    expired
 }
 
 fn build_advertise_services_msg(services: &[Arc<Service>]) -> Option<AdvertiseServices<'_>> {
@@ -228,6 +273,11 @@ pub(super) struct RemoteAccessSession {
     video_codec_override: Option<VideoCodec>,
     /// Per-message size limit for lossy data-track channels; larger messages are dropped.
     max_data_track_message_size: usize,
+    /// Per-channel timestamp of the most recent oversized-drop `Status` warning
+    /// emitted to viewers. Feeds the quiet-period sweeper, which sends
+    /// `RemoveStatus` once a channel stops dropping. See
+    /// [`DROP_STATUS_QUIET_PERIOD`].
+    active_drop_statuses: parking_lot::Mutex<HashMap<ChannelId, std::time::Instant>>,
     /// The preferred encoder backend applied to published video tracks.
     /// [`VideoEncoderBackend::Auto`](super::gateway::VideoEncoderBackend::Auto) leaves the
     /// choice to libwebrtc.
@@ -246,6 +296,10 @@ impl Sink for RemoteAccessSession {
         metadata: &Metadata,
     ) -> std::result::Result<(), FoxgloveError> {
         let channel_id = channel.id();
+
+        // Captured under the read lock on the lossy oversized-drop path and
+        // handled after the lock is released (like the reliable branch below).
+        let mut drop_report: Option<(OversizedDropReport, SmallVec<[ParticipantSid; 4]>)> = None;
 
         // Snapshot subscriber SIDs under the channel-registry read lock and
         // release it before resolving against the participant registry. A
@@ -267,9 +321,13 @@ impl Sink for RemoteAccessSession {
                 state.data_subscriber_sids(&channel_id)
             } else {
                 // Lossy channels: send via the eagerly-published data track
-                // inline, while we still hold the state read lock.
+                // inline, while we still hold the state read lock. On a
+                // throttled oversized drop, capture the report and the current
+                // data subscribers so we can warn them after the lock.
                 if let Some(track) = state.get_subscribed_data_track(&channel_id) {
-                    track.log(channel_id, msg, metadata);
+                    if let Some(report) = track.log(channel_id, msg, metadata) {
+                        drop_report = Some((report, state.data_subscriber_sids(&channel_id)));
+                    }
                 }
                 SmallVec::new()
             }
@@ -284,6 +342,10 @@ impl Sink for RemoteAccessSession {
             for participant in self.participant_registry.resolve_sids(reliable_sids) {
                 participant.send_control(encoded.clone());
             }
+        }
+
+        if let Some((report, subscriber_sids)) = drop_report {
+            self.emit_drop_status(channel, channel_id, report, subscriber_sids);
         }
 
         Ok(())
@@ -380,6 +442,15 @@ impl Sink for RemoteAccessSession {
         let unadvertise = Unadvertise::new([u64::from(channel_id)]);
         self.broadcast_control(encode_json_message(&unadvertise));
 
+        // Eagerly clear any viewer-facing oversized-drop status for the removed
+        // channel so it doesn't linger in the app's Problems panel until the
+        // sweeper's quiet period elapses. Removing an unknown status id is a
+        // client-side no-op.
+        self.active_drop_statuses.lock().remove(&channel_id);
+        self.broadcast_control(encode_json_message(&RemoveStatus::new([drop_status_id(
+            channel_id,
+        )])));
+
         // Fire on_unsubscribe callbacks for subscribers of the removed channel.
         if let Some(listener) = &self.listener {
             let descriptor = channel.descriptor();
@@ -453,6 +524,7 @@ impl RemoteAccessSession {
             device_wait_for_viewer: params.device_wait_for_viewer,
             video_codec_override: params.video_codec_override,
             max_data_track_message_size: params.max_data_track_message_size,
+            active_drop_statuses: parking_lot::Mutex::new(HashMap::new()),
             video_encoder: params.video_encoder,
         })
     }
@@ -497,6 +569,30 @@ impl RemoteAccessSession {
         participant.send_control(encode_json_message(&status));
     }
 
+    /// Warn subscribers about a throttled oversized data-track drop and record
+    /// the drop time so the quiet-period sweeper can later clear the status.
+    ///
+    /// The status uses a stable per-channel id (`channel-drops-{id}`) so each
+    /// throttled report replaces the previous Problems-panel entry rather than
+    /// accumulating.
+    fn emit_drop_status(
+        &self,
+        channel: &RawChannel,
+        channel_id: ChannelId,
+        report: OversizedDropReport,
+        subscriber_sids: SmallVec<[ParticipantSid; 4]>,
+    ) {
+        self.active_drop_statuses
+            .lock()
+            .insert(channel_id, std::time::Instant::now());
+
+        let status = build_drop_status(channel_id, channel.topic(), report);
+        let encoded = encode_json_message(&status);
+        for participant in self.participant_registry.resolve_sids(subscriber_sids) {
+            participant.send_control(encoded.clone());
+        }
+    }
+
     /// Enqueue a control plane message for all currently connected participants.
     /// If a participant's queue is full, a reset is requested for that participant.
     fn broadcast_control(&self, data: Bytes) {
@@ -520,6 +616,44 @@ impl RemoteAccessSession {
                 }
             }
         }
+    }
+
+    /// Auto-clears viewer-facing oversized-drop statuses once a channel has had
+    /// no drop reports for [`DROP_STATUS_QUIET_PERIOD`].
+    ///
+    /// Runs until the cancellation token fires.
+    pub(super) async fn run_drop_status_sweeper(session: Arc<Self>) {
+        let mut interval = tokio::time::interval(DROP_STATUS_SWEEP_INTERVAL);
+        interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+        loop {
+            tokio::select! {
+                biased;
+                () = session.cancellation_token.cancelled() => break,
+                _ = interval.tick() => {
+                    session.sweep_expired_drop_statuses(std::time::Instant::now());
+                }
+            }
+        }
+    }
+
+    /// Removes drop-status entries idle for at least [`DROP_STATUS_QUIET_PERIOD`]
+    /// and broadcasts a single `RemoveStatus` clearing them. Synchronous and
+    /// timer-free so it can be unit-tested with a synthetic `now`.
+    ///
+    /// `RemoveStatus` is broadcast to all participants; removing an unknown
+    /// status id is a client-side no-op, so we needn't track exactly who
+    /// received each warning.
+    fn sweep_expired_drop_statuses(&self, now: std::time::Instant) {
+        let expired = drain_expired_drop_statuses(
+            &mut self.active_drop_statuses.lock(),
+            now,
+            DROP_STATUS_QUIET_PERIOD,
+        );
+        if expired.is_empty() {
+            return;
+        }
+        let remove = RemoveStatus::new(expired.iter().map(|id| drop_status_id(*id)));
+        self.broadcast_control(encode_json_message(&remove));
     }
 
     /// Cancel the session's `CancellationToken`, signaling all session-scoped
@@ -2850,5 +2984,64 @@ mod tests {
         assert_eq!(status.level, StatusLevel::Error);
         assert!(status.message.contains("failed to send a response"));
         assert!(rx.try_recv().is_err());
+    }
+
+    // ---- oversized data-track drop status tests ----
+
+    #[test]
+    fn build_drop_status_has_warning_level_stable_id_and_message() {
+        let channel_id = ChannelId::new(7);
+        let report = OversizedDropReport {
+            dropped_since_last: 3,
+            size_limit: 1200,
+        };
+        let status = build_drop_status(channel_id, "/points", report);
+
+        assert_eq!(status.level, StatusLevel::Warning);
+        assert_eq!(status.id.as_deref(), Some("channel-drops-7"));
+        assert_eq!(
+            status.message,
+            "Dropped 3 message(s) on topic /points: exceeds the data-track size limit of 1200 bytes"
+        );
+    }
+
+    #[test]
+    fn drain_expired_drop_statuses_removes_only_stale_entries() {
+        let quiet = Duration::from_secs(60);
+        let now = std::time::Instant::now();
+
+        let stale = ChannelId::new(1);
+        let fresh = ChannelId::new(2);
+        let mut statuses = HashMap::from([
+            // Idle exactly the quiet period → expired (boundary is inclusive).
+            (stale, now - quiet),
+            // Idle less than the quiet period → retained.
+            (fresh, now - Duration::from_secs(30)),
+        ]);
+
+        let expired = drain_expired_drop_statuses(&mut statuses, now, quiet);
+
+        assert_eq!(expired, vec![stale]);
+        assert!(
+            !statuses.contains_key(&stale),
+            "stale entry should be drained"
+        );
+        assert!(
+            statuses.contains_key(&fresh),
+            "fresh entry should be left alone"
+        );
+    }
+
+    #[test]
+    fn drain_expired_drop_statuses_noop_when_all_fresh() {
+        let quiet = Duration::from_secs(60);
+        let now = std::time::Instant::now();
+        let fresh = ChannelId::new(9);
+        let mut statuses = HashMap::from([(fresh, now)]);
+
+        let expired = drain_expired_drop_statuses(&mut statuses, now, quiet);
+
+        assert!(expired.is_empty());
+        assert_eq!(statuses.len(), 1);
     }
 }

@@ -12,6 +12,20 @@ use crate::{ChannelId, Metadata};
 
 const FRAME_HEADER_SIZE: usize = 8; // u16 LE flags + u16 LE data_offset + u32 LE sequence
 
+/// Details of a throttled oversized-message drop, surfaced to viewers as a
+/// `Status` warning.
+///
+/// Returned by [`DataTrack::log`] only at the moment the throttled gateway-side
+/// warning fires, so the viewer-facing signal reuses the same throttle window
+/// and aggregated count without a second throttle.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct OversizedDropReport {
+    /// Oversized messages dropped since the last report, including this one.
+    pub dropped_since_last: u64,
+    /// The configured per-message size limit, in bytes.
+    pub size_limit: usize,
+}
+
 /// Manages the lifecycle of a single published data track.
 pub(crate) struct DataTrack {
     /// Shared cell where the publish task deposits the track on success.
@@ -121,7 +135,17 @@ impl DataTrack {
     /// Drops the message (with a throttled warning) if it exceeds
     /// [`max_message_size`](Self::max_message_size), or with a throttled debug
     /// log if the track is not ready or full.
-    pub fn log(&self, channel_id: ChannelId, msg: &[u8], metadata: &Metadata) {
+    ///
+    /// Returns `Some(OversizedDropReport)` only on the throttled oversized-drop
+    /// path — the same moment the gateway-side warning fires — so the caller can
+    /// surface a matching viewer signal. Returns `None` on all other paths
+    /// (delivered, throttled, not-ready, queue-full).
+    pub fn log(
+        &self,
+        channel_id: ChannelId,
+        msg: &[u8],
+        metadata: &Metadata,
+    ) -> Option<OversizedDropReport> {
         if msg.len() > self.max_message_size {
             if self.oversized_throttler.lock().try_acquire() {
                 let dropped = 1 + self.oversized_dropped.swap(0, Ordering::Relaxed);
@@ -131,16 +155,19 @@ impl DataTrack {
                     msg.len(),
                     self.max_message_size
                 );
-            } else {
-                self.oversized_dropped.fetch_add(1, Ordering::Relaxed);
+                return Some(OversizedDropReport {
+                    dropped_since_last: dropped,
+                    size_limit: self.max_message_size,
+                });
             }
-            return;
+            self.oversized_dropped.fetch_add(1, Ordering::Relaxed);
+            return None;
         }
         let Some(track) = self.track.get() else {
             if self.drop_throttler.lock().try_acquire() {
                 debug!("data track not ready, dropping message for channel {channel_id:?}");
             }
-            return;
+            return None;
         };
         let seq = self.sequence.fetch_add(1, Ordering::Relaxed);
         let mut payload = Vec::with_capacity(FRAME_HEADER_SIZE + msg.len());
@@ -157,6 +184,7 @@ impl DataTrack {
                 debug!("data track message dropped for channel {channel_id:?}: {e:?}");
             }
         }
+        None
     }
 
     /// Oversized messages dropped since the last warning was logged (test-only).
@@ -217,13 +245,22 @@ mod tests {
         let metadata = Metadata::default();
 
         // The first oversized message fires the throttled warning, which resets
-        // the pending counter, so send a second to leave one pending drop.
-        track.log(channel_id, &[0u8; 17], &metadata);
-        track.log(channel_id, &[0u8; 17], &metadata);
+        // the pending counter and returns a report for the viewer signal.
+        let report = track.log(channel_id, &[0u8; 17], &metadata);
+        assert_eq!(
+            report,
+            Some(OversizedDropReport {
+                dropped_since_last: 1,
+                size_limit: 16,
+            })
+        );
+
+        // A second oversized message is throttled: no report, one pending drop.
+        assert_eq!(track.log(channel_id, &[0u8; 17], &metadata), None);
         assert_eq!(track.oversized_dropped(), 1);
 
-        // An at-limit message takes the normal path and is not counted.
-        track.log(channel_id, &[0u8; 16], &metadata);
+        // An at-limit message takes the normal path: no report, not counted.
+        assert_eq!(track.log(channel_id, &[0u8; 16], &metadata), None);
         assert_eq!(track.oversized_dropped(), 1);
     }
 }

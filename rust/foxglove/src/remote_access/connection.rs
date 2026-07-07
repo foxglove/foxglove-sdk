@@ -541,6 +541,9 @@ impl RemoteAccessConnection {
         let video_metadata_task = tokio::spawn(RemoteAccessSession::run_video_metadata_watcher(
             session.clone(),
         ));
+        let drop_status_task = tokio::spawn(RemoteAccessSession::run_drop_status_sweeper(
+            session.clone(),
+        ));
 
         // Send ServerInfo and channel advertisements to participants already in the room.
         // ParticipantConnected events only fire for participants joining after us.
@@ -609,6 +612,13 @@ impl RemoteAccessConnection {
                 remote_access_session_id,
                 error = %e,
                 "video metadata watcher failed"
+            );
+        }
+        if let Err(e) = drop_status_task.await {
+            error!(
+                remote_access_session_id,
+                error = %e,
+                "drop status sweeper failed"
             );
         }
 
