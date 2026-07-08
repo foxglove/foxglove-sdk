@@ -195,6 +195,7 @@ pub(super) struct RemoteAccessSession {
     parameter_subscriptions: RwLock<ParameterSubscriptions>,
     channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     qos_classifier: Option<Arc<dyn QosClassifier>>,
+    suppress_video_transcode: Option<super::gateway::SuppressVideoTranscodeFn>,
     listener: Option<Arc<dyn Listener>>,
     capabilities: Vec<Capability>,
     fetch_asset_handler: Option<Arc<dyn AssetHandler>>,
@@ -319,7 +320,8 @@ impl Sink for RemoteAccessSession {
             for &ch in &filtered {
                 if advertised_ids.contains(&u64::from(ch.id())) {
                     state.insert_channel(ch);
-                    let video_schema = get_video_input_schema(ch);
+                    let video_schema =
+                        get_video_input_schema(ch, self.suppress_video_transcode.as_ref());
                     if let Some(input_schema) = video_schema {
                         state.insert_video_schema(ch.id(), input_schema);
                     }
@@ -403,6 +405,7 @@ pub(super) struct SessionParams {
     pub(super) context: Weak<Context>,
     pub(super) channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     pub(super) qos_classifier: Option<Arc<dyn QosClassifier>>,
+    pub(super) suppress_video_transcode: Option<super::gateway::SuppressVideoTranscodeFn>,
     pub(super) listener: Option<Arc<dyn Listener>>,
     pub(super) capabilities: Vec<Capability>,
     pub(super) supported_encodings: IndexSet<String>,
@@ -434,6 +437,7 @@ impl RemoteAccessSession {
             parameter_subscriptions: RwLock::new(ParameterSubscriptions::new()),
             channel_filter: params.channel_filter,
             qos_classifier: params.qos_classifier,
+            suppress_video_transcode: params.suppress_video_transcode,
             listener: params.listener,
             capabilities: params.capabilities,
             fetch_asset_handler: params.fetch_asset_handler,

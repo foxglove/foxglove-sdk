@@ -1,4 +1,20 @@
 //! Remote access implementation.
+//!
+//! # Video transcoding and the data opt-out
+//!
+//! For bandwidth-efficient live streaming, image channels are transcoded to a WebRTC video
+//! track rather than sent on the data plane: `foxglove.CompressedImage` and `foxglove.RawImage`
+//! (protobuf), and the ROS `sensor_msgs` image types. A channel with one of these schemas is
+//! advertised with a video track.
+//!
+//! To deliver an image channel as data instead, opt it out with
+//! [`Gateway::suppress_video_transcode_fn`]. The channel is then advertised without a video track
+//! and its messages are delivered on the data plane unchanged. This is required for compressed
+//! depth maps, whose pixel values encode depth and would be corrupted by lossy video transcoding;
+//! [`is_compressed_depth_format`] classifies a compressed-depth `format` string.
+//!
+//! The opt-out is a gateway-side classifier rather than channel metadata so that remote-access
+//! delivery config never leaks into recordings (channel metadata is persisted to MCAP).
 
 mod capability;
 mod channel_registry;
@@ -28,6 +44,8 @@ pub use connection::ConnectionStatus;
 pub use gateway::{Gateway, GatewayHandle, VideoEncoderBackend};
 pub use listener::Listener;
 pub use qos::{QosClassifier, QosProfile, QosProfileBuilder, Reliability};
+
+pub use crate::img2yuv::is_compressed_depth_format;
 
 use reqwest::StatusCode;
 use thiserror::Error;

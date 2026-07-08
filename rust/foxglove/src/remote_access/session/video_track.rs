@@ -102,8 +102,16 @@ fn detect_video_schema(encoding: &str, schema_name: &str) -> Option<VideoInputSc
     }
 }
 
-/// Convenience function to detect a video input schema from a [`RawChannel`].
-pub fn get_video_input_schema(channel: &RawChannel) -> Option<VideoInputSchema> {
+/// Returns the video input schema a channel should be advertised with, or `None` when the channel
+/// is not video-capable or the gateway's `suppress_video_transcode` classifier opts it out
+/// (delivered as data instead, e.g. compressed depth).
+pub fn get_video_input_schema(
+    channel: &RawChannel,
+    suppress: Option<&crate::remote_access::gateway::SuppressVideoTranscodeFn>,
+) -> Option<VideoInputSchema> {
+    if suppress.is_some_and(|suppress| suppress(channel.descriptor())) {
+        return None;
+    }
     let schema_name = channel.schema().map(|s| s.name.as_str()).unwrap_or("");
     detect_video_schema(channel.message_encoding(), schema_name)
 }
@@ -494,6 +502,48 @@ mod tests {
     fn test_unknown_schema() {
         assert_eq!(detect_video_schema("json", "SomeCustomType"), None);
         assert_eq!(detect_video_schema("protobuf", "foxglove.Pose"), None);
+    }
+
+    fn make_video_channel() -> Arc<RawChannel> {
+        use crate::{ChannelBuilder, Context, Schema};
+        let ctx = Context::new();
+        ChannelBuilder::new("/camera")
+            .context(&ctx)
+            .message_encoding("protobuf")
+            .schema(Schema::new(
+                "foxglove.CompressedImage",
+                "protobuf",
+                &b""[..],
+            ))
+            .build_raw()
+            .unwrap()
+    }
+
+    #[test]
+    fn get_video_input_schema_detects_video_capable_channel() {
+        let ch = make_video_channel();
+        let no_suppress = None;
+        assert_eq!(
+            get_video_input_schema(&ch, no_suppress),
+            Some(VideoInputSchema::FoxgloveCompressedImage)
+        );
+    }
+
+    #[test]
+    fn get_video_input_schema_honors_suppress_classifier() {
+        use crate::remote_access::gateway::SuppressVideoTranscodeFn;
+        let ch = make_video_channel();
+        // Opt the channel out → no video schema despite a video-capable schema.
+        let suppress: SuppressVideoTranscodeFn =
+            std::sync::Arc::new(|desc: &crate::ChannelDescriptor| desc.topic() == "/camera");
+        assert_eq!(get_video_input_schema(&ch, Some(&suppress)), None);
+        // A classifier that doesn't match leaves detection intact.
+        let other: SuppressVideoTranscodeFn =
+            std::sync::Arc::new(|desc: &crate::ChannelDescriptor| desc.topic() == "/other");
+        assert_eq!(
+            get_video_input_schema(&ch, Some(&other)),
+            Some(VideoInputSchema::FoxgloveCompressedImage)
+        );
     }
 
     #[test]

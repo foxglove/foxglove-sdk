@@ -867,6 +867,7 @@ pub struct TestGatewayOptions {
     pub capabilities: Vec<foxglove::remote_access::Capability>,
     pub services: Vec<Service>,
     pub qos_classifier: Option<QosClassifierFn>,
+    pub suppress_video_transcode: Option<ChannelFilterFn>,
     pub max_data_track_message_size: Option<usize>,
 }
 
@@ -950,6 +951,9 @@ impl TestGateway {
         }
         if let Some(classifier) = options.qos_classifier {
             gateway = gateway.qos_classifier_fn(classifier);
+        }
+        if let Some(suppress) = options.suppress_video_transcode {
+            gateway = gateway.suppress_video_transcode_fn(suppress);
         }
         if let Some(size) = options.max_data_track_message_size {
             gateway = gateway.max_data_track_message_size(size);

@@ -129,6 +129,7 @@ impl GatewayHandle {
             runtime: runtime.clone(),
             channel_filter: None,
             qos_classifier: None,
+            suppress_video_transcode: None,
             server_info: None,
             message_backlog_size: None,
             max_data_track_message_size: None,
@@ -248,12 +249,17 @@ pub struct Gateway {
     runtime: Option<Handle>,
     channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     qos_classifier: Option<Arc<dyn QosClassifier>>,
+    suppress_video_transcode: Option<SuppressVideoTranscodeFn>,
     server_info: Option<HashMap<String, String>>,
     message_backlog_size: Option<usize>,
     max_data_track_message_size: Option<usize>,
     video_encoder: VideoEncoderBackend,
     context: std::sync::Weak<Context>,
 }
+
+/// Per-channel predicate deciding whether a channel opts out of video transcoding and is
+/// delivered as data instead. Configured via [`Gateway::suppress_video_transcode_fn`].
+pub(super) type SuppressVideoTranscodeFn = Arc<dyn Fn(&ChannelDescriptor) -> bool + Send + Sync>;
 
 impl Default for Gateway {
     fn default() -> Self {
@@ -271,6 +277,7 @@ impl Default for Gateway {
             runtime: None,
             channel_filter: None,
             qos_classifier: None,
+            suppress_video_transcode: None,
             server_info: None,
             message_backlog_size: None,
             max_data_track_message_size: None,
@@ -299,6 +306,10 @@ impl std::fmt::Debug for Gateway {
             .field("has_runtime", &self.runtime.is_some())
             .field("has_channel_filter", &self.channel_filter.is_some())
             .field("has_qos_classifier", &self.qos_classifier.is_some())
+            .field(
+                "has_suppress_video_transcode",
+                &self.suppress_video_transcode.is_some(),
+            )
             .field("server_info", &self.server_info)
             .field("message_backlog_size", &self.message_backlog_size)
             .field(
@@ -469,6 +480,23 @@ impl Gateway {
         classifier: impl Fn(&ChannelDescriptor) -> QosProfile + Sync + Send + 'static,
     ) -> Self {
         self.qos_classifier = Some(Arc::new(QosClassifierFn(classifier)));
+        self
+    }
+
+    /// Opts channels out of video transcoding, delivering them as data instead.
+    ///
+    /// The predicate is invoked when a channel is registered; returning `true` advertises the
+    /// channel without a video track, so its messages are sent on the data plane unchanged. This
+    /// is required for compressed depth maps, whose pixel values encode depth and would be
+    /// corrupted by lossy video transcoding — [`is_compressed_depth_format`] classifies a
+    /// compressed-depth `format` string.
+    ///
+    /// [`is_compressed_depth_format`]: crate::remote_access::is_compressed_depth_format
+    pub fn suppress_video_transcode_fn(
+        mut self,
+        suppress: impl Fn(&ChannelDescriptor) -> bool + Sync + Send + 'static,
+    ) -> Self {
+        self.suppress_video_transcode = Some(Arc::new(suppress));
         self
     }
 
@@ -663,6 +691,7 @@ impl Gateway {
             runtime: runtime.clone(),
             channel_filter: self.channel_filter,
             qos_classifier: self.qos_classifier,
+            suppress_video_transcode: self.suppress_video_transcode,
             server_info: self.server_info,
             message_backlog_size: self.message_backlog_size,
             max_data_track_message_size: self.max_data_track_message_size,

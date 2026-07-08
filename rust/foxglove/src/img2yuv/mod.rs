@@ -18,7 +18,9 @@ pub mod ros2;
 #[cfg(test)]
 mod tests;
 
-pub use self::compressed::{CompressedImage, Compression, UnknownCompressionError};
+pub use self::compressed::{
+    CompressedImage, Compression, UnknownCompressionError, is_compressed_depth_format,
+};
 pub use self::message::ImageMessage;
 pub use self::raw::{BayerCfa, Endian, RawImage, RawImageEncoding, UnknownEncodingError};
 
