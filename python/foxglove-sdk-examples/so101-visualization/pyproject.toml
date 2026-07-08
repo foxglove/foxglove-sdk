@@ -8,7 +8,7 @@ dependencies = [
     "foxglove-sdk>=0.25.1,<0.26.0",
     "scipy~=1.0",
     "yourdfpy",
-    "lerobot[feetech,dataset_viz]>=0.6.0",
+    "lerobot[feetech]>=0.6.0",
 ]
 
 [dependency-groups]
