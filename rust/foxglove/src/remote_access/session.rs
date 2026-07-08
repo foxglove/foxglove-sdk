@@ -388,7 +388,7 @@ impl Sink for RemoteAccessSession {
         }
 
         if let Some((report, subscriber_sids)) = drop_report {
-            self.emit_drop_status(channel, channel_id, report, subscriber_sids);
+            self.emit_drop_status(channel, report, subscriber_sids);
         }
 
         Ok(())
@@ -621,10 +621,11 @@ impl RemoteAccessSession {
     fn emit_drop_status(
         &self,
         channel: &RawChannel,
-        channel_id: ChannelId,
         report: OversizedDropReport,
         subscriber_sids: SmallVec<[ParticipantSid; 4]>,
     ) {
+        let channel_id = channel.id();
+
         // The registry read lock is released before we get here, so a
         // concurrent `remove_channel` may have unadvertised the channel and run
         // its eager clear in the meantime. Skip emitting in that case so we
