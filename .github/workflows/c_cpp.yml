@@ -174,17 +174,7 @@ jobs:
       - name: Install remote access build dependencies (Linux)
         if: matrix.remote_access && runner.os == 'Linux'
         run: |
-          for attempt in 1 2 3; do
-            if sudo apt-get update && sudo apt-get install -y libglib2.0-dev libva-dev libwebsockets-dev; then
-              break
-            fi
-            if [ "$attempt" -eq 3 ]; then
-              echo "::error::apt-get failed after 3 attempts"
-              exit 1
-            fi
-            echo "::warning::apt-get failed (attempt $attempt/3); retrying in 15s"
-            sleep 15
-          done
+          "$GITHUB_WORKSPACE/.github/scripts/apt-retry.sh" libglib2.0-dev libva-dev libwebsockets-dev
           echo "CC=gcc" >> $GITHUB_ENV
           echo "CXX=g++" >> $GITHUB_ENV
 
