@@ -12,9 +12,6 @@
 //! and its messages are delivered on the data plane unchanged. This is required for compressed
 //! depth maps, whose pixel values encode depth and would be corrupted by lossy video transcoding;
 //! [`is_compressed_depth_format`] classifies a compressed-depth `format` string.
-//!
-//! The opt-out is a gateway-side classifier rather than channel metadata so that remote-access
-//! delivery config never leaks into recordings (channel metadata is persisted to MCAP).
 
 mod capability;
 mod channel_registry;

@@ -57,7 +57,7 @@ mod data_track;
 pub(super) use data_track::DataTrack;
 mod video_track;
 pub(super) use video_track::{
-    VideoInputSchema, VideoMetadata, VideoPublisher, get_video_input_schema,
+    VideoInputSchema, VideoMetadata, VideoPublisher, resolve_video_input_schema,
 };
 
 #[derive(Debug)]
@@ -321,7 +321,7 @@ impl Sink for RemoteAccessSession {
                 if advertised_ids.contains(&u64::from(ch.id())) {
                     state.insert_channel(ch);
                     let video_schema =
-                        get_video_input_schema(ch, self.suppress_video_transcode.as_ref());
+                        resolve_video_input_schema(ch, self.suppress_video_transcode.as_ref());
                     if let Some(input_schema) = video_schema {
                         state.insert_video_schema(ch.id(), input_schema);
                     }
