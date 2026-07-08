@@ -22,7 +22,7 @@ runs:
     - name: Install apt packages (with retry)
       shell: bash
       run: |
-        "$GITHUB_WORKSPACE/.github/scripts/apt-retry.sh" \
+        bash "$GITHUB_WORKSPACE/.github/scripts/apt-retry.sh" \
           --no-install-recommends \
           libprotobuf-dev \
           protobuf-compiler \

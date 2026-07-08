@@ -174,7 +174,7 @@ jobs:
       - name: Install remote access build dependencies (Linux)
         if: matrix.remote_access && runner.os == 'Linux'
         run: |
-          "$GITHUB_WORKSPACE/.github/scripts/apt-retry.sh" libglib2.0-dev libva-dev libwebsockets-dev
+          bash "$GITHUB_WORKSPACE/.github/scripts/apt-retry.sh" libglib2.0-dev libva-dev libwebsockets-dev
           echo "CC=gcc" >> $GITHUB_ENV
           echo "CXX=g++" >> $GITHUB_ENV
 
