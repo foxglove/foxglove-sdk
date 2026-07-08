@@ -19,12 +19,11 @@ runs:
     - shell: bash
       run: sudo rm -f /var/lib/man-db/auto-update
 
-    - shell: bash
-      run: sudo apt-get update
-
-    - shell: bash
+    - name: Install apt packages (with retry)
+      shell: bash
       run: |
-        sudo apt-get install -y --no-install-recommends \
+        bash "$GITHUB_WORKSPACE/.github/scripts/apt-retry.sh" \
+          --no-install-recommends \
           libprotobuf-dev \
           protobuf-compiler \
           libglib2.0-dev \
