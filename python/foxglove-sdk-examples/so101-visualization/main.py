@@ -1,7 +1,8 @@
 """Live 3D URDF visualization for the SO-101 arm via the Foxglove SDK.
 
 For teleop, recording, and dataset replay, use LeRobot's native Foxglove integration
-(`--display_mode=foxglove`) instead — see https://foxglove.dev/blog/native-foxglove-visualization-in-lerobot
+(`--display_mode=foxglove`) instead — see
+https://foxglove.dev/blog/native-foxglove-visualization-in-lerobot
 """
 
 import argparse
@@ -18,11 +19,20 @@ from foxglove.messages import (
     RawImage,
     Vector3,
 )
-from lerobot.cameras.opencv import OpenCVCamera, OpenCVCameraConfig
-from lerobot.cameras.opencv.configuration_opencv import ColorMode, Cv2Rotation
-from lerobot.robots.so_follower import SO101Follower, SO101FollowerConfig
-from scipy.spatial.transform import Rotation as R
-from yourdfpy import URDF
+from lerobot.cameras.opencv import (  # type: ignore[import-untyped]
+    OpenCVCamera,
+    OpenCVCameraConfig,
+)
+from lerobot.cameras.opencv.configuration_opencv import (  # type: ignore[import-untyped]
+    ColorMode,
+    Cv2Rotation,
+)
+from lerobot.robots.so_follower import (  # type: ignore[import-untyped]
+    SO101Follower,
+    SO101FollowerConfig,
+)
+from scipy.spatial.transform import Rotation as R  # type: ignore[import-untyped]
+from yourdfpy import URDF  # type: ignore[import-untyped]
 
 WORLD_FRAME_ID = "world"
 BASE_FRAME_ID = "base_link"
