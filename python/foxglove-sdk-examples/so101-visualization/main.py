@@ -12,9 +12,9 @@ from foxglove.messages import (
     RawImage,
     Vector3,
 )
-from lerobot.cameras import ColorMode, Cv2Rotation
 from lerobot.cameras.opencv import OpenCVCamera, OpenCVCameraConfig
-from lerobot.robots.so101_follower import SO101Follower, SO101FollowerConfig
+from lerobot.cameras.opencv.configuration_opencv import ColorMode, Cv2Rotation
+from lerobot.robots.so_follower import SO101Follower, SO101FollowerConfig
 from scipy.spatial.transform import Rotation as R
 from yourdfpy import URDF
 
