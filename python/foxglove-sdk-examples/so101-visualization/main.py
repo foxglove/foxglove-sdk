@@ -1,3 +1,10 @@
+"""Live 3D URDF visualization for the SO-101 arm via the Foxglove SDK.
+
+For teleop, recording, and dataset replay, use LeRobot's native Foxglove integration
+(`--display_mode=foxglove`) instead — see
+https://foxglove.dev/blog/native-foxglove-visualization-in-lerobot
+"""
+
 import argparse
 import datetime
 import math
@@ -12,16 +19,52 @@ from foxglove.messages import (
     RawImage,
     Vector3,
 )
-from lerobot.cameras import ColorMode, Cv2Rotation
-from lerobot.cameras.opencv import OpenCVCamera, OpenCVCameraConfig
-from lerobot.robots.so101_follower import SO101Follower, SO101FollowerConfig
-from scipy.spatial.transform import Rotation as R
-from yourdfpy import URDF
+from lerobot.cameras.opencv import (  # type: ignore[import-untyped]
+    OpenCVCamera,
+    OpenCVCameraConfig,
+)
+from lerobot.cameras.opencv.configuration_opencv import (  # type: ignore[import-untyped]
+    ColorMode,
+    Cv2Rotation,
+)
+from lerobot.robots.so_follower import (  # type: ignore[import-untyped]
+    SO101Follower,
+    SO101FollowerConfig,
+)
+from scipy.spatial.transform import Rotation as R  # type: ignore[import-untyped]
+from yourdfpy import URDF  # type: ignore[import-untyped]
 
 WORLD_FRAME_ID = "world"
 BASE_FRAME_ID = "base_link"
 RATE_HZ = 30.0
 URDF_FILE = "SO101/so101_new_calib.urdf"
+
+# Topic names follow LeRobot's native Foxglove integration (`--display_mode foxglove`),
+# so layouts and downstream tooling work the same whether data comes from this example
+# or from LeRobot directly.
+WRIST_CAM_TOPIC = "/observation/images/wrist"
+ENV_CAM_TOPIC = "/observation/images/env"
+OBS_STATE_TOPIC = "/observation/state"
+
+# Same "lerobot.Scalars" schema LeRobot uses on /observation/state: a flat list of
+# {label, value} pairs. The `label` field names each series, so a single filtered path
+# like `/observation/state.scalars[:].value` plots every joint at once.
+SCALARS_SCHEMA = {
+    "type": "object",
+    "title": "lerobot.Scalars",
+    "properties": {
+        "scalars": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "label": {"type": "string"},
+                    "value": {"type": "number"},
+                },
+            },
+        }
+    },
+}
 
 
 def parse_args():
@@ -128,6 +171,12 @@ def main():
     # Start the Foxglove server
     server = foxglove.start_server()
     print(f"Foxglove server started at {server.app_url()}")
+
+    # Joint positions as reported by the follower, on the same topic and schema as
+    # LeRobot's native Foxglove integration.
+    state_channel = foxglove.Channel(
+        OBS_STATE_TOPIC, message_encoding="json", schema=SCALARS_SCHEMA
+    )
     # Setup cameras if requested
     wrist_camera = None
     wrist_image_channel = None
@@ -138,7 +187,7 @@ def main():
         print(f"Setting up wrist camera (ID: {args.robot_wrist_cam_id})...")
         try:
             wrist_camera, wrist_image_channel = setup_camera(
-                args.robot_wrist_cam_id, "wrist_image"
+                args.robot_wrist_cam_id, WRIST_CAM_TOPIC
             )
             print("Wrist camera connected successfully.")
         except Exception as e:
@@ -148,7 +197,7 @@ def main():
         print(f"Setting up environment camera (ID: {args.robot_env_cam_id})...")
         try:
             env_camera, env_image_channel = setup_camera(
-                args.robot_env_cam_id, "env_image"
+                args.robot_env_cam_id, ENV_CAM_TOPIC
             )
             print("Environment camera connected successfully.")
         except Exception as e:
@@ -191,6 +240,16 @@ def main():
 
             # Read actual joint angles from follower (in degrees)
             obs = follower.get_observation()
+
+            state_channel.log(
+                {
+                    "scalars": [
+                        {"label": key, "value": float(value)}
+                        for key, value in obs.items()
+                        if isinstance(value, (int, float))
+                    ]
+                }
+            )
 
             joint_positions["shoulder_pan"] = math.radians(
                 obs.get("shoulder_pan.pos", 0.0)
