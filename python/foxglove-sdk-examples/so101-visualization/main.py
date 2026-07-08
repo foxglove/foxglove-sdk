@@ -1,3 +1,9 @@
+"""Live 3D URDF visualization for the SO-101 arm via the Foxglove SDK.
+
+For teleop, recording, and dataset replay, use LeRobot's native Foxglove integration
+(`--display_mode=foxglove`) instead — see https://foxglove.dev/blog/native-foxglove-visualization-in-lerobot
+"""
+
 import argparse
 import datetime
 import math
