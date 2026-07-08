@@ -274,10 +274,16 @@ struct RemoteAccessGatewayOptions {
   ///
   /// Defaults to @ref VideoEncoderBackend::Auto, which lets the SDK choose and honors the
   /// `FOXGLOVE_VIDEO_ENCODER` environment variable.
-  ///
-  /// This field is last in the struct so that adding it preserves the layout of pre-existing
-  /// fields.
   VideoEncoderBackend video_encoder = VideoEncoderBackend::Auto;
+  /// @brief Override the maximum lossy data-track message size.
+  ///
+  /// Lossy data-track messages larger than this many bytes are dropped before publishing, with a
+  /// throttled warning, so one high-bandwidth channel cannot starve the others. Must be at least
+  /// 1200 bytes (one data-channel packet).
+  ///
+  /// By default, the limit is 102400 bytes (100 KiB).
+  std::optional<size_t> max_data_track_message_size = std::nullopt;
+  // New fields are appended last so that adding them preserves the layout of pre-existing fields.
 };
 
 /// @brief A remote access gateway for live visualization and teleop in Foxglove.

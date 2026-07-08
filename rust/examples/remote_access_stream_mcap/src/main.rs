@@ -136,6 +136,7 @@ fn create_channels(summary: &Summary) -> Result<HashMap<u16, Arc<RawChannel>>> {
         let channel = ChannelBuilder::new(&mcap_channel.topic)
             .message_encoding(&mcap_channel.message_encoding)
             .schema(schema)
+            .metadata(mcap_channel.metadata.clone())
             .build_raw()?;
         channels.insert(id, channel);
     }

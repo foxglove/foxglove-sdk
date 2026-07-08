@@ -283,6 +283,23 @@ void declareParameters(rclcpp::Node* node) {
     "unavailable, the SDK falls back to another compatible encoder.";
   videoEncoderDescription.read_only = true;
   node->declare_parameter(PARAM_VIDEO_ENCODER, "auto", videoEncoderDescription);
+
+  auto maxDataTrackMessageSizeDescription = rcl_interfaces::msg::ParameterDescriptor{};
+  maxDataTrackMessageSizeDescription.name = PARAM_MAX_DATA_TRACK_MESSAGE_SIZE;
+  maxDataTrackMessageSizeDescription.type = rcl_interfaces::msg::ParameterType::PARAMETER_INTEGER;
+  maxDataTrackMessageSizeDescription.description =
+    "Maximum size, in bytes, of a lossy data-track message sent by the remote access gateway. "
+    "Larger messages are dropped before publishing, with a throttled warning, so one "
+    "high-bandwidth channel cannot starve the others. Must be at least 1200 (one data-channel "
+    "packet).";
+  maxDataTrackMessageSizeDescription.read_only = true;
+  maxDataTrackMessageSizeDescription.integer_range.resize(1);
+  maxDataTrackMessageSizeDescription.integer_range[0].from_value = 1200;
+  maxDataTrackMessageSizeDescription.integer_range[0].to_value =
+    std::numeric_limits<int64_t>::max();
+  maxDataTrackMessageSizeDescription.integer_range[0].step = 1;
+  node->declare_parameter(PARAM_MAX_DATA_TRACK_MESSAGE_SIZE, DEFAULT_MAX_DATA_TRACK_MESSAGE_SIZE,
+                          maxDataTrackMessageSizeDescription);
 }
 
 std::vector<std::regex> parseRegexStrings(rclcpp::Node* node,
