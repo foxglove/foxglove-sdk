@@ -482,15 +482,8 @@ impl Gateway {
 
     /// Opts channels out of video transcoding, delivering them as data instead.
     ///
-    /// The classifier is invoked when a channel is registered; returning `true` advertises the
-    /// channel without a video track, so its messages are sent on the data plane unchanged. This
-    /// is required for compressed depth maps, whose pixel values encode depth and would be
-    /// corrupted by lossy video transcoding — [`is_compressed_depth_format`] classifies a
-    /// compressed-depth `format` string.
-    ///
-    /// If not set, all video-capable channels are transcoded.
-    ///
-    /// [`is_compressed_depth_format`]: crate::remote_access::is_compressed_depth_format
+    /// See [`SuppressVideoTranscode`] for more information. If not set, all video-capable channels
+    /// are transcoded.
     pub fn suppress_video_transcode(mut self, suppress: Arc<dyn SuppressVideoTranscode>) -> Self {
         self.suppress_video_transcode = Some(suppress);
         self

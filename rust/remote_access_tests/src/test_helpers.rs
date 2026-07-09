@@ -59,6 +59,10 @@ pub const CONNECT_RETRY_SLEEP: Duration = Duration::from_millis(500);
 pub type ChannelFilterFn =
     Box<dyn Fn(&foxglove::ChannelDescriptor) -> bool + Send + Sync + 'static>;
 
+/// Type alias for a video-transcode opt-out predicate passed via [`TestGatewayOptions`].
+pub type SuppressVideoTranscodeFn =
+    Box<dyn Fn(&foxglove::ChannelDescriptor) -> bool + Send + Sync + 'static>;
+
 // ---------------------------------------------------------------------------
 // FrameReader: accumulates bytes from a LiveKit byte stream reader and
 // parses successive byte stream frames.
@@ -867,7 +871,7 @@ pub struct TestGatewayOptions {
     pub capabilities: Vec<foxglove::remote_access::Capability>,
     pub services: Vec<Service>,
     pub qos_classifier: Option<QosClassifierFn>,
-    pub suppress_video_transcode: Option<ChannelFilterFn>,
+    pub suppress_video_transcode: Option<SuppressVideoTranscodeFn>,
     pub max_data_track_message_size: Option<usize>,
 }
 

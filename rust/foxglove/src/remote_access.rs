@@ -8,10 +8,9 @@
 //! advertised with a video track.
 //!
 //! To deliver an image channel as data instead, opt it out with
-//! [`Gateway::suppress_video_transcode_fn`]. The channel is then advertised without a video track
-//! and its messages are delivered on the data plane unchanged. This is required for compressed
-//! depth maps, whose pixel values encode depth and would be corrupted by lossy video transcoding;
-//! [`is_compressed_depth_format`] classifies a compressed-depth `format` string.
+//! [`Gateway::suppress_video_transcode`] / [`Gateway::suppress_video_transcode_fn`]: the channel is
+//! advertised without a video track and its messages are delivered on the data plane unchanged.
+//! This is required for compressed depth maps. See [`SuppressVideoTranscode`] for details.
 
 mod capability;
 mod channel_registry;
