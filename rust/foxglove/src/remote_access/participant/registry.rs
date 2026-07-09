@@ -117,6 +117,58 @@ impl ParticipantRegistry {
     where
         I: IntoIterator<Item = Bytes>,
     {
+        self.register_participant_inner(
+            id,
+            participant_sid,
+            joined_at,
+            writer,
+            session_cancel,
+            initial_messages,
+            None,
+        )
+    }
+
+    /// Registers a replacement control stream for the same LiveKit
+    /// connection instance while preserving its inbound liveness state.
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn register_participant_inheriting_liveness<I>(
+        &self,
+        id: ParticipantIdentity,
+        participant_sid: ParticipantSid,
+        joined_at: i64,
+        writer: ParticipantWriter,
+        session_cancel: &CancellationToken,
+        initial_messages: I,
+        liveness_source: &Participant,
+    ) -> Option<Arc<Participant>>
+    where
+        I: IntoIterator<Item = Bytes>,
+    {
+        self.register_participant_inner(
+            id,
+            participant_sid,
+            joined_at,
+            writer,
+            session_cancel,
+            initial_messages,
+            Some(liveness_source),
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn register_participant_inner<I>(
+        &self,
+        id: ParticipantIdentity,
+        participant_sid: ParticipantSid,
+        joined_at: i64,
+        writer: ParticipantWriter,
+        session_cancel: &CancellationToken,
+        initial_messages: I,
+        liveness_source: Option<&Participant>,
+    ) -> Option<Arc<Participant>>
+    where
+        I: IntoIterator<Item = Bytes>,
+    {
         let (participant, flush_handle) = Participant::spawn(
             id,
             participant_sid,
@@ -126,6 +178,7 @@ impl ParticipantRegistry {
             self.pending_resets.clone(),
             self.reset_notify.clone(),
             session_cancel,
+            liveness_source,
         );
 
         for msg in initial_messages {
@@ -540,6 +593,87 @@ mod tests {
         assert!(
             participant.claim_inactivity_warning(),
             "claim must succeed again after the participant sent a message"
+        );
+    }
+
+    /// Re-opening a control stream for the same LiveKit connection instance
+    /// must not restart its inactivity clock or warning state.
+    #[tokio::test]
+    async fn same_instance_reset_shares_liveness_state() {
+        let registry = make_registry();
+        let cancel = CancellationToken::new();
+        let id = ParticipantIdentity("viewer-1".to_string());
+        let sid = test_sid("viewer-1");
+
+        let _ = registry.register_participant(
+            id.clone(),
+            sid.clone(),
+            1_000,
+            test_writer(),
+            &cancel,
+            [],
+        );
+        let original = registry.get_participant(&id).expect("present");
+        assert!(original.claim_inactivity_warning());
+        original.liveness.lock().last_message_at =
+            std::time::Instant::now() - std::time::Duration::from_secs(60);
+        assert!(registry.remove_participant(&sid).is_some());
+
+        let _ = registry.register_participant_inheriting_liveness(
+            id.clone(),
+            sid,
+            1_000,
+            test_writer(),
+            &cancel,
+            [],
+            &original,
+        );
+        let replacement = registry.get_participant(&id).expect("replacement present");
+
+        assert!(
+            !replacement.claim_inactivity_warning(),
+            "replacement must inherit the claimed warning state"
+        );
+        assert!(
+            replacement.last_message_elapsed() >= std::time::Duration::from_secs(60),
+            "replacement must inherit the original inactivity clock"
+        );
+        replacement.touch_last_message();
+        assert!(
+            original.claim_inactivity_warning(),
+            "old and replacement participants must share liveness state"
+        );
+    }
+
+    /// A genuinely new LiveKit connection instance must get a fresh
+    /// liveness state instead of inheriting the prior SID's state.
+    #[tokio::test]
+    async fn new_instance_gets_fresh_liveness_state() {
+        let registry = make_registry();
+        let cancel = CancellationToken::new();
+        let id = ParticipantIdentity("viewer-1".to_string());
+        let old_sid = test_sid("viewer-1-old");
+        let new_sid = test_sid("viewer-1-new");
+
+        let _ = registry.register_participant(
+            id.clone(),
+            old_sid.clone(),
+            1_000,
+            test_writer(),
+            &cancel,
+            [],
+        );
+        let original = registry.get_participant(&id).expect("present");
+        assert!(original.claim_inactivity_warning());
+        assert!(registry.remove_participant(&old_sid).is_some());
+
+        let _ =
+            registry.register_participant(id.clone(), new_sid, 2_000, test_writer(), &cancel, []);
+        let replacement = registry.get_participant(&id).expect("replacement present");
+
+        assert!(
+            replacement.claim_inactivity_warning(),
+            "a new connection instance must start with a fresh warning state"
         );
     }
 

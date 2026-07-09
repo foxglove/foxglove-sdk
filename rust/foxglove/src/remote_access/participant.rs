@@ -63,7 +63,7 @@ pub(super) struct Participant {
     /// the case where LiveKit never delivers a `ParticipantDisconnected`
     /// for a departed viewer, which would otherwise keep the session alive
     /// indefinitely.
-    liveness: parking_lot::Mutex<Liveness>,
+    liveness: Arc<parking_lot::Mutex<Liveness>>,
     /// Shared set of `ParticipantSid`s pending a reset. Inserting into this
     /// set and notifying is how we signal `handle_room_events` to disconnect
     /// us. Keyed by `ParticipantSid` (unique per physical connection) rather
@@ -115,6 +115,10 @@ impl Participant {
     ///
     /// Returns the participant (wrapped in `Arc` for shared ownership) and the
     /// flush-task's `JoinHandle` (for teardown awaiting).
+    ///
+    /// `liveness_source` is supplied only when reopening the control stream
+    /// for the same LiveKit connection instance. Sharing its liveness state
+    /// prevents transport resets from restarting the inactivity timeout.
     #[allow(clippy::too_many_arguments)]
     pub fn spawn(
         identity: ParticipantIdentity,
@@ -125,11 +129,23 @@ impl Participant {
         pending_resets: Arc<parking_lot::Mutex<HashSet<ParticipantSid>>>,
         reset_notify: Arc<tokio::sync::Notify>,
         session_cancel: &CancellationToken,
+        liveness_source: Option<&Participant>,
     ) -> (Arc<Self>, tokio::task::JoinHandle<()>) {
+        if let Some(source) = liveness_source {
+            debug_assert_eq!(
+                source.participant_sid(),
+                &participant_sid,
+                "liveness may only be inherited by the same connection instance",
+            );
+        }
         let (control_tx, control_rx) = flume::bounded::<Bytes>(queue_size);
         let cancel = session_cancel.child_token();
         let cancel_for_task = cancel.clone();
         let client_id = ClientId::next();
+        let liveness = liveness_source.map_or_else(
+            || Arc::new(parking_lot::Mutex::new(Liveness::new())),
+            |participant| participant.liveness.clone(),
+        );
         let identity_for_task = identity.clone();
         let sid_for_task = participant_sid.clone();
         let pending_resets_for_task = pending_resets.clone();
@@ -170,7 +186,7 @@ impl Participant {
             participant_sid,
             joined_at,
             control_tx,
-            liveness: parking_lot::Mutex::new(Liveness::new()),
+            liveness,
             pending_resets,
             reset_notify,
             cancel,
@@ -203,7 +219,7 @@ impl Participant {
             participant_sid,
             joined_at: 0,
             control_tx,
-            liveness: parking_lot::Mutex::new(Liveness::new()),
+            liveness: Arc::new(parking_lot::Mutex::new(Liveness::new())),
             pending_resets,
             reset_notify,
             cancel,

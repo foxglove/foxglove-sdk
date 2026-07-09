@@ -112,6 +112,27 @@ const PARTICIPANT_INACTIVITY_TIMEOUT: Duration = APP_PING_INTERVAL.saturating_mu
 const PARTICIPANT_INACTIVITY_WARNING_THRESHOLD: Duration =
     PARTICIPANT_INACTIVITY_TIMEOUT.saturating_sub(APP_PING_INTERVAL);
 
+#[derive(Debug, PartialEq, Eq)]
+enum ResetLivenessPolicy {
+    DropInactive,
+    Inherit,
+    Fresh,
+}
+
+fn reset_liveness_policy(
+    participant: &Participant,
+    current_sid: &ParticipantSid,
+    inactivity_timeout: Duration,
+) -> ResetLivenessPolicy {
+    if participant.participant_sid() != current_sid {
+        ResetLivenessPolicy::Fresh
+    } else if participant.last_message_elapsed() >= inactivity_timeout {
+        ResetLivenessPolicy::DropInactive
+    } else {
+        ResetLivenessPolicy::Inherit
+    }
+}
+
 /// Default per-message size limit for lossy data-track channels, in bytes.
 /// Messages larger than this are dropped before publish so one oversized channel
 /// cannot monopolize the shared data channel and starve the others (see FLE-592).
@@ -1113,6 +1134,10 @@ impl RemoteAccessSession {
     /// When a participant is added, a ServerInfo message and channel Advertisement messages are
     /// immediately queued for transmission.
     ///
+    /// `liveness_source` is set only when reopening the control stream for
+    /// the same LiveKit connection instance, preserving its inactivity
+    /// deadline across the transport reset.
+    ///
     /// If a participant for `participant_id` is already registered with the
     /// **same** `participant_sid`, this is a no-op (the same connection instance
     /// is being re-announced — nothing to do). If the registered instance
@@ -1131,6 +1156,7 @@ impl RemoteAccessSession {
         participant_id: ParticipantIdentity,
         participant_sid: ParticipantSid,
         joined_at: i64,
+        liveness_source: Option<&Participant>,
     ) -> Result<(), Box<RemoteAccessError>> {
         // Gate on the registry *before* opening the stream: `stream_bytes`
         // is an RPC that should not be wasted on an already-registered
@@ -1187,14 +1213,27 @@ impl RemoteAccessSession {
         // for a replaced prior, so a same-identity reconnect ordering is
         // serialized with concurrent subscribe / unsubscribe / remove paths.
         let _guard = self.subscription_lock.lock();
-        let replaced = self.participant_registry.register_participant(
-            participant_id.clone(),
-            participant_sid.clone(),
-            joined_at,
-            ParticipantWriter::Livekit(stream),
-            &self.cancellation_token,
-            initial_messages,
-        );
+        let replaced = match liveness_source {
+            Some(source) => self
+                .participant_registry
+                .register_participant_inheriting_liveness(
+                    participant_id.clone(),
+                    participant_sid.clone(),
+                    joined_at,
+                    ParticipantWriter::Livekit(stream),
+                    &self.cancellation_token,
+                    initial_messages,
+                    source,
+                ),
+            None => self.participant_registry.register_participant(
+                participant_id.clone(),
+                participant_sid.clone(),
+                joined_at,
+                ParticipantWriter::Livekit(stream),
+                &self.cancellation_token,
+                initial_messages,
+            ),
+        };
         if let Some(prior) = replaced {
             info!(
                 remote_access_session_id = self.remote_access_session_id(),
@@ -1412,7 +1451,7 @@ impl RemoteAccessSession {
                     "participant active in room"
                 );
                 if let Err(e) = self
-                    .add_participant(participant_identity, sid, joined_at)
+                    .add_participant(participant_identity, sid, joined_at, None)
                     .await
                 {
                     error!(remote_access_session_id, error = %e, "failed to add participant: {e}");
@@ -1617,6 +1656,12 @@ impl RemoteAccessSession {
     /// window, `add_participant` may open a dead stream, but the subsequent
     /// `ParticipantDisconnected` event will clean it up. This is harmless — just a
     /// wasted `stream_bytes` call and a log line.
+    ///
+    /// Reopening a stream for the same SID preserves the participant's
+    /// inbound-liveness state. Otherwise repeated write failures could keep
+    /// replacing a silent participant with a fresh inactivity clock forever.
+    /// Once that inherited clock reaches the inactivity timeout, the
+    /// participant stays removed even if LiveKit's participant cache is stale.
     async fn reset_participant(self: &Arc<Self>, target_sid: ParticipantSid) {
         let remote_access_session_id = self.remote_access_session_id();
 
@@ -1633,7 +1678,6 @@ impl RemoteAccessSession {
             return;
         };
         let participant_id = participant.participant_id().clone();
-        drop(participant);
 
         // Best-effort guard: skip re-add if LiveKit has already removed the participant
         // (e.g., because the underlying WebRTC connection dropped). In that case, the
@@ -1661,6 +1705,23 @@ impl RemoteAccessSession {
             );
             return;
         };
+        let liveness_source = match reset_liveness_policy(
+            &participant,
+            &sid,
+            PARTICIPANT_INACTIVITY_TIMEOUT,
+        ) {
+            ResetLivenessPolicy::DropInactive => {
+                info!(
+                    remote_access_session_id,
+                    participant_identity = %participant_id,
+                    participant_sid = %target_sid,
+                    "participant remained inactive through a control-plane reset; skipping re-add",
+                );
+                return;
+            }
+            ResetLivenessPolicy::Inherit => Some(participant.as_ref()),
+            ResetLivenessPolicy::Fresh => None,
+        };
 
         // Re-validate the protocol version against the freshly-queried
         // attributes. A same-identity reconnect could in principle bring a
@@ -1684,7 +1745,10 @@ impl RemoteAccessSession {
             version = %version,
             "resetting participant after control-plane failure",
         );
-        if let Err(e) = self.add_participant(participant_id, sid, joined_at).await {
+        let result = self
+            .add_participant(participant_id, sid, joined_at, liveness_source)
+            .await;
+        if let Err(e) = result {
             error!(
                 remote_access_session_id,
                 error = %e,
@@ -2468,6 +2532,26 @@ mod tests {
         (participant, rx)
     }
 
+    #[test]
+    fn reset_liveness_policy_distinguishes_reset_reconnect_and_expiry() {
+        let (participant, _rx) = make_participant_with_rx("alice");
+        let same_sid = participant.participant_sid().clone();
+        let new_sid = crate::remote_access::participant::test_sid("alice-new");
+
+        assert_eq!(
+            reset_liveness_policy(&participant, &same_sid, Duration::MAX),
+            ResetLivenessPolicy::Inherit,
+        );
+        assert_eq!(
+            reset_liveness_policy(&participant, &same_sid, Duration::ZERO),
+            ResetLivenessPolicy::DropInactive,
+        );
+        assert_eq!(
+            reset_liveness_policy(&participant, &new_sid, Duration::ZERO),
+            ResetLivenessPolicy::Fresh,
+        );
+    }
+
     fn test_client(participant: &Arc<Participant>) -> AnyClient {
         AnyClient::from_remote_access(Client::with_sender(
             participant.client_id(),
@@ -2687,6 +2771,7 @@ mod tests {
             pending_resets,
             reset_notify,
             session_cancel,
+            None,
         );
         (participant, writer, handle)
     }
@@ -2785,6 +2870,7 @@ mod tests {
             pending_resets.clone(),
             reset_notify.clone(),
             &cancel,
+            None,
         );
 
         participant.send_control(Bytes::from_static(b"trigger failure"));
