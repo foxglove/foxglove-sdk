@@ -107,9 +107,9 @@ fn detect_video_schema(encoding: &str, schema_name: &str) -> Option<VideoInputSc
 /// (delivered as data instead, e.g. compressed depth).
 pub fn resolve_video_input_schema(
     channel: &RawChannel,
-    suppress: Option<&crate::remote_access::gateway::SuppressVideoTranscodeFn>,
+    suppress: Option<&dyn crate::remote_access::SuppressVideoTranscode>,
 ) -> Option<VideoInputSchema> {
-    if suppress.is_some_and(|suppress| suppress(channel.descriptor())) {
+    if suppress.is_some_and(|suppress| suppress.should_suppress(channel.descriptor())) {
         return None;
     }
     let schema_name = channel.schema().map(|s| s.name.as_str()).unwrap_or("");
@@ -531,15 +531,15 @@ mod tests {
 
     #[test]
     fn resolve_video_input_schema_honors_suppress_classifier() {
-        use crate::remote_access::gateway::SuppressVideoTranscodeFn;
+        use crate::remote_access::suppress_video_transcode::SuppressVideoTranscodeFn;
         let ch = make_video_channel();
         // Opt the channel out → no video schema despite a video-capable schema.
-        let suppress: SuppressVideoTranscodeFn =
-            std::sync::Arc::new(|desc: &crate::ChannelDescriptor| desc.topic() == "/camera");
+        let suppress =
+            SuppressVideoTranscodeFn(|desc: &crate::ChannelDescriptor| desc.topic() == "/camera");
         assert_eq!(resolve_video_input_schema(&ch, Some(&suppress)), None);
         // A classifier that doesn't match leaves detection intact.
-        let other: SuppressVideoTranscodeFn =
-            std::sync::Arc::new(|desc: &crate::ChannelDescriptor| desc.topic() == "/other");
+        let other =
+            SuppressVideoTranscodeFn(|desc: &crate::ChannelDescriptor| desc.topic() == "/other");
         assert_eq!(
             resolve_video_input_schema(&ch, Some(&other)),
             Some(VideoInputSchema::FoxgloveCompressedImage)

@@ -27,6 +27,7 @@ mod rtt_tracker;
 pub mod service;
 mod session;
 mod sse;
+mod suppress_video_transcode;
 mod watch;
 mod watch_loop;
 
@@ -41,6 +42,7 @@ pub use connection::ConnectionStatus;
 pub use gateway::{Gateway, GatewayHandle, VideoEncoderBackend};
 pub use listener::Listener;
 pub use qos::{QosClassifier, QosProfile, QosProfileBuilder, Reliability};
+pub use suppress_video_transcode::SuppressVideoTranscode;
 
 pub use crate::img2yuv::is_compressed_depth_format;
 

@@ -17,6 +17,7 @@ use crate::{
 };
 
 use super::qos::{QosClassifier, QosClassifierFn, QosProfile};
+use super::suppress_video_transcode::{SuppressVideoTranscode, SuppressVideoTranscodeFn};
 
 use super::connection::{ConnectionParams, ConnectionStatus, RemoteAccessConnection};
 use super::session::MIN_DATA_TRACK_MESSAGE_SIZE;
@@ -249,17 +250,13 @@ pub struct Gateway {
     runtime: Option<Handle>,
     channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     qos_classifier: Option<Arc<dyn QosClassifier>>,
-    suppress_video_transcode: Option<SuppressVideoTranscodeFn>,
+    suppress_video_transcode: Option<Arc<dyn SuppressVideoTranscode>>,
     server_info: Option<HashMap<String, String>>,
     message_backlog_size: Option<usize>,
     max_data_track_message_size: Option<usize>,
     video_encoder: VideoEncoderBackend,
     context: std::sync::Weak<Context>,
 }
-
-/// Per-channel predicate deciding whether a channel opts out of video transcoding and is
-/// delivered as data instead. Configured via [`Gateway::suppress_video_transcode_fn`].
-pub(super) type SuppressVideoTranscodeFn = Arc<dyn Fn(&ChannelDescriptor) -> bool + Send + Sync>;
 
 impl Default for Gateway {
     fn default() -> Self {
@@ -485,18 +482,26 @@ impl Gateway {
 
     /// Opts channels out of video transcoding, delivering them as data instead.
     ///
-    /// The predicate is invoked when a channel is registered; returning `true` advertises the
+    /// The classifier is invoked when a channel is registered; returning `true` advertises the
     /// channel without a video track, so its messages are sent on the data plane unchanged. This
     /// is required for compressed depth maps, whose pixel values encode depth and would be
     /// corrupted by lossy video transcoding — [`is_compressed_depth_format`] classifies a
     /// compressed-depth `format` string.
     ///
+    /// If not set, all video-capable channels are transcoded.
+    ///
     /// [`is_compressed_depth_format`]: crate::remote_access::is_compressed_depth_format
+    pub fn suppress_video_transcode(mut self, suppress: Arc<dyn SuppressVideoTranscode>) -> Self {
+        self.suppress_video_transcode = Some(suppress);
+        self
+    }
+
+    /// Sets a video-transcode opt-out function. See [`SuppressVideoTranscode`] for more information.
     pub fn suppress_video_transcode_fn(
         mut self,
         suppress: impl Fn(&ChannelDescriptor) -> bool + Sync + Send + 'static,
     ) -> Self {
-        self.suppress_video_transcode = Some(Arc::new(suppress));
+        self.suppress_video_transcode = Some(Arc::new(SuppressVideoTranscodeFn(suppress)));
         self
     }
 
