@@ -107,7 +107,7 @@ bool forwardSuppressVideoTranscode(
     auto cpp_channel = ChannelDescriptor(channel);
     return (*classifier)(cpp_channel);
   } catch (const std::exception& exc) {
-    warn() << "Video-transcode opt-out classifier failed: " << exc.what();
+    warn() << "Video-transcode opt-out predicate failed: " << exc.what();
     return false;
   }
 }

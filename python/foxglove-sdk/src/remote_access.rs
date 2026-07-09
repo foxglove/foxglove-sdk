@@ -608,7 +608,7 @@ impl foxglove::remote_access::QosClassifier for PyQosClassifier {
     }
 }
 
-/// A video-transcode opt-out classifier wrapping a Python callable.
+/// A video-transcode opt-out predicate wrapping a Python callable.
 ///
 /// The callable should accept a `ChannelDescriptor` and return a `bool`; returning `True` delivers
 /// the channel as data rather than transcoding it to video.
@@ -628,7 +628,7 @@ impl foxglove::remote_access::SuppressVideoTranscode for PySuppressVideoTranscod
                 Ok(suppress) => suppress,
                 Err(err) => {
                     tracing::error!(
-                        "Error in video-transcode opt-out classifier: {}",
+                        "Error in video-transcode opt-out predicate: {}",
                         err.to_string()
                     );
                     false

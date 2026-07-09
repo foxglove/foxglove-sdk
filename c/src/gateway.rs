@@ -83,7 +83,7 @@ impl foxglove::remote_access::QosClassifier for QosClassifier {
     }
 }
 
-/// A video-transcode opt-out classifier that wraps a C callback.
+/// A video-transcode opt-out predicate that wraps a C callback.
 #[derive(Clone)]
 struct SuppressVideoTranscode {
     callback_context: *const c_void,
