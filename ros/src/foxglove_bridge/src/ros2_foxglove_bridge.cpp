@@ -17,11 +17,6 @@
 
 namespace foxglove_bridge {
 namespace {
-// SDK channel-metadata key (kept in sync with the Rust
-// foxglove::remote_access::SUPPRESS_VIDEO_TRANSCODE_METADATA_KEY) that opts a channel out of
-// video transcoding, so it is delivered as data instead.
-constexpr char kSuppressVideoTranscodeKey[] = "foxglove.suppressVideoTranscode";
-
 inline bool isHiddenTopicOrService(const std::string& name) {
   if (name.empty()) {
     throw std::invalid_argument("Topic or service name can't be empty");
@@ -398,6 +393,8 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
     gatewayOptions.callbacks.onUnsubscribe =
       std::bind(&FoxgloveBridge::gatewayUnsubscribe, this, _1, _2);
     gatewayOptions.qos_classifier = std::bind(&FoxgloveBridge::classifyRemoteAccessQos, this, _1);
+    gatewayOptions.suppress_video_transcode =
+      std::bind(&FoxgloveBridge::suppressRemoteAccessVideoTranscode, this, _1);
 
     if (hasCapability(_capabilities, foxglove::WebSocketServerCapabilities::ClientPublish)) {
       gatewayOptions.callbacks.onClientAdvertise =
@@ -609,16 +606,8 @@ void FoxgloveBridge::updateAdvertisedTopics(
         continue;
       }
 
-      // Compressed depth maps must be delivered as data, not transcoded to video.
-      std::optional<std::map<std::string, std::string>> metadata;
-      if (isCompressedDepthTopic(schemaName, topic)) {
-        metadata = std::map<std::string, std::string>{{kSuppressVideoTranscodeKey, "true"}};
-        RCLCPP_INFO(this->get_logger(),
-                    "Delivering compressed-depth topic \"%s\" as data (no video transcoding)",
-                    topic.c_str());
-      }
       auto channelResult =
-        foxglove::RawChannel::create(topic, messageEncoding, schema, _serverContext, metadata);
+        foxglove::RawChannel::create(topic, messageEncoding, schema, _serverContext);
       if (!channelResult.has_value()) {
         RCLCPP_ERROR(this->get_logger(), "Failed to create channel for topic \"%s\" (%s)",
                      topic.c_str(), foxglove::strerror(channelResult.error()));
@@ -1603,6 +1592,22 @@ foxglove::QosProfile FoxgloveBridge::classifyRemoteAccessQos(
     profile.reliability = foxglove::Reliability::Reliable;
   }
   return profile;
+}
+
+bool FoxgloveBridge::suppressRemoteAccessVideoTranscode(
+  const foxglove::ChannelDescriptor& channel) {
+  // Compressed depth maps must be delivered as data, not transcoded to video: their pixel values
+  // encode depth and would be corrupted by lossy video.
+  const auto schema = channel.schema();
+  const std::string schemaName = schema ? schema->name : std::string();
+  const std::string topic(channel.topic());
+  if (!isCompressedDepthTopic(schemaName, topic)) {
+    return false;
+  }
+  RCLCPP_INFO(this->get_logger(),
+              "Delivering compressed-depth topic \"%s\" as data (no video transcoding)",
+              topic.c_str());
+  return true;
 }
 #endif
 

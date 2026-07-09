@@ -275,6 +275,7 @@ private:
                             const std::byte* data, size_t dataLen);
   void gatewayConnectionStatusChanged(foxglove::RemoteAccessConnectionStatus status);
   foxglove::QosProfile classifyRemoteAccessQos(const foxglove::ChannelDescriptor& channel);
+  bool suppressRemoteAccessVideoTranscode(const foxglove::ChannelDescriptor& channel);
 #endif
 };
 
