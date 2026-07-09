@@ -88,17 +88,29 @@ pub(super) const DEFAULT_MESSAGE_BACKLOG_SIZE: usize = 1024;
 /// used to size the inactivity timeout below.
 const APP_PING_INTERVAL: Duration = Duration::from_secs(3);
 
-/// A participant that has sent no control-plane messages for this long (10
-/// missed ping intervals) is presumed gone and a reset is requested for it.
+/// A participant that has sent no control-plane messages for this long
+/// (20 missed ping intervals) is presumed gone and is removed from the
+/// session.
 ///
 /// This covers the case where LiveKit never delivers a
 /// `ParticipantDisconnected` event for a departed viewer: without it, the
 /// device would consider the viewer still connected and stay in the room
-/// forever instead of returning to the dormant watch phase. The reset path
-/// (`reset_participant`) re-checks `Room::remote_participants()`, so a
-/// truly-departed viewer is cleaned up while a live-but-wedged one simply
-/// gets a fresh control stream.
+/// forever instead of returning to the dormant watch phase.
+///
+/// The participant is deliberately *not* re-added (unlike the reset path):
+/// `Room::remote_participants()` is a local cache fed by the same SFU signal
+/// stream that failed to deliver the disconnect, so it cannot be trusted to
+/// say the viewer is still present. A viewer that is actually still alive
+/// sees its pongs stop and can reconnect, which arrives as a fresh
+/// `ParticipantActive` and registers through the normal path.
 const PARTICIPANT_INACTIVITY_TIMEOUT: Duration = APP_PING_INTERVAL.saturating_mul(20);
+
+/// When a participant's silence reaches this threshold (one ping interval
+/// before the inactivity kick), a status error is sent telling it the
+/// connection is too poor to continue — early enough that the message has a
+/// chance to be delivered before the participant is removed.
+const PARTICIPANT_INACTIVITY_WARNING_THRESHOLD: Duration =
+    PARTICIPANT_INACTIVITY_TIMEOUT.saturating_sub(APP_PING_INTERVAL);
 
 /// Default per-message size limit for lossy data-track channels, in bytes.
 /// Messages larger than this are dropped before publish so one oversized channel
@@ -1289,10 +1301,10 @@ impl RemoteAccessSession {
         // `device_wait_for_viewer` is sized large enough that the viewer has time to join
         // after a wake.
         let mut idle_since: Option<tokio::time::Instant> = None;
-        // Periodic sweep for participants that have gone silent past
-        // `PARTICIPANT_INACTIVITY_TIMEOUT` (e.g. because LiveKit never
-        // delivered their `ParticipantDisconnected` event). The sweep only
-        // queues resets; the drain at the top of the loop runs them.
+        // Periodic sweep for participants that have gone silent (e.g.
+        // because LiveKit never delivered their `ParticipantDisconnected`
+        // event): warn once near the timeout, then remove — without
+        // re-adding — at the timeout.
         let mut liveness_interval = tokio::time::interval_at(
             tokio::time::Instant::now() + APP_PING_INTERVAL,
             APP_PING_INTERVAL,
@@ -1338,10 +1350,9 @@ impl RemoteAccessSession {
                 }
                 // Wake when new reset requests arrive.
                 () = self.participant_registry.reset_notify().notified() => {}
-                // Queue resets for participants that have gone silent.
+                // Warn and remove participants that have gone silent.
                 _ = liveness_interval.tick() => {
-                    self.participant_registry
-                        .request_resets_for_inactive_participants(PARTICIPANT_INACTIVITY_TIMEOUT);
+                    self.sweep_inactive_participants();
                 }
                 // Fire when the no-viewer grace period expires.
                 () = async {
@@ -1679,6 +1690,46 @@ impl RemoteAccessSession {
                 error = %e,
                 "failed to re-add participant after reset: {e}",
             );
+        }
+    }
+
+    /// Enforces the participant inactivity policy. Runs on every
+    /// `liveness_interval` tick in [`Self::handle_room_events`].
+    ///
+    /// The app sends a `Ping` every [`APP_PING_INTERVAL`], so a healthy
+    /// participant is never silent for long. A participant whose silence
+    /// reaches [`PARTICIPANT_INACTIVITY_WARNING_THRESHOLD`] is sent a
+    /// one-shot status error explaining the impending disconnect; one that
+    /// stays silent past [`PARTICIPANT_INACTIVITY_TIMEOUT`] is removed from
+    /// the session without being re-added (see the constant's docs for why
+    /// re-adding based on `Room::remote_participants()` is unsound here).
+    /// Once the last participant is removed, the idle countdown in
+    /// `handle_room_events` returns the device to the dormant watch phase.
+    fn sweep_inactive_participants(self: &Arc<Self>) {
+        for participant in self.participant_registry.collect_participants() {
+            let elapsed = participant.last_message_elapsed();
+            if elapsed >= PARTICIPANT_INACTIVITY_TIMEOUT {
+                warn!(
+                    remote_access_session_id = self.remote_access_session_id(),
+                    participant_identity = %participant.participant_id(),
+                    participant_sid = %participant.participant_sid(),
+                    idle_ms = elapsed.as_millis() as u64,
+                    "participant sent no control-plane messages within the inactivity timeout; \
+                     removing it from the session",
+                );
+                self.remove_participant(participant.participant_sid());
+            } else if elapsed >= PARTICIPANT_INACTIVITY_WARNING_THRESHOLD
+                && participant.claim_inactivity_warning()
+            {
+                self.send_error(
+                    &participant,
+                    format!(
+                        "Connection is too poor to continue the session \
+                         (no messages received for {}s); disconnecting",
+                        elapsed.as_secs()
+                    ),
+                );
+            }
         }
     }
 

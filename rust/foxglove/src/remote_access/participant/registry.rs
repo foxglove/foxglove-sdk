@@ -12,7 +12,6 @@
 
 use std::collections::HashSet;
 use std::sync::Arc;
-use std::time::Duration;
 
 use bytes::Bytes;
 use livekit::id::{ParticipantIdentity, ParticipantSid};
@@ -242,35 +241,6 @@ impl ParticipantRegistry {
     /// Drains the pending-reset set and returns its contents.
     pub(crate) fn drain_pending_resets(&self) -> HashSet<ParticipantSid> {
         std::mem::take(&mut *self.pending_resets.lock())
-    }
-
-    /// Requests a reset for every participant that hasn't sent a
-    /// control-plane message within `timeout`.
-    ///
-    /// The app sends periodic `Ping` messages, so a healthy participant is
-    /// never silent for long. A participant that goes quiet past the timeout
-    /// has either left the room without LiveKit delivering a
-    /// `ParticipantDisconnected` event, or has a wedged control stream. In
-    /// both cases the reset path does the right thing: it removes the
-    /// participant and only re-adds it (with a fresh control stream) if
-    /// LiveKit still shows it in the room.
-    pub(crate) fn request_resets_for_inactive_participants(&self, timeout: Duration) {
-        let stale: Vec<Arc<Participant>> = self
-            .participants
-            .read()
-            .iter()
-            .filter(|p| p.last_message_elapsed() >= timeout)
-            .cloned()
-            .collect();
-        for participant in stale {
-            tracing::warn!(
-                participant_identity = %participant.participant_id(),
-                participant_sid = %participant.participant_sid(),
-                idle_ms = participant.last_message_elapsed().as_millis() as u64,
-                "participant sent no control-plane messages within the inactivity timeout; requesting reset",
-            );
-            participant.request_reset();
-        }
     }
 
     /// Test-only hook to simulate a flush-task failure by directly inserting
@@ -538,43 +508,39 @@ mod tests {
         assert_ne!(current.client_id(), client_id_1);
     }
 
-    /// The inactivity sweep must request a reset only for participants that
-    /// have been silent past the timeout, and must leave recently-active
-    /// participants alone.
+    /// The one-shot inactivity warning must be claimable exactly once per
+    /// silent stretch, and must re-arm when the participant sends a message.
     #[tokio::test]
-    async fn inactivity_sweep_requests_reset_only_for_silent_participants() {
+    async fn inactivity_warning_claimed_once_until_next_message() {
         let registry = make_registry();
         let cancel = CancellationToken::new();
         let id = ParticipantIdentity("viewer-1".to_string());
-        let sid = test_sid("viewer-1");
+
+        let _ = registry.register_participant(
+            id.clone(),
+            test_sid("viewer-1"),
+            1_000,
+            test_writer(),
+            &cancel,
+            [],
+        );
+        let participant = registry.get_participant(&id).expect("present");
 
         assert!(
-            registry
-                .register_participant(id.clone(), sid.clone(), 1_000, test_writer(), &cancel, [],)
-                .is_none()
+            participant.claim_inactivity_warning(),
+            "first claim must succeed"
         );
-
-        // A freshly-registered participant is well within a generous timeout.
-        registry.request_resets_for_inactive_participants(std::time::Duration::from_secs(60));
         assert!(
-            registry.drain_pending_resets().is_empty(),
-            "an active participant must not be reset",
+            !participant.claim_inactivity_warning(),
+            "second claim in the same silent stretch must fail"
         );
 
-        // With a zero timeout the participant is considered silent for too
-        // long and a reset must be queued (and the notifier signaled).
-        registry.request_resets_for_inactive_participants(std::time::Duration::ZERO);
-        tokio::time::timeout(
-            std::time::Duration::from_secs(1),
-            registry.reset_notify().notified(),
-        )
-        .await
-        .expect("reset_notify must be signaled by the inactivity sweep");
-        assert_eq!(registry.drain_pending_resets(), HashSet::from([sid]));
-
-        // The sweep only queues resets; the participant stays registered
-        // until the session's drain loop runs the reset.
-        assert!(registry.get_participant(&id).is_some());
+        // An inbound message re-arms the warning.
+        participant.touch_last_message();
+        assert!(
+            participant.claim_inactivity_warning(),
+            "claim must succeed again after the participant sent a message"
+        );
     }
 
     /// `touch_last_message` must refresh the liveness clock the inactivity

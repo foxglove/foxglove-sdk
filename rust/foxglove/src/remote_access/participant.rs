@@ -55,15 +55,15 @@ pub(super) struct Participant {
     /// Per-participant control plane queue. The receiving end is owned by the
     /// flush-task.
     control_tx: flume::Sender<Bytes>,
-    /// When this participant last sent us a control-plane message
-    /// (initialized to the registration time). Touched by the session on
-    /// every parsed inbound message; the app sends periodic `Ping`s, so a
-    /// healthy participant updates this continuously. Scanned by the
-    /// registry's inactivity sweep, which requests a reset for participants
-    /// that have been silent for too long — covering the case where LiveKit
-    /// never delivers a `ParticipantDisconnected` for a departed viewer,
-    /// which would otherwise keep the session alive indefinitely.
-    last_message_at: parking_lot::Mutex<Instant>,
+    /// Inbound liveness state (initialized to the registration time).
+    /// Touched by the session on every parsed inbound message; the app sends
+    /// periodic `Ping`s, so a healthy participant updates this continuously.
+    /// Scanned by the session's inactivity sweep, which warns and then
+    /// removes participants that have been silent for too long — covering
+    /// the case where LiveKit never delivers a `ParticipantDisconnected`
+    /// for a departed viewer, which would otherwise keep the session alive
+    /// indefinitely.
+    liveness: parking_lot::Mutex<Liveness>,
     /// Shared set of `ParticipantSid`s pending a reset. Inserting into this
     /// set and notifying is how we signal `handle_room_events` to disconnect
     /// us. Keyed by `ParticipantSid` (unique per physical connection) rather
@@ -87,6 +87,23 @@ pub(super) struct Participant {
     /// Limits concurrent parameter handler invocations (get + set combined) from this
     /// participant. Subscribe / unsubscribe are bookkeeping-only and not gated.
     parameter_sem: Semaphore,
+}
+
+/// Inbound liveness state for a participant: when it last sent us a
+/// control-plane message, and whether the inactivity warning has already
+/// been sent for the current silent stretch.
+struct Liveness {
+    last_message_at: Instant,
+    warning_sent: bool,
+}
+
+impl Liveness {
+    fn new() -> Self {
+        Self {
+            last_message_at: Instant::now(),
+            warning_sent: false,
+        }
+    }
 }
 
 impl Participant {
@@ -153,7 +170,7 @@ impl Participant {
             participant_sid,
             joined_at,
             control_tx,
-            last_message_at: parking_lot::Mutex::new(Instant::now()),
+            liveness: parking_lot::Mutex::new(Liveness::new()),
             pending_resets,
             reset_notify,
             cancel,
@@ -186,7 +203,7 @@ impl Participant {
             participant_sid,
             joined_at: 0,
             control_tx,
-            last_message_at: parking_lot::Mutex::new(Instant::now()),
+            liveness: parking_lot::Mutex::new(Liveness::new()),
             pending_resets,
             reset_notify,
             cancel,
@@ -243,20 +260,31 @@ impl Participant {
         self.joined_at
     }
 
-    /// Records that this participant just sent us a control-plane message.
+    /// Records that this participant just sent us a control-plane message,
+    /// re-arming the inactivity warning for a future silent stretch.
     pub(super) fn touch_last_message(&self) {
-        *self.last_message_at.lock() = Instant::now();
+        let mut liveness = self.liveness.lock();
+        liveness.last_message_at = Instant::now();
+        liveness.warning_sent = false;
     }
 
     /// Returns how long ago this participant last sent us a control-plane
     /// message (or was registered, if it has never sent anything).
     pub(super) fn last_message_elapsed(&self) -> Duration {
-        self.last_message_at.lock().elapsed()
+        self.liveness.lock().last_message_at.elapsed()
+    }
+
+    /// Claims the one-shot inactivity warning for the current silent
+    /// stretch: returns `true` if it has not been sent yet (marking it
+    /// sent), `false` if it was already claimed. Re-armed by
+    /// [`Self::touch_last_message`].
+    pub(super) fn claim_inactivity_warning(&self) -> bool {
+        !std::mem::replace(&mut self.liveness.lock().warning_sent, true)
     }
 
     /// Requests a reset of this participant: inserts its SID into the shared
     /// pending-reset set and wakes `handle_room_events` to run the reset.
-    pub(super) fn request_reset(&self) {
+    fn request_reset(&self) {
         self.pending_resets
             .lock()
             .insert(self.participant_sid.clone());
