@@ -846,6 +846,33 @@ TEST(FetchAssetTest, fetchNonExistingAsset) {
   EXPECT_FALSE(response.errorMessage.empty());
 }
 
+TEST(SmokeTest, serviceEventTopicDoesNotPreventFutureAdvertisements) {
+  // Regression test: topics typed with a rosidl-generated service event message (<Srv>_Event,
+  // published when service introspection is enabled) have no definition file on disk. They used
+  // to be advertised with a null schema, and every subsequent rosgraph poll then threw
+  // bad_optional_access (channel.schema().value()) before advertising anything, permanently
+  // stopping discovery of new topics.
+  auto node = rclcpp::Node::make_shared("service_event_publisher");
+  auto eventPub =
+    node->create_publisher<std_srvs::srv::SetBool::Event>("/service_event_before", 10);
+
+  // The service event topic is advertised with a schema synthesized from the service definition.
+  auto client = std::make_shared<foxglove::test::Client<websocketpp::config::asio_client>>();
+  auto eventChannelFuture = client->waitForChannel("/service_event_before");
+  ASSERT_EQ(std::future_status::ready, client->connect(URI).wait_for(DEFAULT_TIMEOUT));
+  ASSERT_EQ(std::future_status::ready, eventChannelFuture.wait_for(DEFAULT_TIMEOUT));
+  const foxglove::test::Channel eventChannel = eventChannelFuture.get();
+  EXPECT_EQ("std_srvs/srv/SetBool_Event", eventChannel.schemaName);
+  EXPECT_NE(std::string::npos, eventChannel.schema.find("service_msgs/msg/ServiceEventInfo info"));
+  EXPECT_NE(std::string::npos, eventChannel.schema.find("std_srvs/srv/SetBool_Request[<=1]"));
+
+  // Topics appearing after the service event topic must still be advertised.
+  auto afterChannelFuture = client->waitForChannel("/topic_after_service_event");
+  auto afterPub = node->create_publisher<std_msgs::msg::String>("/topic_after_service_event", 10);
+  ASSERT_EQ(std::future_status::ready, afterChannelFuture.wait_for(DEFAULT_TIMEOUT));
+  EXPECT_EQ("std_msgs/msg/String", afterChannelFuture.get().schemaName);
+}
+
 // Run all the tests that were declared with TEST()
 int main(int argc, char** argv) {
   testing::InitGoogleTest(&argc, argv);

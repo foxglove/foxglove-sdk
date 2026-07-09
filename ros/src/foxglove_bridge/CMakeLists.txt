@@ -248,6 +248,13 @@ if(BUILD_TESTING)
   ament_add_gtest(utils_test tests/utils_test.cpp)
   target_link_libraries(utils_test foxglove_bridge_component)
   enable_strict_compiler_warnings(utils_test)
+
+  # message_definition_cache_test resolves schemas from installed interface packages
+  # (std_srvs for services, test_msgs for actions) via the ament index at runtime.
+  find_package(test_msgs REQUIRED)
+  ament_add_gtest(message_definition_cache_test tests/message_definition_cache_test.cpp)
+  target_link_libraries(message_definition_cache_test foxglove_bridge_component)
+  enable_strict_compiler_warnings(message_definition_cache_test)
 endif()
 
 install(FILES include/foxglove_bridge/ros2_foxglove_bridge.hpp
