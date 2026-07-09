@@ -7,6 +7,7 @@ pub(super) use registry::ParticipantRegistry;
 
 use std::collections::HashSet;
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use bytes::Bytes;
 use livekit::{
@@ -54,6 +55,15 @@ pub(super) struct Participant {
     /// Per-participant control plane queue. The receiving end is owned by the
     /// flush-task.
     control_tx: flume::Sender<Bytes>,
+    /// When this participant last sent us a control-plane message
+    /// (initialized to the registration time). Touched by the session on
+    /// every parsed inbound message; the app sends periodic `Ping`s, so a
+    /// healthy participant updates this continuously. Scanned by the
+    /// registry's inactivity sweep, which requests a reset for participants
+    /// that have been silent for too long — covering the case where LiveKit
+    /// never delivers a `ParticipantDisconnected` for a departed viewer,
+    /// which would otherwise keep the session alive indefinitely.
+    last_message_at: parking_lot::Mutex<Instant>,
     /// Shared set of `ParticipantSid`s pending a reset. Inserting into this
     /// set and notifying is how we signal `handle_room_events` to disconnect
     /// us. Keyed by `ParticipantSid` (unique per physical connection) rather
@@ -143,6 +153,7 @@ impl Participant {
             participant_sid,
             joined_at,
             control_tx,
+            last_message_at: parking_lot::Mutex::new(Instant::now()),
             pending_resets,
             reset_notify,
             cancel,
@@ -175,6 +186,7 @@ impl Participant {
             participant_sid,
             joined_at: 0,
             control_tx,
+            last_message_at: parking_lot::Mutex::new(Instant::now()),
             pending_resets,
             reset_notify,
             cancel,
@@ -231,6 +243,26 @@ impl Participant {
         self.joined_at
     }
 
+    /// Records that this participant just sent us a control-plane message.
+    pub(super) fn touch_last_message(&self) {
+        *self.last_message_at.lock() = Instant::now();
+    }
+
+    /// Returns how long ago this participant last sent us a control-plane
+    /// message (or was registered, if it has never sent anything).
+    pub(super) fn last_message_elapsed(&self) -> Duration {
+        self.last_message_at.lock().elapsed()
+    }
+
+    /// Requests a reset of this participant: inserts its SID into the shared
+    /// pending-reset set and wakes `handle_room_events` to run the reset.
+    pub(super) fn request_reset(&self) {
+        self.pending_resets
+            .lock()
+            .insert(self.participant_sid.clone());
+        self.reset_notify.notify_one();
+    }
+
     /// Try to queue a control plane message. Returns `false` if the queue is
     /// full and the caller should trigger a participant reset.
     #[must_use]
@@ -259,10 +291,7 @@ impl Participant {
     pub(super) fn send_control(&self, data: Bytes) {
         if !self.try_queue_control(data) {
             self.cancel.cancel();
-            self.pending_resets
-                .lock()
-                .insert(self.participant_sid.clone());
-            self.reset_notify.notify_one();
+            self.request_reset();
         }
     }
 

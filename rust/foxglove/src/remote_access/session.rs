@@ -82,6 +82,24 @@ const ROOM_CLOSE_TIMEOUT: Duration = Duration::from_secs(5);
 
 pub(super) const DEFAULT_MESSAGE_BACKLOG_SIZE: usize = 1024;
 
+/// Interval at which the Foxglove app sends `Ping` control messages to the
+/// device. Not negotiated over the protocol; this mirrors the app-side
+/// cadence (`PING_INTERVAL_MS` in `FoxgloveRemoteAccessClient`) and is only
+/// used to size the inactivity timeout below.
+const APP_PING_INTERVAL: Duration = Duration::from_secs(3);
+
+/// A participant that has sent no control-plane messages for this long (10
+/// missed ping intervals) is presumed gone and a reset is requested for it.
+///
+/// This covers the case where LiveKit never delivers a
+/// `ParticipantDisconnected` event for a departed viewer: without it, the
+/// device would consider the viewer still connected and stay in the room
+/// forever instead of returning to the dormant watch phase. The reset path
+/// (`reset_participant`) re-checks `Room::remote_participants()`, so a
+/// truly-departed viewer is cleaned up while a live-but-wedged one simply
+/// gets a fresh control stream.
+const PARTICIPANT_INACTIVITY_TIMEOUT: Duration = APP_PING_INTERVAL.saturating_mul(20);
+
 /// Default per-message size limit for lossy data-track channels, in bytes.
 /// Messages larger than this are dropped before publish so one oversized channel
 /// cannot monopolize the shared data channel and starve the others (see FLE-592).
@@ -660,6 +678,11 @@ impl RemoteAccessSession {
             error!("Unknown participant identity: {:?}", participant_identity);
             return false;
         };
+
+        // Any well-formed message counts as liveness for the inactivity
+        // sweep; the app's periodic pings guarantee a healthy participant
+        // sends something within every ping interval.
+        participant.touch_last_message();
 
         match client_msg {
             ClientMessage::Subscribe(msg) => {
@@ -1266,6 +1289,15 @@ impl RemoteAccessSession {
         // `device_wait_for_viewer` is sized large enough that the viewer has time to join
         // after a wake.
         let mut idle_since: Option<tokio::time::Instant> = None;
+        // Periodic sweep for participants that have gone silent past
+        // `PARTICIPANT_INACTIVITY_TIMEOUT` (e.g. because LiveKit never
+        // delivered their `ParticipantDisconnected` event). The sweep only
+        // queues resets; the drain at the top of the loop runs them.
+        let mut liveness_interval = tokio::time::interval_at(
+            tokio::time::Instant::now() + APP_PING_INTERVAL,
+            APP_PING_INTERVAL,
+        );
+        liveness_interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
         loop {
             // Drain pending resets before waiting for events. This covers the case
             // where a `Notify::notified()` wakeup was lost due to `select!`
@@ -1306,6 +1338,11 @@ impl RemoteAccessSession {
                 }
                 // Wake when new reset requests arrive.
                 () = self.participant_registry.reset_notify().notified() => {}
+                // Queue resets for participants that have gone silent.
+                _ = liveness_interval.tick() => {
+                    self.participant_registry
+                        .request_resets_for_inactive_participants(PARTICIPANT_INACTIVITY_TIMEOUT);
+                }
                 // Fire when the no-viewer grace period expires.
                 () = async {
                     match idle_deadline {
