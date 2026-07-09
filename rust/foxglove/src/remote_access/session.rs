@@ -368,7 +368,7 @@ impl Sink for RemoteAccessSession {
                 // throttled oversized drop, capture the report and the current
                 // data subscribers so we can warn them after the lock.
                 if let Some(track) = state.get_subscribed_data_track(&channel_id) {
-                    if let Some(report) = track.log(channel_id, msg, metadata) {
+                    if let Err(report) = track.log(channel_id, msg, metadata) {
                         drop_report = Some((report, state.data_subscriber_sids(&channel_id)));
                     }
                 }
