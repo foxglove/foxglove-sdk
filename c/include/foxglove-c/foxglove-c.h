@@ -2813,6 +2813,19 @@ typedef struct foxglove_gateway_options {
   struct foxglove_qos_profile (*qos_classifier)(const void *context,
                                                 const struct foxglove_channel_descriptor *channel);
   /**
+   * Context provided to the `suppress_video_transcode` callback.
+   */
+  const void *suppress_video_transcode_context;
+  /**
+   * Opts channels out of video transcoding, delivering them as data instead.
+   *
+   * Return true to deliver the given channel as data rather than transcoding it to video. This
+   * is required for compressed depth maps, whose pixel values encode depth and would be
+   * corrupted by lossy video transcoding. If not set, all video-capable channels are transcoded.
+   */
+  bool (*suppress_video_transcode)(const void *context,
+                                   const struct foxglove_channel_descriptor *channel);
+  /**
    * Context provided to the `fetch_asset` callback.
    */
   const void *fetch_asset_context;

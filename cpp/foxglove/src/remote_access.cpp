@@ -96,6 +96,22 @@ foxglove_qos_profile forwardQosClassifier(
   }
 }
 
+bool forwardSuppressVideoTranscode(
+  const void* context, const foxglove_channel_descriptor* channel
+) {
+  if (context == nullptr) {
+    return false;
+  }
+  try {
+    const auto* classifier = static_cast<const SuppressVideoTranscodeFn*>(context);
+    auto cpp_channel = ChannelDescriptor(channel);
+    return (*classifier)(cpp_channel);
+  } catch (const std::exception& exc) {
+    warn() << "Video-transcode opt-out classifier failed: " << exc.what();
+    return false;
+  }
+}
+
 // Populates `c` with forward function pointers for every callback set on `cb`,
 // and reports whether any callback was set. Callers should leave both the
 // heap-allocated callbacks wrapper unallocated and `c_options.callbacks` null
@@ -227,6 +243,15 @@ FoxgloveResult<RemoteAccessGateway> RemoteAccessGateway::create(
     c_options.qos_classifier = &forwardQosClassifier;
   }
 
+  // Suppress video transcode
+  std::unique_ptr<SuppressVideoTranscodeFn> suppress_video_transcode;
+  if (options.suppress_video_transcode) {
+    suppress_video_transcode =
+      std::make_unique<SuppressVideoTranscodeFn>(std::move(options.suppress_video_transcode));
+    c_options.suppress_video_transcode_context = suppress_video_transcode.get();
+    c_options.suppress_video_transcode = &forwardSuppressVideoTranscode;
+  }
+
   // Fetch asset handler
   internal::wireFetchAsset(c_options, std::move(options.fetch_asset), fetch_asset);
 
@@ -275,6 +300,7 @@ FoxgloveResult<RemoteAccessGateway> RemoteAccessGateway::create(
     std::move(fetch_asset),
     std::move(sink_channel_filter),
     std::move(qos_classifier),
+    std::move(suppress_video_transcode),
     std::move(parameter_handler)
   );
 }
@@ -284,12 +310,14 @@ RemoteAccessGateway::RemoteAccessGateway(
   std::unique_ptr<FetchAssetHandler> fetch_asset,
   std::unique_ptr<SinkChannelFilterFn> sink_channel_filter,
   std::unique_ptr<QosClassifierFn> qos_classifier,
+  std::unique_ptr<SuppressVideoTranscodeFn> suppress_video_transcode,
   std::unique_ptr<ParameterHandler> parameter_handler
 )
     : callbacks_(std::move(callbacks))
     , fetch_asset_(std::move(fetch_asset))
     , sink_channel_filter_(std::move(sink_channel_filter))
     , qos_classifier_(std::move(qos_classifier))
+    , suppress_video_transcode_(std::move(suppress_video_transcode))
     , parameter_handler_(std::move(parameter_handler))
     , impl_(gateway, foxglove_gateway_stop) {}
 

@@ -1317,3 +1317,33 @@ TEST_CASE("livekit: video channel forces lossy over reliable classifier", "[inte
 
   gw.stop();
 }
+
+TEST_CASE("livekit: suppress_video_transcode opts channel out of video track", "[integration]") {
+  auto ctx = foxglove::Context::create();
+
+  TestGatewayOptions opts;
+  opts.suppress_video_transcode = [](const foxglove::ChannelDescriptor& ch) {
+    return std::string(ch.topic()) == "/depth";
+  };
+  auto gw = TestGateway::start_with_options(ctx, std::move(opts));
+
+  auto viewer = ViewerConnection::connect(gw.room_name, "viewer-1");
+  viewer.expect_server_info();
+
+  // A video-capable schema that would normally be transcoded; the classifier opts it out by
+  // topic, so it is advertised as data (no video track).
+  auto depth_channel = foxglove::RawChannel::create(
+    "/depth", "protobuf", foxglove::Schema{"foxglove.CompressedImage", "protobuf", nullptr, 0}, ctx
+  );
+  REQUIRE(depth_channel.has_value());
+
+  auto advertise = viewer.expect_advertise();
+  REQUIRE(advertise["channels"].size() == 1);
+  auto& ch = advertise["channels"][0];
+  CHECK(ch["id"].get<uint64_t>() == depth_channel->id());
+
+  auto meta = ch.value("metadata", nlohmann::json::object());
+  CHECK(!meta.contains("foxglove.hasVideoTrack"));
+
+  gw.stop();
+}
