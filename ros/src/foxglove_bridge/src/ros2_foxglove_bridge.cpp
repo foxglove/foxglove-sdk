@@ -394,7 +394,7 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
       std::bind(&FoxgloveBridge::gatewayUnsubscribe, this, _1, _2);
     gatewayOptions.qos_classifier = std::bind(&FoxgloveBridge::classifyRemoteAccessQos, this, _1);
     gatewayOptions.suppress_video_transcode =
-      std::bind(&FoxgloveBridge::suppressRemoteAccessVideoTranscode, this, _1);
+      std::bind(&FoxgloveBridge::shouldSuppressRemoteAccessVideoTranscode, this, _1);
 
     if (hasCapability(_capabilities, foxglove::WebSocketServerCapabilities::ClientPublish)) {
       gatewayOptions.callbacks.onClientAdvertise =
@@ -1594,10 +1594,8 @@ foxglove::QosProfile FoxgloveBridge::classifyRemoteAccessQos(
   return profile;
 }
 
-bool FoxgloveBridge::suppressRemoteAccessVideoTranscode(
+bool FoxgloveBridge::shouldSuppressRemoteAccessVideoTranscode(
   const foxglove::ChannelDescriptor& channel) {
-  // Compressed depth maps must be delivered as data, not transcoded to video: their pixel values
-  // encode depth and would be corrupted by lossy video.
   const auto schema = channel.schema();
   const std::string schemaName = schema ? schema->name : std::string();
   const std::string topic(channel.topic());
