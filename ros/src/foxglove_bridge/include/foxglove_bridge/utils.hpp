@@ -6,6 +6,7 @@
 #include <regex>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -69,7 +70,7 @@ inline std::vector<std::string> splitMessageDefinitions(std::istream& stream) {
 /// to video over remote access (their pixel values encode depth). The
 /// `compressed_depth_image_transport` transport publishes depth maps as
 /// `sensor_msgs/msg/CompressedImage` on a `.../compressedDepth` topic.
-inline bool isCompressedDepthTopic(const std::string& schemaName, const std::string& topic) {
+inline bool isCompressedDepthTopic(std::string_view schemaName, std::string_view topic) {
   constexpr char suffix[] = "/compressedDepth";
   constexpr size_t suffixLen = sizeof(suffix) - 1;
   return schemaName == "sensor_msgs/msg/CompressedImage" && topic.size() >= suffixLen &&

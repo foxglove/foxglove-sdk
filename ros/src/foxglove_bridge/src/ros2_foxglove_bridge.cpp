@@ -606,6 +606,7 @@ void FoxgloveBridge::updateAdvertisedTopics(
         continue;
       }
 
+      // Create the new SDK channel
       auto channelResult =
         foxglove::RawChannel::create(topic, messageEncoding, schema, _serverContext);
       if (!channelResult.has_value()) {
@@ -1597,11 +1598,11 @@ foxglove::QosProfile FoxgloveBridge::classifyRemoteAccessQos(
 bool FoxgloveBridge::shouldSuppressRemoteAccessVideoTranscode(
   const foxglove::ChannelDescriptor& channel) {
   const auto schema = channel.schema();
-  const std::string schemaName = schema ? schema->name : std::string();
-  const std::string topic(channel.topic());
-  if (!isCompressedDepthTopic(schemaName, topic)) {
+  const std::string_view schemaName = schema ? std::string_view(schema->name) : std::string_view();
+  if (!isCompressedDepthTopic(schemaName, channel.topic())) {
     return false;
   }
+  const std::string topic(channel.topic());
   RCLCPP_INFO(this->get_logger(),
               "Delivering compressed-depth topic \"%s\" as data (no video transcoding)",
               topic.c_str());
