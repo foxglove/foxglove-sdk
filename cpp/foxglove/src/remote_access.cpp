@@ -103,9 +103,9 @@ bool forwardSuppressVideoTranscode(
     return false;
   }
   try {
-    const auto* classifier = static_cast<const SuppressVideoTranscodeFn*>(context);
+    const auto* predicate = static_cast<const SuppressVideoTranscodeFn*>(context);
     auto cpp_channel = ChannelDescriptor(channel);
-    return (*classifier)(cpp_channel);
+    return (*predicate)(cpp_channel);
   } catch (const std::exception& exc) {
     warn() << "Video-transcode opt-out predicate failed: " << exc.what();
     return false;
