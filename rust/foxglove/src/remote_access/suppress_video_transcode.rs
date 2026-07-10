@@ -1,4 +1,4 @@
-//! The video-transcoding opt-out classifier for remote access.
+//! The video-transcoding opt-out predicate for remote access.
 
 use crate::channel::ChannelDescriptor;
 

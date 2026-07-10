@@ -98,7 +98,7 @@ impl Compression {
 /// `"16UC1; compressedDepth"`), independent of the pixel-format prefix and codec suffix.
 ///
 /// Such images encode depth in their pixel values and must not be transcoded to video. A
-/// producer can use this in the gateway's `suppress_video_transcode` classifier to deliver the
+/// producer can use this in the gateway's `suppress_video_transcode` predicate to deliver the
 /// channel as data instead.
 pub fn is_compressed_depth_format(format: &str) -> bool {
     format.contains("compressedDepth")

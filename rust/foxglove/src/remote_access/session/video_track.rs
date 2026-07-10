@@ -103,7 +103,7 @@ fn detect_video_schema(encoding: &str, schema_name: &str) -> Option<VideoInputSc
 }
 
 /// Returns the video input schema a channel should be advertised with, or `None` when the channel
-/// is not video-capable or the gateway's `suppress_video_transcode` classifier opts it out
+/// is not video-capable or the gateway's `suppress_video_transcode` predicate opts it out
 /// (delivered as data instead, e.g. compressed depth).
 pub fn resolve_video_input_schema(
     channel: &RawChannel,
@@ -530,14 +530,14 @@ mod tests {
     }
 
     #[test]
-    fn resolve_video_input_schema_honors_suppress_classifier() {
+    fn resolve_video_input_schema_honors_suppress_predicate() {
         use crate::remote_access::suppress_video_transcode::SuppressVideoTranscodeFn;
         let ch = make_video_channel();
         // Opt the channel out → no video schema despite a video-capable schema.
         let suppress =
             SuppressVideoTranscodeFn(|desc: &crate::ChannelDescriptor| desc.topic() == "/camera");
         assert_eq!(resolve_video_input_schema(&ch, Some(&suppress)), None);
-        // A classifier that doesn't match leaves detection intact.
+        // A predicate that doesn't match leaves detection intact.
         let other =
             SuppressVideoTranscodeFn(|desc: &crate::ChannelDescriptor| desc.topic() == "/other");
         assert_eq!(
