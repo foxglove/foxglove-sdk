@@ -84,9 +84,10 @@ pub(super) const DEFAULT_MESSAGE_BACKLOG_SIZE: usize = 1024;
 
 /// Quiet period after a channel's last oversized-drop report before its
 /// viewer-facing `Status` warning is auto-cleared via `RemoveStatus`. Set to
-/// 2× the 30s drop-warning throttle window so a channel under continuous drops
-/// (reported at most every 30s) never flaps between warned and cleared.
-const DROP_STATUS_QUIET_PERIOD: Duration = Duration::from_secs(60);
+/// 2× the drop-warning throttle window so a channel under continuous drops
+/// (reported at most once per window) never flaps between warned and cleared.
+const DROP_STATUS_QUIET_PERIOD: Duration =
+    Duration::from_secs(2 * data_track::OVERSIZED_WARN_INTERVAL.as_secs());
 
 /// How often the drop-status sweeper checks for expired drop statuses.
 const DROP_STATUS_SWEEP_INTERVAL: Duration = Duration::from_secs(15);
@@ -197,6 +198,10 @@ fn trim_trailing_zeros(value: f64) -> String {
 }
 
 /// Builds the viewer-facing warning for a throttled oversized data-track drop.
+///
+/// Quoting the throttle window ("in the last 30 seconds") makes it clear the
+/// count is a rolling per-window tally that updates in place, not a cumulative
+/// total — statuses carry no timestamp, so the message must say so itself.
 fn build_drop_status(channel_id: ChannelId, topic: &str, report: OversizedDropReport) -> Status {
     let messages = if report.dropped_since_last == 1 {
         "message"
@@ -204,8 +209,10 @@ fn build_drop_status(channel_id: ChannelId, topic: &str, report: OversizedDropRe
         "messages"
     };
     Status::warning(format!(
-        "Dropped {} {messages} on topic {topic}: exceeds {} per-message size limit",
+        "Dropped {} {messages} on topic {topic} in the last {} seconds: \
+         exceeds {} per-message size limit",
         report.dropped_since_last,
+        data_track::OVERSIZED_WARN_INTERVAL.as_secs(),
         format_byte_size(report.size_limit),
     ))
     .with_id(drop_status_id(channel_id))
@@ -3085,7 +3092,8 @@ mod tests {
         assert_eq!(status.id.as_deref(), Some("channel-drops-7"));
         assert_eq!(
             status.message,
-            "Dropped 3 messages on topic /points: exceeds 100 KiB per-message size limit"
+            "Dropped 3 messages on topic /points in the last 30 seconds: \
+             exceeds 100 KiB per-message size limit"
         );
     }
 
@@ -3098,7 +3106,8 @@ mod tests {
         let status = build_drop_status(ChannelId::new(1), "/points", report);
         assert_eq!(
             status.message,
-            "Dropped 1 message on topic /points: exceeds 1.17 KiB per-message size limit"
+            "Dropped 1 message on topic /points in the last 30 seconds: \
+             exceeds 1.17 KiB per-message size limit"
         );
     }
 

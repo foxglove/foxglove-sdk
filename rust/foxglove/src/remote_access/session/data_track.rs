@@ -12,6 +12,12 @@ use crate::{ChannelId, Metadata};
 
 const FRAME_HEADER_SIZE: usize = 8; // u16 LE flags + u16 LE data_offset + u32 LE sequence
 
+/// Minimum interval between oversized-drop warnings for a track. Drops between
+/// firings are counted and aggregated into the next warning's report. The
+/// viewer-facing status message quotes this window ("in the last 30 seconds"),
+/// and the session's drop-status quiet period is derived from it.
+pub(super) const OVERSIZED_WARN_INTERVAL: Duration = Duration::from_secs(30);
+
 /// Details of a throttled oversized-message drop, surfaced to viewers as a
 /// `Status` warning.
 ///
@@ -125,7 +131,7 @@ impl DataTrack {
             max_message_size,
             oversized_dropped: AtomicU64::new(0),
             oversized_throttler: parking_lot::Mutex::new(crate::throttler::Throttler::new(
-                Duration::from_secs(30),
+                OVERSIZED_WARN_INTERVAL,
             )),
         }
     }
@@ -232,7 +238,7 @@ mod tests {
                 max_message_size,
                 oversized_dropped: AtomicU64::new(0),
                 oversized_throttler: parking_lot::Mutex::new(crate::throttler::Throttler::new(
-                    Duration::from_secs(30),
+                    OVERSIZED_WARN_INTERVAL,
                 )),
             }
         }
