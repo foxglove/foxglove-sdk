@@ -111,8 +111,7 @@ pub fn resolve_video_input_schema(
 ) -> Option<VideoInputSchema> {
     let schema_name = channel.schema().map(|s| s.name.as_str()).unwrap_or("");
     let video_schema = detect_video_schema(channel.message_encoding(), schema_name)?;
-    // Only consult the predicate for channels we would otherwise transcode, so it can't fire on a
-    // channel that was never video-capable and the log below always reflects a real opt-out.
+    // Detect first so the predicate (and its log) only apply to channels we'd actually transcode.
     if suppress.is_some_and(|suppress| suppress.should_suppress(channel.descriptor())) {
         debug!(
             topic = %channel.topic(),
