@@ -47,7 +47,7 @@ use crate::{
         channel_registry::ChannelRegistry,
         client::Client,
         parameter_subscriptions::ParameterSubscriptions,
-        participant::{Participant, ParticipantRegistry, ParticipantWriter},
+        participant::{Liveness, Participant, ParticipantRegistry, ParticipantWriter},
         protocol_version,
         rtt_tracker::RttTracker,
     },
@@ -1154,9 +1154,10 @@ impl RemoteAccessSession {
     /// When a participant is added, a ServerInfo message and channel Advertisement messages are
     /// immediately queued for transmission.
     ///
-    /// `liveness_source` is set only when reopening the control stream for
-    /// the same LiveKit connection instance, preserving its inactivity
-    /// deadline across the transport reset.
+    /// `liveness` is set only when reopening the control stream for the same
+    /// LiveKit connection instance, preserving its inactivity deadline across
+    /// the transport reset. The caller must only supply shared liveness when
+    /// the SID matches the connection being re-registered.
     ///
     /// If a participant for `participant_id` is already registered with the
     /// **same** `participant_sid`, this is a no-op (the same connection instance
@@ -1176,7 +1177,7 @@ impl RemoteAccessSession {
         participant_id: ParticipantIdentity,
         participant_sid: ParticipantSid,
         joined_at: i64,
-        liveness_source: Option<&Participant>,
+        liveness: Option<Arc<parking_lot::Mutex<Liveness>>>,
     ) -> Result<(), Box<RemoteAccessError>> {
         // Gate on the registry *before* opening the stream: `stream_bytes`
         // is an RPC that should not be wasted on an already-registered
@@ -1233,8 +1234,8 @@ impl RemoteAccessSession {
         // for a replaced prior, so a same-identity reconnect ordering is
         // serialized with concurrent subscribe / unsubscribe / remove paths.
         let _guard = self.subscription_lock.lock();
-        let replaced = match liveness_source {
-            Some(source) => self
+        let replaced = match liveness {
+            Some(liveness) => self
                 .participant_registry
                 .register_participant_inheriting_liveness(
                     participant_id.clone(),
@@ -1243,7 +1244,7 @@ impl RemoteAccessSession {
                     ParticipantWriter::Livekit(stream),
                     &self.cancellation_token,
                     initial_messages,
-                    source,
+                    liveness,
                 ),
             None => self.participant_registry.register_participant(
                 participant_id.clone(),
@@ -1725,7 +1726,7 @@ impl RemoteAccessSession {
             );
             return;
         };
-        let liveness_source = match reset_liveness_policy(
+        let liveness = match reset_liveness_policy(
             &participant,
             &sid,
             PARTICIPANT_INACTIVITY_TIMEOUT,
@@ -1739,7 +1740,7 @@ impl RemoteAccessSession {
                 );
                 return;
             }
-            ResetLivenessPolicy::Inherit => Some(participant.as_ref()),
+            ResetLivenessPolicy::Inherit => Some(participant.liveness()),
             ResetLivenessPolicy::Fresh => None,
         };
 
@@ -1766,7 +1767,7 @@ impl RemoteAccessSession {
             "resetting participant after control-plane failure",
         );
         let result = self
-            .add_participant(participant_id, sid, joined_at, liveness_source)
+            .add_participant(participant_id, sid, joined_at, liveness)
             .await;
         if let Err(e) = result {
             error!(

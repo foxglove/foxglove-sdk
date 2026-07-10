@@ -20,7 +20,7 @@ use tokio::sync::Notify;
 use tokio_util::sync::CancellationToken;
 
 use super::collection::Participants;
-use super::{Participant, ParticipantWriter};
+use super::{Liveness, Participant, ParticipantWriter};
 
 /// Owns the participant membership state machine: add / remove / lookup, plus
 /// the `pending_resets` channel that lets a flush-task request its own reset.
@@ -139,7 +139,7 @@ impl ParticipantRegistry {
         writer: ParticipantWriter,
         session_cancel: &CancellationToken,
         initial_messages: I,
-        liveness_source: &Participant,
+        liveness: Arc<Mutex<Liveness>>,
     ) -> Option<Arc<Participant>>
     where
         I: IntoIterator<Item = Bytes>,
@@ -151,7 +151,7 @@ impl ParticipantRegistry {
             writer,
             session_cancel,
             initial_messages,
-            Some(liveness_source),
+            Some(liveness),
         )
     }
 
@@ -164,7 +164,7 @@ impl ParticipantRegistry {
         writer: ParticipantWriter,
         session_cancel: &CancellationToken,
         initial_messages: I,
-        liveness_source: Option<&Participant>,
+        liveness: Option<Arc<Mutex<Liveness>>>,
     ) -> Option<Arc<Participant>>
     where
         I: IntoIterator<Item = Bytes>,
@@ -178,7 +178,7 @@ impl ParticipantRegistry {
             self.pending_resets.clone(),
             self.reset_notify.clone(),
             session_cancel,
-            liveness_source,
+            liveness,
         );
 
         for msg in initial_messages {
@@ -625,7 +625,7 @@ mod tests {
             test_writer(),
             &cancel,
             [],
-            &original,
+            original.liveness(),
         );
         let replacement = registry.get_participant(&id).expect("replacement present");
 
