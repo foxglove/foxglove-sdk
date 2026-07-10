@@ -846,6 +846,37 @@ TEST(FetchAssetTest, fetchNonExistingAsset) {
   EXPECT_FALSE(response.errorMessage.empty());
 }
 
+// Verify that MultiThreadedExecutor::spin() returns gracefully when the context is shut down
+// externally, whether or not rclcpp::exceptions::RCLError is thrown along the way. This exercises
+// the condition caught in ros2_foxglove_bridge_node.cpp's main() — if it propagated uncaught the
+// process would call std::terminate() (exit code -6).
+TEST(SmokeTest, spinReturnsOnContextShutdown) {
+  auto context = std::make_shared<rclcpp::Context>();
+  context->init(0, nullptr);
+
+  rclcpp::ExecutorOptions execOpts;
+  execOpts.context = context;
+  auto executor = std::make_shared<rclcpp::executors::MultiThreadedExecutor>(execOpts);
+
+  rclcpp::NodeOptions nodeOpts;
+  nodeOpts.context(context);
+  nodeOpts.append_parameter_override("port", 8766);
+  auto bridge = std::make_shared<foxglove_bridge::FoxgloveBridge>(nodeOpts);
+  executor->add_node(bridge->get_node_base_interface());
+
+  std::thread spinThread([&]() {
+    try {
+      executor->spin();
+    } catch (const rclcpp::exceptions::RCLError&) {
+      // Expected on some ROS distros when the context is shut down mid-spin.
+    }
+  });
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(200));
+  context->shutdown("test shutdown");
+  spinThread.join();
+}
+
 // Run all the tests that were declared with TEST()
 int main(int argc, char** argv) {
   testing::InitGoogleTest(&argc, argv);
