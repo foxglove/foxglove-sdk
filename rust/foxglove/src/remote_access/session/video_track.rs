@@ -109,11 +109,18 @@ pub fn resolve_video_input_schema(
     channel: &RawChannel,
     suppress: Option<&dyn crate::remote_access::SuppressVideoTranscode>,
 ) -> Option<VideoInputSchema> {
+    let schema_name = channel.schema().map(|s| s.name.as_str()).unwrap_or("");
+    let video_schema = detect_video_schema(channel.message_encoding(), schema_name)?;
+    // Only consult the predicate for channels we would otherwise transcode, so it can't fire on a
+    // channel that was never video-capable and the log below always reflects a real opt-out.
     if suppress.is_some_and(|suppress| suppress.should_suppress(channel.descriptor())) {
+        debug!(
+            topic = %channel.topic(),
+            "opted out of video transcoding; delivering as data"
+        );
         return None;
     }
-    let schema_name = channel.schema().map(|s| s.name.as_str()).unwrap_or("");
-    detect_video_schema(channel.message_encoding(), schema_name)
+    Some(video_schema)
 }
 
 /// Metadata extracted from image messages on a video channel.
