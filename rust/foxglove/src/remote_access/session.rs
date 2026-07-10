@@ -606,8 +606,8 @@ impl RemoteAccessSession {
 
         // Don't take `subscription_lock` here: listeners can synchronously log
         // from subscribe/unsubscribe callbacks while that lock is held. The
-        // subscriber snapshot may be slightly stale, but unsubscribe/remove and
-        // the quiet-period sweeper all clear the stable status id.
+        // subscriber snapshot may be stale, but the status will be eventually
+        // cleared by the sweeper.
         if !self.channel_registry.read().has_channel(&channel_id) {
             return;
         }
