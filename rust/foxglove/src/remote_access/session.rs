@@ -330,7 +330,7 @@ impl Sink for RemoteAccessSession {
         let channel_id = channel.id();
 
         // Captured under the read lock and handled after the lock is released.
-        let mut drop_report: Option<OversizedDropReport> = None;
+        let mut drop_report: Option<(OversizedDropReport, SmallVec<[ParticipantSid; 4]>)> = None;
 
         // Snapshot subscriber SIDs under the channel-registry read lock and
         // release it before resolving against the participant registry. A
@@ -355,7 +355,7 @@ impl Sink for RemoteAccessSession {
                 // inline, while we still hold the state read lock.
                 if let Some(track) = state.get_subscribed_data_track(&channel_id) {
                     if let Err(report) = track.log(channel_id, msg, metadata) {
-                        drop_report = Some(report);
+                        drop_report = Some((report, state.data_subscriber_sids(&channel_id)));
                     }
                 }
                 SmallVec::new()
@@ -373,8 +373,8 @@ impl Sink for RemoteAccessSession {
             }
         }
 
-        if let Some(report) = drop_report {
-            self.emit_drop_status(channel, report);
+        if let Some((report, subscriber_sids)) = drop_report {
+            self.emit_drop_status(channel, report, subscriber_sids);
         }
 
         Ok(())
@@ -596,18 +596,21 @@ impl RemoteAccessSession {
     }
 
     /// Warn current data subscribers about a throttled oversized data-track drop.
-    fn emit_drop_status(&self, channel: &RawChannel, report: OversizedDropReport) {
+    fn emit_drop_status(
+        &self,
+        channel: &RawChannel,
+        report: OversizedDropReport,
+        subscriber_sids: SmallVec<[ParticipantSid; 4]>,
+    ) {
         let channel_id = channel.id();
 
-        let _guard = self.subscription_lock.lock();
-        let subscriber_sids = {
-            let state = self.channel_registry.read();
-            if !state.has_channel(&channel_id) {
-                return;
-            }
-            state.data_subscriber_sids(&channel_id)
-        };
-
+        // Don't take `subscription_lock` here: listeners can synchronously log
+        // from subscribe/unsubscribe callbacks while that lock is held. The
+        // subscriber snapshot may be slightly stale, but unsubscribe/remove and
+        // the quiet-period sweeper all clear the stable status id.
+        if !self.channel_registry.read().has_channel(&channel_id) {
+            return;
+        }
         self.active_drop_statuses.lock().insert(
             channel_id,
             ActiveDropStatus {
