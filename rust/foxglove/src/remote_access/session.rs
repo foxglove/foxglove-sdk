@@ -1015,11 +1015,30 @@ impl RemoteAccessSession {
 
         self.stop_video_tracks(&last_video_unsubscribed);
 
-        if let Some(listener) = &self.listener {
-            if !unsubscribe_result
+        if !unsubscribe_result
+            .actually_unsubscribed_descriptors
+            .is_empty()
+        {
+            // Eagerly clear any oversized-drop warning this participant was shown
+            // for a channel they just unsubscribed from, so it doesn't linger in
+            // their Problems panel until the sweeper's quiet period elapses.
+            // Other subscribers of the same channel are unaffected: the shared
+            // `active_drop_statuses` entry, and their own view of the warning,
+            // are left in place.
+            let statuses = self.active_drop_statuses.lock();
+            let ids_to_clear: SmallVec<[ChannelId; 4]> = unsubscribe_result
                 .actually_unsubscribed_descriptors
-                .is_empty()
-            {
+                .iter()
+                .map(|descriptor| descriptor.id())
+                .filter(|id| statuses.contains_key(id))
+                .collect();
+            drop(statuses);
+            if !ids_to_clear.is_empty() {
+                let remove = RemoveStatus::new(ids_to_clear.iter().map(|id| drop_status_id(*id)));
+                participant.send_control(encode_json_message(&remove));
+            }
+
+            if let Some(listener) = &self.listener {
                 let client = Client::new(
                     participant.client_id(),
                     participant.participant_id().clone(),

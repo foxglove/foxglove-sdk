@@ -141,8 +141,9 @@ async fn livekit_viewer_receives_message_after_subscribe() -> Result<()> {
 /// Test the full oversized data-track drop story: a message exceeding the
 /// configured size limit is dropped at the gateway while smaller messages on
 /// the same channel are delivered (FLE-592), the subscribed viewer is warned
-/// via a `Status` with a stable per-channel id, and removing the channel
-/// eagerly clears the warning for every subscribed viewer via a broadcast
+/// via a `Status` with a stable per-channel id, unsubscribing eagerly clears
+/// the warning for just the departing viewer, and removing the channel
+/// eagerly clears the warning for every remaining viewer via a broadcast
 /// `RemoveStatus` (FLE-645).
 #[traced_test]
 #[ignore]
@@ -224,7 +225,22 @@ async fn livekit_oversized_data_track_message_is_dropped() -> Result<()> {
     assert_eq!(after.data.as_ref(), b"after");
     info!("oversized data-track message correctly dropped at the gateway");
 
-    // 4. A second viewer subscribes after the warning has already been sent to
+    let expected_status_id = format!("channel-drops-{channel_id}");
+
+    // 4. viewer-1 unsubscribes from the channel while its warning is still
+    //    active. Since it's no longer watching that channel, it gets a
+    //    targeted RemoveStatus clearing the warning immediately, without
+    //    waiting for the sweeper's quiet period.
+    viewer.send_unsubscribe(&[channel_id]).await?;
+    let unsub_clear = viewer.expect_remove_status().await?;
+    assert_eq!(
+        unsub_clear.status_ids,
+        vec![expected_status_id.clone()],
+        "unsubscribing viewer-1 should have its drop status cleared"
+    );
+    info!("unsubscribe eagerly cleared the drop status for the departing viewer");
+
+    // 5. A second viewer subscribes after the warning has already been sent to
     //    viewer-1. It does not receive the warning itself (no replay to late
     //    subscribers), but it is still subscribed when the channel is removed
     //    below, so the eager clear below must reach it too.
@@ -233,11 +249,13 @@ async fn livekit_oversized_data_track_message_is_dropped() -> Result<()> {
     let _advertise = viewer2.expect_advertise().await?;
     viewer2.subscribe_and_wait(&[channel_id], &channel).await?;
 
-    // 5. Removing the channel eagerly clears the warning: every viewer gets an
-    //    Unadvertise followed by a RemoveStatus for the channel's status id,
-    //    without waiting for the sweeper's quiet period.
+    // 6. Removing the channel eagerly clears the warning for every remaining
+    //    connected participant: each gets an Unadvertise followed by a
+    //    RemoveStatus for the channel's status id, without waiting for the
+    //    sweeper's quiet period. viewer-1 receives this too even though it
+    //    already unsubscribed, since the removal broadcast doesn't depend on
+    //    subscription state.
     channel.close();
-    let expected_status_id = format!("channel-drops-{channel_id}");
     for (name, v) in [("viewer-1", &mut viewer), ("viewer-2", &mut viewer2)] {
         let unadvertise = v.expect_unadvertise().await?;
         assert_eq!(unadvertise.channel_ids, vec![channel_id]);
