@@ -198,10 +198,6 @@ fn trim_trailing_zeros(value: f64) -> String {
 }
 
 /// Builds the viewer-facing warning for a throttled oversized data-track drop.
-///
-/// Quoting the throttle window ("in the last 30 seconds") makes it clear the
-/// count is a rolling per-window tally that updates in place, not a cumulative
-/// total — statuses carry no timestamp, so the message must say so itself.
 fn build_drop_status(channel_id: ChannelId, topic: &str, report: OversizedDropReport) -> Status {
     let messages = if report.dropped_since_last == 1 {
         "message"
@@ -209,10 +205,8 @@ fn build_drop_status(channel_id: ChannelId, topic: &str, report: OversizedDropRe
         "messages"
     };
     Status::warning(format!(
-        "Dropped {} {messages} on topic {topic} in the last {} seconds: \
-         exceeds {} per-message size limit",
+        "Dropped {} {messages} on topic {topic}: exceeds {} per-message size limit",
         report.dropped_since_last,
-        data_track::OVERSIZED_WARN_INTERVAL.as_secs(),
         format_byte_size(report.size_limit),
     ))
     .with_id(drop_status_id(channel_id))
@@ -3092,8 +3086,7 @@ mod tests {
         assert_eq!(status.id.as_deref(), Some("channel-drops-7"));
         assert_eq!(
             status.message,
-            "Dropped 3 messages on topic /points in the last 30 seconds: \
-             exceeds 100 KiB per-message size limit"
+            "Dropped 3 messages on topic /points: exceeds 100 KiB per-message size limit"
         );
     }
 
@@ -3106,8 +3099,7 @@ mod tests {
         let status = build_drop_status(ChannelId::new(1), "/points", report);
         assert_eq!(
             status.message,
-            "Dropped 1 message on topic /points in the last 30 seconds: \
-             exceeds 1.17 KiB per-message size limit"
+            "Dropped 1 message on topic /points: exceeds 1.17 KiB per-message size limit"
         );
     }
 
