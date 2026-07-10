@@ -141,10 +141,9 @@ async fn livekit_viewer_receives_message_after_subscribe() -> Result<()> {
 /// Test the full oversized data-track drop story: a message exceeding the
 /// configured size limit is dropped at the gateway while smaller messages on
 /// the same channel are delivered (FLE-592), the subscribed viewer is warned
-/// via a `Status` with a stable per-channel id, a viewer subscribing later —
-/// while the warning is still active — receives it replayed immediately at
-/// subscribe time, and removing the channel eagerly clears the warning for
-/// every viewer via a broadcast `RemoveStatus` (FLE-645).
+/// via a `Status` with a stable per-channel id, and removing the channel
+/// eagerly clears the warning for every subscribed viewer via a broadcast
+/// `RemoveStatus` (FLE-645).
 #[traced_test]
 #[ignore]
 #[tokio::test]
@@ -225,30 +224,14 @@ async fn livekit_oversized_data_track_message_is_dropped() -> Result<()> {
     assert_eq!(after.data.as_ref(), b"after");
     info!("oversized data-track message correctly dropped at the gateway");
 
-    // 4. A viewer subscribing while the warning is active receives it replayed
-    //    at subscribe time. No oversized message is logged after this subscribe
-    //    and the 30s report throttle makes a fresh report impossible this soon,
-    //    so the status below is provably the replay, not a new report.
+    // 4. A second viewer subscribes after the warning has already been sent to
+    //    viewer-1. It does not receive the warning itself (no replay to late
+    //    subscribers), but it is still subscribed when the channel is removed
+    //    below, so the eager clear below must reach it too.
     let mut viewer2 = ViewerConnection::connect(&gw.room_name, "viewer-2").await?;
     let _server_info = viewer2.expect_server_info().await?;
     let _advertise = viewer2.expect_advertise().await?;
     viewer2.subscribe_and_wait(&[channel_id], &channel).await?;
-
-    let replayed = viewer2.expect_status().await?;
-    assert_eq!(
-        replayed.level,
-        foxglove::protocol::v2::server::status::Level::Warning
-    );
-    assert_eq!(
-        replayed.id.as_deref(),
-        Some(format!("channel-drops-{channel_id}").as_str())
-    );
-    assert!(
-        replayed.message.contains("per-message size limit"),
-        "unexpected replayed status message: {}",
-        replayed.message
-    );
-    info!("late subscriber received replayed oversized-drop status warning");
 
     // 5. Removing the channel eagerly clears the warning: every viewer gets an
     //    Unadvertise followed by a RemoveStatus for the channel's status id,

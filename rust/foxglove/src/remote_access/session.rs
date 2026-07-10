@@ -212,27 +212,17 @@ fn build_drop_status(channel_id: ChannelId, topic: &str, report: OversizedDropRe
     .with_id(drop_status_id(channel_id))
 }
 
-/// A channel's most recent oversized-drop report and when it was emitted.
-///
-/// `last_report` feeds the quiet-period sweeper; `report` lets the warning be
-/// rebuilt and replayed to viewers who subscribe while drops are ongoing.
-#[derive(Debug, Clone, Copy)]
-struct ActiveDropStatus {
-    last_report: std::time::Instant,
-    report: OversizedDropReport,
-}
-
 /// Drains and returns the channels whose most recent drop report is at least
 /// `quiet_period` old, leaving fresher entries in place. Pure and timer-free so
 /// the sweeper's expiry logic can be unit-tested with a synthetic `now`.
 fn drain_expired_drop_statuses(
-    statuses: &mut HashMap<ChannelId, ActiveDropStatus>,
+    statuses: &mut HashMap<ChannelId, std::time::Instant>,
     now: std::time::Instant,
     quiet_period: Duration,
 ) -> Vec<ChannelId> {
     let mut expired = Vec::new();
-    statuses.retain(|channel_id, status| {
-        if now.duration_since(status.last_report) >= quiet_period {
+    statuses.retain(|channel_id, last_report| {
+        if now.duration_since(*last_report) >= quiet_period {
             expired.push(*channel_id);
             false
         } else {
@@ -317,11 +307,10 @@ pub(super) struct RemoteAccessSession {
     video_codec_override: Option<VideoCodec>,
     /// Per-message size limit for lossy data-track channels; larger messages are dropped.
     max_data_track_message_size: usize,
-    /// Per-channel record of the most recent oversized-drop `Status` warning
+    /// Per-channel time of the most recent oversized-drop `Status` warning
     /// emitted to viewers. Feeds the quiet-period sweeper, which sends
-    /// `RemoveStatus` once a channel stops dropping, and lets the warning be
-    /// replayed to late subscribers. See [`DROP_STATUS_QUIET_PERIOD`].
-    active_drop_statuses: parking_lot::Mutex<HashMap<ChannelId, ActiveDropStatus>>,
+    /// `RemoveStatus` once a channel stops dropping. See [`DROP_STATUS_QUIET_PERIOD`].
+    active_drop_statuses: parking_lot::Mutex<HashMap<ChannelId, std::time::Instant>>,
     /// The preferred encoder backend applied to published video tracks.
     /// [`VideoEncoderBackend::Auto`](super::gateway::VideoEncoderBackend::Auto) leaves the
     /// choice to libwebrtc.
@@ -638,13 +627,9 @@ impl RemoteAccessSession {
             return;
         }
 
-        self.active_drop_statuses.lock().insert(
-            channel_id,
-            ActiveDropStatus {
-                last_report: std::time::Instant::now(),
-                report,
-            },
-        );
+        self.active_drop_statuses
+            .lock()
+            .insert(channel_id, std::time::Instant::now());
 
         let status = build_drop_status(channel_id, channel.topic(), report);
         let encoded = encode_json_message(&status);
@@ -995,31 +980,6 @@ impl RemoteAccessSession {
                 );
                 for descriptor in &subscribe_result.newly_subscribed_descriptors {
                     listener.on_subscribe(&client, descriptor);
-                }
-            }
-        }
-
-        // Replay any active oversized-drop warning to the new data subscribers,
-        // so a viewer subscribing mid-drop-storm sees the warning immediately
-        // instead of waiting up to a throttle window for the next report. Video
-        // subscribers are excluded to match the original warning's audience
-        // (they bypass the data plane). The sends are queued while holding the
-        // map lock: the sweeper drains entries under this lock strictly before
-        // broadcasting `RemoveStatus`, so a replayed `Status` can never arrive
-        // after the `RemoveStatus` that clears it. `subscription_lock` (held
-        // above) serializes this against `remove_channel`'s eager clear.
-        {
-            let statuses = self.active_drop_statuses.lock();
-            if !statuses.is_empty() {
-                for descriptor in &subscribe_result.newly_subscribed_descriptors {
-                    if !data_channel_ids.contains(&descriptor.id()) {
-                        continue;
-                    }
-                    if let Some(active) = statuses.get(&descriptor.id()) {
-                        let status =
-                            build_drop_status(descriptor.id(), descriptor.topic(), active.report);
-                        participant.send_control(encode_json_message(&status));
-                    }
                 }
             }
         }
@@ -3112,16 +3072,6 @@ mod tests {
         assert_eq!(format_byte_size(2 * 1024 * 1024), "2 MiB");
     }
 
-    fn active_drop_status(last_report: std::time::Instant) -> ActiveDropStatus {
-        ActiveDropStatus {
-            last_report,
-            report: OversizedDropReport {
-                dropped_since_last: 1,
-                size_limit: 1200,
-            },
-        }
-    }
-
     #[test]
     fn drain_expired_drop_statuses_removes_only_stale_entries() {
         let quiet = Duration::from_secs(60);
@@ -3131,9 +3081,9 @@ mod tests {
         let fresh = ChannelId::new(2);
         let mut statuses = HashMap::from([
             // Idle exactly the quiet period → expired (boundary is inclusive).
-            (stale, active_drop_status(now - quiet)),
+            (stale, now - quiet),
             // Idle less than the quiet period → retained.
-            (fresh, active_drop_status(now - Duration::from_secs(30))),
+            (fresh, now - Duration::from_secs(30)),
         ]);
 
         let expired = drain_expired_drop_statuses(&mut statuses, now, quiet);
@@ -3154,7 +3104,7 @@ mod tests {
         let quiet = Duration::from_secs(60);
         let now = std::time::Instant::now();
         let fresh = ChannelId::new(9);
-        let mut statuses = HashMap::from([(fresh, active_drop_status(now))]);
+        let mut statuses = HashMap::from([(fresh, now)]);
 
         let expired = drain_expired_drop_statuses(&mut statuses, now, quiet);
 
