@@ -93,17 +93,6 @@ impl Compression {
     }
 }
 
-/// Returns `true` if a `CompressedImage.format` string denotes a ROS-style compressed depth
-/// image (e.g. `"16UC1; compressedDepth png"`, `"32FC1; compressedDepth rvl"`, or
-/// `"16UC1; compressedDepth"`), independent of the pixel-format prefix and codec suffix.
-///
-/// Such images encode depth in their pixel values and must not be transcoded to video. A
-/// producer can use this in the gateway's `suppress_video_transcode` predicate to deliver the
-/// channel as data instead.
-pub fn is_compressed_depth_format(format: &str) -> bool {
-    format.contains("compressedDepth")
-}
-
 /// A compressed image.
 #[derive(Debug, Clone)]
 pub struct CompressedImage<'a> {
@@ -177,25 +166,5 @@ mod tests {
         check("gif", None);
         check("rgb8; gif compressed", None);
         check("32FC1; compressedDepth rvl", None);
-    }
-}
-
-#[cfg(test)]
-mod is_compressed_depth_format_tests {
-    use super::is_compressed_depth_format;
-
-    #[test]
-    fn matches_compressed_depth_formats() {
-        assert!(is_compressed_depth_format("16UC1; compressedDepth png"));
-        assert!(is_compressed_depth_format("16UC1; compressedDepth"));
-        assert!(is_compressed_depth_format("32FC1; compressedDepth rvl"));
-    }
-
-    #[test]
-    fn rejects_non_depth_formats() {
-        assert!(!is_compressed_depth_format("png"));
-        assert!(!is_compressed_depth_format("jpeg"));
-        assert!(!is_compressed_depth_format("16UC1; png compressed"));
-        assert!(!is_compressed_depth_format(""));
     }
 }

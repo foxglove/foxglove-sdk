@@ -10,7 +10,8 @@
 //! To deliver an image channel as data instead, opt it out with
 //! [`Gateway::suppress_video_transcode`] / [`Gateway::suppress_video_transcode_fn`]: the channel is
 //! advertised without a video track and its messages are delivered on the data plane unchanged.
-//! This is required for compressed depth maps. See [`SuppressVideoTranscode`] for details.
+//! This is needed for image channels whose pixels must not pass through lossy video — compressed
+//! depth maps are the motivating case. See [`SuppressVideoTranscode`] for details.
 
 mod capability;
 mod channel_registry;
@@ -42,8 +43,6 @@ pub use gateway::{Gateway, GatewayHandle, VideoEncoderBackend};
 pub use listener::Listener;
 pub use qos::{QosClassifier, QosProfile, QosProfileBuilder, Reliability};
 pub use suppress_video_transcode::SuppressVideoTranscode;
-
-pub use crate::img2yuv::is_compressed_depth_format;
 
 use reqwest::StatusCode;
 use thiserror::Error;

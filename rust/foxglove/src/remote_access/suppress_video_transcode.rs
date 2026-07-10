@@ -5,15 +5,14 @@ use crate::channel::ChannelDescriptor;
 /// Decides, per channel, whether to opt out of video transcoding over remote access.
 ///
 /// This callback is invoked when a channel is registered. Returning `true` advertises the channel
-/// without a video track, so its messages are delivered on the data plane unchanged. This is
-/// required for compressed depth maps, whose pixel values encode depth and would be corrupted by
-/// lossy video transcoding — [`is_compressed_depth_format`] classifies a compressed-depth `format`
-/// string.
+/// without a video track, so its messages are delivered on the data plane unchanged. Use it for
+/// image channels whose pixel values must not pass through lossy video — compressed depth maps are
+/// the motivating case, since their pixels encode depth. The SDK cannot tell such channels apart
+/// from a channel descriptor alone, so the producer identifies them here (e.g. by topic or schema).
 ///
 /// Configured via [`Gateway::suppress_video_transcode`] (this trait) or
 /// [`Gateway::suppress_video_transcode_fn`] (a closure).
 ///
-/// [`is_compressed_depth_format`]: crate::remote_access::is_compressed_depth_format
 /// [`Gateway::suppress_video_transcode`]: crate::remote_access::Gateway::suppress_video_transcode
 /// [`Gateway::suppress_video_transcode_fn`]: crate::remote_access::Gateway::suppress_video_transcode_fn
 pub trait SuppressVideoTranscode: Sync + Send {
