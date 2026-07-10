@@ -12,18 +12,15 @@ use crate::{ChannelId, Metadata};
 
 const FRAME_HEADER_SIZE: usize = 8; // u16 LE flags + u16 LE data_offset + u32 LE sequence
 
-/// Minimum interval between oversized-drop warnings for a track. Drops between
-/// firings are counted and aggregated into the next warning's report. The
-/// viewer-facing status message quotes this window ("in the last 30 seconds"),
-/// and the session's drop-status quiet period is derived from it.
+/// Minimum interval between oversized-drop warnings for a track.
+///
+/// Drops between warnings are counted and folded into the next report.
 pub(super) const OVERSIZED_WARN_INTERVAL: Duration = Duration::from_secs(30);
 
 /// Details of a throttled oversized-message drop, surfaced to viewers as a
 /// `Status` warning.
 ///
-/// Returned as the `Err` variant of [`DataTrack::log`] only at the moment the
-/// throttled gateway-side warning fires, so the viewer-facing signal reuses the
-/// same throttle window and aggregated count without a second throttle.
+/// Returned by [`DataTrack::log`] only when the gateway-side warning fires.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct OversizedDropReport {
     /// Oversized messages dropped since the last report, including this one.
@@ -142,10 +139,8 @@ impl DataTrack {
     /// [`max_message_size`](Self::max_message_size), or with a throttled debug
     /// log if the track is not ready or full.
     ///
-    /// Returns `Err(OversizedDropReport)` only on the throttled oversized-drop
-    /// path — the same moment the gateway-side warning fires — so the caller can
-    /// surface a matching viewer signal. Returns `Ok(())` on all other paths
-    /// (delivered, throttled, not-ready, queue-full).
+    /// Returns `Err(OversizedDropReport)` only when an oversized-drop warning
+    /// fires. All other delivered or dropped messages return `Ok(())`.
     pub fn log(
         &self,
         channel_id: ChannelId,

@@ -138,14 +138,8 @@ async fn livekit_viewer_receives_message_after_subscribe() -> Result<()> {
     Ok(())
 }
 
-/// Test the full oversized data-track drop story: a message exceeding the
-/// configured size limit is dropped at the gateway while smaller messages on
-/// the same channel are delivered (FLE-592), the subscribed viewer is warned
-/// via a `Status` with a stable per-channel id, unsubscribing eagerly clears
-/// the warning for just the departing viewer, a viewer subscribing later —
-/// while the warning is still active — receives it replayed immediately at
-/// subscribe time, and removing the channel eagerly clears the warning for
-/// every remaining viewer via a broadcast `RemoveStatus` (FLE-645).
+/// Oversized data-track messages are dropped, surfaced as channel-scoped
+/// warnings, replayed to late subscribers, and cleared on unsubscribe/removal.
 #[traced_test]
 #[ignore]
 #[tokio::test]
@@ -200,9 +194,7 @@ async fn livekit_oversized_data_track_message_is_dropped() -> Result<()> {
          received a frame"
     );
 
-    // The drop is surfaced to the subscribed viewer as a throttled Status
-    // warning on the control channel, with a stable per-channel id so repeated
-    // reports replace rather than accumulate in the Problems panel.
+    // The subscribed viewer is warned with a stable per-channel status id.
     let status = viewer.expect_status().await?;
     assert_eq!(
         status.level,
@@ -219,8 +211,7 @@ async fn livekit_oversized_data_track_message_is_dropped() -> Result<()> {
     );
     info!("viewer received oversized-drop status warning");
 
-    // 3. A later small message is delivered, confirming the stream is still
-    //    healthy — the absence above was the drop, not a broken channel.
+    // 3. A later small message is delivered, confirming the stream is healthy.
     channel.log(b"after");
     let after = ch_reader.next_message_data().await?;
     assert_eq!(after.data.as_ref(), b"after");
@@ -228,10 +219,7 @@ async fn livekit_oversized_data_track_message_is_dropped() -> Result<()> {
 
     let expected_status_id = format!("channel-drops-{channel_id}");
 
-    // 4. viewer-1 unsubscribes from the channel while its warning is still
-    //    active. Since it's no longer watching that channel, it gets a
-    //    targeted RemoveStatus clearing the warning immediately, without
-    //    waiting for the sweeper's quiet period.
+    // 4. Unsubscribe clears the warning for the departing viewer.
     viewer.send_unsubscribe(&[channel_id]).await?;
     let unsub_clear = viewer.expect_remove_status().await?;
     assert_eq!(
@@ -241,11 +229,7 @@ async fn livekit_oversized_data_track_message_is_dropped() -> Result<()> {
     );
     info!("unsubscribe eagerly cleared the drop status for the departing viewer");
 
-    // 5. A second viewer subscribing while the warning is still active
-    //    receives it replayed at subscribe time. No oversized message is
-    //    logged after this subscribe and the 30s report throttle makes a
-    //    fresh report impossible this soon, so the status below is provably
-    //    the replay, not a new report.
+    // 5. A late subscriber receives the active warning immediately.
     let mut viewer2 = ViewerConnection::connect(&gw.room_name, "viewer-2").await?;
     let _server_info = viewer2.expect_server_info().await?;
     let _advertise = viewer2.expect_advertise().await?;
@@ -264,12 +248,7 @@ async fn livekit_oversized_data_track_message_is_dropped() -> Result<()> {
     );
     info!("late subscriber received replayed oversized-drop status warning");
 
-    // 6. Removing the channel eagerly clears the warning for every remaining
-    //    connected participant: each gets an Unadvertise followed by a
-    //    RemoveStatus for the channel's status id, without waiting for the
-    //    sweeper's quiet period. viewer-1 receives this too even though it
-    //    already unsubscribed, since the removal broadcast doesn't depend on
-    //    subscription state.
+    // 6. Removing the channel clears the warning for connected participants.
     channel.close();
     for (name, v) in [("viewer-1", &mut viewer), ("viewer-2", &mut viewer2)] {
         let unadvertise = v.expect_unadvertise().await?;
