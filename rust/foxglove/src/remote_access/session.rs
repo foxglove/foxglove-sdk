@@ -970,8 +970,11 @@ impl RemoteAccessSession {
             }
         }
 
-        // Replay active drop warnings to new data subscribers. Hold the map
-        // lock while queueing so the sweeper cannot clear first.
+        // Replay active drop warnings to new data subscribers. This is important to ensure that
+        // users are notified of drops in a timely fashion. Otherwise, they have to wait up to the
+        // throttle period, which is deliberately quite long.
+        //
+        // Hold the map lock while queueing so the sweeper cannot clear first.
         {
             let statuses = self.active_drop_statuses.lock();
             if !statuses.is_empty() {
