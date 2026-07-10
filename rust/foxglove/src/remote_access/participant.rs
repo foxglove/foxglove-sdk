@@ -137,7 +137,8 @@ impl Participant {
         let cancel = session_cancel.child_token();
         let cancel_for_task = cancel.clone();
         let client_id = ClientId::next();
-        let liveness = liveness.unwrap_or_else(|| Arc::new(parking_lot::Mutex::new(Liveness::new())));
+        let liveness =
+            liveness.unwrap_or_else(|| Arc::new(parking_lot::Mutex::new(Liveness::new())));
         let identity_for_task = identity.clone();
         let sid_for_task = participant_sid.clone();
         let pending_resets_for_task = pending_resets.clone();
