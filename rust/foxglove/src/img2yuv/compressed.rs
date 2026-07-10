@@ -51,7 +51,7 @@ impl FromStr for Compression {
 }
 impl Compression {
     /// Returns the canonical format string for this compression.
-    pub fn as_str(&self) -> &'static str {
+    pub fn as_str(self) -> &'static str {
         match self {
             #[cfg(feature = "img2yuv-png")]
             Self::Png => "png",

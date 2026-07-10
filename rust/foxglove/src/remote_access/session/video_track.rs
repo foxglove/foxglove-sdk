@@ -35,6 +35,24 @@ pub enum VideoInputSchema {
     FoxgloveCompressedImage,
     /// `foxglove.RawImage` with protobuf encoding.
     FoxgloveRawImage,
+    /// `foxglove.CompressedImage` with json encoding.
+    #[cfg(feature = "img2yuv-json")]
+    FoxgloveJsonCompressedImage,
+    /// `foxglove.RawImage` with json encoding.
+    #[cfg(feature = "img2yuv-json")]
+    FoxgloveJsonRawImage,
+    /// `foxglove.CompressedImage` with flatbuffer encoding.
+    #[cfg(feature = "img2yuv-flatbuffer")]
+    FoxgloveFlatbufferCompressedImage,
+    /// `foxglove.RawImage` with flatbuffer encoding.
+    #[cfg(feature = "img2yuv-flatbuffer")]
+    FoxgloveFlatbufferRawImage,
+    /// `foxglove::CompressedImage` (OMG IDL) with cdr encoding.
+    #[cfg(feature = "img2yuv-omgidl")]
+    FoxgloveOmgidlCompressedImage,
+    /// `foxglove::RawImage` (OMG IDL) with cdr encoding.
+    #[cfg(feature = "img2yuv-omgidl")]
+    FoxgloveOmgidlRawImage,
     /// ROS 1 `sensor_msgs/CompressedImage` with ros1 encoding.
     #[cfg(feature = "img2yuv-ros1")]
     Ros1CompressedImage,
@@ -56,6 +74,22 @@ fn detect_video_schema(encoding: &str, schema_name: &str) -> Option<VideoInputSc
     match (encoding, schema_name) {
         ("protobuf", "foxglove.CompressedImage") => Some(VideoInputSchema::FoxgloveCompressedImage),
         ("protobuf", "foxglove.RawImage") => Some(VideoInputSchema::FoxgloveRawImage),
+        #[cfg(feature = "img2yuv-json")]
+        ("json", "foxglove.CompressedImage") => Some(VideoInputSchema::FoxgloveJsonCompressedImage),
+        #[cfg(feature = "img2yuv-json")]
+        ("json", "foxglove.RawImage") => Some(VideoInputSchema::FoxgloveJsonRawImage),
+        #[cfg(feature = "img2yuv-flatbuffer")]
+        ("flatbuffer", "foxglove.CompressedImage") => {
+            Some(VideoInputSchema::FoxgloveFlatbufferCompressedImage)
+        }
+        #[cfg(feature = "img2yuv-flatbuffer")]
+        ("flatbuffer", "foxglove.RawImage") => Some(VideoInputSchema::FoxgloveFlatbufferRawImage),
+        #[cfg(feature = "img2yuv-omgidl")]
+        ("cdr", "foxglove::CompressedImage") => {
+            Some(VideoInputSchema::FoxgloveOmgidlCompressedImage)
+        }
+        #[cfg(feature = "img2yuv-omgidl")]
+        ("cdr", "foxglove::RawImage") => Some(VideoInputSchema::FoxgloveOmgidlRawImage),
         #[cfg(feature = "img2yuv-ros1")]
         ("ros1", "sensor_msgs/CompressedImage") => Some(VideoInputSchema::Ros1CompressedImage),
         #[cfg(feature = "img2yuv-ros1")]
@@ -304,6 +338,36 @@ fn decode_image_message<'a>(
                 .map_err(|e| VideoEncodeError::Decode(e.to_string()))?;
             ImageMessage::try_from(msg).map_err(|e| VideoEncodeError::Decode(e.to_string()))
         }
+        #[cfg(feature = "img2yuv-json")]
+        VideoInputSchema::FoxgloveJsonCompressedImage => {
+            crate::img2yuv::json::decode_compressed_image(data)
+                .map_err(|e| VideoEncodeError::Decode(e.to_string()))
+        }
+        #[cfg(feature = "img2yuv-json")]
+        VideoInputSchema::FoxgloveJsonRawImage => crate::img2yuv::json::decode_raw_image(data)
+            .map_err(|e| VideoEncodeError::Decode(e.to_string())),
+        #[cfg(feature = "img2yuv-flatbuffer")]
+        VideoInputSchema::FoxgloveFlatbufferCompressedImage => {
+            crate::img2yuv::flatbuffer::decode_compressed_image(data)
+                .map_err(|e| VideoEncodeError::Decode(e.to_string()))
+        }
+        #[cfg(feature = "img2yuv-flatbuffer")]
+        VideoInputSchema::FoxgloveFlatbufferRawImage => {
+            crate::img2yuv::flatbuffer::decode_raw_image(data)
+                .map_err(|e| VideoEncodeError::Decode(e.to_string()))
+        }
+        #[cfg(feature = "img2yuv-omgidl")]
+        VideoInputSchema::FoxgloveOmgidlCompressedImage => {
+            let msg = crate::img2yuv::omgidl::OmgidlCompressedImage::decode(data)
+                .map_err(|e| VideoEncodeError::Decode(e.to_string()))?;
+            ImageMessage::try_from(msg).map_err(|e| VideoEncodeError::Decode(e.to_string()))
+        }
+        #[cfg(feature = "img2yuv-omgidl")]
+        VideoInputSchema::FoxgloveOmgidlRawImage => {
+            let msg = crate::img2yuv::omgidl::OmgidlRawImage::decode(data)
+                .map_err(|e| VideoEncodeError::Decode(e.to_string()))?;
+            ImageMessage::try_from(msg).map_err(|e| VideoEncodeError::Decode(e.to_string()))
+        }
         #[cfg(feature = "img2yuv-ros1")]
         VideoInputSchema::Ros1CompressedImage => {
             let msg = crate::img2yuv::ros1::Ros1CompressedImage::decode(data)
@@ -384,6 +448,45 @@ mod tests {
         assert_eq!(
             detect_video_schema("cdr", "sensor_msgs/msg/Image"),
             Some(VideoInputSchema::Ros2Image)
+        );
+    }
+
+    #[cfg(feature = "img2yuv-json")]
+    #[test]
+    fn test_foxglove_json_images() {
+        assert_eq!(
+            detect_video_schema("json", "foxglove.CompressedImage"),
+            Some(VideoInputSchema::FoxgloveJsonCompressedImage)
+        );
+        assert_eq!(
+            detect_video_schema("json", "foxglove.RawImage"),
+            Some(VideoInputSchema::FoxgloveJsonRawImage)
+        );
+    }
+
+    #[cfg(feature = "img2yuv-flatbuffer")]
+    #[test]
+    fn test_foxglove_flatbuffer_images() {
+        assert_eq!(
+            detect_video_schema("flatbuffer", "foxglove.CompressedImage"),
+            Some(VideoInputSchema::FoxgloveFlatbufferCompressedImage)
+        );
+        assert_eq!(
+            detect_video_schema("flatbuffer", "foxglove.RawImage"),
+            Some(VideoInputSchema::FoxgloveFlatbufferRawImage)
+        );
+    }
+
+    #[cfg(feature = "img2yuv-omgidl")]
+    #[test]
+    fn test_foxglove_omgidl_images() {
+        assert_eq!(
+            detect_video_schema("cdr", "foxglove::CompressedImage"),
+            Some(VideoInputSchema::FoxgloveOmgidlCompressedImage)
+        );
+        assert_eq!(
+            detect_video_schema("cdr", "foxglove::RawImage"),
+            Some(VideoInputSchema::FoxgloveOmgidlRawImage)
         );
     }
 
