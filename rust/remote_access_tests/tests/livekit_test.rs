@@ -497,7 +497,7 @@ async fn livekit_video_channel_has_video_track_metadata() -> Result<()> {
 }
 
 /// Test that a video-capable channel opted out via the gateway's `suppress_video_transcode`
-/// classifier is advertised WITHOUT `foxglove.hasVideoTrack` (so the app takes the data track,
+/// predicate is advertised WITHOUT `foxglove.hasVideoTrack` (so the app takes the data track,
 /// e.g. for compressed depth maps), while an equivalent channel without the opt-out still
 /// advertises the video track.
 #[traced_test]
