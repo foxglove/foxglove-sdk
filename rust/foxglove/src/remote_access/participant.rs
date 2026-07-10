@@ -7,13 +7,14 @@ pub(super) use registry::ParticipantRegistry;
 
 use std::collections::HashSet;
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use bytes::Bytes;
 use livekit::{
     ByteStreamWriter, StreamWriter,
     id::{ParticipantIdentity, ParticipantSid},
 };
+use tokio::time::Instant;
 use tokio_util::sync::CancellationToken;
 
 use crate::protocol::v2::server::FetchAssetResponse;

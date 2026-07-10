@@ -84,8 +84,10 @@ pub(super) const DEFAULT_MESSAGE_BACKLOG_SIZE: usize = 1024;
 
 /// Interval at which the Foxglove app sends `Ping` control messages to the
 /// device. Not negotiated over the protocol; this mirrors the app-side
-/// cadence (`PING_INTERVAL_MS` in `FoxgloveRemoteAccessClient`) and is only
-/// used to size the inactivity timeout below.
+/// cadence (`PING_INTERVAL_MS` in
+/// `app/packages/viz/src/players/FoxgloveWebSocketPlayer/FoxgloveRemoteAccessClient.ts`)
+/// and is only used to size the inactivity timeout below. Keep both values in
+/// sync.
 const APP_PING_INTERVAL: Duration = Duration::from_secs(3);
 
 /// A participant that has sent no control-plane messages for this long
@@ -106,11 +108,29 @@ const APP_PING_INTERVAL: Duration = Duration::from_secs(3);
 const PARTICIPANT_INACTIVITY_TIMEOUT: Duration = APP_PING_INTERVAL.saturating_mul(20);
 
 /// When a participant's silence reaches this threshold (one ping interval
-/// before the inactivity kick), a status error is sent telling it the
-/// connection is too poor to continue — early enough that the message has a
-/// chance to be delivered before the participant is removed.
+/// before the inactivity kick), a status error is sent explaining that no
+/// messages were received for 1 minute and the session is disconnecting —
+/// early enough that the message has a chance to be delivered before the
+/// participant is removed.
 const PARTICIPANT_INACTIVITY_WARNING_THRESHOLD: Duration =
     PARTICIPANT_INACTIVITY_TIMEOUT.saturating_sub(APP_PING_INTERVAL);
+
+fn apply_participant_inactivity_policy(
+    participants: impl IntoIterator<Item = Arc<Participant>>,
+    mut on_warning: impl FnMut(&Participant, Duration),
+    mut on_remove: impl FnMut(&Participant, Duration),
+) {
+    for participant in participants {
+        let elapsed = participant.last_message_elapsed();
+        if elapsed >= PARTICIPANT_INACTIVITY_TIMEOUT {
+            on_remove(&participant, elapsed);
+        } else if elapsed >= PARTICIPANT_INACTIVITY_WARNING_THRESHOLD
+            && participant.claim_inactivity_warning()
+        {
+            on_warning(&participant, elapsed);
+        }
+    }
+}
 
 #[derive(Debug, PartialEq, Eq)]
 enum ResetLivenessPolicy {
@@ -1770,9 +1790,15 @@ impl RemoteAccessSession {
     /// Once the last participant is removed, the idle countdown in
     /// `handle_room_events` returns the device to the dormant watch phase.
     fn sweep_inactive_participants(self: &Arc<Self>) {
-        for participant in self.participant_registry.collect_participants() {
-            let elapsed = participant.last_message_elapsed();
-            if elapsed >= PARTICIPANT_INACTIVITY_TIMEOUT {
+        apply_participant_inactivity_policy(
+            self.participant_registry.collect_participants(),
+            |participant, _elapsed| {
+                self.send_error(
+                    participant,
+                    "No messages received for 1 minute, disconnecting".to_string(),
+                );
+            },
+            |participant, elapsed| {
                 warn!(
                     remote_access_session_id = self.remote_access_session_id(),
                     participant_identity = %participant.participant_id(),
@@ -1782,19 +1808,8 @@ impl RemoteAccessSession {
                      removing it from the session",
                 );
                 self.remove_participant(participant.participant_sid());
-            } else if elapsed >= PARTICIPANT_INACTIVITY_WARNING_THRESHOLD
-                && participant.claim_inactivity_warning()
-            {
-                self.send_error(
-                    &participant,
-                    format!(
-                        "Connection is too poor to continue the session \
-                         (no messages received for {}s); disconnecting",
-                        elapsed.as_secs()
-                    ),
-                );
-            }
-        }
+            },
+        );
     }
 
     /// Periodically logs session statistics for monitoring and debugging.
@@ -2530,6 +2545,71 @@ mod tests {
             cancel,
         ));
         (participant, rx)
+    }
+
+    fn apply_test_inactivity_policy(
+        participant: &Arc<Participant>,
+    ) -> (Vec<Duration>, Vec<ParticipantSid>) {
+        let mut warnings = Vec::new();
+        let mut removals = Vec::new();
+        apply_participant_inactivity_policy(
+            [participant.clone()],
+            |_participant, elapsed| warnings.push(elapsed),
+            |participant, _elapsed| removals.push(participant.participant_sid().clone()),
+        );
+        (warnings, removals)
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn inactivity_policy_warns_once_then_removes_at_timeout() {
+        let (participant, _rx) = make_participant_with_rx("alice");
+
+        tokio::time::advance(PARTICIPANT_INACTIVITY_WARNING_THRESHOLD - Duration::from_millis(1))
+            .await;
+        assert_eq!(
+            apply_test_inactivity_policy(&participant),
+            (Vec::new(), Vec::new()),
+        );
+
+        tokio::time::advance(Duration::from_millis(1)).await;
+        let (warnings, removals) = apply_test_inactivity_policy(&participant);
+        assert_eq!(warnings, [PARTICIPANT_INACTIVITY_WARNING_THRESHOLD]);
+        assert!(removals.is_empty());
+
+        let (warnings, removals) = apply_test_inactivity_policy(&participant);
+        assert!(warnings.is_empty(), "warning must only be sent once");
+        assert!(removals.is_empty());
+
+        tokio::time::advance(
+            PARTICIPANT_INACTIVITY_TIMEOUT - PARTICIPANT_INACTIVITY_WARNING_THRESHOLD,
+        )
+        .await;
+        let (warnings, removals) = apply_test_inactivity_policy(&participant);
+        assert!(warnings.is_empty());
+        assert_eq!(removals, [participant.participant_sid().clone()]);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn inbound_message_restarts_inactivity_warning_and_removal_deadlines() {
+        let (participant, _rx) = make_participant_with_rx("alice");
+
+        tokio::time::advance(PARTICIPANT_INACTIVITY_WARNING_THRESHOLD).await;
+        let (warnings, removals) = apply_test_inactivity_policy(&participant);
+        assert_eq!(warnings, [PARTICIPANT_INACTIVITY_WARNING_THRESHOLD]);
+        assert!(removals.is_empty());
+
+        participant.touch_last_message();
+        tokio::time::advance(PARTICIPANT_INACTIVITY_WARNING_THRESHOLD - Duration::from_millis(1))
+            .await;
+        assert_eq!(
+            apply_test_inactivity_policy(&participant),
+            (Vec::new(), Vec::new()),
+        );
+
+        tokio::time::advance(Duration::from_millis(1)).await;
+        let (warnings, removals) = apply_test_inactivity_policy(&participant);
+        assert_eq!(warnings, [PARTICIPANT_INACTIVITY_WARNING_THRESHOLD]);
+        assert!(removals.is_empty());
     }
 
     #[test]

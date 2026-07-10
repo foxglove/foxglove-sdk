@@ -598,7 +598,7 @@ mod tests {
 
     /// Re-opening a control stream for the same LiveKit connection instance
     /// must not restart its inactivity clock or warning state.
-    #[tokio::test]
+    #[tokio::test(start_paused = true)]
     async fn same_instance_reset_shares_liveness_state() {
         let registry = make_registry();
         let cancel = CancellationToken::new();
@@ -615,8 +615,7 @@ mod tests {
         );
         let original = registry.get_participant(&id).expect("present");
         assert!(original.claim_inactivity_warning());
-        original.liveness.lock().last_message_at =
-            std::time::Instant::now() - std::time::Duration::from_secs(60);
+        tokio::time::advance(std::time::Duration::from_secs(60)).await;
         assert!(registry.remove_participant(&sid).is_some());
 
         let _ = registry.register_participant_inheriting_liveness(
@@ -679,7 +678,7 @@ mod tests {
 
     /// `touch_last_message` must refresh the liveness clock the inactivity
     /// sweep reads.
-    #[tokio::test]
+    #[tokio::test(start_paused = true)]
     async fn touch_last_message_refreshes_liveness_clock() {
         let registry = make_registry();
         let cancel = CancellationToken::new();
@@ -695,7 +694,7 @@ mod tests {
         );
         let participant = registry.get_participant(&id).expect("present");
 
-        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        tokio::time::advance(std::time::Duration::from_millis(50)).await;
         assert!(participant.last_message_elapsed() >= std::time::Duration::from_millis(50));
 
         participant.touch_last_message();
