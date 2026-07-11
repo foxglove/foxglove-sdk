@@ -1599,7 +1599,7 @@ bool FoxgloveBridge::shouldSuppressRemoteAccessVideoTranscode(
   const foxglove::ChannelDescriptor& channel) {
   const auto schema = channel.schema();
   const std::string_view schemaName = schema ? std::string_view(schema->name) : std::string_view();
-  if (!isCompressedDepthTopic(schemaName, channel.topic())) {
+  if (!isCompressedDepthChannel(schemaName, channel.topic())) {
     return false;
   }
   const std::string topic(channel.topic());

@@ -66,14 +66,14 @@ inline std::vector<std::string> splitMessageDefinitions(std::istream& stream) {
   return definitions;
 }
 
-/// Returns true if a channel carries ROS compressed depth images, which must not be transcoded
-/// to video over remote access (their pixel values encode depth). The
-/// `compressed_depth_image_transport` transport publishes depth maps as
-/// `sensor_msgs/msg/CompressedImage` on a `.../compressedDepth` topic.
-inline bool isCompressedDepthTopic(std::string_view schemaName, std::string_view topic) {
+/// Returns true if a channel carries ROS compressed depth images, which must not be transcoded to
+/// video over remote access. The `compressed_depth_image_transport` transport publishes depth maps
+/// as `sensor_msgs/msg/CompressedImage` on a `.../compressedDepth` topic.
+inline bool isCompressedDepthChannel(std::string_view schemaName, std::string_view topic) {
+  constexpr std::string_view schema = "sensor_msgs/msg/CompressedImage";
   constexpr char suffix[] = "/compressedDepth";
   constexpr size_t suffixLen = sizeof(suffix) - 1;
-  return schemaName == "sensor_msgs/msg/CompressedImage" && topic.size() >= suffixLen &&
+  return schemaName == schema && topic.size() >= suffixLen &&
          topic.compare(topic.size() - suffixLen, suffixLen, suffix) == 0;
 }
 

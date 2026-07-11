@@ -5,7 +5,7 @@
 
 #include <foxglove_bridge/utils.hpp>
 
-using foxglove_bridge::isCompressedDepthTopic;
+using foxglove_bridge::isCompressedDepthChannel;
 using foxglove_bridge::saturatingToSizeT;
 
 TEST(saturatingToSizeTTest, InRangeValuesPassThrough) {
@@ -49,23 +49,24 @@ TEST(saturatingToSizeTTest, ValueAtSizeTMaxIsPreserved) {
   }
 }
 
-TEST(IsCompressedDepthTopicTest, MatchesRosCompressedDepthTransport) {
-  EXPECT_TRUE(isCompressedDepthTopic("sensor_msgs/msg/CompressedImage",
-                                     "/camera/depth/image_raw/compressedDepth"));
+TEST(IsCompressedDepthChannelTest, MatchesRosCompressedDepthTransport) {
+  EXPECT_TRUE(isCompressedDepthChannel("sensor_msgs/msg/CompressedImage",
+                                       "/camera/depth/image_raw/compressedDepth"));
 }
 
-TEST(IsCompressedDepthTopicTest, RejectsRegularCompressedImage) {
+TEST(IsCompressedDepthChannelTest, RejectsRegularCompressedImage) {
   EXPECT_FALSE(
-    isCompressedDepthTopic("sensor_msgs/msg/CompressedImage", "/camera/image_raw/compressed"));
+    isCompressedDepthChannel("sensor_msgs/msg/CompressedImage", "/camera/image_raw/compressed"));
 }
 
-TEST(IsCompressedDepthTopicTest, RejectsNonCompressedImageSchema) {
+TEST(IsCompressedDepthChannelTest, RejectsNonCompressedImageSchema) {
   EXPECT_FALSE(
-    isCompressedDepthTopic("sensor_msgs/msg/Image", "/camera/depth/image_raw/compressedDepth"));
+    isCompressedDepthChannel("sensor_msgs/msg/Image", "/camera/depth/image_raw/compressedDepth"));
 }
 
-TEST(IsCompressedDepthTopicTest, RequiresSuffixNotSubstring) {
-  EXPECT_FALSE(isCompressedDepthTopic("sensor_msgs/msg/CompressedImage", "/compressedDepth/extra"));
+TEST(IsCompressedDepthChannelTest, RequiresSuffixNotSubstring) {
+  EXPECT_FALSE(
+    isCompressedDepthChannel("sensor_msgs/msg/CompressedImage", "/compressedDepth/extra"));
 }
 
 TEST(SplitDefinitionsTest, EmptyMessageDefinition) {
