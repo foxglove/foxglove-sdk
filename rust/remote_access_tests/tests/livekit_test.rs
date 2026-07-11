@@ -138,11 +138,8 @@ async fn livekit_viewer_receives_message_after_subscribe() -> Result<()> {
     Ok(())
 }
 
-/// Test that a message exceeding the configured data-track size limit is dropped
-/// at the gateway, while smaller messages on the same channel are delivered. The
-/// viewer receives the two small payloads and never the oversized one logged
-/// between them, proving the oversized message was shed at publish rather than
-/// merely delayed (FLE-592).
+/// Oversized data-track messages are dropped, surfaced as channel-scoped
+/// warnings, replayed to late subscribers, and cleared on unsubscribe/removal.
 #[traced_test]
 #[ignore]
 #[tokio::test]
@@ -197,14 +194,76 @@ async fn livekit_oversized_data_track_message_is_dropped() -> Result<()> {
          received a frame"
     );
 
-    // 3. A later small message is delivered, confirming the stream is still
-    //    healthy — the absence above was the drop, not a broken channel.
+    // The subscribed viewer is warned with a stable per-channel status id.
+    let status = viewer.expect_status().await?;
+    assert_eq!(
+        status.level,
+        foxglove::protocol::v2::server::status::Level::Warning
+    );
+    assert_eq!(
+        status.id.as_deref(),
+        Some(format!("channel-drops-{channel_id}").as_str())
+    );
+    assert!(
+        status.message.contains("per-message size limit"),
+        "unexpected status message: {}",
+        status.message
+    );
+    info!("viewer received oversized-drop status warning");
+
+    // 3. A later small message is delivered, confirming the stream is healthy.
     channel.log(b"after");
     let after = ch_reader.next_message_data().await?;
     assert_eq!(after.data.as_ref(), b"after");
     info!("oversized data-track message correctly dropped at the gateway");
 
+    let expected_status_id = format!("channel-drops-{channel_id}");
+
+    // 4. Unsubscribe clears the warning for the departing viewer.
+    viewer.send_unsubscribe(&[channel_id]).await?;
+    let unsub_clear = viewer.expect_remove_status().await?;
+    assert_eq!(
+        unsub_clear.status_ids,
+        vec![expected_status_id.clone()],
+        "unsubscribing viewer-1 should have its drop status cleared"
+    );
+    info!("unsubscribe eagerly cleared the drop status for the departing viewer");
+
+    // 5. A late subscriber receives the active warning immediately.
+    let mut viewer2 = ViewerConnection::connect(&gw.room_name, "viewer-2").await?;
+    let _server_info = viewer2.expect_server_info().await?;
+    let _advertise = viewer2.expect_advertise().await?;
+    viewer2.subscribe_and_wait(&[channel_id], &channel).await?;
+
+    let replayed = viewer2.expect_status().await?;
+    assert_eq!(
+        replayed.level,
+        foxglove::protocol::v2::server::status::Level::Warning
+    );
+    assert_eq!(replayed.id.as_deref(), Some(expected_status_id.as_str()));
+    assert!(
+        replayed.message.contains("per-message size limit"),
+        "unexpected replayed status message: {}",
+        replayed.message
+    );
+    info!("late subscriber received replayed oversized-drop status warning");
+
+    // 6. Removing the channel clears the warning for connected participants.
+    channel.close();
+    for (name, v) in [("viewer-1", &mut viewer), ("viewer-2", &mut viewer2)] {
+        let unadvertise = v.expect_unadvertise().await?;
+        assert_eq!(unadvertise.channel_ids, vec![channel_id]);
+        let removed = v.expect_remove_status().await?;
+        assert_eq!(
+            removed.status_ids,
+            vec![expected_status_id.clone()],
+            "{name} should have the drop status cleared on channel removal"
+        );
+    }
+    info!("channel removal eagerly cleared the drop status for all viewers");
+
     viewer.close().await?;
+    viewer2.close().await?;
     gw.stop().await?;
     Ok(())
 }
