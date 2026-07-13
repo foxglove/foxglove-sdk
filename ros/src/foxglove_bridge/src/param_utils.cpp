@@ -312,9 +312,10 @@ void declareParameters(rclcpp::Node* node) {
     "pass through lossy video, such as compressed depth maps. Defaults to match the "
     "'compressed_depth_image_transport' '/compressedDepth' suffix.";
   suppressVideoTranscodeTopicWhiteListDescription.read_only = true;
-  node->declare_parameter(PARAM_SUPPRESS_VIDEO_TRANSCODE_TOPIC_WHITELIST,
-                          std::vector<std::string>({".*/compressedDepth"}),
-                          suppressVideoTranscodeTopicWhiteListDescription);
+  node->declare_parameter(
+    PARAM_SUPPRESS_VIDEO_TRANSCODE_TOPIC_WHITELIST,
+    std::vector<std::string>({DEFAULT_SUPPRESS_VIDEO_TRANSCODE_TOPIC_WHITELIST}),
+    suppressVideoTranscodeTopicWhiteListDescription);
 }
 
 std::vector<std::regex> parseRegexStrings(rclcpp::Node* node,
@@ -324,8 +325,7 @@ std::vector<std::regex> parseRegexStrings(rclcpp::Node* node,
 
   for (const auto& pattern : strings) {
     try {
-      regexVector.push_back(
-        std::regex(pattern, std::regex_constants::ECMAScript | std::regex_constants::icase));
+      regexVector.push_back(compileTopicRegex(pattern));
     } catch (const std::exception& ex) {
       RCLCPP_ERROR(node->get_logger(), "Ignoring invalid regular expression '%s': %s",
                    pattern.c_str(), ex.what());

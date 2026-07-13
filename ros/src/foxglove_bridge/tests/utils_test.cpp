@@ -1,12 +1,27 @@
 #include <cstdint>
 #include <limits>
+#include <regex>
+#include <vector>
 
 #include <gtest/gtest.h>
 
+#include <foxglove_bridge/param_utils.hpp>
 #include <foxglove_bridge/utils.hpp>
 
+using foxglove_bridge::compileTopicRegex;
+using foxglove_bridge::DEFAULT_SUPPRESS_VIDEO_TRANSCODE_TOPIC_WHITELIST;
 using foxglove_bridge::isWhitelisted;
 using foxglove_bridge::saturatingToSizeT;
+
+namespace {
+// The shipped default for `suppress_video_transcode_topic_whitelist`, compiled exactly as the
+// bridge compiles every topic pattern (compileTopicRegex → ECMAScript | icase). Building the tests
+// off this — rather than a hand-copied literal — guards the actual default value AND the flags that
+// ship, so a change to either is caught here.
+std::vector<std::regex> defaultSuppressPatterns() {
+  return {compileTopicRegex(DEFAULT_SUPPRESS_VIDEO_TRANSCODE_TOPIC_WHITELIST)};
+}
+}  // namespace
 
 TEST(saturatingToSizeTTest, InRangeValuesPassThrough) {
   EXPECT_EQ(saturatingToSizeT(0), size_t{0});
@@ -54,18 +69,22 @@ TEST(saturatingToSizeTTest, ValueAtSizeTMaxIsPreserved) {
 // `isWhitelisted` matches the whole topic (`std::regex_match`), so the suffix pattern needs the
 // leading `.*`.
 TEST(SuppressVideoTranscodeDefaultPatternTest, MatchesRosCompressedDepthTransport) {
-  const std::vector<std::regex> patterns = {std::regex(".*/compressedDepth")};
-  EXPECT_TRUE(isWhitelisted("/camera/depth/image_raw/compressedDepth", patterns));
+  EXPECT_TRUE(isWhitelisted("/camera/depth/image_raw/compressedDepth", defaultSuppressPatterns()));
 }
 
 TEST(SuppressVideoTranscodeDefaultPatternTest, RejectsRegularCompressedImage) {
-  const std::vector<std::regex> patterns = {std::regex(".*/compressedDepth")};
-  EXPECT_FALSE(isWhitelisted("/camera/image_raw/compressed", patterns));
+  EXPECT_FALSE(isWhitelisted("/camera/image_raw/compressed", defaultSuppressPatterns()));
 }
 
 TEST(SuppressVideoTranscodeDefaultPatternTest, RequiresSuffixNotSubstring) {
-  const std::vector<std::regex> patterns = {std::regex(".*/compressedDepth")};
-  EXPECT_FALSE(isWhitelisted("/compressedDepth/extra", patterns));
+  EXPECT_FALSE(isWhitelisted("/compressedDepth/extra", defaultSuppressPatterns()));
+}
+
+// The bridge compiles every topic pattern case-insensitively (compileTopicRegex), so a
+// `/CompressedDepth` suffix still matches. Guards that the default is exercised with the shipped
+// flags, not a case-sensitive stand-in.
+TEST(SuppressVideoTranscodeDefaultPatternTest, MatchesCaseInsensitively) {
+  EXPECT_TRUE(isWhitelisted("/camera/depth/image_raw/CompressedDepth", defaultSuppressPatterns()));
 }
 
 TEST(SplitDefinitionsTest, EmptyMessageDefinition) {
