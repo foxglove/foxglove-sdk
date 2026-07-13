@@ -674,10 +674,10 @@ struct Duration {
 
 /// @brief A discrete event that occurred over a time range
 struct Event {
-  /// @brief Event start time
+  /// @brief Event start time (inclusive)
   std::optional<Timestamp> start_time;
 
-  /// @brief Event end time
+  /// @brief Event end time (inclusive)
   std::optional<Timestamp> end_time;
 
   /// @brief Additional key-value metadata. Keys must be unique.

@@ -936,7 +936,7 @@ export const Event = {
           "maximum": 999999999
         }
       },
-      "description": "Event start time"
+      "description": "Event start time (inclusive)"
     },
     "end_time": {
       "type": "object",
@@ -952,7 +952,7 @@ export const Event = {
           "maximum": 999999999
         }
       },
-      "description": "Event end time"
+      "description": "Event end time (inclusive)"
     },
     "metadata": {
       "type": "array",

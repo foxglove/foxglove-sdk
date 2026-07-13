@@ -362,10 +362,10 @@ import { Time } from "./Time";
 
 /** A discrete event that occurred over a time range */
 export type Event = {
-  /** Event start time */
+  /** Event start time (inclusive) */
   start_time: Time;
 
-  /** Event end time */
+  /** Event end time (inclusive) */
   end_time: Time;
 
   /** Additional key-value metadata. Keys must be unique. */

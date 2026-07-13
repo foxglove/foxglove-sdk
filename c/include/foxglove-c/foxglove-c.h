@@ -1135,11 +1135,11 @@ typedef struct foxglove_cube_primitive {
  */
 typedef struct foxglove_event {
   /**
-   * Event start time
+   * Event start time (inclusive)
    */
   const struct foxglove_timestamp *start_time;
   /**
-   * Event end time
+   * Event end time (inclusive)
    */
   const struct foxglove_timestamp *end_time;
   /**

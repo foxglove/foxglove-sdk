@@ -332,12 +332,12 @@ const Event: FoxgloveMessageSchema = {
     {
       name: "start_time",
       type: { type: "nested", schema: Timestamp },
-      description: "Event start time",
+      description: "Event start time (inclusive)",
     },
     {
       name: "end_time",
       type: { type: "nested", schema: Timestamp },
-      description: "Event end time",
+      description: "Event end time (inclusive)",
     },
     {
       name: "metadata",

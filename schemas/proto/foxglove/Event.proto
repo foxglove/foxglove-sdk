@@ -9,10 +9,10 @@ package foxglove;
 
 // A discrete event that occurred over a time range
 message Event {
-  // Event start time
+  // Event start time (inclusive)
   google.protobuf.Timestamp start_time = 1;
 
-  // Event end time
+  // Event end time (inclusive)
   google.protobuf.Timestamp end_time = 2;
 
   // Additional key-value metadata. Keys must be unique.

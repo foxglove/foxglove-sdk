@@ -1064,7 +1064,7 @@ A discrete event that occurred over a time range
 </td>
 <td>
 
-Event start time
+Event start time (inclusive)
 
 </td>
 </tr>
@@ -1077,7 +1077,7 @@ Event start time
 </td>
 <td>
 
-Event end time
+Event end time (inclusive)
 
 </td>
 </tr>

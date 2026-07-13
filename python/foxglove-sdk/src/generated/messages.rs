@@ -979,8 +979,8 @@ impl From<CubePrimitive> for foxglove::messages::CubePrimitive {
 
 /// A discrete event that occurred over a time range
 ///
-/// :param start_time: Event start time
-/// :param end_time: Event end time
+/// :param start_time: Event start time (inclusive)
+/// :param end_time: Event end time (inclusive)
 /// :param metadata: Additional key-value metadata. Keys must be unique.
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/event

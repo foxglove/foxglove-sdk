@@ -1928,10 +1928,10 @@ pub unsafe extern "C" fn foxglove_cube_primitive_encode(
 /// A discrete event that occurred over a time range
 #[repr(C)]
 pub struct Event {
-    /// Event start time
+    /// Event start time (inclusive)
     pub start_time: *const FoxgloveTimestamp,
 
-    /// Event end time
+    /// Event end time (inclusive)
     pub end_time: *const FoxgloveTimestamp,
 
     /// Additional key-value metadata. Keys must be unique.

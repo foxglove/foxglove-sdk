@@ -316,10 +316,10 @@ pub struct CylinderPrimitive {
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Event {
-    /// Event start time
+    /// Event start time (inclusive)
     #[prost(message, optional, tag = "1")]
     pub start_time: ::core::option::Option<crate::messages::Timestamp>,
-    /// Event end time
+    /// Event end time (inclusive)
     #[prost(message, optional, tag = "2")]
     pub end_time: ::core::option::Option<crate::messages::Timestamp>,
     /// Additional key-value metadata. Keys must be unique.
