@@ -39,6 +39,8 @@ constexpr char PARAM_DEVICE_TOKEN[] = "device_token";
 constexpr char PARAM_FOXGLOVE_API_URL[] = "foxglove_api_url";
 constexpr char PARAM_VIDEO_ENCODER[] = "video_encoder";
 constexpr char PARAM_MAX_DATA_TRACK_MESSAGE_SIZE[] = "max_data_track_message_size";
+constexpr char PARAM_SUPPRESS_VIDEO_TRANSCODE_TOPIC_WHITELIST[] =
+  "suppress_video_transcode_topic_whitelist";
 
 constexpr int64_t DEFAULT_PORT = 8765;
 constexpr char DEFAULT_ADDRESS[] = "0.0.0.0";

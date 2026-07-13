@@ -392,6 +392,8 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
     gatewayOptions.callbacks.onUnsubscribe =
       std::bind(&FoxgloveBridge::gatewayUnsubscribe, this, _1, _2);
     gatewayOptions.qos_classifier = std::bind(&FoxgloveBridge::classifyRemoteAccessQos, this, _1);
+    _suppressVideoTranscodeTopicPatterns = parseRegexStrings(
+      this, this->get_parameter(PARAM_SUPPRESS_VIDEO_TRANSCODE_TOPIC_WHITELIST).as_string_array());
     gatewayOptions.suppress_video_transcode =
       std::bind(&FoxgloveBridge::shouldSuppressRemoteAccessVideoTranscode, this, _1);
 
@@ -1596,14 +1598,11 @@ foxglove::QosProfile FoxgloveBridge::classifyRemoteAccessQos(
 
 bool FoxgloveBridge::shouldSuppressRemoteAccessVideoTranscode(
   const foxglove::ChannelDescriptor& channel) {
-  const auto schema = channel.schema();
-  const std::string_view schemaName = schema ? std::string_view(schema->name) : std::string_view();
-  if (!isCompressedDepthChannel(schemaName, channel.topic())) {
+  const std::string topic(channel.topic());
+  if (!isWhitelisted(topic, _suppressVideoTranscodeTopicPatterns)) {
     return false;
   }
-  const std::string topic(channel.topic());
-  RCLCPP_INFO(this->get_logger(),
-              "Delivering compressed-depth topic \"%s\" as data (no video transcoding)",
+  RCLCPP_INFO(this->get_logger(), "Delivering topic \"%s\" as data (no video transcoding)",
               topic.c_str());
   return true;
 }

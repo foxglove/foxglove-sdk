@@ -5,7 +5,7 @@
 
 #include <foxglove_bridge/utils.hpp>
 
-using foxglove_bridge::isCompressedDepthChannel;
+using foxglove_bridge::isWhitelisted;
 using foxglove_bridge::saturatingToSizeT;
 
 TEST(saturatingToSizeTTest, InRangeValuesPassThrough) {
@@ -49,24 +49,23 @@ TEST(saturatingToSizeTTest, ValueAtSizeTMaxIsPreserved) {
   }
 }
 
-TEST(IsCompressedDepthChannelTest, MatchesRosCompressedDepthTransport) {
-  EXPECT_TRUE(isCompressedDepthChannel("sensor_msgs/msg/CompressedImage",
-                                       "/camera/depth/image_raw/compressedDepth"));
+// The default `suppress_video_transcode_topic_whitelist` pattern opts topics ending in
+// `/compressedDepth` (the `compressed_depth_image_transport` suffix) out of video transcoding.
+// `isWhitelisted` matches the whole topic (`std::regex_match`), so the suffix pattern needs the
+// leading `.*`.
+TEST(SuppressVideoTranscodeDefaultPatternTest, MatchesRosCompressedDepthTransport) {
+  const std::vector<std::regex> patterns = {std::regex(".*/compressedDepth")};
+  EXPECT_TRUE(isWhitelisted("/camera/depth/image_raw/compressedDepth", patterns));
 }
 
-TEST(IsCompressedDepthChannelTest, RejectsRegularCompressedImage) {
-  EXPECT_FALSE(
-    isCompressedDepthChannel("sensor_msgs/msg/CompressedImage", "/camera/image_raw/compressed"));
+TEST(SuppressVideoTranscodeDefaultPatternTest, RejectsRegularCompressedImage) {
+  const std::vector<std::regex> patterns = {std::regex(".*/compressedDepth")};
+  EXPECT_FALSE(isWhitelisted("/camera/image_raw/compressed", patterns));
 }
 
-TEST(IsCompressedDepthChannelTest, RejectsNonCompressedImageSchema) {
-  EXPECT_FALSE(
-    isCompressedDepthChannel("sensor_msgs/msg/Image", "/camera/depth/image_raw/compressedDepth"));
-}
-
-TEST(IsCompressedDepthChannelTest, RequiresSuffixNotSubstring) {
-  EXPECT_FALSE(
-    isCompressedDepthChannel("sensor_msgs/msg/CompressedImage", "/compressedDepth/extra"));
+TEST(SuppressVideoTranscodeDefaultPatternTest, RequiresSuffixNotSubstring) {
+  const std::vector<std::regex> patterns = {std::regex(".*/compressedDepth")};
+  EXPECT_FALSE(isWhitelisted("/compressedDepth/extra", patterns));
 }
 
 TEST(SplitDefinitionsTest, EmptyMessageDefinition) {

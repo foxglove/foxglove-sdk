@@ -134,6 +134,9 @@ private:
   std::vector<std::regex> _serviceWhitelistPatterns;
   std::vector<std::regex> _assetUriAllowlistPatterns;
   std::vector<std::regex> _bestEffortQosTopicWhiteListPatterns;
+#ifdef FOXGLOVE_REMOTE_ACCESS
+  std::vector<std::regex> _suppressVideoTranscodeTopicPatterns;
+#endif
   std::shared_ptr<ParameterInterface> _paramInterface;
   rclcpp::CallbackGroup::SharedPtr _subscriptionCallbackGroup;
   rclcpp::CallbackGroup::SharedPtr _clientPublishCallbackGroup;
