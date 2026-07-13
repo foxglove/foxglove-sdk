@@ -608,9 +608,39 @@ impl foxglove::remote_access::QosClassifier for PyQosClassifier {
     }
 }
 
+/// A video-transcode opt-out predicate wrapping a Python callable.
+///
+/// The callable should accept a `ChannelDescriptor` and return a `bool`; returning `True` delivers
+/// the channel as data rather than transcoding it to video.
+pub struct PySuppressVideoTranscode(pub Py<PyAny>);
+
+impl foxglove::remote_access::SuppressVideoTranscode for PySuppressVideoTranscode {
+    fn should_suppress(&self, channel: &foxglove::ChannelDescriptor) -> bool {
+        Python::attach(|py| {
+            let handler = self.0.clone_ref(py);
+            let descriptor = PyChannelDescriptor(channel.clone());
+            let result = handler
+                .bind(py)
+                .call((descriptor,), None)
+                .and_then(|f| f.extract::<bool>());
+
+            match result {
+                Ok(suppress) => suppress,
+                Err(err) => {
+                    tracing::error!(
+                        "Error in video-transcode opt-out predicate: {}",
+                        err.to_string()
+                    );
+                    false
+                }
+            }
+        })
+    }
+}
+
 /// Start a remote access gateway for live visualization and teleop in Foxglove.
 #[pyfunction]
-#[pyo3(signature = (*, name=None, device_token=None, capabilities=None, listener=None, supported_encodings=None, services=None, context=None, channel_filter=None, qos_classifier=None, message_backlog_size=None, foxglove_api_url=None, foxglove_api_timeout=None, video_encoder=None))]
+#[pyo3(signature = (*, name=None, device_token=None, capabilities=None, listener=None, supported_encodings=None, services=None, context=None, channel_filter=None, qos_classifier=None, suppress_video_transcode=None, message_backlog_size=None, foxglove_api_url=None, foxglove_api_timeout=None, video_encoder=None))]
 #[allow(clippy::too_many_arguments)]
 pub fn start_gateway(
     py: Python<'_>,
@@ -623,6 +653,7 @@ pub fn start_gateway(
     context: Option<PyRef<PyContext>>,
     channel_filter: Option<Py<PyAny>>,
     qos_classifier: Option<Py<PyAny>>,
+    suppress_video_transcode: Option<Py<PyAny>>,
     message_backlog_size: Option<usize>,
     foxglove_api_url: Option<String>,
     foxglove_api_timeout: Option<f64>,
@@ -667,6 +698,11 @@ pub fn start_gateway(
 
     if let Some(qos_classifier) = qos_classifier {
         gateway = gateway.qos_classifier(Arc::new(PyQosClassifier(qos_classifier)));
+    }
+
+    if let Some(suppress_video_transcode) = suppress_video_transcode {
+        gateway = gateway
+            .suppress_video_transcode(Arc::new(PySuppressVideoTranscode(suppress_video_transcode)));
     }
 
     if let Some(size) = message_backlog_size {

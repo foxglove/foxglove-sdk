@@ -1317,3 +1317,42 @@ TEST_CASE("livekit: video channel forces lossy over reliable classifier", "[inte
 
   gw.stop();
 }
+
+TEST_CASE("livekit: suppress_video_transcode opts channel out of video track", "[integration]") {
+  auto ctx = foxglove::Context::create();
+
+  // Same video-capable schema for both channels. The gateway opts /depth out by topic (advertised
+  // as data, no video track), while /camera is still transcoded to video — so the test verifies
+  // the callback's per-topic selectivity, not just that it fires.
+  auto depth_channel = foxglove::RawChannel::create(
+    "/depth", "protobuf", foxglove::Schema{"foxglove.CompressedImage", "protobuf", nullptr, 0}, ctx
+  );
+  REQUIRE(depth_channel.has_value());
+  auto camera_channel = foxglove::RawChannel::create(
+    "/camera", "protobuf", foxglove::Schema{"foxglove.CompressedImage", "protobuf", nullptr, 0}, ctx
+  );
+  REQUIRE(camera_channel.has_value());
+
+  TestGatewayOptions opts;
+  opts.suppress_video_transcode = [](const foxglove::ChannelDescriptor& ch) {
+    return std::string(ch.topic()) == "/depth";
+  };
+  auto gw = TestGateway::start_with_options(ctx, std::move(opts));
+
+  auto viewer = ViewerConnection::connect(gw.room_name, "viewer-1");
+  viewer.expect_server_info();
+
+  auto advertise = viewer.expect_advertise();
+  REQUIRE(advertise["channels"].size() == 2);
+  for (const auto& ch : advertise["channels"]) {
+    auto meta = ch.value("metadata", nlohmann::json::object());
+    if (ch["id"].get<uint64_t>() == depth_channel->id()) {
+      CHECK(!meta.contains("foxglove.hasVideoTrack"));
+    } else {
+      CHECK(ch["id"].get<uint64_t>() == camera_channel->id());
+      CHECK(meta.value("foxglove.hasVideoTrack", "") == "true");
+    }
+  }
+
+  gw.stop();
+}
