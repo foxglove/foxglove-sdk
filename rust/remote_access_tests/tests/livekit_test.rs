@@ -555,6 +555,80 @@ async fn livekit_video_channel_has_video_track_metadata() -> Result<()> {
     Ok(())
 }
 
+/// Test that a video-capable channel opted out via the gateway's `suppress_video_transcode`
+/// predicate is advertised WITHOUT `foxglove.hasVideoTrack` (so the app takes the data track,
+/// e.g. for compressed depth maps), while an equivalent channel without the opt-out still
+/// advertises the video track.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_suppress_video_transcode_opts_out_of_video_track() -> Result<()> {
+    let ctx = foxglove::Context::new();
+
+    // Same schema (foxglove.CompressedImage); the gateway opts /depth out by topic.
+    let depth_channel = ctx
+        .channel_builder("/depth")
+        .message_encoding("protobuf")
+        .schema(Schema::new(
+            "foxglove.CompressedImage",
+            "protobuf",
+            &b""[..],
+        ))
+        .build_raw()
+        .context("create depth channel")?;
+    let camera_channel = ctx
+        .channel_builder("/camera")
+        .message_encoding("protobuf")
+        .schema(Schema::new(
+            "foxglove.CompressedImage",
+            "protobuf",
+            &b""[..],
+        ))
+        .build_raw()
+        .context("create camera channel")?;
+
+    let gw = TestGateway::start_with_options(
+        &ctx,
+        TestGatewayOptions {
+            // Opt the depth channel out of video transcoding via the gateway, not metadata.
+            suppress_video_transcode: Some(Box::new(|ch: &foxglove::ChannelDescriptor| {
+                ch.topic() == "/depth"
+            })),
+            ..Default::default()
+        },
+    )
+    .await?;
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+
+    let _server_info = viewer.expect_server_info().await?;
+    let advertise = viewer.expect_advertise().await?;
+
+    assert_eq!(advertise.channels.len(), 2);
+    for ch in &advertise.channels {
+        if ch.id == u64::from(depth_channel.id()) {
+            assert!(
+                !ch.metadata.contains_key("foxglove.hasVideoTrack"),
+                "opted-out channel should not advertise a video track"
+            );
+        } else {
+            assert_eq!(ch.id, u64::from(camera_channel.id()));
+            assert_eq!(
+                ch.metadata
+                    .get("foxglove.hasVideoTrack")
+                    .map(|s| s.as_str()),
+                Some("true"),
+                "channel without opt-out should still advertise a video track"
+            );
+        }
+    }
+    info!("suppress_video_transcode opt-out validated");
+
+    viewer.close().await?;
+    gw.stop().await?;
+    Ok(())
+}
+
 /// Test that messages logged to a video-capable channel are routed through the video
 /// publisher and do NOT produce MessageData frames on the data plane.
 #[traced_test]
