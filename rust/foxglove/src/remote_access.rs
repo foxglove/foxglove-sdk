@@ -3,9 +3,9 @@
 //! # Video transcoding and the data opt-out
 //!
 //! For bandwidth-efficient live streaming, image channels are transcoded to a WebRTC video
-//! track rather than sent on the data plane: `foxglove.CompressedImage` and `foxglove.RawImage`
-//! (protobuf), and the ROS `sensor_msgs` image types. A channel with one of these schemas is
-//! advertised with a video track.
+//! track rather than sent on the data plane: the `foxglove.CompressedImage` and `foxglove.RawImage`
+//! schemas (in protobuf, JSON, FlatBuffer, or OMG IDL encoding) and the ROS `sensor_msgs` image
+//! types. A channel with one of these schemas is advertised with a video track.
 //!
 //! To deliver an image channel as data instead, opt it out with
 //! [`Gateway::suppress_video_transcode`] / [`Gateway::suppress_video_transcode_fn`]: the channel is
