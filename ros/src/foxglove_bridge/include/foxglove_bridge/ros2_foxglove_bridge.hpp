@@ -134,6 +134,9 @@ private:
   std::vector<std::regex> _serviceWhitelistPatterns;
   std::vector<std::regex> _assetUriAllowlistPatterns;
   std::vector<std::regex> _bestEffortQosTopicWhiteListPatterns;
+#ifdef FOXGLOVE_REMOTE_ACCESS
+  std::vector<std::regex> _videoTranscodeTopicDenyPatterns;
+#endif
   std::shared_ptr<ParameterInterface> _paramInterface;
   rclcpp::CallbackGroup::SharedPtr _subscriptionCallbackGroup;
   rclcpp::CallbackGroup::SharedPtr _clientPublishCallbackGroup;
@@ -275,6 +278,7 @@ private:
                             const std::byte* data, size_t dataLen);
   void gatewayConnectionStatusChanged(foxglove::RemoteAccessConnectionStatus status);
   foxglove::QosProfile classifyRemoteAccessQos(const foxglove::ChannelDescriptor& channel);
+  bool shouldSuppressRemoteAccessVideoTranscode(const foxglove::ChannelDescriptor& channel);
 #endif
 };
 

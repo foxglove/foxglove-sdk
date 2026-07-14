@@ -1,11 +1,27 @@
 #include <cstdint>
 #include <limits>
+#include <regex>
+#include <vector>
 
 #include <gtest/gtest.h>
 
+#include <foxglove_bridge/param_utils.hpp>
 #include <foxglove_bridge/utils.hpp>
 
+using foxglove_bridge::compileTopicRegex;
+using foxglove_bridge::DEFAULT_VIDEO_TRANSCODE_TOPIC_DENYLIST;
+using foxglove_bridge::matchesRegex;
 using foxglove_bridge::saturatingToSizeT;
+
+namespace {
+// The shipped default for `video_transcode_topic_denylist`, compiled exactly as the
+// bridge compiles every topic pattern (compileTopicRegex → ECMAScript | icase). Building the tests
+// off this — rather than a hand-copied literal — guards the actual default value AND the flags that
+// ship, so a change to either is caught here.
+std::vector<std::regex> defaultDenylistPatterns() {
+  return {compileTopicRegex(DEFAULT_VIDEO_TRANSCODE_TOPIC_DENYLIST)};
+}
+}  // namespace
 
 TEST(saturatingToSizeTTest, InRangeValuesPassThrough) {
   EXPECT_EQ(saturatingToSizeT(0), size_t{0});
@@ -46,6 +62,29 @@ TEST(saturatingToSizeTTest, ValueAtSizeTMaxIsPreserved) {
   } else {
     EXPECT_EQ(saturatingToSizeT(kLargeInput), std::numeric_limits<size_t>::max());
   }
+}
+
+// The default `video_transcode_topic_denylist` pattern opts topics ending in
+// `/compressedDepth` (the `compressed_depth_image_transport` suffix) out of video transcoding.
+// `matchesRegex` matches the whole topic (`std::regex_match`), so the suffix pattern needs the
+// leading `.*`.
+TEST(VideoTranscodeTopicDenylistTest, MatchesRosCompressedDepthTransport) {
+  EXPECT_TRUE(matchesRegex("/camera/depth/image_raw/compressedDepth", defaultDenylistPatterns()));
+}
+
+TEST(VideoTranscodeTopicDenylistTest, RejectsRegularCompressedImage) {
+  EXPECT_FALSE(matchesRegex("/camera/image_raw/compressed", defaultDenylistPatterns()));
+}
+
+TEST(VideoTranscodeTopicDenylistTest, RequiresSuffixNotSubstring) {
+  EXPECT_FALSE(matchesRegex("/compressedDepth/extra", defaultDenylistPatterns()));
+}
+
+// The bridge compiles every topic pattern case-insensitively (compileTopicRegex), so a
+// `/CompressedDepth` suffix still matches. Guards that the default is exercised with the shipped
+// flags, not a case-sensitive stand-in.
+TEST(VideoTranscodeTopicDenylistTest, MatchesCaseInsensitively) {
+  EXPECT_TRUE(matchesRegex("/camera/depth/image_raw/CompressedDepth", defaultDenylistPatterns()));
 }
 
 TEST(SplitDefinitionsTest, EmptyMessageDefinition) {
