@@ -168,10 +168,10 @@ ParameterList ParameterInterface::cloneParameterList(const ParameterList& other)
 }
 
 ParameterInterface::ParameterInterface(rclcpp::Node* node,
-                                       std::vector<std::regex> paramWhitelistPatterns,
+                                       std::vector<std::regex> paramAllowlistPatterns,
                                        UnresponsiveNodePolicy unresponsiveNodePolicy)
     : _node(node)
-    , _paramWhitelistPatterns(paramWhitelistPatterns)
+    , _paramAllowlistPatterns(paramAllowlistPatterns)
     , _callbackGroup(node->create_callback_group(rclcpp::CallbackGroupType::Reentrant))
     , _ignoredNodeNames({node->get_fully_qualified_name()})
     , _unresponsiveNodePolicy(unresponsiveNodePolicy) {}
@@ -297,7 +297,7 @@ void ParameterInterface::setParams(const ParameterList& parameters,
 
   rclcpp::ParameterMap paramsByNode;
   for (const auto& param : parameters) {
-    if (!matchesRegex(std::string(param.name()), _paramWhitelistPatterns)) {
+    if (!matchesRegex(std::string(param.name()), _paramAllowlistPatterns)) {
       continue;
     }
 
@@ -339,7 +339,7 @@ void ParameterInterface::subscribeParams(const std::vector<std::string_view>& pa
 
   std::unordered_set<std::string> nodesToSubscribe;
   for (const auto& paramName : paramNames) {
-    if (!matchesRegex(std::string(paramName), _paramWhitelistPatterns)) {
+    if (!matchesRegex(std::string(paramName), _paramAllowlistPatterns)) {
       continue;
     }
 
@@ -451,7 +451,7 @@ ParameterList ParameterInterface::getNodeParameters(
   ParameterList result;
   for (const auto& param : params) {
     const auto fullParamName = prependNodeNameToParamName(param.get_name(), nodeName);
-    if (matchesRegex(fullParamName, _paramWhitelistPatterns)) {
+    if (matchesRegex(fullParamName, _paramAllowlistPatterns)) {
       result.push_back(fromRosParam(rclcpp::Parameter(fullParamName, param.get_parameter_value())));
     }
   }

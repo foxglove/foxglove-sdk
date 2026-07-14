@@ -17,13 +17,13 @@ constexpr char PARAM_CERTFILE[] = "certfile";
 constexpr char PARAM_KEYFILE[] = "keyfile";
 constexpr char PARAM_MIN_QOS_DEPTH[] = "min_qos_depth";
 constexpr char PARAM_MAX_QOS_DEPTH[] = "max_qos_depth";
-constexpr char PARAM_BEST_EFFORT_QOS_TOPIC_WHITELIST[] = "best_effort_qos_topic_whitelist";
-constexpr char PARAM_TOPIC_WHITELIST[] = "topic_whitelist";
-constexpr char PARAM_SERVICE_WHITELIST[] = "service_whitelist";
-constexpr char PARAM_PARAMETER_WHITELIST[] = "param_whitelist";
+constexpr char PARAM_BEST_EFFORT_QOS_TOPIC_ALLOWLIST[] = "best_effort_qos_topic_allowlist";
+constexpr char PARAM_TOPIC_ALLOWLIST[] = "topic_allowlist";
+constexpr char PARAM_SERVICE_ALLOWLIST[] = "service_allowlist";
+constexpr char PARAM_PARAMETER_ALLOWLIST[] = "param_allowlist";
 constexpr char PARAM_USE_COMPRESSION[] = "use_compression";
 constexpr char PARAM_CAPABILITIES[] = "capabilities";
-constexpr char PARAM_CLIENT_TOPIC_WHITELIST[] = "client_topic_whitelist";
+constexpr char PARAM_CLIENT_TOPIC_ALLOWLIST[] = "client_topic_allowlist";
 constexpr char PARAM_INCLUDE_HIDDEN[] = "include_hidden";
 constexpr char PARAM_DISABLE_LOAN_MESSAGE[] = "disable_load_message";
 constexpr char PARAM_ASSET_URI_ALLOWLIST[] = "asset_uri_allowlist";
@@ -40,6 +40,16 @@ constexpr char PARAM_FOXGLOVE_API_URL[] = "foxglove_api_url";
 constexpr char PARAM_VIDEO_ENCODER[] = "video_encoder";
 constexpr char PARAM_MAX_DATA_TRACK_MESSAGE_SIZE[] = "max_data_track_message_size";
 constexpr char PARAM_VIDEO_TRANSCODE_TOPIC_DENYLIST[] = "video_transcode_topic_denylist";
+
+// Deprecated aliases for the *_allowlist parameters above. Kept so existing launch files and
+// parameter overrides using the old *_whitelist names keep working; resolved by
+// getStringArrayParamWithDeprecatedAlias.
+constexpr char PARAM_BEST_EFFORT_QOS_TOPIC_ALLOWLIST_DEPRECATED[] =
+  "best_effort_qos_topic_whitelist";
+constexpr char PARAM_TOPIC_ALLOWLIST_DEPRECATED[] = "topic_whitelist";
+constexpr char PARAM_SERVICE_ALLOWLIST_DEPRECATED[] = "service_whitelist";
+constexpr char PARAM_PARAMETER_ALLOWLIST_DEPRECATED[] = "param_whitelist";
+constexpr char PARAM_CLIENT_TOPIC_ALLOWLIST_DEPRECATED[] = "client_topic_whitelist";
 
 constexpr int64_t DEFAULT_PORT = 8765;
 constexpr char DEFAULT_ADDRESS[] = "0.0.0.0";
@@ -63,5 +73,21 @@ inline std::regex compileTopicRegex(const std::string& pattern) {
 
 std::vector<std::regex> parseRegexStrings(rclcpp::Node* node,
                                           const std::vector<std::string>& strings);
+
+/// Chooses between a string-array parameter's canonical value and the value of a deprecated alias.
+/// The deprecated alias is declared with an empty-array default that acts as an "unset" sentinel,
+/// so a non-empty `deprecated` value means the user set the old name explicitly. Returns the
+/// deprecated value when it is non-empty (and sets `usedDeprecated`); otherwise returns
+/// `canonical`.
+std::vector<std::string> resolveAliasedStringArray(const std::vector<std::string>& canonical,
+                                                   const std::vector<std::string>& deprecated,
+                                                   bool& usedDeprecated);
+
+/// Reads a string-array parameter that has a deprecated alias (both declared by declareParameters),
+/// preferring the deprecated value when the user set it and logging a deprecation warning in that
+/// case. Returns the effective value.
+std::vector<std::string> getStringArrayParamWithDeprecatedAlias(rclcpp::Node* node,
+                                                                const std::string& canonicalName,
+                                                                const std::string& deprecatedName);
 
 }  // namespace foxglove_bridge

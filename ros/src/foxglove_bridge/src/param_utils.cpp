@@ -92,44 +92,44 @@ void declareParameters(rclcpp::Node* node) {
   maxQosDepthDescription.integer_range[0].step = 1;
   node->declare_parameter(PARAM_MAX_QOS_DEPTH, DEFAULT_MAX_QOS_DEPTH, maxQosDepthDescription);
 
-  auto bestEffortQosTopicWhiteListDescription = rcl_interfaces::msg::ParameterDescriptor{};
-  bestEffortQosTopicWhiteListDescription.name = PARAM_BEST_EFFORT_QOS_TOPIC_WHITELIST;
-  bestEffortQosTopicWhiteListDescription.type =
+  auto bestEffortQosTopicAllowlistDescription = rcl_interfaces::msg::ParameterDescriptor{};
+  bestEffortQosTopicAllowlistDescription.name = PARAM_BEST_EFFORT_QOS_TOPIC_ALLOWLIST;
+  bestEffortQosTopicAllowlistDescription.type =
     rcl_interfaces::msg::ParameterType::PARAMETER_STRING_ARRAY;
-  bestEffortQosTopicWhiteListDescription.description =
+  bestEffortQosTopicAllowlistDescription.description =
     "List of regular expressions (ECMAScript) for topics that should be forced to use "
     "'best_effort' QoS. Unmatched topics will use 'reliable' QoS if ALL publishers are 'reliable', "
     "'best_effort' if any publishers are 'best_effort'.";
-  bestEffortQosTopicWhiteListDescription.read_only = true;
-  node->declare_parameter(PARAM_BEST_EFFORT_QOS_TOPIC_WHITELIST, std::vector<std::string>({"(?!)"}),
-                          bestEffortQosTopicWhiteListDescription);
+  bestEffortQosTopicAllowlistDescription.read_only = true;
+  node->declare_parameter(PARAM_BEST_EFFORT_QOS_TOPIC_ALLOWLIST, std::vector<std::string>({"(?!)"}),
+                          bestEffortQosTopicAllowlistDescription);
 
-  auto topicWhiteListDescription = rcl_interfaces::msg::ParameterDescriptor{};
-  topicWhiteListDescription.name = PARAM_TOPIC_WHITELIST;
-  topicWhiteListDescription.type = rcl_interfaces::msg::ParameterType::PARAMETER_STRING_ARRAY;
-  topicWhiteListDescription.description =
-    "List of regular expressions (ECMAScript) of whitelisted topic names.";
-  topicWhiteListDescription.read_only = true;
-  node->declare_parameter(PARAM_TOPIC_WHITELIST, std::vector<std::string>({".*"}),
-                          topicWhiteListDescription);
+  auto topicAllowlistDescription = rcl_interfaces::msg::ParameterDescriptor{};
+  topicAllowlistDescription.name = PARAM_TOPIC_ALLOWLIST;
+  topicAllowlistDescription.type = rcl_interfaces::msg::ParameterType::PARAMETER_STRING_ARRAY;
+  topicAllowlistDescription.description =
+    "List of regular expressions (ECMAScript) of allowed topic names.";
+  topicAllowlistDescription.read_only = true;
+  node->declare_parameter(PARAM_TOPIC_ALLOWLIST, std::vector<std::string>({".*"}),
+                          topicAllowlistDescription);
 
-  auto serviceWhiteListDescription = rcl_interfaces::msg::ParameterDescriptor{};
-  serviceWhiteListDescription.name = PARAM_SERVICE_WHITELIST;
-  serviceWhiteListDescription.type = rcl_interfaces::msg::ParameterType::PARAMETER_STRING_ARRAY;
-  serviceWhiteListDescription.description =
-    "List of regular expressions (ECMAScript) of whitelisted service names.";
-  serviceWhiteListDescription.read_only = true;
-  node->declare_parameter(PARAM_SERVICE_WHITELIST, std::vector<std::string>({".*"}),
-                          serviceWhiteListDescription);
+  auto serviceAllowlistDescription = rcl_interfaces::msg::ParameterDescriptor{};
+  serviceAllowlistDescription.name = PARAM_SERVICE_ALLOWLIST;
+  serviceAllowlistDescription.type = rcl_interfaces::msg::ParameterType::PARAMETER_STRING_ARRAY;
+  serviceAllowlistDescription.description =
+    "List of regular expressions (ECMAScript) of allowed service names.";
+  serviceAllowlistDescription.read_only = true;
+  node->declare_parameter(PARAM_SERVICE_ALLOWLIST, std::vector<std::string>({".*"}),
+                          serviceAllowlistDescription);
 
-  auto paramWhiteListDescription = rcl_interfaces::msg::ParameterDescriptor{};
-  paramWhiteListDescription.name = PARAM_PARAMETER_WHITELIST;
-  paramWhiteListDescription.type = rcl_interfaces::msg::ParameterType::PARAMETER_STRING_ARRAY;
-  paramWhiteListDescription.description =
-    "List of regular expressions (ECMAScript) of whitelisted parameter names.";
-  paramWhiteListDescription.read_only = true;
-  node->declare_parameter(PARAM_PARAMETER_WHITELIST, std::vector<std::string>({".*"}),
-                          paramWhiteListDescription);
+  auto paramAllowlistDescription = rcl_interfaces::msg::ParameterDescriptor{};
+  paramAllowlistDescription.name = PARAM_PARAMETER_ALLOWLIST;
+  paramAllowlistDescription.type = rcl_interfaces::msg::ParameterType::PARAMETER_STRING_ARRAY;
+  paramAllowlistDescription.description =
+    "List of regular expressions (ECMAScript) of allowed parameter names.";
+  paramAllowlistDescription.read_only = true;
+  node->declare_parameter(PARAM_PARAMETER_ALLOWLIST, std::vector<std::string>({".*"}),
+                          paramAllowlistDescription);
 
   auto useCompressionDescription = rcl_interfaces::msg::ParameterDescriptor{};
   useCompressionDescription.name = PARAM_USE_COMPRESSION;
@@ -150,14 +150,32 @@ void declareParameters(rclcpp::Node* node) {
                             DEFAULT_CAPABILITIES.begin(), DEFAULT_CAPABILITIES.end())),
                           paramCapabilities);
 
-  auto clientTopicWhiteListDescription = rcl_interfaces::msg::ParameterDescriptor{};
-  clientTopicWhiteListDescription.name = PARAM_CLIENT_TOPIC_WHITELIST;
-  clientTopicWhiteListDescription.type = rcl_interfaces::msg::ParameterType::PARAMETER_STRING_ARRAY;
-  clientTopicWhiteListDescription.description =
-    "List of regular expressions (ECMAScript) of whitelisted client-published topic names.";
-  clientTopicWhiteListDescription.read_only = true;
-  node->declare_parameter(PARAM_CLIENT_TOPIC_WHITELIST, std::vector<std::string>({".*"}),
-                          paramWhiteListDescription);
+  auto clientTopicAllowlistDescription = rcl_interfaces::msg::ParameterDescriptor{};
+  clientTopicAllowlistDescription.name = PARAM_CLIENT_TOPIC_ALLOWLIST;
+  clientTopicAllowlistDescription.type = rcl_interfaces::msg::ParameterType::PARAMETER_STRING_ARRAY;
+  clientTopicAllowlistDescription.description =
+    "List of regular expressions (ECMAScript) of allowed client-published topic names.";
+  clientTopicAllowlistDescription.read_only = true;
+  node->declare_parameter(PARAM_CLIENT_TOPIC_ALLOWLIST, std::vector<std::string>({".*"}),
+                          paramAllowlistDescription);
+
+  // Deprecated *_whitelist aliases for the *_allowlist parameters above. Declared with an
+  // empty-array default that acts as an "unset" sentinel (see
+  // getStringArrayParamWithDeprecatedAlias).
+  auto declareDeprecatedAlias = [node](const char* deprecatedName, const char* canonicalName) {
+    auto descriptor = rcl_interfaces::msg::ParameterDescriptor{};
+    descriptor.name = deprecatedName;
+    descriptor.type = rcl_interfaces::msg::ParameterType::PARAMETER_STRING_ARRAY;
+    descriptor.description = "Deprecated: use '" + std::string(canonicalName) + "' instead.";
+    descriptor.read_only = true;
+    node->declare_parameter(deprecatedName, std::vector<std::string>{}, descriptor);
+  };
+  declareDeprecatedAlias(PARAM_BEST_EFFORT_QOS_TOPIC_ALLOWLIST_DEPRECATED,
+                         PARAM_BEST_EFFORT_QOS_TOPIC_ALLOWLIST);
+  declareDeprecatedAlias(PARAM_TOPIC_ALLOWLIST_DEPRECATED, PARAM_TOPIC_ALLOWLIST);
+  declareDeprecatedAlias(PARAM_SERVICE_ALLOWLIST_DEPRECATED, PARAM_SERVICE_ALLOWLIST);
+  declareDeprecatedAlias(PARAM_PARAMETER_ALLOWLIST_DEPRECATED, PARAM_PARAMETER_ALLOWLIST);
+  declareDeprecatedAlias(PARAM_CLIENT_TOPIC_ALLOWLIST_DEPRECATED, PARAM_CLIENT_TOPIC_ALLOWLIST);
 
   auto includeHiddenDescription = rcl_interfaces::msg::ParameterDescriptor{};
   includeHiddenDescription.name = PARAM_INCLUDE_HIDDEN;
@@ -178,14 +196,14 @@ void declareParameters(rclcpp::Node* node) {
   assetUriAllowlistDescription.name = PARAM_ASSET_URI_ALLOWLIST;
   assetUriAllowlistDescription.type = rcl_interfaces::msg::ParameterType::PARAMETER_STRING_ARRAY;
   assetUriAllowlistDescription.description =
-    "List of regular expressions (ECMAScript) of whitelisted asset URIs.";
+    "List of regular expressions (ECMAScript) of allowed asset URIs.";
   assetUriAllowlistDescription.read_only = true;
   node->declare_parameter(
     PARAM_ASSET_URI_ALLOWLIST,
     std::vector<std::string>(
       {"^package://(?:[-\\w%]+/"
        ")*[-\\w%.]+\\.(?:dae|fbx|glb|gltf|jpeg|jpg|mtl|obj|png|stl|tif|tiff|urdf|webp|xacro)$"}),
-    paramWhiteListDescription);
+    paramAllowlistDescription);
 
   auto ignUnresponsiveParamNodes = rcl_interfaces::msg::ParameterDescriptor{};
   ignUnresponsiveParamNodes.name = PARAM_IGN_UNRESPONSIVE_PARAM_NODES;
@@ -331,6 +349,27 @@ std::vector<std::regex> parseRegexStrings(rclcpp::Node* node,
   }
 
   return regexVector;
+}
+
+std::vector<std::string> resolveAliasedStringArray(const std::vector<std::string>& canonical,
+                                                   const std::vector<std::string>& deprecated,
+                                                   bool& usedDeprecated) {
+  usedDeprecated = !deprecated.empty();
+  return usedDeprecated ? deprecated : canonical;
+}
+
+std::vector<std::string> getStringArrayParamWithDeprecatedAlias(rclcpp::Node* node,
+                                                                const std::string& canonicalName,
+                                                                const std::string& deprecatedName) {
+  bool usedDeprecated = false;
+  auto value = resolveAliasedStringArray(node->get_parameter(canonicalName).as_string_array(),
+                                         node->get_parameter(deprecatedName).as_string_array(),
+                                         usedDeprecated);
+  if (usedDeprecated) {
+    RCLCPP_WARN(node->get_logger(), "Parameter '%s' is deprecated; use '%s' instead.",
+                deprecatedName.c_str(), canonicalName.c_str());
+  }
+  return value;
 }
 
 }  // namespace foxglove_bridge

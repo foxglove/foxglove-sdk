@@ -130,10 +130,10 @@ private:
   std::unordered_map<std::string, std::unique_ptr<foxglove::ServiceHandler>> _serviceHandlers;
 
   foxglove_bridge::MessageDefinitionCache _messageDefinitionCache;
-  std::vector<std::regex> _topicWhitelistPatterns;
-  std::vector<std::regex> _serviceWhitelistPatterns;
+  std::vector<std::regex> _topicAllowlistPatterns;
+  std::vector<std::regex> _serviceAllowlistPatterns;
   std::vector<std::regex> _assetUriAllowlistPatterns;
-  std::vector<std::regex> _bestEffortQosTopicWhiteListPatterns;
+  std::vector<std::regex> _bestEffortQosTopicAllowlistPatterns;
 #ifdef FOXGLOVE_REMOTE_ACCESS
   std::vector<std::regex> _videoTranscodeTopicDenyPatterns;
 #endif

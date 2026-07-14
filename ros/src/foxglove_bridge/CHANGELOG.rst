@@ -17,7 +17,7 @@ Changelog for package foxglove_bridge
 ------------------
 * Fix an issue where the ``parameters`` implementation would occasionally stall message forwarding for several seconds
 * Fix an issue where the bridge was not refcounting parameter subscriptions properly when a WebSocket server and Remote Access gateway were simultaneously in use
-* Fix an issue where the parameter whitelist would randomly prevent subscribing to or setting unrelated parameters
+* Fix an issue where the parameter whitelist would randomly prevent subscribing to or setting unrelated parameters [edit: the parameter is now called ``param_allowlist``]
 * Add ``message_backlog_size`` option to configure the outgoing message buffer
 * Update Foxglove SDK version to 0.25.0
 
@@ -82,7 +82,7 @@ Changelog for package foxglove_bridge
 
 0.8.3 (2025-02-03)
 ------------------
-* add best_effort_qos_topic_whitelist param (`#329 <https://github.com/foxglove/ros-foxglove-bridge/issues/329>`_)
+* add best_effort_qos_topic_whitelist param (`#329 <https://github.com/foxglove/ros-foxglove-bridge/issues/329>`_) [edit: now called ``best_effort_qos_topic_allowlist``]
 * Add missing functional include in message_definition_cache.cpp (`#334 <https://github.com/foxglove/ros-foxglove-bridge/issues/334>`_)
 * Contributors: David Revay, Silvio Traversaro
 
@@ -149,7 +149,7 @@ Changelog for package foxglove_bridge
 
 0.7.3 (2023-10-25)
 ------------------
-* Fix `asset_uri_whitelist` regex backtracking issue, add more extensions (`#270 <https://github.com/foxglove/ros-foxglove-bridge/issues/270>`_)
+* Fix `asset_uri_whitelist` regex backtracking issue, add more extensions (`#270 <https://github.com/foxglove/ros-foxglove-bridge/issues/270>`_) [edit: now called ``asset_uri_allowlist``]
 * [ROS1] Fix callback accessing invalid reference to promise (`#268 <https://github.com/foxglove/ros-foxglove-bridge/issues/268>`_)
 * Contributors: Hans-Joachim Krauch
 
@@ -241,7 +241,7 @@ Changelog for package foxglove_bridge
 * Add support for `schemaEncoding` field (`#186 <https://github.com/foxglove/ros-foxglove-bridge/issues/186>`_)
 * Use QoS profile of existing publishers (if available) when creating new publishers (`#184 <https://github.com/foxglove/ros-foxglove-bridge/issues/184>`_)
 * Make server more independent of given server configurations (`#185 <https://github.com/foxglove/ros-foxglove-bridge/issues/185>`_)
-* Add parameter `client_topic_whitelist` for whitelisting client-published topics (`#181 <https://github.com/foxglove/ros-foxglove-bridge/issues/181>`_)
+* Add parameter `client_topic_whitelist` for whitelisting client-published topics (`#181 <https://github.com/foxglove/ros-foxglove-bridge/issues/181>`_) [edit: now called ``client_topic_allowlist``]
 * Make server capabilities configurable (`#182 <https://github.com/foxglove/ros-foxglove-bridge/issues/182>`_)
 * Fix action topic log spam (`#179 <https://github.com/foxglove/ros-foxglove-bridge/issues/179>`_)
 * Remove (clang specific) compiler flag -Wmost (`#177 <https://github.com/foxglove/ros-foxglove-bridge/issues/177>`_)
@@ -301,7 +301,7 @@ Changelog for package foxglove_bridge
 0.2.2 (2022-12-12)
 ------------------
 * Fix messages not being received anymore after unadvertising a client publication (`#109 <https://github.com/foxglove/ros-foxglove-bridge/issues/109>`_)
-* Allow to whitelist topics via a ROS paramater (`#108 <https://github.com/foxglove/ros-foxglove-bridge/issues/108>`_)
+* Allow to whitelist topics via a ROS paramater (`#108 <https://github.com/foxglove/ros-foxglove-bridge/issues/108>`_) [edit: the parameter is now called ``topic_allowlist``]
 * Contributors: Hans-Joachim Krauch
 
 0.2.1 (2022-12-05)

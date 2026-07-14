@@ -153,20 +153,23 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
   const bool useTls = this->get_parameter(PARAM_USETLS).as_bool();
   const std::string certfile = this->get_parameter(PARAM_CERTFILE).as_string();
   const std::string keyfile = this->get_parameter(PARAM_KEYFILE).as_string();
-  const auto bestEffortQosTopicWhiteList =
-    this->get_parameter(PARAM_BEST_EFFORT_QOS_TOPIC_WHITELIST).as_string_array();
-  _bestEffortQosTopicWhiteListPatterns = parseRegexStrings(this, bestEffortQosTopicWhiteList);
-  const auto topicWhiteList = this->get_parameter(PARAM_TOPIC_WHITELIST).as_string_array();
-  _topicWhitelistPatterns = parseRegexStrings(this, topicWhiteList);
-  const auto serviceWhiteList = this->get_parameter(PARAM_SERVICE_WHITELIST).as_string_array();
-  _serviceWhitelistPatterns = parseRegexStrings(this, serviceWhiteList);
-  const auto paramWhiteList = this->get_parameter(PARAM_PARAMETER_WHITELIST).as_string_array();
-  const auto paramWhitelistPatterns = parseRegexStrings(this, paramWhiteList);
+  const auto bestEffortQosTopicAllowlist = getStringArrayParamWithDeprecatedAlias(
+    this, PARAM_BEST_EFFORT_QOS_TOPIC_ALLOWLIST, PARAM_BEST_EFFORT_QOS_TOPIC_ALLOWLIST_DEPRECATED);
+  _bestEffortQosTopicAllowlistPatterns = parseRegexStrings(this, bestEffortQosTopicAllowlist);
+  const auto topicAllowlist = getStringArrayParamWithDeprecatedAlias(
+    this, PARAM_TOPIC_ALLOWLIST, PARAM_TOPIC_ALLOWLIST_DEPRECATED);
+  _topicAllowlistPatterns = parseRegexStrings(this, topicAllowlist);
+  const auto serviceAllowlist = getStringArrayParamWithDeprecatedAlias(
+    this, PARAM_SERVICE_ALLOWLIST, PARAM_SERVICE_ALLOWLIST_DEPRECATED);
+  _serviceAllowlistPatterns = parseRegexStrings(this, serviceAllowlist);
+  const auto paramAllowlist = getStringArrayParamWithDeprecatedAlias(
+    this, PARAM_PARAMETER_ALLOWLIST, PARAM_PARAMETER_ALLOWLIST_DEPRECATED);
+  const auto paramAllowlistPatterns = parseRegexStrings(this, paramAllowlist);
   _useSimTime = this->get_parameter("use_sim_time").as_bool();
   const auto capabilities = this->get_parameter(PARAM_CAPABILITIES).as_string_array();
-  const auto clientTopicWhiteList =
-    this->get_parameter(PARAM_CLIENT_TOPIC_WHITELIST).as_string_array();
-  const auto clientTopicWhiteListPatterns = parseRegexStrings(this, clientTopicWhiteList);
+  const auto clientTopicAllowlist = getStringArrayParamWithDeprecatedAlias(
+    this, PARAM_CLIENT_TOPIC_ALLOWLIST, PARAM_CLIENT_TOPIC_ALLOWLIST_DEPRECATED);
+  const auto clientTopicAllowlistPatterns = parseRegexStrings(this, clientTopicAllowlist);
   _includeHidden = this->get_parameter(PARAM_INCLUDE_HIDDEN).as_bool();
   const auto assetUriAllowlist = this->get_parameter(PARAM_ASSET_URI_ALLOWLIST).as_string_array();
   _assetUriAllowlistPatterns = parseRegexStrings(this, assetUriAllowlist);
@@ -245,7 +248,7 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
                            sdkServerOptions.callbacks.onParametersUnsubscribe,
                            sdkServerOptions.parameter_handler);
 
-    _paramInterface = std::make_shared<ParameterInterface>(this, paramWhitelistPatterns,
+    _paramInterface = std::make_shared<ParameterInterface>(this, paramAllowlistPatterns,
                                                            ignoreUnresponsiveParamNodes
                                                              ? UnresponsiveNodePolicy::Ignore
                                                              : UnresponsiveNodePolicy::Retry);
@@ -517,8 +520,8 @@ void FoxgloveBridge::updateAdvertisedTopics(
       continue;
     }
 
-    // Ignore the topic if it is not on the topic whitelist
-    if (matchesRegex(topicName, _topicWhitelistPatterns)) {
+    // Ignore the topic if it is not on the topic allowlist
+    if (matchesRegex(topicName, _topicAllowlistPatterns)) {
       for (const auto& datatype : datatypes) {
         latestTopics.emplace(topicName, datatype);
       }
@@ -528,7 +531,7 @@ void FoxgloveBridge::updateAdvertisedTopics(
   if (const auto numIgnoredTopics = topicNamesAndTypes.size() - latestTopics.size()) {
     RCLCPP_DEBUG(
       this->get_logger(),
-      "%zu topics have been ignored as they do not match any pattern on the topic whitelist",
+      "%zu topics have been ignored as they do not match any pattern on the topic allowlist",
       numIgnoredTopics);
   }
 
@@ -690,8 +693,8 @@ void FoxgloveBridge::updateAdvertisedServices() {
       continue;
     }
 
-    // Ignore the service if it is not on the service whitelist
-    if (!matchesRegex(serviceName, _serviceWhitelistPatterns)) {
+    // Ignore the service if it is not on the service allowlist
+    if (!matchesRegex(serviceName, _serviceAllowlistPatterns)) {
       continue;
     }
 
@@ -818,7 +821,7 @@ void FoxgloveBridge::updateConnectionGraph(
 
   for (const auto& topicNameAndType : topicNamesAndTypes) {
     const auto& topicName = topicNameAndType.first;
-    if (!matchesRegex(topicName, _topicWhitelistPatterns)) {
+    if (!matchesRegex(topicName, _topicAllowlistPatterns)) {
       continue;
     }
 
@@ -851,7 +854,7 @@ void FoxgloveBridge::updateConnectionGraph(
 
     for (const auto& [serviceName, serviceTypes] : serviceNamesAndTypes) {
       (void)serviceTypes;
-      if (matchesRegex(serviceName, _serviceWhitelistPatterns)) {
+      if (matchesRegex(serviceName, _serviceAllowlistPatterns)) {
         services[serviceName].insert(fqnNodeName);
       }
     }
@@ -1497,7 +1500,7 @@ void FoxgloveBridge::fetchAsset(const std::string_view uriView,
 
 FoxgloveBridge::TopicQosInfo FoxgloveBridge::collectTopicQosInfo(const std::string& topic) {
   TopicQosInfo info;
-  info.bestEffortForced = matchesRegex(topic, _bestEffortQosTopicWhiteListPatterns);
+  info.bestEffortForced = matchesRegex(topic, _bestEffortQosTopicAllowlistPatterns);
 
   const auto publisherInfo = this->get_publishers_info_by_topic(topic);
   info.publisherCount = publisherInfo.size();
@@ -1539,7 +1542,7 @@ rclcpp::QoS FoxgloveBridge::determineQoS(const std::string& topic) {
 
   rclcpp::QoS qos{rclcpp::KeepLast(depth)};
 
-  // Force the QoS to be "best_effort" if in the whitelist
+  // Force the QoS to be "best_effort" if in the allowlist
   if (info.bestEffortForced) {
     qos.best_effort();
   } else if (info.publisherCount > 0 && info.reliableCount == info.publisherCount) {
@@ -1578,7 +1581,7 @@ rclcpp::QoS FoxgloveBridge::determineQoS(const std::string& topic) {
 foxglove::QosProfile FoxgloveBridge::classifyRemoteAccessQos(
   const foxglove::ChannelDescriptor& channel) {
   // Mirror the reliability/durability decisions made by determineQoS: a topic qualifies for a
-  // Reliable remote access profile only when it is not forced to best_effort by the whitelist
+  // Reliable remote access profile only when it is not forced to best_effort by the allowlist
   // and every publisher offers both Reliable and TransientLocal. Anything else falls back to
   // the default (lossy data-track) profile.
   foxglove::QosProfile profile;

@@ -24,7 +24,7 @@ enum class UnresponsiveNodePolicy {
 
 class ParameterInterface {
 public:
-  ParameterInterface(rclcpp::Node* node, std::vector<std::regex> paramWhitelistPatterns,
+  ParameterInterface(rclcpp::Node* node, std::vector<std::regex> paramAllowlistPatterns,
                      UnresponsiveNodePolicy unresponsiveNodePolicy);
 
   ParameterList getParams(const std::vector<std::string_view>& paramNames,
@@ -38,7 +38,7 @@ public:
 
 private:
   rclcpp::Node* _node;
-  std::vector<std::regex> _paramWhitelistPatterns;
+  std::vector<std::regex> _paramAllowlistPatterns;
   rclcpp::CallbackGroup::SharedPtr _callbackGroup;
   std::mutex _mutex;
   std::unordered_map<std::string, rclcpp::AsyncParametersClient::SharedPtr> _paramClientsByNode;
@@ -55,7 +55,6 @@ private:
   void setNodeParameters(rclcpp::AsyncParametersClient::SharedPtr paramClient,
                          const std::string& nodeName, const std::vector<rclcpp::Parameter>& params,
                          const std::chrono::duration<double>& timeout);
-  bool isWhitelistedParam(const std::string& paramName);
 };
 
 }  // namespace foxglove_bridge
