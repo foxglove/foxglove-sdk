@@ -111,7 +111,7 @@ impl<'a> TryFrom<Ros2CompressedImage<'a>> for ImageMessage<'a> {
     type Error = Ros2DecodeError;
 
     fn try_from(image: Ros2CompressedImage<'a>) -> std::result::Result<Self, Self::Error> {
-        let compression = Compression::try_from_ros_format(&image.format)?;
+        let compression = image.format.parse::<Compression>()?;
         Ok(ImageMessage {
             timestamp: Some(image.header.stamp.try_into()?),
             frame_id: image.header.frame_id.into(),

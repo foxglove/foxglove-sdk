@@ -177,7 +177,7 @@ impl<'a> TryFrom<Ros1CompressedImage<'a>> for ImageMessage<'a> {
     type Error = Ros1DecodeError;
 
     fn try_from(image: Ros1CompressedImage<'a>) -> std::result::Result<Self, Self::Error> {
-        let compression = Compression::try_from_ros_format(image.format)?;
+        let compression = image.format.parse::<Compression>()?;
         Ok(ImageMessage {
             timestamp: Some(image.header.timestamp()?),
             frame_id: image.header.frame_id.to_string(),
