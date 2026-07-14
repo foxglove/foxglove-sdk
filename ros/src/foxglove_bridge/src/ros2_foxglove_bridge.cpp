@@ -518,7 +518,7 @@ void FoxgloveBridge::updateAdvertisedTopics(
     }
 
     // Ignore the topic if it is not on the topic whitelist
-    if (isWhitelisted(topicName, _topicWhitelistPatterns)) {
+    if (matchesRegex(topicName, _topicWhitelistPatterns)) {
       for (const auto& datatype : datatypes) {
         latestTopics.emplace(topicName, datatype);
       }
@@ -691,7 +691,7 @@ void FoxgloveBridge::updateAdvertisedServices() {
     }
 
     // Ignore the service if it is not on the service whitelist
-    if (!isWhitelisted(serviceName, _serviceWhitelistPatterns)) {
+    if (!matchesRegex(serviceName, _serviceWhitelistPatterns)) {
       continue;
     }
 
@@ -818,7 +818,7 @@ void FoxgloveBridge::updateConnectionGraph(
 
   for (const auto& topicNameAndType : topicNamesAndTypes) {
     const auto& topicName = topicNameAndType.first;
-    if (!isWhitelisted(topicName, _topicWhitelistPatterns)) {
+    if (!matchesRegex(topicName, _topicWhitelistPatterns)) {
       continue;
     }
 
@@ -851,7 +851,7 @@ void FoxgloveBridge::updateConnectionGraph(
 
     for (const auto& [serviceName, serviceTypes] : serviceNamesAndTypes) {
       (void)serviceTypes;
-      if (isWhitelisted(serviceName, _serviceWhitelistPatterns)) {
+      if (matchesRegex(serviceName, _serviceWhitelistPatterns)) {
         services[serviceName].insert(fqnNodeName);
       }
     }
@@ -1470,7 +1470,7 @@ void FoxgloveBridge::fetchAsset(const std::string_view uriView,
     // not be accessible over the WebSocket connection. Example:
     // `package://<pkg_name>/../../../secret.txt`. This is an extra security measure and should
     // not be necessary if the allowlist is strict enough.
-    if (uri.find("..") != std::string::npos || !isWhitelisted(uri, _assetUriAllowlistPatterns)) {
+    if (uri.find("..") != std::string::npos || !matchesRegex(uri, _assetUriAllowlistPatterns)) {
       throw std::runtime_error("Asset URI not allowed: " + uri);
     }
 
@@ -1497,7 +1497,7 @@ void FoxgloveBridge::fetchAsset(const std::string_view uriView,
 
 FoxgloveBridge::TopicQosInfo FoxgloveBridge::collectTopicQosInfo(const std::string& topic) {
   TopicQosInfo info;
-  info.bestEffortForced = isWhitelisted(topic, _bestEffortQosTopicWhiteListPatterns);
+  info.bestEffortForced = matchesRegex(topic, _bestEffortQosTopicWhiteListPatterns);
 
   const auto publisherInfo = this->get_publishers_info_by_topic(topic);
   info.publisherCount = publisherInfo.size();
@@ -1599,7 +1599,7 @@ foxglove::QosProfile FoxgloveBridge::classifyRemoteAccessQos(
 bool FoxgloveBridge::shouldSuppressRemoteAccessVideoTranscode(
   const foxglove::ChannelDescriptor& channel) {
   const std::string topic(channel.topic());
-  if (!isWhitelisted(topic, _videoTranscodeTopicDenyPatterns)) {
+  if (!matchesRegex(topic, _videoTranscodeTopicDenyPatterns)) {
     return false;
   }
   RCLCPP_INFO(this->get_logger(), "Delivering topic \"%s\" as data (no video transcoding)",

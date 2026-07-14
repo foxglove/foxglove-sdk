@@ -10,7 +10,7 @@
 
 using foxglove_bridge::compileTopicRegex;
 using foxglove_bridge::DEFAULT_VIDEO_TRANSCODE_TOPIC_DENYLIST;
-using foxglove_bridge::isWhitelisted;
+using foxglove_bridge::matchesRegex;
 using foxglove_bridge::saturatingToSizeT;
 
 namespace {
@@ -66,25 +66,25 @@ TEST(saturatingToSizeTTest, ValueAtSizeTMaxIsPreserved) {
 
 // The default `video_transcode_topic_denylist` pattern opts topics ending in
 // `/compressedDepth` (the `compressed_depth_image_transport` suffix) out of video transcoding.
-// `isWhitelisted` matches the whole topic (`std::regex_match`), so the suffix pattern needs the
+// `matchesRegex` matches the whole topic (`std::regex_match`), so the suffix pattern needs the
 // leading `.*`.
 TEST(VideoTranscodeTopicDenylistTest, MatchesRosCompressedDepthTransport) {
-  EXPECT_TRUE(isWhitelisted("/camera/depth/image_raw/compressedDepth", defaultDenylistPatterns()));
+  EXPECT_TRUE(matchesRegex("/camera/depth/image_raw/compressedDepth", defaultDenylistPatterns()));
 }
 
 TEST(VideoTranscodeTopicDenylistTest, RejectsRegularCompressedImage) {
-  EXPECT_FALSE(isWhitelisted("/camera/image_raw/compressed", defaultDenylistPatterns()));
+  EXPECT_FALSE(matchesRegex("/camera/image_raw/compressed", defaultDenylistPatterns()));
 }
 
 TEST(VideoTranscodeTopicDenylistTest, RequiresSuffixNotSubstring) {
-  EXPECT_FALSE(isWhitelisted("/compressedDepth/extra", defaultDenylistPatterns()));
+  EXPECT_FALSE(matchesRegex("/compressedDepth/extra", defaultDenylistPatterns()));
 }
 
 // The bridge compiles every topic pattern case-insensitively (compileTopicRegex), so a
 // `/CompressedDepth` suffix still matches. Guards that the default is exercised with the shipped
 // flags, not a case-sensitive stand-in.
 TEST(VideoTranscodeTopicDenylistTest, MatchesCaseInsensitively) {
-  EXPECT_TRUE(isWhitelisted("/camera/depth/image_raw/CompressedDepth", defaultDenylistPatterns()));
+  EXPECT_TRUE(matchesRegex("/camera/depth/image_raw/CompressedDepth", defaultDenylistPatterns()));
 }
 
 TEST(SplitDefinitionsTest, EmptyMessageDefinition) {
