@@ -9,6 +9,14 @@
   <arg name="param_allowlist"                 default="['.*']" />
   <arg name="service_allowlist"               default="['.*']" />
   <arg name="client_topic_allowlist"          default="['.*']" />
+  <!-- Deprecated *_whitelist launch args. Each defaults to its *_allowlist arg and is forwarded to
+       the *_allowlist parameter below, so passing an old name still overrides the value while the
+       new name stays the documented one. (A ROS parameter override cannot be an empty array, so the
+       old names cannot be aliased via an empty-default sentinel the way the node parameters are.) -->
+  <arg name="topic_whitelist"                 default="$(var topic_allowlist)" />
+  <arg name="param_whitelist"                 default="$(var param_allowlist)" />
+  <arg name="service_whitelist"               default="$(var service_allowlist)" />
+  <arg name="client_topic_whitelist"          default="$(var client_topic_allowlist)" />
   <arg name="min_qos_depth"                   default="1" />
   <arg name="max_qos_depth"                   default="10" />
   <arg name="num_threads"                     default="0" />
@@ -36,10 +44,11 @@
     <param name="tls"                             value="$(var tls)" />
     <param name="certfile"                        value="$(var certfile)" />
     <param name="keyfile"                         value="$(var keyfile)" />
-    <param name="topic_allowlist"                 value="$(var topic_allowlist)" />
-    <param name="service_allowlist"               value="$(var service_allowlist)" />
-    <param name="param_allowlist"                 value="$(var param_allowlist)" />
-    <param name="client_topic_allowlist"          value="$(var client_topic_allowlist)" />
+    <!-- Fed from the deprecated *_whitelist args, which default to the matching *_allowlist arg. -->
+    <param name="topic_allowlist"                 value="$(var topic_whitelist)" />
+    <param name="service_allowlist"               value="$(var service_whitelist)" />
+    <param name="param_allowlist"                 value="$(var param_whitelist)" />
+    <param name="client_topic_allowlist"          value="$(var client_topic_whitelist)" />
     <param name="min_qos_depth"                   value="$(var min_qos_depth)" />
     <param name="max_qos_depth"                   value="$(var max_qos_depth)" />
     <param name="num_threads"                     value="$(var num_threads)" />

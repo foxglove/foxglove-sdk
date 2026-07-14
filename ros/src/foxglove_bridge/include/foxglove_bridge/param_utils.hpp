@@ -62,6 +62,13 @@ constexpr int64_t DEFAULT_MESSAGE_BACKLOG_SIZE = 1024;
 constexpr int64_t DEFAULT_MAX_DATA_TRACK_MESSAGE_SIZE = 102400;
 constexpr char DEFAULT_VIDEO_TRANSCODE_TOPIC_DENYLIST[] = ".*/compressedDepth";
 
+/// Regex that matches nothing, used as the "match nothing" value for topic-list parameters. An
+/// empty list would express the same intent (matchesRegex returns false for an empty pattern list),
+/// but a ROS parameter override cannot be an empty string array: a bare `[]` is parsed as an
+/// untyped empty array and leaves the parameter uninitialized, so users cannot pass `[]`. This
+/// never-matching pattern is the value they can actually set to disable a list.
+constexpr char REGEX_MATCH_NOTHING[] = "(?!)";
+
 void declareParameters(rclcpp::Node* node);
 
 /// Compiles a topic-matching regex with the flags the bridge applies to every topic pattern
@@ -79,6 +86,11 @@ std::vector<std::regex> parseRegexStrings(rclcpp::Node* node,
 /// so a non-empty `deprecated` value means the user set the old name explicitly. Returns the
 /// deprecated value when it is non-empty (and sets `usedDeprecated`); otherwise returns
 /// `canonical`.
+///
+/// The empty-vs-set sentinel is unambiguous because a ROS parameter override cannot be an empty
+/// string array (a bare `[]` is parsed as an untyped empty array and leaves the parameter
+/// uninitialized), so a user can never actually set the alias to `[]`. To disable a list, users
+/// pass REGEX_MATCH_NOTHING, which is non-empty and therefore honored here.
 std::vector<std::string> resolveAliasedStringArray(const std::vector<std::string>& canonical,
                                                    const std::vector<std::string>& deprecated,
                                                    bool& usedDeprecated);

@@ -125,7 +125,9 @@ Parameters are provided to configure the behavior of the bridge. These parameter
 - **max_qos_depth**: Maximum depth used for the QoS profile of subscriptions. Defaults to `25`.
 - **best_effort_qos_topic_allowlist**: List of regular expressions (ECMAScript) for topics that should be forced to use 'best_effort' QoS. Unmatched topics will use 'reliable' QoS if ALL publishers are 'reliable', 'best_effort' if any publishers are 'best_effort'. Defaults to `["(?!)"]` (match nothing).
 
-> **Note:** The `*_allowlist` parameters above were previously named `*_whitelist` (`topic_whitelist`, `service_whitelist`, `param_whitelist`, `client_topic_whitelist`, `best_effort_qos_topic_whitelist`). The old names still work as deprecated aliases and log a warning; prefer the `*_allowlist` names.
+> **Note:** The `*_allowlist` parameters above were previously named `*_whitelist` (`topic_whitelist`, `service_whitelist`, `param_whitelist`, `client_topic_whitelist`, `best_effort_qos_topic_whitelist`). The old names are still accepted as deprecated aliases — both as node parameters (setting a `*_whitelist` parameter logs a warning) and as arguments to the provided launch file — but prefer the `*_allowlist` names.
+>
+> To match nothing (disable a list), use `["(?!)"]`. An empty array (`[]`) expresses the same intent but cannot be set as a ROS parameter override — a bare `[]` is parsed as an untyped empty array and leaves the parameter uninitialized.
 
 - **include_hidden**: Include hidden topics and services. Defaults to `false`.
 - **disable_load_message**: Do not publish as loaned message when publishing a client message. Defaults to `true`.

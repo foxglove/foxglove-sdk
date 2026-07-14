@@ -101,7 +101,8 @@ void declareParameters(rclcpp::Node* node) {
     "'best_effort' QoS. Unmatched topics will use 'reliable' QoS if ALL publishers are 'reliable', "
     "'best_effort' if any publishers are 'best_effort'.";
   bestEffortQosTopicAllowlistDescription.read_only = true;
-  node->declare_parameter(PARAM_BEST_EFFORT_QOS_TOPIC_ALLOWLIST, std::vector<std::string>({"(?!)"}),
+  node->declare_parameter(PARAM_BEST_EFFORT_QOS_TOPIC_ALLOWLIST,
+                          std::vector<std::string>({REGEX_MATCH_NOTHING}),
                           bestEffortQosTopicAllowlistDescription);
 
   auto topicAllowlistDescription = rcl_interfaces::msg::ParameterDescriptor{};
