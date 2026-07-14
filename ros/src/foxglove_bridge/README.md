@@ -126,6 +126,7 @@ Parameters are provided to configure the behavior of the bridge. These parameter
 - **best_effort_qos_topic_allowlist**: List of regular expressions (ECMAScript) for topics that should be forced to use 'best_effort' QoS. Unmatched topics will use 'reliable' QoS if ALL publishers are 'reliable', 'best_effort' if any publishers are 'best_effort'. Defaults to `["(?!)"]` (match nothing).
 
 > **Note:** The `*_allowlist` parameters above were previously named `*_whitelist` (`topic_whitelist`, `service_whitelist`, `param_whitelist`, `client_topic_whitelist`, `best_effort_qos_topic_whitelist`). The old names still work as deprecated aliases and log a warning; prefer the `*_allowlist` names.
+
 - **include_hidden**: Include hidden topics and services. Defaults to `false`.
 - **disable_load_message**: Do not publish as loaned message when publishing a client message. Defaults to `true`.
 - **ignore_unresponsive_param_nodes**: Avoid requesting parameters from previously unresponsive nodes. Defaults to `true`.
@@ -156,9 +157,11 @@ The `capabilities` parameter can accept one or more of the following values.
 - `time`: The server may publish time messages using `broadcastTime`. This can be used to sync frame state in panels like the 3D panel if the server's time disagrees with wall time.
 
 ### Diagnostic topics
+
 If `publish_client_count` is set to `true`, foxglove_bridge publishes the number of currently connected clients to the topic `/foxglove_bridge/client_count`.
 
 If `sysinfo` is set to `true` (the default), foxglove_bridge publishes process and system statistics to the topic configured by `sysinfo_topic` (default `/foxglove_bridge/sysinfo`).
+
 ## For developers
 
 ### Building with local SDK changes
