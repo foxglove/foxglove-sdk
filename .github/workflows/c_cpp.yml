@@ -42,8 +42,7 @@ jobs:
           ref: ${{ inputs.ref }}
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
+          bash "$GITHUB_WORKSPACE/.github/scripts/apt-retry.sh" --no-install-recommends \
             clang-format-19 clang-tidy-19 \
             gcc g++ libglib2.0-dev libva-dev  \
             libwebsockets-dev nlohmann-json3-dev
@@ -271,8 +270,7 @@ jobs:
           toolchain: nightly
           components: rust-src
       - run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
+          bash "$GITHUB_WORKSPACE/.github/scripts/apt-retry.sh" --no-install-recommends \
             libglib2.0-dev libva-dev \
             libwebsockets-dev nlohmann-json3-dev
 
