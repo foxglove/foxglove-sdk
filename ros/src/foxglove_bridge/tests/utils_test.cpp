@@ -90,19 +90,14 @@ TEST(VideoTranscodeTopicDenylistTest, MatchesCaseInsensitively) {
 
 // resolveAliasedStringArray backs the deprecated *_whitelist → *_allowlist parameter aliases: an
 // empty deprecated value is the "unset" sentinel, so the canonical value wins; a non-empty
-// deprecated value means the user set the old name and must take precedence (with a warning logged
-// by the caller).
+// deprecated value means the user set the old name and must take precedence.
 TEST(ResolveAliasedStringArrayTest, UsesCanonicalWhenDeprecatedIsEmpty) {
-  bool usedDeprecated = true;
-  const auto result = resolveAliasedStringArray({".*"}, {}, usedDeprecated);
-  EXPECT_FALSE(usedDeprecated);
+  const auto result = resolveAliasedStringArray({".*"}, {});
   EXPECT_EQ(result, std::vector<std::string>({".*"}));
 }
 
 TEST(ResolveAliasedStringArrayTest, PrefersDeprecatedWhenSet) {
-  bool usedDeprecated = false;
-  const auto result = resolveAliasedStringArray({".*"}, {"/foo", "/bar"}, usedDeprecated);
-  EXPECT_TRUE(usedDeprecated);
+  const auto result = resolveAliasedStringArray({".*"}, {"/foo", "/bar"});
   EXPECT_EQ(result, std::vector<std::string>({"/foo", "/bar"}));
 }
 

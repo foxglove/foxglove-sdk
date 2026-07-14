@@ -158,7 +158,7 @@ void declareParameters(rclcpp::Node* node) {
     "List of regular expressions (ECMAScript) of allowed client-published topic names.";
   clientTopicAllowlistDescription.read_only = true;
   node->declare_parameter(PARAM_CLIENT_TOPIC_ALLOWLIST, std::vector<std::string>({".*"}),
-                          paramAllowlistDescription);
+                          clientTopicAllowlistDescription);
 
   // Deprecated *_whitelist aliases for the *_allowlist parameters above. Declared with an
   // empty-array default that acts as an "unset" sentinel (see
@@ -204,7 +204,7 @@ void declareParameters(rclcpp::Node* node) {
     std::vector<std::string>(
       {"^package://(?:[-\\w%]+/"
        ")*[-\\w%.]+\\.(?:dae|fbx|glb|gltf|jpeg|jpg|mtl|obj|png|stl|tif|tiff|urdf|webp|xacro)$"}),
-    paramAllowlistDescription);
+    assetUriAllowlistDescription);
 
   auto ignUnresponsiveParamNodes = rcl_interfaces::msg::ParameterDescriptor{};
   ignUnresponsiveParamNodes.name = PARAM_IGN_UNRESPONSIVE_PARAM_NODES;
@@ -353,24 +353,20 @@ std::vector<std::regex> parseRegexStrings(rclcpp::Node* node,
 }
 
 std::vector<std::string> resolveAliasedStringArray(const std::vector<std::string>& canonical,
-                                                   const std::vector<std::string>& deprecated,
-                                                   bool& usedDeprecated) {
-  usedDeprecated = !deprecated.empty();
-  return usedDeprecated ? deprecated : canonical;
+                                                   const std::vector<std::string>& deprecated) {
+  return deprecated.empty() ? canonical : deprecated;
 }
 
 std::vector<std::string> getStringArrayParamWithDeprecatedAlias(rclcpp::Node* node,
                                                                 const std::string& canonicalName,
                                                                 const std::string& deprecatedName) {
-  bool usedDeprecated = false;
-  auto value = resolveAliasedStringArray(node->get_parameter(canonicalName).as_string_array(),
-                                         node->get_parameter(deprecatedName).as_string_array(),
-                                         usedDeprecated);
-  if (usedDeprecated) {
+  const auto canonical = node->get_parameter(canonicalName).as_string_array();
+  const auto deprecated = node->get_parameter(deprecatedName).as_string_array();
+  if (!deprecated.empty()) {
     RCLCPP_WARN(node->get_logger(), "Parameter '%s' is deprecated; use '%s' instead.",
                 deprecatedName.c_str(), canonicalName.c_str());
   }
-  return value;
+  return resolveAliasedStringArray(canonical, deprecated);
 }
 
 }  // namespace foxglove_bridge

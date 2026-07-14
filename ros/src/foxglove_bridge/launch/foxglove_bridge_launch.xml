@@ -11,10 +11,9 @@
   <arg name="client_topic_allowlist"          default="['.*']" />
   <!-- Deprecated *_whitelist launch args. Each defaults to its *_allowlist arg and is forwarded to
        the *_allowlist parameter below, so passing an old name still overrides the value while the
-       new name stays the documented one. (A ROS parameter override cannot be an empty array, so the
-       old names cannot be aliased via an empty-default sentinel the way the node parameters are.)
-       Because the old arg feeds the *_allowlist parameter directly, using it here does not trigger
-       the node's deprecation warning; only setting a *_whitelist parameter override does. -->
+       new name stays the documented one. Because the old arg feeds the *_allowlist parameter
+       directly, using it here does not trigger the node's deprecation warning; only setting a
+       *_whitelist parameter override does. -->
   <arg name="topic_whitelist"                 default="$(var topic_allowlist)" />
   <arg name="param_whitelist"                 default="$(var param_allowlist)" />
   <arg name="service_whitelist"               default="$(var service_allowlist)" />

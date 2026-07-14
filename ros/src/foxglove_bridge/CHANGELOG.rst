@@ -17,7 +17,7 @@ Changelog for package foxglove_bridge
 ------------------
 * Fix an issue where the ``parameters`` implementation would occasionally stall message forwarding for several seconds
 * Fix an issue where the bridge was not refcounting parameter subscriptions properly when a WebSocket server and Remote Access gateway were simultaneously in use
-* Fix an issue where the parameter whitelist would randomly prevent subscribing to or setting unrelated parameters [edit: the parameter is now called ``param_allowlist``]
+* Fix an issue where the parameter whitelist would randomly prevent subscribing to or setting unrelated parameters [edit: now called ``param_allowlist``]
 * Add ``message_backlog_size`` option to configure the outgoing message buffer
 * Update Foxglove SDK version to 0.25.0
 
@@ -301,7 +301,7 @@ Changelog for package foxglove_bridge
 0.2.2 (2022-12-12)
 ------------------
 * Fix messages not being received anymore after unadvertising a client publication (`#109 <https://github.com/foxglove/ros-foxglove-bridge/issues/109>`_)
-* Allow to whitelist topics via a ROS paramater (`#108 <https://github.com/foxglove/ros-foxglove-bridge/issues/108>`_) [edit: the parameter is now called ``topic_allowlist``]
+* Allow to whitelist topics via a ROS paramater (`#108 <https://github.com/foxglove/ros-foxglove-bridge/issues/108>`_) [edit: now called ``topic_allowlist``]
 * Contributors: Hans-Joachim Krauch
 
 0.2.1 (2022-12-05)

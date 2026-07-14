@@ -41,10 +41,11 @@ constexpr char PARAM_VIDEO_ENCODER[] = "video_encoder";
 constexpr char PARAM_MAX_DATA_TRACK_MESSAGE_SIZE[] = "max_data_track_message_size";
 constexpr char PARAM_VIDEO_TRANSCODE_TOPIC_DENYLIST[] = "video_transcode_topic_denylist";
 
-// Deprecated aliases for the *_allowlist parameters above, kept so parameter overrides using the old
-// *_whitelist names (a YAML params file, a CLI `-p`, or a `<param>` in a user's own launch file) keep
-// working; resolved by getStringArrayParamWithDeprecatedAlias. The provided launch file aliases its
-// own *_whitelist arguments separately (see foxglove_bridge_launch.xml).
+// Deprecated aliases for the *_allowlist parameters above. Kept so that overrides using the old
+// *_whitelist names (a YAML params file, a CLI `-p`, or a `<param>` in a user's own launch file)
+// keep working; resolved by getStringArrayParamWithDeprecatedAlias. The provided launch file
+// aliases its own *_whitelist arguments separately (see foxglove_bridge_launch.xml). Removal is
+// tracked in FLE-672.
 constexpr char PARAM_BEST_EFFORT_QOS_TOPIC_ALLOWLIST_DEPRECATED[] =
   "best_effort_qos_topic_whitelist";
 constexpr char PARAM_TOPIC_ALLOWLIST_DEPRECATED[] = "topic_whitelist";
@@ -82,19 +83,12 @@ inline std::regex compileTopicRegex(const std::string& pattern) {
 std::vector<std::regex> parseRegexStrings(rclcpp::Node* node,
                                           const std::vector<std::string>& strings);
 
-/// Chooses between a string-array parameter's canonical value and the value of a deprecated alias.
-/// The deprecated alias is declared with an empty-array default that acts as an "unset" sentinel,
-/// so a non-empty `deprecated` value means the user set the old name explicitly. Returns the
-/// deprecated value when it is non-empty (and sets `usedDeprecated`); otherwise returns
-/// `canonical`.
-///
-/// The empty-vs-set sentinel is unambiguous because a ROS parameter override cannot be an empty
-/// string array (a bare `[]` is parsed as an untyped empty array and leaves the parameter
-/// uninitialized), so a user can never actually set the alias to `[]`. To disable a list, users
-/// pass REGEX_MATCH_NOTHING, which is non-empty and therefore honored here.
+/// Chooses between a string-array parameter's canonical value and a deprecated alias's value:
+/// returns the deprecated value when it is non-empty, otherwise the canonical value. An empty
+/// deprecated value is the "unset" sentinel; see REGEX_MATCH_NOTHING for why a user cannot pass an
+/// empty array, which is what makes the sentinel unambiguous.
 std::vector<std::string> resolveAliasedStringArray(const std::vector<std::string>& canonical,
-                                                   const std::vector<std::string>& deprecated,
-                                                   bool& usedDeprecated);
+                                                   const std::vector<std::string>& deprecated);
 
 /// Reads a string-array parameter that has a deprecated alias (both declared by declareParameters),
 /// preferring the deprecated value when the user set it and logging a deprecation warning in that
