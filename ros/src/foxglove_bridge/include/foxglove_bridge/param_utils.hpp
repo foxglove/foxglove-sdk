@@ -41,9 +41,10 @@ constexpr char PARAM_VIDEO_ENCODER[] = "video_encoder";
 constexpr char PARAM_MAX_DATA_TRACK_MESSAGE_SIZE[] = "max_data_track_message_size";
 constexpr char PARAM_VIDEO_TRANSCODE_TOPIC_DENYLIST[] = "video_transcode_topic_denylist";
 
-// Deprecated aliases for the *_allowlist parameters above. Kept so existing launch files and
-// parameter overrides using the old *_whitelist names keep working; resolved by
-// getStringArrayParamWithDeprecatedAlias.
+// Deprecated aliases for the *_allowlist parameters above, kept so parameter overrides using the old
+// *_whitelist names (a YAML params file, a CLI `-p`, or a `<param>` in a user's own launch file) keep
+// working; resolved by getStringArrayParamWithDeprecatedAlias. The provided launch file aliases its
+// own *_whitelist arguments separately (see foxglove_bridge_launch.xml).
 constexpr char PARAM_BEST_EFFORT_QOS_TOPIC_ALLOWLIST_DEPRECATED[] =
   "best_effort_qos_topic_whitelist";
 constexpr char PARAM_TOPIC_ALLOWLIST_DEPRECATED[] = "topic_whitelist";
