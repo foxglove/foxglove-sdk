@@ -181,8 +181,7 @@ jobs:
       - name: Install CUDA build dependencies
         if: matrix.require_cuda && runner.os == 'Linux'
         run: |
-          sudo apt-get update
-          sudo apt-get install -y nvidia-cuda-dev
+          bash "$GITHUB_WORKSPACE/.github/scripts/apt-retry.sh" nvidia-cuda-dev
           echo "CUDA_HOME=/usr" >> $GITHUB_ENV
       - name: Use Clang
         if: matrix.compiler == 'clang'
@@ -300,7 +299,7 @@ jobs:
 
       - name: Install LiveKit C++ SDK dependencies
         run: |
-          sudo apt-get install -y --no-install-recommends \
+          bash "$GITHUB_WORKSPACE/.github/scripts/apt-retry.sh" --no-install-recommends \
             llvm-dev libclang-dev clang \
             libdrm-dev libgbm-dev libx11-dev libgl1-mesa-dev \
             libxext-dev libxcomposite-dev libxdamage-dev libxfixes-dev \
