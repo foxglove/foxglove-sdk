@@ -13,6 +13,7 @@ from foxglove.messages import (
     PointCloud,
     Pose,
     Quaternion,
+    Timestamp,
     Vector3,
 )
 
@@ -44,23 +45,26 @@ def main() -> None:
         channel_filter=live_viz_filter,
     )
 
-    cloud_tf = FrameTransforms(
-        transforms=[
-            FrameTransform(
-                parent_frame_id="world",
-                child_frame_id="points",
-                translation=Vector3(x=-10, y=-10, z=0),
-            ),
-        ]
-    )
-
     pc_chan = foxglove.channels.PointCloudChannel(topic="/point_cloud")
 
     try:
         while True:
             foxglove.log("/info", {"state": get_state(), "y": cos(time.time())})
 
-            foxglove.log("/point_cloud_tf", cloud_tf)
+            foxglove.log(
+                "/point_cloud_tf",
+                FrameTransforms(
+                    transforms=[
+                        FrameTransform(
+                            timestamp=Timestamp.from_epoch_secs(time.time()),
+                            parent_frame_id="world",
+                            child_frame_id="points",
+                            translation=Vector3(x=-10, y=-10, z=0),
+                            rotation=Quaternion(x=0, y=0, z=0, w=1),
+                        ),
+                    ]
+                ),
+            )
 
             pc_chan.log(
                 # "/point_cloud",
