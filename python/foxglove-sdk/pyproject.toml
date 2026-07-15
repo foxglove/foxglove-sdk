@@ -15,6 +15,7 @@ documentation = "https://docs.foxglove.dev/"
 
 [project.optional-dependencies]
 notebook = ["anywidget", "mcap", "traitlets"]
+ray = ["ray[data]", "foxglove-client", "pandas"]
 
 [dependency-groups]
 dev = [
@@ -68,6 +69,14 @@ warn_redundant_casts = true
 warn_unused_ignores = true
 warn_no_return = true
 warn_unreachable = true
+
+# The `ray` extra's dependencies (ray, pandas, and the separate foxglove-client package that
+# provides `foxglove.client`) are not installed in the lint environment and ship no usable stubs;
+# treat them as untyped so the ray integration still type-checks. The ray feature is exercised by a
+# dedicated CI job that installs the extra and runs its tests.
+[[tool.mypy.overrides]]
+module = ["ray", "ray.*", "pandas", "pandas.*", "foxglove.client", "foxglove.client.*"]
+ignore_missing_imports = true
 
 [tool.black]
 include = '\.pyi?$'

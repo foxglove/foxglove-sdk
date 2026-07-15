@@ -1,0 +1,17 @@
+[project]
+name = "ray-datasource"
+version = "0.0.0"
+description = "Example of loading Foxglove recordings as a Ray Data dataset"
+authors = [{ name = "Foxglove", email = "support@foxglove.dev" }]
+requires-python = ">=3.10"
+readme = "README.md"
+dependencies = [
+    "foxglove-sdk[ray]>=0.4.0",
+    "mcap>=1.2",
+]
+
+[dependency-groups]
+dev = ["mypy>=1,<2"]
+
+[tool.uv]
+package = false
