@@ -136,7 +136,7 @@ Parameters are provided to configure the behavior of the bridge. These parameter
 - **sysinfo_refresh_interval**: Refresh interval for system info messages in milliseconds. Minimum 200ms. Defaults to `500`.
 - **message_backlog_size**: Maximum number of outgoing messages to buffer per connected WebSocket client or remote access gateway participant. The WebSocket server drops the oldest data-plane message on overflow and disconnects clients whose control-plane queue fills. The remote access gateway disconnects participants whose queue fills. Defaults to `1024`.
 - **remote_access**: Enable the remote access gateway, allowing the bridge to be reached through Foxglove's platform without exposing a port on the device. Requires the bridge to be built with `FOXGLOVE_BRIDGE_REMOTE_ACCESS=ON` (the default for our published Docker images). Defaults to `false`.
-- **device_token**: Foxglove device token used to authenticate with the Foxglove platform when `remote_access` is enabled. If empty, the bridge falls back to the `FOXGLOVE_DEVICE_TOKEN` environment variable.
+- **device_token**: Foxglove device token used to authenticate with the Foxglove platform when `remote_access` is enabled. If empty, the bridge falls back to the `FOXGLOVE_DEVICE_TOKEN` environment variable, which is preferred: a token passed as a parameter is readable by other nodes via the ROS 2 parameter services, while the environment variable is only visible to the bridge process.
 - **video_encoder**: Preferred backend for encoding published video tracks when `remote_access` is enabled: one of `auto`, `software`, `hardware`, `nvenc`, `vaapi`, `videotoolbox`. With `auto` (the default) the SDK chooses the backend and honors the `FOXGLOVE_VIDEO_ENCODER` environment variable. If the requested backend is unavailable on the host, the SDK falls back to another compatible encoder.
 - **max_data_track_message_size**: Maximum size, in bytes, of a lossy data-track message sent by the remote access gateway when `remote_access` is enabled. Larger messages are dropped before publishing, with a throttled warning, so one high-bandwidth channel cannot starve the others. Must be at least `1200` (one data-channel packet). Defaults to `102400` (100 KiB).
 - **video_transcode_topic_denylist**: List of regular expressions ([ECMAScript grammar](https://en.cppreference.com/w/cpp/regex/ecmascript)) of topic names delivered as data over remote access instead of being transcoded to video. Use this for image topics whose pixel values must not pass through lossy video, such as compressed depth maps. Defaults to `[".*/compressedDepth"]`, matching the `compressed_depth_image_transport` `/compressedDepth` suffix.
@@ -154,9 +154,11 @@ The `capabilities` parameter can accept one or more of the following values.
 - `time`: The server may publish time messages using `broadcastTime`. This can be used to sync frame state in panels like the 3D panel if the server's time disagrees with wall time.
 
 ### Diagnostic topics
+
 If `publish_client_count` is set to `true`, foxglove_bridge publishes the number of currently connected clients to the topic `/foxglove_bridge/client_count`.
 
 If `sysinfo` is set to `true` (the default), foxglove_bridge publishes process and system statistics to the topic configured by `sysinfo_topic` (default `/foxglove_bridge/sysinfo`).
+
 ## For developers
 
 ### Building with local SDK changes
