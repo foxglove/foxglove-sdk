@@ -314,6 +314,20 @@ void declareParameters(rclcpp::Node* node) {
   node->declare_parameter(PARAM_VIDEO_TRANSCODE_TOPIC_DENYLIST,
                           std::vector<std::string>({DEFAULT_VIDEO_TRANSCODE_TOPIC_DENYLIST}),
                           videoTranscodeTopicDenylistDescription);
+
+  auto pointCloudCompressionTopicDenylistDescription = rcl_interfaces::msg::ParameterDescriptor{};
+  pointCloudCompressionTopicDenylistDescription.name = PARAM_POINT_CLOUD_COMPRESSION_TOPIC_DENYLIST;
+  pointCloudCompressionTopicDenylistDescription.type =
+    rcl_interfaces::msg::ParameterType::PARAMETER_STRING_ARRAY;
+  pointCloudCompressionTopicDenylistDescription.description =
+    "List of regular expressions (ECMAScript) of topic names delivered with their original "
+    "schema over remote access instead of being transparently Draco-compressed. Use this for "
+    "point cloud topics whose exact values or point order must be preserved, since the default "
+    "compression is lossy. Defaults to empty (all compressible point cloud topics are "
+    "compressed).";
+  pointCloudCompressionTopicDenylistDescription.read_only = true;
+  node->declare_parameter(PARAM_POINT_CLOUD_COMPRESSION_TOPIC_DENYLIST, std::vector<std::string>(),
+                          pointCloudCompressionTopicDenylistDescription);
 }
 
 std::vector<std::regex> parseRegexStrings(rclcpp::Node* node,
