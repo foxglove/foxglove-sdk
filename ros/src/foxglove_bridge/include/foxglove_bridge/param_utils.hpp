@@ -41,11 +41,11 @@ constexpr char PARAM_VIDEO_ENCODER[] = "video_encoder";
 constexpr char PARAM_MAX_DATA_TRACK_MESSAGE_SIZE[] = "max_data_track_message_size";
 constexpr char PARAM_VIDEO_TRANSCODE_TOPIC_DENYLIST[] = "video_transcode_topic_denylist";
 
-// Deprecated aliases for the *_allowlist parameters above. Kept so that overrides using the old
-// *_whitelist names (a YAML params file, a CLI `-p`, or a `<param>` in a user's own launch file)
-// keep working; resolved by getStringArrayParamWithDeprecatedAlias. The provided launch file
-// aliases its own *_whitelist arguments separately (see foxglove_bridge_launch.xml). Removal is
-// tracked in FLE-672.
+// Deprecated names for the *_allowlist parameters above. Not declared as parameters themselves;
+// getStringArrayParamWithDeprecatedAlias checks for them in the node's parameter overrides (a YAML
+// params file, a CLI `-p`, or a `<param>` in a user's own launch file) so the old names keep
+// working. The provided launch file aliases its own *_whitelist arguments separately (see
+// foxglove_bridge_launch.xml). Removal is tracked in FLE-672.
 constexpr char PARAM_BEST_EFFORT_QOS_TOPIC_ALLOWLIST_DEPRECATED[] =
   "best_effort_qos_topic_whitelist";
 constexpr char PARAM_TOPIC_ALLOWLIST_DEPRECATED[] = "topic_whitelist";
@@ -83,16 +83,9 @@ inline std::regex compileTopicRegex(const std::string& pattern) {
 std::vector<std::regex> parseRegexStrings(rclcpp::Node* node,
                                           const std::vector<std::string>& strings);
 
-/// Chooses between a string-array parameter's canonical value and a deprecated alias's value:
-/// returns the deprecated value when it is non-empty, otherwise the canonical value. An empty
-/// deprecated value is the "unset" sentinel; see REGEX_MATCH_NOTHING for why a user cannot pass an
-/// empty array, which is what makes the sentinel unambiguous.
-std::vector<std::string> resolveAliasedStringArray(const std::vector<std::string>& canonical,
-                                                   const std::vector<std::string>& deprecated);
-
-/// Reads a string-array parameter that has a deprecated alias (both declared by declareParameters),
-/// preferring the deprecated value when the user set it and logging a deprecation warning in that
-/// case. Returns the effective value.
+/// Reads a string-array parameter that has a deprecated old name: if the node was given an
+/// override for deprecatedName (YAML file, CLI `-p`, or launch `<param>`), returns that value and
+/// logs a deprecation warning; otherwise returns canonicalName's declared value.
 std::vector<std::string> getStringArrayParamWithDeprecatedAlias(rclcpp::Node* node,
                                                                 const std::string& canonicalName,
                                                                 const std::string& deprecatedName);

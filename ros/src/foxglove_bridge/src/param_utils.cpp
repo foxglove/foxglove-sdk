@@ -160,24 +160,6 @@ void declareParameters(rclcpp::Node* node) {
   node->declare_parameter(PARAM_CLIENT_TOPIC_ALLOWLIST, std::vector<std::string>({".*"}),
                           clientTopicAllowlistDescription);
 
-  // Deprecated *_whitelist aliases for the *_allowlist parameters above. Declared with an
-  // empty-array default that acts as an "unset" sentinel (see
-  // getStringArrayParamWithDeprecatedAlias).
-  auto declareDeprecatedAlias = [node](const char* deprecatedName, const char* canonicalName) {
-    auto descriptor = rcl_interfaces::msg::ParameterDescriptor{};
-    descriptor.name = deprecatedName;
-    descriptor.type = rcl_interfaces::msg::ParameterType::PARAMETER_STRING_ARRAY;
-    descriptor.description = "Deprecated: use '" + std::string(canonicalName) + "' instead.";
-    descriptor.read_only = true;
-    node->declare_parameter(deprecatedName, std::vector<std::string>{}, descriptor);
-  };
-  declareDeprecatedAlias(PARAM_BEST_EFFORT_QOS_TOPIC_ALLOWLIST_DEPRECATED,
-                         PARAM_BEST_EFFORT_QOS_TOPIC_ALLOWLIST);
-  declareDeprecatedAlias(PARAM_TOPIC_ALLOWLIST_DEPRECATED, PARAM_TOPIC_ALLOWLIST);
-  declareDeprecatedAlias(PARAM_SERVICE_ALLOWLIST_DEPRECATED, PARAM_SERVICE_ALLOWLIST);
-  declareDeprecatedAlias(PARAM_PARAMETER_ALLOWLIST_DEPRECATED, PARAM_PARAMETER_ALLOWLIST);
-  declareDeprecatedAlias(PARAM_CLIENT_TOPIC_ALLOWLIST_DEPRECATED, PARAM_CLIENT_TOPIC_ALLOWLIST);
-
   auto includeHiddenDescription = rcl_interfaces::msg::ParameterDescriptor{};
   includeHiddenDescription.name = PARAM_INCLUDE_HIDDEN;
   includeHiddenDescription.type = rcl_interfaces::msg::ParameterType::PARAMETER_BOOL;
@@ -352,21 +334,17 @@ std::vector<std::regex> parseRegexStrings(rclcpp::Node* node,
   return regexVector;
 }
 
-std::vector<std::string> resolveAliasedStringArray(const std::vector<std::string>& canonical,
-                                                   const std::vector<std::string>& deprecated) {
-  return deprecated.empty() ? canonical : deprecated;
-}
-
 std::vector<std::string> getStringArrayParamWithDeprecatedAlias(rclcpp::Node* node,
                                                                 const std::string& canonicalName,
                                                                 const std::string& deprecatedName) {
-  const auto canonical = node->get_parameter(canonicalName).as_string_array();
-  const auto deprecated = node->get_parameter(deprecatedName).as_string_array();
-  if (!deprecated.empty()) {
-    RCLCPP_WARN(node->get_logger(), "Parameter '%s' is deprecated; use '%s' instead.",
-                deprecatedName.c_str(), canonicalName.c_str());
+  const auto& overrides = node->get_node_parameters_interface()->get_parameter_overrides();
+  const auto it = overrides.find(deprecatedName);
+  if (it == overrides.end()) {
+    return node->get_parameter(canonicalName).as_string_array();
   }
-  return resolveAliasedStringArray(canonical, deprecated);
+  RCLCPP_WARN(node->get_logger(), "Parameter '%s' is deprecated; use '%s' instead.",
+             deprecatedName.c_str(), canonicalName.c_str());
+  return it->second.get<std::vector<std::string>>();
 }
 
 }  // namespace foxglove_bridge

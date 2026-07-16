@@ -11,7 +11,6 @@
 using foxglove_bridge::compileTopicRegex;
 using foxglove_bridge::DEFAULT_VIDEO_TRANSCODE_TOPIC_DENYLIST;
 using foxglove_bridge::matchesRegex;
-using foxglove_bridge::resolveAliasedStringArray;
 using foxglove_bridge::saturatingToSizeT;
 
 namespace {
@@ -86,19 +85,6 @@ TEST(VideoTranscodeTopicDenylistTest, RequiresSuffixNotSubstring) {
 // flags, not a case-sensitive stand-in.
 TEST(VideoTranscodeTopicDenylistTest, MatchesCaseInsensitively) {
   EXPECT_TRUE(matchesRegex("/camera/depth/image_raw/CompressedDepth", defaultDenylistPatterns()));
-}
-
-// resolveAliasedStringArray backs the deprecated *_whitelist → *_allowlist parameter aliases: an
-// empty deprecated value is the "unset" sentinel, so the canonical value wins; a non-empty
-// deprecated value means the user set the old name and must take precedence.
-TEST(ResolveAliasedStringArrayTest, UsesCanonicalWhenDeprecatedIsEmpty) {
-  const auto result = resolveAliasedStringArray({".*"}, {});
-  EXPECT_EQ(result, std::vector<std::string>({".*"}));
-}
-
-TEST(ResolveAliasedStringArrayTest, PrefersDeprecatedWhenSet) {
-  const auto result = resolveAliasedStringArray({".*"}, {"/foo", "/bar"});
-  EXPECT_EQ(result, std::vector<std::string>({"/foo", "/bar"}));
 }
 
 TEST(SplitDefinitionsTest, EmptyMessageDefinition) {
