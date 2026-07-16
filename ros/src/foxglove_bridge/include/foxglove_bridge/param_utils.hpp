@@ -42,10 +42,7 @@ constexpr char PARAM_MAX_DATA_TRACK_MESSAGE_SIZE[] = "max_data_track_message_siz
 constexpr char PARAM_VIDEO_TRANSCODE_TOPIC_DENYLIST[] = "video_transcode_topic_denylist";
 
 // Deprecated names for the *_allowlist parameters above. Not declared as parameters themselves;
-// getStringArrayParamWithDeprecatedAlias checks for them in the node's parameter overrides (a YAML
-// params file, a CLI `-p`, or a `<param>` in a user's own launch file) so the old names keep
-// working. The provided launch file aliases its own *_whitelist arguments separately (see
-// foxglove_bridge_launch.xml). Removal is tracked in FLE-672.
+// see getStringArrayParamWithDeprecatedAlias. Removal tracked in FLE-672.
 constexpr char PARAM_BEST_EFFORT_QOS_TOPIC_ALLOWLIST_DEPRECATED[] =
   "best_effort_qos_topic_whitelist";
 constexpr char PARAM_TOPIC_ALLOWLIST_DEPRECATED[] = "topic_whitelist";
@@ -64,11 +61,8 @@ constexpr int64_t DEFAULT_MESSAGE_BACKLOG_SIZE = 1024;
 constexpr int64_t DEFAULT_MAX_DATA_TRACK_MESSAGE_SIZE = 102400;
 constexpr char DEFAULT_VIDEO_TRANSCODE_TOPIC_DENYLIST[] = ".*/compressedDepth";
 
-/// Regex that matches nothing, used as the "match nothing" value for topic-list parameters. An
-/// empty list would express the same intent (matchesRegex returns false for an empty pattern list),
-/// but a ROS parameter override cannot be an empty string array: a bare `[]` is parsed as an
-/// untyped empty array and leaves the parameter uninitialized, so users cannot pass `[]`. This
-/// never-matching pattern is the value they can actually set to disable a list.
+/// Regex matching nothing. Used to disable a topic-list parameter, since ROS can't take `[]` as
+/// an override value.
 constexpr char REGEX_MATCH_NOTHING[] = "(?!)";
 
 void declareParameters(rclcpp::Node* node);
@@ -83,9 +77,8 @@ inline std::regex compileTopicRegex(const std::string& pattern) {
 std::vector<std::regex> parseRegexStrings(rclcpp::Node* node,
                                           const std::vector<std::string>& strings);
 
-/// Reads a string-array parameter that has a deprecated old name: if the node was given an
-/// override for deprecatedName (YAML file, CLI `-p`, or launch `<param>`), returns that value and
-/// logs a deprecation warning; otherwise returns canonicalName's declared value.
+/// Reads canonicalName, preferring an override for deprecatedName if one was given (and logging a
+/// deprecation warning in that case).
 std::vector<std::string> getStringArrayParamWithDeprecatedAlias(rclcpp::Node* node,
                                                                 const std::string& canonicalName,
                                                                 const std::string& deprecatedName);
