@@ -40,13 +40,13 @@ impl FromStr for Compression {
     /// Parses a compressed image format string.
     ///
     /// This accepts a bare codec name (e.g. `"png"`), as used by the Foxglove `CompressedImage`
-    /// schema, as well as a ROS `sensor_msgs/CompressedImage` format string, which additionally
-    /// encodes the original pixel format and (for non-depth transports) a `compressed` marker:
+    /// schema, as well as the documented ROS `sensor_msgs/CompressedImage` format string, which
+    /// additionally encodes the original pixel format and a `compressed` marker:
     ///
     /// - `CODEC`
     /// - `ORIG_PIXFMT; CODEC compressed [COMPRESSED_PIXFMT]`
     ///
-    /// The foxglove frontend interprets both of these the same way, so we do too.
+    /// Other strings are rejected even if they contain a codec token.
     ///
     /// `ORIG_PIXFMT; compressedDepth CODEC` (the `compressed_depth_image_transport` format) is
     /// always reported as an unknown compression: the payload has a transport-specific header
@@ -57,31 +57,49 @@ impl FromStr for Compression {
     /// [ros2]: https://docs.ros.org/en/rolling/p/sensor_msgs/msg/CompressedImage.html
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let normalized = s.trim().to_ascii_lowercase();
-        if normalized.is_empty() || normalized.contains("compresseddepth") {
+        if normalized.is_empty() {
             return Err(UnknownCompressionError(s.to_string()));
         }
 
-        let tokens: Vec<&str> = normalized
-            .split(|c: char| c == ';' || c.is_whitespace())
-            .filter(|token| !token.is_empty())
-            .collect();
+        if let Some(compression) = Self::from_codec(&normalized) {
+            return Ok(compression);
+        }
 
-        #[cfg(feature = "img2yuv-jpeg")]
-        if tokens.iter().any(|&t| t == "jpg" || t == "jpeg") {
-            return Ok(Self::Jpeg);
+        let Some((orig_pixfmt, rest)) = normalized.split_once(';') else {
+            return Err(UnknownCompressionError(s.to_string()));
+        };
+        if orig_pixfmt.split_whitespace().count() != 1 {
+            return Err(UnknownCompressionError(s.to_string()));
         }
-        #[cfg(feature = "img2yuv-png")]
-        if tokens.contains(&"png") {
-            return Ok(Self::Png);
+
+        let mut tokens = rest.split_whitespace();
+        let Some(codec) = tokens.next() else {
+            return Err(UnknownCompressionError(s.to_string()));
+        };
+        if codec == "compresseddepth" || tokens.next() != Some("compressed") {
+            return Err(UnknownCompressionError(s.to_string()));
         }
-        #[cfg(feature = "img2yuv-webp")]
-        if tokens.contains(&"webp") {
-            return Ok(Self::WebP);
+        let _compressed_pixfmt = tokens.next();
+        if tokens.next().is_some() {
+            return Err(UnknownCompressionError(s.to_string()));
         }
-        Err(UnknownCompressionError(s.to_string()))
+
+        Self::from_codec(codec).ok_or_else(|| UnknownCompressionError(s.to_string()))
     }
 }
 impl Compression {
+    fn from_codec(codec: &str) -> Option<Self> {
+        match codec {
+            #[cfg(feature = "img2yuv-png")]
+            "png" => Some(Self::Png),
+            #[cfg(feature = "img2yuv-jpeg")]
+            "jpg" | "jpeg" => Some(Self::Jpeg),
+            #[cfg(feature = "img2yuv-webp")]
+            "webp" => Some(Self::WebP),
+            _ => None,
+        }
+    }
+
     /// Returns the canonical format string for this compression.
     pub fn as_str(self) -> &'static str {
         match self {
@@ -145,7 +163,9 @@ mod tests {
     #[cfg(feature = "img2yuv-jpeg")]
     fn test_from_str_jpeg() {
         check("jpeg", Some(Compression::Jpeg));
+        check("  JPG  ", Some(Compression::Jpeg));
         check("bgr8; jpeg compressed bgr8", Some(Compression::Jpeg));
+        check("BGR8; JPEG compressed RGB8", Some(Compression::Jpeg));
     }
 
     #[test]
@@ -165,6 +185,11 @@ mod tests {
     fn test_from_str_unknown() {
         check("gif", None);
         check("rgb8; gif compressed", None);
+        check("rgb8; compressed jpeg", None);
+        check("some unrelated png metadata", None);
+        check("png jpeg", None);
+        check("rgb8; png", None);
+        check("rgb8; png compressed bgr8 extra", None);
     }
 
     #[test]
