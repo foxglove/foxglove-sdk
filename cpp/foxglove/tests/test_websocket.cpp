@@ -351,8 +351,6 @@ TEST_CASE("Subscribe and unsubscribe callbacks") {
   std::vector<uint64_t> subscribe_calls;
   std::vector<uint64_t> unsubscribe_calls;
 
-  std::unique_lock lock{mutex};
-
   foxglove::WebSocketServerCallbacks callbacks;
   callbacks.onSubscribe =
     [&](uint64_t channel_id, const foxglove::ClientMetadata& _ [[maybe_unused]]) {
@@ -367,6 +365,11 @@ TEST_CASE("Subscribe and unsubscribe callbacks") {
       cv.notify_all();
     };
   auto server = startServer(context, {}, std::move(callbacks));
+
+  // Acquired after `server` so it is released before the server's destructor runs: the
+  // destructor blocks on server shutdown, which can't complete while a callback is waiting
+  // for this mutex.
+  std::unique_lock lock{mutex};
 
   foxglove::Schema schema;
   schema.name = "ExampleSchema";
@@ -395,7 +398,7 @@ TEST_CASE("Subscribe and unsubscribe callbacks") {
   cv.wait_for(lock, kTestTimeout, [&] {
     return !subscribe_calls.empty();
   });
-  REQUIRE_THAT(subscribe_calls, Equals(std::vector<uint64_t>{1}));
+  REQUIRE_THAT(subscribe_calls, Equals(std::vector<uint64_t>{channel.id()}));
 
   client.send(
     R"({
@@ -406,8 +409,9 @@ TEST_CASE("Subscribe and unsubscribe callbacks") {
   cv.wait_for(lock, kTestTimeout, [&] {
     return !unsubscribe_calls.empty();
   });
-  REQUIRE_THAT(unsubscribe_calls, Equals(std::vector<uint64_t>{1}));
+  REQUIRE_THAT(unsubscribe_calls, Equals(std::vector<uint64_t>{channel.id()}));
 
+  lock.unlock();
   REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
 }
 
@@ -440,23 +444,32 @@ TEST_CASE("Client advertise/publish callbacks") {
   // the following variables are protected by the mutex:
   bool advertised = false;
   bool received_message = false;
+  uint32_t advertise_client_id = 0;
+  uint32_t advertise_channel_id = 0;
+  std::string advertise_topic;
+  std::string advertise_encoding;
+  std::string advertise_schema_name;
+  std::string advertise_schema_encoding;
+  std::string advertise_schema;
+  std::string message_data;
+  uint32_t unadvertise_client_id = 0;
+  uint32_t unadvertise_channel_id = 0;
 
-  std::unique_lock lock{mutex};
-
+  // These callbacks run on server threads, so they only capture values; assertions run on
+  // the main thread. A failing Catch2 assertion throws, and a throw from a non-test thread
+  // terminates the process.
   foxglove::WebSocketServerCallbacks callbacks;
   callbacks.onClientAdvertise = [&](uint32_t client_id, const foxglove::ClientChannel& channel) {
     std::scoped_lock lock{mutex};
     advertised = true;
-    REQUIRE(client_id == 1);
-    REQUIRE(channel.id == 100);
-    REQUIRE(channel.topic == "topic");
-    REQUIRE(channel.encoding == "encoding");
-    REQUIRE(channel.schema_name == "schema name");
-    REQUIRE(channel.schema_encoding == "schema encoding");
-    REQUIRE(
-      std::string_view(reinterpret_cast<const char*>(channel.schema), channel.schema_len) ==
-      "schema data"
-    );
+    advertise_client_id = client_id;
+    advertise_channel_id = channel.id;
+    advertise_topic = channel.topic;
+    advertise_encoding = channel.encoding;
+    advertise_schema_name = channel.schema_name;
+    advertise_schema_encoding = channel.schema_encoding;
+    advertise_schema =
+      std::string(reinterpret_cast<const char*>(channel.schema), channel.schema_len);
     cv.notify_all();
   };
   callbacks.onMessageData = [&](
@@ -467,17 +480,14 @@ TEST_CASE("Client advertise/publish callbacks") {
                             ) {
     std::scoped_lock lock{mutex};
     received_message = true;
-    REQUIRE(data_len == 3);
-    REQUIRE(char(data[0]) == 'a');
-    REQUIRE(char(data[1]) == 'b');
-    REQUIRE(char(data[2]) == 'c');
+    message_data = std::string(reinterpret_cast<const char*>(data), data_len);
     cv.notify_all();
   };
   callbacks.onClientUnadvertise = [&](uint32_t client_id, uint32_t client_channel_id) {
     std::scoped_lock lock{mutex};
     advertised = false;
-    REQUIRE(client_id == 1);
-    REQUIRE(client_channel_id == 100);
+    unadvertise_client_id = client_id;
+    unadvertise_channel_id = client_channel_id;
     cv.notify_all();
   };
   auto server = startServer(
@@ -486,6 +496,11 @@ TEST_CASE("Client advertise/publish callbacks") {
     std::move(callbacks),
     {"schema encoding", "another"}
   );
+
+  // Acquired after `server` so it is released before the server's destructor runs: the
+  // destructor blocks on server shutdown, which can't complete while a callback is waiting
+  // for this mutex.
+  std::unique_lock lock{mutex};
 
   WebSocketClient client;
   client.start(server.port());
@@ -515,6 +530,12 @@ TEST_CASE("Client advertise/publish callbacks") {
     return advertised;
   });
   REQUIRE(advertised_result);
+  REQUIRE(advertise_channel_id == 100);
+  REQUIRE(advertise_topic == "topic");
+  REQUIRE(advertise_encoding == "encoding");
+  REQUIRE(advertise_schema_name == "schema name");
+  REQUIRE(advertise_schema_encoding == "schema encoding");
+  REQUIRE(advertise_schema == "schema data");
 
   // send ClientMessageData message
   std::array<char, 8> msg = {1, 100, 0, 0, 0, 'a', 'b', 'c'};
@@ -523,12 +544,18 @@ TEST_CASE("Client advertise/publish callbacks") {
     return received_message;
   });
   REQUIRE(received_result);
+  REQUIRE(message_data == "abc");
 
   client.send(R"({ "op": "unadvertise", "channelIds": [100] })");
   cv.wait(lock, [&] {
     return !advertised;
   });
+  // Client IDs come from a process-global counter, so compare for consistency rather than
+  // against an absolute value.
+  REQUIRE(unadvertise_client_id == advertise_client_id);
+  REQUIRE(unadvertise_channel_id == 100);
 
+  lock.unlock();
   REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
 }
 
@@ -2010,7 +2037,6 @@ TEST_CASE("Server channel filtering") {
   std::condition_variable cv;
   // the following variable is protected by the mutex:
   std::vector<uint64_t> subscribe_calls;
-  std::unique_lock lock{mutex};
 
   foxglove::WebSocketServerCallbacks callbacks;
   callbacks.onSubscribe =
@@ -2029,6 +2055,11 @@ TEST_CASE("Server channel filtering") {
   };
 
   auto server = startServer(std::move(ws_options));
+
+  // Acquired after `server` so it is released before the server's destructor runs: the
+  // destructor blocks on server shutdown, which can't complete while a callback is waiting
+  // for this mutex.
+  std::unique_lock lock{mutex};
 
   auto channel_result_1 = foxglove::RawChannel::create("/1", "json", std::nullopt, context);
   auto channel_1 = std::move(requireValue(channel_result_1));
@@ -2079,7 +2110,7 @@ TEST_CASE("Server channel filtering") {
   cv.wait_for(lock, kTestTimeout, [&] {
     return !subscribe_calls.empty();
   });
-  REQUIRE_THAT(subscribe_calls, Equals(std::vector<uint64_t>{1}));
+  REQUIRE_THAT(subscribe_calls, Equals(std::vector<uint64_t>{channel_1.id()}));
 
   payload = client.recv();
   parsed = Json::parse(payload);
@@ -2087,6 +2118,7 @@ TEST_CASE("Server channel filtering") {
   REQUIRE(parsed["op"] == "status");
   REQUIRE(parsed["message"] == "Unknown channel ID: " + std::to_string(channel_2.id()));
 
+  lock.unlock();
   REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
 }
 
