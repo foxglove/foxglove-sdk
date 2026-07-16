@@ -40,8 +40,9 @@ impl FromStr for Compression {
     /// Parses a compressed image format string.
     ///
     /// This accepts a bare codec name (e.g. `"png"`), as used by the Foxglove `CompressedImage`
-    /// schema, as well as the documented ROS `sensor_msgs/CompressedImage` format string, which
-    /// additionally encodes the original pixel format and a `compressed` marker:
+    /// schema, as well as the documented [ROS 1][ros1] and [ROS 2][ros2]
+    /// `sensor_msgs/CompressedImage` format string, which additionally encodes the original pixel
+    /// format and a `compressed` marker:
     ///
     /// - `CODEC`
     /// - `ORIG_PIXFMT; CODEC compressed [COMPRESSED_PIXFMT]`
