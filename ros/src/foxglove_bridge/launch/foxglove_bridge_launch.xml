@@ -28,6 +28,10 @@
   <arg name="foxglove_api_url"               default="" />
   <arg name="max_data_track_message_size"    default="102400" />
   <arg name="video_transcode_topic_denylist" default="['.*/compressedDepth']" />
+  <!-- Defaults to a never-matching pattern rather than []: an empty array does not
+       round-trip as a string array through the launch frontend (the bridge rejects it
+       with InvalidParameterValueException). Same idiom as best_effort_qos_topic_whitelist. -->
+  <arg name="point_cloud_compression_topic_denylist" default="['(?!)']" />
 
   <node pkg="foxglove_bridge" exec="foxglove_bridge">
     <param name="port"                            value="$(var port)" />
@@ -59,5 +63,6 @@
     <param name="foxglove_api_url"               value="$(var foxglove_api_url)" />
     <param name="max_data_track_message_size"    value="$(var max_data_track_message_size)" />
     <param name="video_transcode_topic_denylist" value="$(var video_transcode_topic_denylist)" />
+    <param name="point_cloud_compression_topic_denylist" value="$(var point_cloud_compression_topic_denylist)" />
   </node>
 </launch>
