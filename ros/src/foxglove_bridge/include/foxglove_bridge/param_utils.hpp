@@ -77,8 +77,9 @@ inline std::regex compileTopicRegex(const std::string& pattern) {
 std::vector<std::regex> parseRegexStrings(rclcpp::Node* node,
                                           const std::vector<std::string>& strings);
 
-/// Reads canonicalName, preferring an override for deprecatedName if one was given (and logging a
-/// deprecation warning in that case).
+/// Reads canonicalName. Falls back to deprecatedName's override (logging a deprecation warning)
+/// only if canonicalName has no override of its own; an explicit canonicalName override always
+/// wins over deprecatedName.
 std::vector<std::string> getStringArrayParamWithDeprecatedAlias(rclcpp::Node* node,
                                                                 const std::string& canonicalName,
                                                                 const std::string& deprecatedName);

@@ -5,11 +5,14 @@
 
 #include <gtest/gtest.h>
 
+#include <rclcpp/rclcpp.hpp>
+
 #include <foxglove_bridge/param_utils.hpp>
 #include <foxglove_bridge/utils.hpp>
 
 using foxglove_bridge::compileTopicRegex;
 using foxglove_bridge::DEFAULT_VIDEO_TRANSCODE_TOPIC_DENYLIST;
+using foxglove_bridge::getStringArrayParamWithDeprecatedAlias;
 using foxglove_bridge::matchesRegex;
 using foxglove_bridge::saturatingToSizeT;
 
@@ -20,6 +23,16 @@ namespace {
 // ship, so a change to either is caught here.
 std::vector<std::regex> defaultDenylistPatterns() {
   return {compileTopicRegex(DEFAULT_VIDEO_TRANSCODE_TOPIC_DENYLIST)};
+}
+
+using StringArrayOverride = std::pair<std::string, std::vector<std::string>>;
+
+rclcpp::Node::SharedPtr makeNodeWithOverrides(const std::vector<StringArrayOverride>& overrides) {
+  rclcpp::NodeOptions options;
+  for (const auto& [name, value] : overrides) {
+    options.append_parameter_override(name, value);
+  }
+  return std::make_shared<rclcpp::Node>("param_alias_test_node", options);
 }
 }  // namespace
 
@@ -169,7 +182,49 @@ TEST(SplitDefinitionsTest, HandleCarriageReturn) {
   EXPECT_EQ(definitions[1], "string device_name");
 }
 
+// getStringArrayParamWithDeprecatedAlias backs the *_whitelist -> *_allowlist parameter renames:
+// the deprecated name is only consulted when the canonical name has no override of its own, so an
+// explicit canonical override always wins over a deprecated one.
+TEST(GetStringArrayParamWithDeprecatedAliasTest, UsesCanonicalWhenNoOverrideGiven) {
+  auto node = makeNodeWithOverrides({});
+  node->declare_parameter("topic_allowlist", std::vector<std::string>({".*"}));
+
+  const auto result =
+    getStringArrayParamWithDeprecatedAlias(node.get(), "topic_allowlist", "topic_whitelist");
+
+  EXPECT_EQ(result, std::vector<std::string>({".*"}));
+}
+
+TEST(GetStringArrayParamWithDeprecatedAliasTest, PrefersDeprecatedOverrideWhenCanonicalUnset) {
+  auto node = makeNodeWithOverrides({{"topic_whitelist", {"/foo", "/bar"}}});
+  node->declare_parameter("topic_allowlist", std::vector<std::string>({".*"}));
+
+  testing::internal::CaptureStdout();
+  testing::internal::CaptureStderr();
+  const auto result =
+    getStringArrayParamWithDeprecatedAlias(node.get(), "topic_allowlist", "topic_whitelist");
+  const std::string logOutput =
+    testing::internal::GetCapturedStdout() + testing::internal::GetCapturedStderr();
+
+  EXPECT_EQ(result, std::vector<std::string>({"/foo", "/bar"}));
+  EXPECT_NE(logOutput.find("deprecated"), std::string::npos);
+}
+
+TEST(GetStringArrayParamWithDeprecatedAliasTest, CanonicalOverrideWinsWhenBothAreSet) {
+  auto node = makeNodeWithOverrides(
+    {{"topic_allowlist", {"/canonical"}}, {"topic_whitelist", {"/deprecated"}}});
+  node->declare_parameter("topic_allowlist", std::vector<std::string>({".*"}));
+
+  const auto result =
+    getStringArrayParamWithDeprecatedAlias(node.get(), "topic_allowlist", "topic_whitelist");
+
+  EXPECT_EQ(result, std::vector<std::string>({"/canonical"}));
+}
+
 int main(int argc, char** argv) {
   testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
+  rclcpp::init(argc, argv);
+  const int result = RUN_ALL_TESTS();
+  rclcpp::shutdown();
+  return result;
 }

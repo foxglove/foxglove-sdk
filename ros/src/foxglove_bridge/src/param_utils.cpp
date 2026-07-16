@@ -338,13 +338,15 @@ std::vector<std::string> getStringArrayParamWithDeprecatedAlias(rclcpp::Node* no
                                                                 const std::string& canonicalName,
                                                                 const std::string& deprecatedName) {
   const auto& overrides = node->get_node_parameters_interface()->get_parameter_overrides();
-  const auto it = overrides.find(deprecatedName);
-  if (it == overrides.end()) {
-    return node->get_parameter(canonicalName).as_string_array();
+  if (overrides.find(canonicalName) == overrides.end()) {
+    const auto it = overrides.find(deprecatedName);
+    if (it != overrides.end()) {
+      RCLCPP_WARN(node->get_logger(), "Parameter '%s' is deprecated; use '%s' instead.",
+                 deprecatedName.c_str(), canonicalName.c_str());
+      return it->second.get<std::vector<std::string>>();
+    }
   }
-  RCLCPP_WARN(node->get_logger(), "Parameter '%s' is deprecated; use '%s' instead.",
-             deprecatedName.c_str(), canonicalName.c_str());
-  return it->second.get<std::vector<std::string>>();
+  return node->get_parameter(canonicalName).as_string_array();
 }
 
 }  // namespace foxglove_bridge
