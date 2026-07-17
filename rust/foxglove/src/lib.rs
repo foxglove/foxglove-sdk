@@ -343,6 +343,8 @@
 //!   channels in the remote access sink. Enabled by the `remote-access` feature; with it
 //!   enabled, the remote access sink compresses point clouds by default, and its builder
 //!   can opt out.
+//! - `draco-flatbuffer`: adds FlatBuffer-encoded `foxglove.PointCloud` channels as a
+//!   point-cloud compression input in the remote access sink.
 //! - `draco-json`: adds JSON-encoded `foxglove.PointCloud` channels as a point-cloud
 //!   compression input in the remote access sink.
 //! - `draco-ros2`: adds CDR-encoded ROS 2 `sensor_msgs/msg/PointCloud2` channels as a
