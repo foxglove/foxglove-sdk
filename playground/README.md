@@ -15,17 +15,15 @@ Set up the emscripten toolchain with
 
 ```sh
 git clone https://github.com/emscripten-core/emsdk.git
-emsdk/emsdk install 3.1.58
-emsdk/emsdk activate 3.1.58
+emsdk/emsdk install 6.0.3
+emsdk/emsdk activate 6.0.3
 source emsdk/emsdk_env.sh
 ```
 
-We currently use an older version of rust to work around limitations in this
-version of emscripten. To install the 1.86.0 toolchain:
+Add the `wasm32-unknown-emscripten` target to your rust toolchain:
 
 ```sh
-rustup toolchain install 1.86.0
-rustup target add wasm32-unknown-emscripten --toolchain 1.86.0
+rustup target add wasm32-unknown-emscripten
 ```
 
 Now you can build the wheel.
@@ -34,7 +32,6 @@ Now you can build the wheel.
 cd ../python/foxglove-sdk
 CFLAGS=-fPIC \
   RUSTC_BOOTSTRAP=1 \
-  RUSTUP_TOOLCHAIN=1.86.0 \
   uv run maturin build --release --out dist --target wasm32-unknown-emscripten -i python3.12
 cp dist/foxglove_sdk-*.whl ../../playground/public/
 ```
