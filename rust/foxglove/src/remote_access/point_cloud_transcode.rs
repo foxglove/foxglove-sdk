@@ -1,11 +1,13 @@
 //! Transparent point-cloud transcoding for the remote-access sink.
 //!
-//! Detects channels carrying point-cloud messages — protobuf- or JSON-encoded
-//! `foxglove.PointCloud`, or CDR-encoded ROS 2 `sensor_msgs/msg/PointCloud2` — rewrites
-//! their advertisement to the `foxglove.CompressedPointCloud` schema, and transcodes
-//! individual messages using the Draco mechanism in [`crate::draco`]. Every input format
-//! is decoded to a `foxglove.PointCloud` before Draco encoding.
+//! Detects channels carrying point-cloud messages — protobuf-, JSON-, or
+//! FlatBuffer-encoded `foxglove.PointCloud`, or CDR-encoded ROS 2
+//! `sensor_msgs/msg/PointCloud2` — rewrites their advertisement to the
+//! `foxglove.CompressedPointCloud` schema, and transcodes individual messages using the
+//! Draco mechanism in [`crate::draco`]. Every input format is decoded to a
+//! `foxglove.PointCloud` before Draco encoding.
 
+mod flatbuffer;
 mod ros2;
 
 use bytes::Bytes;
@@ -27,6 +29,8 @@ pub(crate) enum TranscodeError {
     Ros2(#[from] ros2::Ros2PointCloudError),
     #[error("failed to decode JSON PointCloud message: {0}")]
     Json(#[from] serde_json::Error),
+    #[error("failed to decode FlatBuffer PointCloud message: {0}")]
+    Flatbuffer(#[from] flatbuffer::FlatbufferPointCloudError),
     #[error(transparent)]
     Encode(#[from] DracoEncodeError),
 }
@@ -42,18 +46,18 @@ pub(crate) enum PointCloudInputSchema {
     FoxgloveProtobuf,
     /// `foxglove.PointCloud` with json encoding.
     FoxgloveJson,
+    /// `foxglove.PointCloud` with flatbuffer encoding.
+    FoxgloveFlatbuffer,
     /// ROS 2 `sensor_msgs/msg/PointCloud2` with cdr encoding.
     Ros2PointCloud2,
 }
 
 /// Maps a channel's message encoding and schema name to a point-cloud input format.
-///
-/// Additional input formats (e.g. `foxglove.PointCloud` with json or flatbuffer encoding,
-/// mirroring the video pipeline's input menu) slot in here as new arms.
 fn detect_point_cloud_schema(encoding: &str, schema_name: &str) -> Option<PointCloudInputSchema> {
     match (encoding, schema_name) {
         ("protobuf", "foxglove.PointCloud") => Some(PointCloudInputSchema::FoxgloveProtobuf),
         ("json", "foxglove.PointCloud") => Some(PointCloudInputSchema::FoxgloveJson),
+        ("flatbuffer", "foxglove.PointCloud") => Some(PointCloudInputSchema::FoxgloveFlatbuffer),
         ("cdr", "sensor_msgs/msg/PointCloud2") => Some(PointCloudInputSchema::Ros2PointCloud2),
         _ => None,
     }
@@ -77,6 +81,7 @@ pub(crate) fn transcode_point_cloud_message(
     let mut cloud = match input_schema {
         PointCloudInputSchema::FoxgloveProtobuf => <PointCloud as Decode>::decode(msg)?,
         PointCloudInputSchema::FoxgloveJson => serde_json::from_slice::<PointCloud>(msg)?,
+        PointCloudInputSchema::FoxgloveFlatbuffer => flatbuffer::decode_point_cloud(msg)?,
         PointCloudInputSchema::Ros2PointCloud2 => ros2::Ros2PointCloud2::decode(msg)?.try_into()?,
     };
     // The conditioning passes and Draco encoding run on the converted cloud, so every
@@ -449,6 +454,18 @@ mod tests {
         assert_eq!(
             point_cloud_input_schema(&ch),
             Some(PointCloudInputSchema::Ros2PointCloud2)
+        );
+    }
+
+    #[test]
+    fn test_detects_flatbuffer_point_cloud() {
+        let ch = make_channel(
+            "flatbuffer",
+            Some(Schema::new("foxglove.PointCloud", "flatbuffer", b"")),
+        );
+        assert_eq!(
+            point_cloud_input_schema(&ch),
+            Some(PointCloudInputSchema::FoxgloveFlatbuffer)
         );
     }
 

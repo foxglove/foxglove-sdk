@@ -2822,7 +2822,7 @@ typedef struct foxglove_draco_encode_options {
  * `point_cloud_compression` callback on the gateway options.
  *
  * When compression is enabled, channels carrying a supported point-cloud schema —
- * currently protobuf- or JSON-encoded
+ * currently protobuf-, JSON-, or FlatBuffer-encoded
  * `foxglove.PointCloud`, or CDR-encoded `sensor_msgs/msg/PointCloud2` — are advertised with the protobuf-encoded
  * `foxglove.CompressedPointCloud` schema, and each logged point cloud
  * is compressed in a background task (off the logging hot path) before delivery. If

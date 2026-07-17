@@ -33,8 +33,8 @@ struct DracoEncodeOptions {
 /// per-channel policy callback on the gateway options.
 ///
 /// When compression is enabled, channels carrying a supported point-cloud schema —
-/// currently protobuf- or JSON-encoded
-/// `foxglove.PointCloud`, or CDR-encoded `sensor_msgs/msg/PointCloud2` — are advertised with the protobuf-encoded
+/// currently protobuf-, JSON-, or FlatBuffer-encoded `foxglove.PointCloud`, or CDR-encoded
+/// `sensor_msgs/msg/PointCloud2` — are advertised with the protobuf-encoded
 /// `foxglove.CompressedPointCloud` schema, and each logged point cloud
 /// is compressed in a background task (off the logging hot path) before delivery. If
 /// compression falls behind the log rate, the oldest queued message is dropped.
