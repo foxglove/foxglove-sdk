@@ -9,6 +9,8 @@ use tracing::{debug, info};
 use crate::protocol::v2::server::advertise;
 
 use crate::remote_access::qos::{QosProfile, Reliability};
+#[cfg(feature = "draco")]
+use crate::remote_access::session::PointCloudPublisher;
 use crate::remote_access::session::{DataTrack, VideoInputSchema, VideoMetadata, VideoPublisher};
 use crate::{ChannelDescriptor, ChannelId, RawChannel};
 
@@ -81,6 +83,19 @@ pub(super) struct ChannelRegistry {
     video_track_sids: HashMap<ChannelId, TrackSid>,
     /// Video metadata last advertised for each video channel.
     video_metadata: HashMap<ChannelId, VideoMetadata>,
+    /// Compression options for point-cloud channels, keyed by channel ID. Channels
+    /// present here are advertised with the `foxglove.CompressedPointCloud` schema for
+    /// the lifetime of the channel; a publisher exists in `point_cloud_publishers` only
+    /// while the channel has data subscribers.
+    #[cfg(feature = "draco")]
+    point_cloud_compression: HashMap<ChannelId, crate::draco::CompressPointCloudOptions>,
+    /// Active point-cloud transcoding publishers, keyed by channel ID. Channels present
+    /// here have their messages diverted to the publisher's background transcoding task.
+    /// Publishers are created when a compression-enabled channel gains its first data
+    /// subscriber and dropped when it loses its last, so transcoding only runs while
+    /// someone is receiving the output.
+    #[cfg(feature = "draco")]
+    point_cloud_publishers: HashMap<ChannelId, Arc<PointCloudPublisher>>,
     /// Client-advertised channels, keyed by participant SID then client-assigned channel ID.
     client_channels: HashMap<ParticipantSid, HashMap<ChannelId, ChannelDescriptor>>,
 }
@@ -97,6 +112,10 @@ impl ChannelRegistry {
             video_publishers: HashMap::new(),
             video_track_sids: HashMap::new(),
             video_metadata: HashMap::new(),
+            #[cfg(feature = "draco")]
+            point_cloud_compression: HashMap::new(),
+            #[cfg(feature = "draco")]
+            point_cloud_publishers: HashMap::new(),
             client_channels: HashMap::new(),
         }
     }
@@ -261,6 +280,10 @@ impl ChannelRegistry {
         self.qos_profiles.remove(&channel_id);
         self.video_subscribers.remove(&channel_id);
         self.video_metadata.remove(&channel_id);
+        #[cfg(feature = "draco")]
+        self.point_cloud_compression.remove(&channel_id);
+        #[cfg(feature = "draco")]
+        self.point_cloud_publishers.remove(&channel_id);
         self.channels.remove(&channel_id).is_some()
     }
 
@@ -362,6 +385,80 @@ impl ChannelRegistry {
                     ch.metadata
                         .insert("foxglove.videoFrameId".to_string(), meta.frame_id.clone());
                 }
+            }
+        }
+    }
+
+    /// Enables point-cloud compression for a channel with the given options.
+    ///
+    /// The channel is advertised with the `foxglove.CompressedPointCloud` schema; a
+    /// transcoding publisher is created separately once the channel has data subscribers.
+    #[cfg(feature = "draco")]
+    pub fn insert_point_cloud_compression(
+        &mut self,
+        channel_id: ChannelId,
+        options: crate::draco::CompressPointCloudOptions,
+    ) {
+        self.point_cloud_compression.insert(channel_id, options);
+    }
+
+    /// Returns the compression options for a channel, if point-cloud compression is
+    /// enabled for it.
+    #[cfg(feature = "draco")]
+    pub fn get_point_cloud_compression(
+        &self,
+        channel_id: &ChannelId,
+    ) -> Option<crate::draco::CompressPointCloudOptions> {
+        self.point_cloud_compression.get(channel_id).copied()
+    }
+
+    /// Inserts a point-cloud transcoding publisher for a channel.
+    #[cfg(feature = "draco")]
+    pub fn insert_point_cloud_publisher(
+        &mut self,
+        channel_id: ChannelId,
+        publisher: Arc<PointCloudPublisher>,
+    ) {
+        self.point_cloud_publishers.insert(channel_id, publisher);
+    }
+
+    /// Removes the point-cloud transcoding publisher for a channel, if any.
+    ///
+    /// Dropping the publisher closes its queue and terminates the background
+    /// transcoding task.
+    #[cfg(feature = "draco")]
+    pub fn remove_point_cloud_publisher(&mut self, channel_id: &ChannelId) {
+        self.point_cloud_publishers.remove(channel_id);
+    }
+
+    /// Returns the point-cloud transcoding publisher for a channel, if any.
+    #[cfg(feature = "draco")]
+    pub fn get_point_cloud_publisher(
+        &self,
+        channel_id: &ChannelId,
+    ) -> Option<&Arc<PointCloudPublisher>> {
+        self.point_cloud_publishers.get(channel_id)
+    }
+
+    /// Returns the advertised channel with the given ID, if any.
+    #[cfg(feature = "draco")]
+    pub fn get_channel(&self, channel_id: &ChannelId) -> Option<Arc<RawChannel>> {
+        self.channels.get(channel_id).cloned()
+    }
+
+    /// Rewrites compression-enabled channels to advertise the
+    /// `foxglove.CompressedPointCloud` schema instead of `foxglove.PointCloud`.
+    ///
+    /// Keyed on the compression configuration rather than an active publisher, so the
+    /// advertised schema is stable regardless of the current subscriber count.
+    #[cfg(feature = "draco")]
+    pub fn rewrite_point_cloud_advertisements(&self, advertise: &mut advertise::Advertise<'_>) {
+        for ch in &mut advertise.channels {
+            if self
+                .point_cloud_compression
+                .contains_key(&ChannelId::new(ch.id))
+            {
+                crate::draco::transcode::rewrite_advertisement(ch);
             }
         }
     }
@@ -1037,6 +1134,136 @@ mod tests {
                 .contains_key("foxglove.videoFrameId"),
             "empty frame_id should not be advertised",
         );
+    }
+
+    #[cfg(feature = "draco")]
+    mod point_cloud {
+        use super::*;
+        use crate::Encode;
+        use crate::draco::CompressPointCloudOptions;
+        use crate::remote_access::session::PointCloudPublisher;
+
+        fn make_point_cloud_channel(topic: &str) -> Arc<RawChannel> {
+            use crate::{ChannelBuilder, Context};
+            let ctx = Context::new();
+            ChannelBuilder::new(topic)
+                .context(&ctx)
+                .message_encoding("protobuf")
+                .schema(<crate::messages::PointCloud as Encode>::get_schema().unwrap())
+                .build_raw()
+                .unwrap()
+        }
+
+        fn make_publisher(channel_id: ChannelId) -> Arc<PointCloudPublisher> {
+            Arc::new(PointCloudPublisher::new(
+                &tokio::runtime::Handle::current(),
+                std::sync::Weak::new(),
+                channel_id,
+                CompressPointCloudOptions::default(),
+            ))
+        }
+
+        #[tokio::test]
+        async fn rewrite_replaces_schema_for_compression_enabled_channels() {
+            let mut state = ChannelRegistry::new();
+            let cloud_ch = make_point_cloud_channel("/cloud");
+            let other_ch = make_channel("/other");
+            state.insert_channel(&cloud_ch);
+            state.insert_channel(&other_ch);
+            state.insert_point_cloud_compression(
+                cloud_ch.id(),
+                CompressPointCloudOptions::default(),
+            );
+
+            let mut msg =
+                advertise::advertise_channels([&cloud_ch, &other_ch].into_iter()).into_owned();
+            state.rewrite_point_cloud_advertisements(&mut msg);
+
+            let adv_cloud = msg
+                .channels
+                .iter()
+                .find(|ch| ch.id == u64::from(cloud_ch.id()))
+                .unwrap();
+            assert_eq!(adv_cloud.schema_name, "foxglove.CompressedPointCloud");
+            assert_eq!(adv_cloud.schema_encoding.as_deref(), Some("protobuf"));
+            assert_eq!(
+                adv_cloud.decode_schema().unwrap(),
+                crate::messages::descriptors::COMPRESSED_POINT_CLOUD,
+            );
+
+            let adv_other = msg
+                .channels
+                .iter()
+                .find(|ch| ch.id == u64::from(other_ch.id()))
+                .unwrap();
+            assert_eq!(adv_other.schema_name, "S");
+        }
+
+        #[tokio::test]
+        async fn rewrite_is_noop_without_compression_enabled() {
+            let mut state = ChannelRegistry::new();
+            let cloud_ch = make_point_cloud_channel("/cloud");
+            state.insert_channel(&cloud_ch);
+
+            let mut msg = advertise::advertise_channels(std::iter::once(&cloud_ch)).into_owned();
+            state.rewrite_point_cloud_advertisements(&mut msg);
+            assert_eq!(msg.channels[0].schema_name, "foxglove.PointCloud");
+        }
+
+        #[tokio::test]
+        async fn rewrite_does_not_depend_on_active_publisher() {
+            // The advertised schema must be stable regardless of subscriber count, so the
+            // rewrite is keyed on the compression config, not on a live publisher.
+            let mut state = ChannelRegistry::new();
+            let cloud_ch = make_point_cloud_channel("/cloud");
+            state.insert_channel(&cloud_ch);
+            state.insert_point_cloud_compression(
+                cloud_ch.id(),
+                CompressPointCloudOptions::default(),
+            );
+            assert!(state.get_point_cloud_publisher(&cloud_ch.id()).is_none());
+
+            let mut msg = advertise::advertise_channels(std::iter::once(&cloud_ch)).into_owned();
+            state.rewrite_point_cloud_advertisements(&mut msg);
+            assert_eq!(msg.channels[0].schema_name, "foxglove.CompressedPointCloud");
+        }
+
+        #[tokio::test]
+        async fn publisher_lifecycle_follows_insert_and_remove() {
+            let mut state = ChannelRegistry::new();
+            let cloud_ch = make_point_cloud_channel("/cloud");
+            state.insert_channel(&cloud_ch);
+            state.insert_point_cloud_compression(
+                cloud_ch.id(),
+                CompressPointCloudOptions::default(),
+            );
+            assert!(state.get_point_cloud_compression(&cloud_ch.id()).is_some());
+
+            state.insert_point_cloud_publisher(cloud_ch.id(), make_publisher(cloud_ch.id()));
+            assert!(state.get_point_cloud_publisher(&cloud_ch.id()).is_some());
+
+            // Dropping the publisher (last unsubscribe) keeps the compression config.
+            state.remove_point_cloud_publisher(&cloud_ch.id());
+            assert!(state.get_point_cloud_publisher(&cloud_ch.id()).is_none());
+            assert!(state.get_point_cloud_compression(&cloud_ch.id()).is_some());
+        }
+
+        #[tokio::test]
+        async fn remove_channel_drops_publisher_and_compression() {
+            let mut state = ChannelRegistry::new();
+            let cloud_ch = make_point_cloud_channel("/cloud");
+            state.insert_channel(&cloud_ch);
+            state.insert_point_cloud_compression(
+                cloud_ch.id(),
+                CompressPointCloudOptions::default(),
+            );
+            state.insert_point_cloud_publisher(cloud_ch.id(), make_publisher(cloud_ch.id()));
+            assert!(state.get_point_cloud_publisher(&cloud_ch.id()).is_some());
+
+            state.remove_channel(cloud_ch.id());
+            assert!(state.get_point_cloud_publisher(&cloud_ch.id()).is_none());
+            assert!(state.get_point_cloud_compression(&cloud_ch.id()).is_none());
+        }
     }
 
     #[test]
