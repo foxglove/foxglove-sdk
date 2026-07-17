@@ -11,6 +11,11 @@ license.workspace = true
 default = ["aws-lc-rs", "derive", "lz4", "websocket", "zstd"]
 chrono = ["dep:chrono"]
 derive = ["dep:foxglove_derive"]
+# Draco point-cloud compression: enables `foxglove::draco` (the
+# `compress_point_cloud` helper) and transparent transcoding of
+# `foxglove.PointCloud` channels in the remote-access sink
+# (enabled by default on that sink; opt out via its builder).
+draco = ["dep:draco-core"]
 sysinfo = ["dep:sysinfo", "dep:tokio", "tokio/rt-multi-thread", "tokio/time"]
 _remote-common = [
   "dep:base64",
@@ -25,6 +30,7 @@ websocket = ["_remote-common", "dep:tokio-tungstenite"]
 live_visualization = ["websocket"]
 remote-access = [
   "_remote-common",
+  "draco",
   "img2yuv",
   "dep:livekit",
   "dep:libwebrtc",
@@ -92,6 +98,7 @@ full = [
   "chrono",
   "data_provider",
   "derive",
+  "draco",
   "img2yuv",
   "live_visualization",
   "lz4",
@@ -116,6 +123,7 @@ bimap = "0.6.3"
 bytes.workspace = true
 chrono = { workspace = true, optional = true }
 delegate = "0.13.2"
+draco-core = { version = "1.0", optional = true }
 flume = { version = "0.12", optional = true }
 indexmap = "2"
 foxglove_derive = { version = "0.25.3", path = "../foxglove_derive", optional = true }
