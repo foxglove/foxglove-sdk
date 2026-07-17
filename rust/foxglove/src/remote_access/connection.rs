@@ -604,10 +604,8 @@ impl RemoteAccessConnection {
             let mut graph = self.connection_graph.lock();
             let had_subscribers = graph.has_subscribers();
             graph.clear_subscribers();
-            if had_subscribers {
-                if let Some(listener) = &self.listener {
-                    listener.on_connection_graph_unsubscribe();
-                }
+            if had_subscribers && let Some(listener) = &self.listener {
+                listener.on_connection_graph_unsubscribe();
             }
         }
         context.remove_sink(session.sink_id());

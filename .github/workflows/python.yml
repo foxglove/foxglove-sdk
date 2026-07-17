@@ -67,17 +67,26 @@ jobs:
       - uses: astral-sh/setup-uv@v7
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          # Use an older rust toolchain to avoid emscripten build error "Unknown option '--enable-bulk-memory-opt'"
-          # similar to https://github.com/godotengine/godot/issues/100841
-          toolchain: 1.86.0
+          # Must be >= the workspace MSRV. Requires an Emscripten version new enough for the
+          # bulk-memory flags modern rustc emits (see the emsdk pin below).
+          toolchain: 1.88.0
           target: wasm32-unknown-emscripten
 
       - name: Set up Emscripten
         run: |
           git clone https://github.com/emscripten-core/emsdk.git
-          # Use an older emscripten version to avoid errors with building Rust packages https://github.com/pyodide/pyodide/pull/5646#issuecomment-3215934664
-          ./emsdk/emsdk install 3.1.58
-          ./emsdk/emsdk activate 3.1.58
+          # Must match the Emscripten ABI of the Pyodide version pinned in playground/package.json
+          # (Pyodide 0.28.x is built with Emscripten 4.0.9).
+          ./emsdk/emsdk install 4.0.9
+          ./emsdk/emsdk activate 4.0.9
+          # Emscripten 4.0.9 rejects Rust side modules whose exports are not valid JS
+          # identifiers; fixed upstream in 4.0.12 (emscripten-core/emscripten#24359), but the
+          # Pyodide 0.28 ABI requires 4.0.9, so apply the same patch Pyodide's own toolchain
+          # carries. Fetched at runtime because this job builds from the sdist and has no
+          # repo checkout. Drop this when Pyodide moves to Emscripten >= 4.0.12.
+          curl -fsSLo emcc-exports.patch https://raw.githubusercontent.com/pyodide/pyodide/0.28.3/emsdk/patches/0002-Don-t-check-exports-for-being-valid-C-C-identifiers-.patch
+          echo "3cfc92700778eff9a39a9638f034a7cf4cf41092ef8cf6bb76475eb7c5887c50  emcc-exports.patch" | sha256sum -c
+          patch -p1 -d emsdk/upstream/emscripten < emcc-exports.patch
           echo "$(pwd)/emsdk" >> $GITHUB_PATH
           echo "$(pwd)/emsdk/upstream/emscripten" >> $GITHUB_PATH
 

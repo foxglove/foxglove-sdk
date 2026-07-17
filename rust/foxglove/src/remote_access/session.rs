@@ -355,10 +355,10 @@ impl Sink for RemoteAccessSession {
             } else {
                 // Lossy channels: send via the eagerly-published data track
                 // inline, while we still hold the state read lock.
-                if let Some(track) = state.get_subscribed_data_track(&channel_id) {
-                    if let Err(report) = track.log(channel_id, msg, metadata) {
-                        drop_report = Some((report, state.data_subscriber_sids(&channel_id)));
-                    }
+                if let Some(track) = state.get_subscribed_data_track(&channel_id)
+                    && let Err(report) = track.log(channel_id, msg, metadata)
+                {
+                    drop_report = Some((report, state.data_subscriber_sids(&channel_id)));
                 }
                 SmallVec::new()
             }
@@ -954,24 +954,24 @@ impl RemoteAccessSession {
             state.unsubscribe_video(participant.participant_sid(), &data_channel_ids);
         drop(state);
 
-        if !subscribe_result.first_subscribed.is_empty() {
-            if let Some(context) = self.context.upgrade() {
-                context.subscribe_channels(self.sink_id, &subscribe_result.first_subscribed);
-            }
+        if !subscribe_result.first_subscribed.is_empty()
+            && let Some(context) = self.context.upgrade()
+        {
+            context.subscribe_channels(self.sink_id, &subscribe_result.first_subscribed);
         }
 
         self.start_video_tracks(&first_video_subscribed);
         self.stop_video_tracks(&last_video_unsubscribed);
 
-        if let Some(listener) = &self.listener {
-            if !subscribe_result.newly_subscribed_descriptors.is_empty() {
-                let client = Client::new(
-                    participant.client_id(),
-                    participant.participant_id().clone(),
-                );
-                for descriptor in &subscribe_result.newly_subscribed_descriptors {
-                    listener.on_subscribe(&client, descriptor);
-                }
+        if let Some(listener) = &self.listener
+            && !subscribe_result.newly_subscribed_descriptors.is_empty()
+        {
+            let client = Client::new(
+                participant.client_id(),
+                participant.participant_id().clone(),
+            );
+            for descriptor in &subscribe_result.newly_subscribed_descriptors {
+                listener.on_subscribe(&client, descriptor);
             }
         }
 
@@ -1019,10 +1019,10 @@ impl RemoteAccessSession {
             state.unsubscribe_video(participant.participant_sid(), &channel_ids);
         drop(state);
 
-        if !unsubscribe_result.last_unsubscribed.is_empty() {
-            if let Some(context) = self.context.upgrade() {
-                context.unsubscribe_channels(self.sink_id, &unsubscribe_result.last_unsubscribed);
-            }
+        if !unsubscribe_result.last_unsubscribed.is_empty()
+            && let Some(context) = self.context.upgrade()
+        {
+            context.unsubscribe_channels(self.sink_id, &unsubscribe_result.last_unsubscribed);
         }
 
         self.stop_video_tracks(&last_video_unsubscribed);
@@ -1420,26 +1420,27 @@ impl RemoteAccessSession {
             .cleanup_for_removed_participant(participant_sid);
 
         // Listener / context / video-track / connection-graph aftercare.
-        if !removed.last_unsubscribed.is_empty() {
-            if let Some(context) = self.context.upgrade() {
-                context.unsubscribe_channels(self.sink_id, &removed.last_unsubscribed);
-            }
+        if !removed.last_unsubscribed.is_empty()
+            && let Some(context) = self.context.upgrade()
+        {
+            context.unsubscribe_channels(self.sink_id, &removed.last_unsubscribed);
         }
 
         self.stop_video_tracks(&removed.last_video_unsubscribed);
 
-        if !last_param_unsubscribed.is_empty() {
-            if let Some(listener) = &self.listener {
-                listener.on_parameters_unsubscribe(last_param_unsubscribed);
-            }
+        if !last_param_unsubscribed.is_empty()
+            && let Some(listener) = &self.listener
+        {
+            listener.on_parameters_unsubscribe(last_param_unsubscribed);
         }
 
         if self.has_capability(Capability::ConnectionGraph) {
             let mut graph = self.connection_graph.lock();
-            if graph.remove_subscriber(client_id) && !graph.has_subscribers() {
-                if let Some(listener) = &self.listener {
-                    listener.on_connection_graph_unsubscribe();
-                }
+            if graph.remove_subscriber(client_id)
+                && !graph.has_subscribers()
+                && let Some(listener) = &self.listener
+            {
+                listener.on_connection_graph_unsubscribe();
             }
         }
 
@@ -2171,10 +2172,10 @@ impl RemoteAccessSession {
             .parameter_subscriptions
             .write()
             .subscribe(participant.participant_sid(), names);
-        if !new_names.is_empty() {
-            if let Some(listener) = &self.listener {
-                listener.on_parameters_subscribe(new_names);
-            }
+        if !new_names.is_empty()
+            && let Some(listener) = &self.listener
+        {
+            listener.on_parameters_subscribe(new_names);
         }
     }
 
@@ -2196,10 +2197,10 @@ impl RemoteAccessSession {
             .parameter_subscriptions
             .write()
             .unsubscribe(participant.participant_sid(), names);
-        if !old_names.is_empty() {
-            if let Some(listener) = &self.listener {
-                listener.on_parameters_unsubscribe(old_names);
-            }
+        if !old_names.is_empty()
+            && let Some(listener) = &self.listener
+        {
+            listener.on_parameters_unsubscribe(old_names);
         }
     }
 
@@ -2289,10 +2290,8 @@ impl RemoteAccessSession {
                 return;
             }
 
-            if first {
-                if let Some(listener) = &self.listener {
-                    listener.on_connection_graph_subscribe();
-                }
+            if first && let Some(listener) = &self.listener {
+                listener.on_connection_graph_subscribe();
             }
 
             encode_json_message(&graph.as_initial_update())
@@ -2320,10 +2319,10 @@ impl RemoteAccessSession {
             return;
         }
 
-        if !graph.has_subscribers() {
-            if let Some(listener) = &self.listener {
-                listener.on_connection_graph_unsubscribe();
-            }
+        if !graph.has_subscribers()
+            && let Some(listener) = &self.listener
+        {
+            listener.on_connection_graph_unsubscribe();
         }
     }
 

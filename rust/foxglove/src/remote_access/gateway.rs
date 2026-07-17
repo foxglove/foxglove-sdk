@@ -634,16 +634,15 @@ impl Gateway {
                     encodings.insert(encoding.to_string());
                 }
             }
-            if encodings.is_empty() {
-                if let Some(svc) = self
+            if encodings.is_empty()
+                && let Some(svc) = self
                     .services
                     .values()
                     .find(|s| s.request_encoding().is_none())
-                {
-                    return Err(FoxgloveError::MissingRequestEncoding(
-                        svc.name().to_string(),
-                    ));
-                }
+            {
+                return Err(FoxgloveError::MissingRequestEncoding(
+                    svc.name().to_string(),
+                ));
             }
         }
         // If the gateway was declared with a fetch asset handler, automatically add the "assets" capability.
@@ -664,13 +663,13 @@ impl Gateway {
                     .to_string(),
             ));
         }
-        if let Some(size) = self.max_data_track_message_size {
-            if size < MIN_DATA_TRACK_MESSAGE_SIZE {
-                return Err(FoxgloveError::ConfigurationError(format!(
-                    "max_data_track_message_size ({size} bytes) is below the minimum of \
+        if let Some(size) = self.max_data_track_message_size
+            && size < MIN_DATA_TRACK_MESSAGE_SIZE
+        {
+            return Err(FoxgloveError::ConfigurationError(format!(
+                "max_data_track_message_size ({size} bytes) is below the minimum of \
                      {MIN_DATA_TRACK_MESSAGE_SIZE} bytes (one data-channel packet)."
-                )));
-            }
+            )));
         }
         let runtime = self.runtime.unwrap_or_else(get_runtime_handle);
         let services = Arc::new(parking_lot::RwLock::new(ServiceMap::from_iter(
