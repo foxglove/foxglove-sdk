@@ -32,17 +32,16 @@ where
     }
 }
 
-/// Returns the compression options for a channel, or `None` when compression is disabled, the
-/// channel is not compressible, or the gateway's suppression predicate opts it out.
+/// Returns the compression configuration for a channel, or `None` when compression is
+/// disabled, the channel is not compressible, or the gateway's suppression predicate opts
+/// it out.
 pub(super) fn resolve_point_cloud_compression(
     channel: &RawChannel,
     options: Option<CompressPointCloudOptions>,
     suppress: Option<&dyn SuppressPointCloudCompression>,
-) -> Option<CompressPointCloudOptions> {
+) -> Option<crate::draco::PointCloudCompressionConfig> {
     let options = options?;
-    if !crate::draco::transcode::is_point_cloud_channel(channel) {
-        return None;
-    }
+    let input_schema = crate::draco::transcode::point_cloud_input_schema(channel)?;
     if suppress.is_some_and(|suppress| suppress.should_suppress(channel.descriptor())) {
         tracing::debug!(
             topic = %channel.topic(),
@@ -50,7 +49,10 @@ pub(super) fn resolve_point_cloud_compression(
         );
         return None;
     }
-    Some(options)
+    Some(crate::draco::PointCloudCompressionConfig {
+        input_schema,
+        options,
+    })
 }
 
 #[cfg(test)]
@@ -83,9 +85,12 @@ mod tests {
 
         let other =
             SuppressPointCloudCompressionFn(|ch: &ChannelDescriptor| ch.topic() == "/other");
+        let config = resolve_point_cloud_compression(&cloud, Some(options), Some(&other))
+            .expect("channel should resolve");
+        assert_eq!(config.options, options);
         assert_eq!(
-            resolve_point_cloud_compression(&cloud, Some(options), Some(&other)),
-            Some(options)
+            config.input_schema,
+            crate::draco::transcode::PointCloudInputSchema::FoxgloveProtobuf
         );
     }
 

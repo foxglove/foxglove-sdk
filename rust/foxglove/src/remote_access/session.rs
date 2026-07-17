@@ -441,7 +441,7 @@ impl Sink for RemoteAccessSession {
                 if advertised_ids.contains(&u64::from(ch.id())) {
                     state.insert_channel(ch);
                     #[cfg(feature = "draco")]
-                    if let Some(options) = resolve_point_cloud_compression(
+                    if let Some(config) = resolve_point_cloud_compression(
                         ch,
                         self.point_cloud_compression,
                         self.suppress_point_cloud_compression.as_deref(),
@@ -449,7 +449,7 @@ impl Sink for RemoteAccessSession {
                         // Only record the configuration here: the transcoding publisher
                         // is created once the channel gains its first data subscriber,
                         // so encoding never runs for output nobody receives.
-                        state.insert_point_cloud_compression(ch.id(), options);
+                        state.insert_point_cloud_compression(ch.id(), config);
                     }
                     let video_schema =
                         resolve_video_input_schema(ch, self.suppress_video_transcode.as_deref());
@@ -2623,7 +2623,7 @@ impl RemoteAccessSession {
         }
         let mut state = self.channel_registry.write();
         for &channel_id in first_subscribed {
-            let Some(options) = state.get_point_cloud_compression(&channel_id) else {
+            let Some(config) = state.get_point_cloud_compression(&channel_id) else {
                 continue;
             };
             state.insert_point_cloud_publisher(
@@ -2632,7 +2632,7 @@ impl RemoteAccessSession {
                     &self.runtime,
                     self.weak_self.clone(),
                     channel_id,
-                    options,
+                    config,
                 )),
             );
         }

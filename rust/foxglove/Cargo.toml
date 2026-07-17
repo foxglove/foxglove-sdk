@@ -16,6 +16,8 @@ derive = ["dep:foxglove_derive"]
 # `foxglove.PointCloud` channels in the remote-access sink
 # (enabled by default on that sink; opt out via its builder).
 draco = ["dep:draco-core"]
+# Adds ROS 2 `sensor_msgs/msg/PointCloud2` (cdr) as a point-cloud compression input.
+draco-ros2 = ["draco", "dep:cdr"]
 sysinfo = ["dep:sysinfo", "dep:tokio", "tokio/rt-multi-thread", "tokio/time"]
 _remote-common = [
   "dep:base64",
@@ -99,6 +101,7 @@ full = [
   "data_provider",
   "derive",
   "draco",
+  "draco-ros2",
   "img2yuv",
   "live_visualization",
   "lz4",
