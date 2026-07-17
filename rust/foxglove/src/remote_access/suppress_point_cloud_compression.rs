@@ -37,9 +37,9 @@ where
     }
 }
 
-/// Returns the compression options for a channel, or `None` when compression is disabled,
-/// the channel is not compressible, QoS is Reliable, or the gateway's suppression predicate
-/// opts it out.
+/// Returns the compression configuration for a channel, or `None` when compression is
+/// disabled, the channel is not compressible, QoS is Reliable, or the gateway's suppression
+/// predicate opts it out.
 ///
 /// Reliable channels keep the raw point cloud on the control bytestream: compression is
 /// lossy (and the publisher may drop when behind), which would violate the Reliable
@@ -49,11 +49,9 @@ pub(super) fn resolve_point_cloud_compression(
     options: Option<CompressPointCloudOptions>,
     suppress: Option<&dyn SuppressPointCloudCompression>,
     reliability: Reliability,
-) -> Option<CompressPointCloudOptions> {
+) -> Option<crate::draco::PointCloudCompressionConfig> {
     let options = options?;
-    if !crate::draco::transcode::is_point_cloud_channel(channel) {
-        return None;
-    }
+    let input_schema = crate::draco::transcode::point_cloud_input_schema(channel)?;
     if reliability == Reliability::Reliable {
         tracing::debug!(
             topic = %channel.topic(),
@@ -68,7 +66,10 @@ pub(super) fn resolve_point_cloud_compression(
         );
         return None;
     }
-    Some(options)
+    Some(crate::draco::PointCloudCompressionConfig {
+        input_schema,
+        options,
+    })
 }
 
 #[cfg(test)]
@@ -107,14 +108,17 @@ mod tests {
 
         let other =
             SuppressPointCloudCompressionFn(|ch: &ChannelDescriptor| ch.topic() == "/other");
+        let config = resolve_point_cloud_compression(
+            &cloud,
+            Some(options),
+            Some(&other),
+            Reliability::Lossy,
+        )
+        .expect("channel should resolve");
+        assert_eq!(config.options, options);
         assert_eq!(
-            resolve_point_cloud_compression(
-                &cloud,
-                Some(options),
-                Some(&other),
-                Reliability::Lossy
-            ),
-            Some(options)
+            config.input_schema,
+            crate::draco::transcode::PointCloudInputSchema::FoxgloveProtobuf
         );
     }
 

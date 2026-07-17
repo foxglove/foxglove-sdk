@@ -462,7 +462,7 @@ impl Sink for RemoteAccessSession {
                         qos.reliability = Reliability::Lossy;
                     }
                     #[cfg(feature = "draco")]
-                    if let Some(options) = resolve_point_cloud_compression(
+                    if let Some(config) = resolve_point_cloud_compression(
                         ch,
                         self.point_cloud_compression,
                         self.suppress_point_cloud_compression.as_deref(),
@@ -472,7 +472,7 @@ impl Sink for RemoteAccessSession {
                         // is created once the channel gains its first data subscriber,
                         // so encoding never runs for output nobody receives. Reliable
                         // channels never reach this path (see resolve).
-                        state.insert_point_cloud_compression(ch.id(), options);
+                        state.insert_point_cloud_compression(ch.id(), config);
                     }
                     state.insert_qos_profile(ch.id(), qos);
                     if qos.reliability != Reliability::Reliable {
@@ -2628,7 +2628,7 @@ impl RemoteAccessSession {
         }
         let mut state = self.channel_registry.write();
         for &channel_id in first_subscribed {
-            let Some(options) = state.get_point_cloud_compression(&channel_id) else {
+            let Some(config) = state.get_point_cloud_compression(&channel_id) else {
                 continue;
             };
             state.insert_point_cloud_publisher(
@@ -2637,7 +2637,7 @@ impl RemoteAccessSession {
                     &self.runtime,
                     self.weak_self.clone(),
                     channel_id,
-                    options,
+                    config,
                 )),
             );
         }

@@ -12,8 +12,10 @@
 //! [`DracoMethod::KdTree`] (the default) or copied losslessly under
 //! [`DracoMethod::Sequential`].
 //!
-//! The remote-access sink can also transcode `foxglove.PointCloud` channels transparently;
-//! see [`CompressPointCloudOptions`].
+//! The remote-access sink can also transcode point-cloud channels transparently; see
+//! [`CompressPointCloudOptions`]. Protobuf-encoded `foxglove.PointCloud` channels are
+//! always eligible; with the `draco-ros2` feature, CDR-encoded ROS 2
+//! `sensor_msgs/msg/PointCloud2` channels are too.
 
 use bytes::Bytes;
 
@@ -27,6 +29,9 @@ use draco_core::point_cloud_encoder::PointCloudEncoder;
 use draco_core::metadata::Metadata;
 
 use crate::messages::{CompressedPointCloud, PointCloud};
+
+#[cfg(all(feature = "draco-ros2", feature = "remote-access"))]
+mod ros2;
 
 /// Draco encoding method.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -103,6 +108,17 @@ impl Default for CompressPointCloudOptions {
     fn default() -> Self {
         Self::Draco(DracoEncodeOptions::default())
     }
+}
+
+/// Resolved per-channel compression configuration: the input format to decode and the
+/// Draco settings to encode with.
+#[cfg(feature = "remote-access")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct PointCloudCompressionConfig {
+    /// The message format of the channel's input.
+    pub(crate) input_schema: transcode::PointCloudInputSchema,
+    /// The Draco encoding settings.
+    pub(crate) options: CompressPointCloudOptions,
 }
 
 /// An error during Draco point-cloud encoding.
@@ -409,45 +425,93 @@ pub(crate) mod transcode {
     use crate::protocol::common::server::advertise;
     use crate::{Decode, RawChannel};
 
-    /// An error transcoding a logged `foxglove.PointCloud` message.
+    /// An error transcoding a logged point cloud message.
     #[derive(Debug, thiserror::Error)]
     pub(crate) enum TranscodeError {
         #[error("failed to decode PointCloud message: {0}")]
         Decode(#[from] prost::DecodeError),
+        #[cfg(feature = "draco-ros2")]
+        #[error("failed to decode PointCloud2 message: {0}")]
+        Ros2(#[from] super::ros2::Ros2PointCloudError),
         #[error(transparent)]
         Encode(#[from] DracoEncodeError),
     }
 
-    /// Returns true if the channel carries `foxglove.PointCloud` messages that the sink can
-    /// transcode.
-    pub(crate) fn is_point_cloud_channel(channel: &RawChannel) -> bool {
-        channel.message_encoding() == "protobuf"
-            && channel
-                .schema()
-                .is_some_and(|s| s.name == "foxglove.PointCloud")
+    /// The message format of a compressible point-cloud channel.
+    ///
+    /// Every input format is decoded to a `foxglove.PointCloud` before Draco encoding, and
+    /// the channel is delivered as a protobuf-encoded `foxglove.CompressedPointCloud`
+    /// regardless of the input format.
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    pub(crate) enum PointCloudInputSchema {
+        /// `foxglove.PointCloud` with protobuf encoding.
+        FoxgloveProtobuf,
+        /// ROS 2 `sensor_msgs/msg/PointCloud2` with cdr encoding.
+        #[cfg(feature = "draco-ros2")]
+        Ros2PointCloud2,
     }
 
-    /// Transcodes a serialized `foxglove.PointCloud` message into a serialized
+    /// Maps a channel's message encoding and schema name to a point-cloud input format.
+    ///
+    /// Additional input formats (e.g. `foxglove.PointCloud` with json or flatbuffer
+    /// encoding, mirroring the video pipeline's input menu) slot in here as new
+    /// feature-gated arms.
+    fn detect_point_cloud_schema(
+        encoding: &str,
+        schema_name: &str,
+    ) -> Option<PointCloudInputSchema> {
+        match (encoding, schema_name) {
+            ("protobuf", "foxglove.PointCloud") => Some(PointCloudInputSchema::FoxgloveProtobuf),
+            #[cfg(feature = "draco-ros2")]
+            ("cdr", "sensor_msgs/msg/PointCloud2") => Some(PointCloudInputSchema::Ros2PointCloud2),
+            _ => None,
+        }
+    }
+
+    /// Returns the point-cloud input format of a channel, or `None` if the channel does
+    /// not carry point cloud messages the sink can transcode.
+    pub(crate) fn point_cloud_input_schema(channel: &RawChannel) -> Option<PointCloudInputSchema> {
+        let schema = channel.schema();
+        let schema_name = schema.as_ref().map(|s| s.name.as_str()).unwrap_or_default();
+        detect_point_cloud_schema(channel.message_encoding(), schema_name)
+    }
+
+    /// Transcodes a serialized point cloud message into a serialized
     /// `foxglove.CompressedPointCloud` message.
     pub(crate) fn transcode_point_cloud_message(
         msg: &[u8],
+        input_schema: PointCloudInputSchema,
         options: &CompressPointCloudOptions,
     ) -> Result<Bytes, TranscodeError> {
-        let cloud = <PointCloud as Decode>::decode(msg)?;
+        let cloud = match input_schema {
+            PointCloudInputSchema::FoxgloveProtobuf => <PointCloud as Decode>::decode(msg)?,
+            #[cfg(feature = "draco-ros2")]
+            PointCloudInputSchema::Ros2PointCloud2 => {
+                super::ros2::Ros2PointCloud2::decode(msg)?.try_into()?
+            }
+        };
         let compressed = compress_point_cloud(&cloud, &options.draco_options())?;
         Ok(Bytes::from(compressed.encode_to_vec()))
     }
 
-    /// Rewrites a channel advertisement to report the `foxglove.CompressedPointCloud`
-    /// schema, replacing the original `foxglove.PointCloud` schema.
+    /// Rewrites a channel advertisement to report the protobuf-encoded
+    /// `foxglove.CompressedPointCloud` schema, replacing the original point cloud schema
+    /// and message encoding (transcoded output is always protobuf, whatever the input).
     ///
-    /// The channel id, topic, encoding, and metadata are unchanged.
+    /// The channel id and topic are unchanged. The original schema name is recorded in
+    /// the channel metadata as `foxglove.originalSchemaName`, so clients can surface the
+    /// source type of a transparently compressed channel.
     pub(crate) fn rewrite_advertisement(channel: &mut advertise::Channel<'_>) {
         let schema_data = protocol_schema::encode_schema_data(
             "protobuf",
             std::borrow::Cow::Borrowed(descriptors::COMPRESSED_POINT_CLOUD),
         )
         .expect("binary schema encoding is infallible");
+        channel.metadata.insert(
+            "foxglove.originalSchemaName".to_string(),
+            channel.schema_name.to_string(),
+        );
+        channel.encoding = "protobuf".into();
         channel.schema_name = "foxglove.CompressedPointCloud".into();
         channel.schema_encoding = Some("protobuf".into());
         channel.schema = std::borrow::Cow::Owned(schema_data.into_owned());
@@ -456,7 +520,7 @@ pub(crate) mod transcode {
 
 #[cfg(all(test, feature = "remote-access"))]
 mod transcode_tests {
-    use super::transcode::is_point_cloud_channel;
+    use super::transcode::{PointCloudInputSchema, point_cloud_input_schema};
     use crate::{ChannelBuilder, Context, Encode, RawChannel, Schema};
     use std::sync::Arc;
 
@@ -477,7 +541,102 @@ mod transcode_tests {
             "protobuf",
             <crate::messages::PointCloud as Encode>::get_schema(),
         );
-        assert!(is_point_cloud_channel(&ch));
+        assert_eq!(
+            point_cloud_input_schema(&ch),
+            Some(PointCloudInputSchema::FoxgloveProtobuf)
+        );
+    }
+
+    #[cfg(feature = "draco-ros2")]
+    #[test]
+    fn test_detects_ros2_point_cloud2() {
+        let ch = make_channel(
+            "cdr",
+            Some(Schema::new("sensor_msgs/msg/PointCloud2", "ros2msg", b"")),
+        );
+        assert_eq!(
+            point_cloud_input_schema(&ch),
+            Some(PointCloudInputSchema::Ros2PointCloud2)
+        );
+    }
+
+    #[cfg(feature = "draco-ros2")]
+    #[test]
+    fn test_transcodes_cdr_point_cloud2_to_compressed_point_cloud() {
+        use crate::Decode;
+
+        // A one-point float32 xyz cloud, CDR-encoded like a ROS 2 publisher would.
+        #[derive(serde::Serialize)]
+        struct Time {
+            sec: i32,
+            nanosec: u32,
+        }
+        #[derive(serde::Serialize)]
+        struct Header {
+            stamp: Time,
+            frame_id: String,
+        }
+        #[derive(serde::Serialize)]
+        struct PointField {
+            name: String,
+            offset: u32,
+            datatype: u8,
+            count: u32,
+        }
+        #[derive(serde::Serialize)]
+        struct PointCloud2 {
+            header: Header,
+            height: u32,
+            width: u32,
+            fields: Vec<PointField>,
+            is_bigendian: bool,
+            point_step: u32,
+            row_step: u32,
+            data: Vec<u8>,
+            is_dense: bool,
+        }
+
+        let mut data = Vec::new();
+        for c in [1.0f32, 2.0, 3.0] {
+            data.extend_from_slice(&c.to_le_bytes());
+        }
+        let cloud = PointCloud2 {
+            header: Header {
+                stamp: Time { sec: 1, nanosec: 2 },
+                frame_id: "lidar".into(),
+            },
+            height: 1,
+            width: 1,
+            fields: ["x", "y", "z"]
+                .into_iter()
+                .enumerate()
+                .map(|(i, name)| PointField {
+                    name: name.into(),
+                    offset: 4 * i as u32,
+                    datatype: 7,
+                    count: 1,
+                })
+                .collect(),
+            is_bigendian: false,
+            point_step: 12,
+            row_step: 12,
+            data,
+            is_dense: true,
+        };
+        let encoded = cdr::serialize::<_, _, cdr::CdrLe>(&cloud, cdr::Infinite).unwrap();
+
+        let compressed_bytes = super::transcode::transcode_point_cloud_message(
+            &encoded,
+            PointCloudInputSchema::Ros2PointCloud2,
+            &super::CompressPointCloudOptions::default(),
+        )
+        .unwrap();
+        let compressed =
+            <crate::messages::CompressedPointCloud as Decode>::decode(compressed_bytes.as_ref())
+                .unwrap();
+        assert_eq!(compressed.format, "draco");
+        assert_eq!(compressed.frame_id, "lidar");
+        assert!(!compressed.data.is_empty());
     }
 
     #[test]
@@ -487,18 +646,18 @@ mod transcode_tests {
             "protobuf",
             <crate::messages::CompressedPointCloud as Encode>::get_schema(),
         );
-        assert!(!is_point_cloud_channel(&ch));
+        assert_eq!(point_cloud_input_schema(&ch), None);
 
         // Wrong encoding.
         let ch = make_channel(
             "json",
             Some(Schema::new("foxglove.PointCloud", "jsonschema", b"{}")),
         );
-        assert!(!is_point_cloud_channel(&ch));
+        assert_eq!(point_cloud_input_schema(&ch), None);
 
         // No schema.
         let ch = make_channel("json", None);
-        assert!(!is_point_cloud_channel(&ch));
+        assert_eq!(point_cloud_input_schema(&ch), None);
     }
 }
 
