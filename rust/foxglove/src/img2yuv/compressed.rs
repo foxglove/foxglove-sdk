@@ -37,58 +37,15 @@ impl From<Compression> for image::ImageFormat {
 impl FromStr for Compression {
     type Err = UnknownCompressionError;
 
-    /// Parses a compressed image format string.
-    ///
-    /// This accepts a bare codec name (e.g. `"png"`), as used by the Foxglove `CompressedImage`
-    /// schema, as well as the documented [ROS 1][ros1] and [ROS 2][ros2]
-    /// `sensor_msgs/CompressedImage` format string, which additionally encodes the original pixel
-    /// format and a `compressed` marker:
-    ///
-    /// - `CODEC`
-    /// - `ORIG_PIXFMT; CODEC compressed [COMPRESSED_PIXFMT]`
-    ///
-    /// Other strings are rejected even if they contain a codec token.
-    ///
-    /// `ORIG_PIXFMT; compressedDepth CODEC` (the `compressed_depth_image_transport` format) is
-    /// always reported as an unknown compression: the payload has a transport-specific header
-    /// before the codec's data, so it can't be decoded as an ordinary compressed image of that
-    /// codec.
-    ///
-    /// [ros1]: https://docs.ros.org/en/noetic/api/sensor_msgs/html/msg/CompressedImage.html
-    /// [ros2]: https://docs.ros.org/en/rolling/p/sensor_msgs/msg/CompressedImage.html
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let normalized = s.trim().to_ascii_lowercase();
-        if normalized.is_empty() {
-            return Err(UnknownCompressionError(s.to_string()));
-        }
-
-        if let Some(compression) = Self::from_codec(&normalized) {
-            return Ok(compression);
-        }
-
-        let Some((orig_pixfmt, rest)) = normalized.split_once(';') else {
-            return Err(UnknownCompressionError(s.to_string()));
-        };
-        if orig_pixfmt.split_whitespace().count() != 1 {
-            return Err(UnknownCompressionError(s.to_string()));
-        }
-
-        let mut tokens = rest.split_whitespace();
-        let Some(codec) = tokens.next() else {
-            return Err(UnknownCompressionError(s.to_string()));
-        };
-        if codec == "compresseddepth" || tokens.next() != Some("compressed") {
-            return Err(UnknownCompressionError(s.to_string()));
-        }
-        let _compressed_pixfmt = tokens.next();
-        if tokens.next().is_some() {
-            return Err(UnknownCompressionError(s.to_string()));
-        }
-
-        Self::from_codec(codec).ok_or_else(|| UnknownCompressionError(s.to_string()))
+        Self::from_codec(&normalized).ok_or_else(|| UnknownCompressionError(s.to_string()))
     }
 }
 impl Compression {
+    /// Parses a bare codec name (e.g. `"png"`).
+    ///
+    /// To parse a ROS-style format string, use [`Compression::try_from_ros_format`] instead.
     fn from_codec(codec: &str) -> Option<Self> {
         match codec {
             #[cfg(feature = "img2yuv-png")]
@@ -98,6 +55,42 @@ impl Compression {
             #[cfg(feature = "img2yuv-webp")]
             "webp" => Some(Self::WebP),
             _ => None,
+        }
+    }
+
+    /// Parses a format string from a ROS `sensor_msgs/CompressedImage` message.
+    ///
+    /// This accepts a bare codec name (e.g. `"png"`), as well as the documented [ROS 1][ros1] and
+    /// [ROS 2][ros2] format string, which additionally encodes the original pixel format and a
+    /// `compressed` marker:
+    ///
+    /// - `CODEC`
+    /// - `ORIG_PIXFMT; CODEC compressed [COMPRESSED_PIXFMT]`
+    ///
+    /// Other strings are rejected even if they contain a codec token.
+    ///
+    /// Note that `ORIG_PIXFMT; compressedDepth CODEC` (the `compressed_depth_image_transport`
+    /// format) is always reported as an unknown compression: the payload has a transport-specific
+    /// header before the codec's data, so it can't be decoded as an ordinary compressed image of
+    /// that codec.
+    ///
+    /// [ros1]: https://docs.ros.org/en/noetic/api/sensor_msgs/html/msg/CompressedImage.html
+    /// [ros2]: https://docs.ros.org/en/rolling/p/sensor_msgs/msg/CompressedImage.html
+    pub fn try_from_ros_format(format: &str) -> Result<Self, UnknownCompressionError> {
+        let normalized = format.trim().to_ascii_lowercase();
+        let unknown = || UnknownCompressionError(format.to_string());
+
+        let Some((orig, rest)) = normalized.split_once(';') else {
+            return Self::from_str(format);
+        };
+        let orig: Vec<&str> = orig.split_whitespace().collect();
+        let rest: Vec<&str> = rest.split_whitespace().collect();
+
+        match (orig.as_slice(), rest.as_slice()) {
+            ([_], [codec, "compressed"] | [codec, "compressed", _]) => {
+                Self::from_codec(codec).ok_or_else(unknown)
+            }
+            _ => Err(unknown()),
         }
     }
 
@@ -154,51 +147,82 @@ impl CompressedImage<'_> {
 mod tests {
     use super::Compression;
 
-    fn check(input: &str, expect: Option<Compression>) {
+    fn check_from_str(input: &str, expect: Option<Compression>) {
         println!("{input:?} -> {expect:?}");
         let compression = input.parse::<Compression>().ok();
+        assert_eq!(compression, expect);
+    }
+
+    fn check_ros_format(input: &str, expect: Option<Compression>) {
+        println!("{input:?} -> {expect:?}");
+        let compression = Compression::try_from_ros_format(input).ok();
         assert_eq!(compression, expect);
     }
 
     #[test]
     #[cfg(feature = "img2yuv-jpeg")]
     fn test_from_str_jpeg() {
-        check("jpeg", Some(Compression::Jpeg));
-        check("  JPG  ", Some(Compression::Jpeg));
-        check("bgr8; jpeg compressed bgr8", Some(Compression::Jpeg));
-        check("BGR8; JPEG compressed RGB8", Some(Compression::Jpeg));
+        check_from_str("jpeg", Some(Compression::Jpeg));
+        check_from_str("  JPG  ", Some(Compression::Jpeg));
     }
 
     #[test]
     #[cfg(feature = "img2yuv-png")]
     fn test_from_str_png() {
-        check("png", Some(Compression::Png));
-        check("rgba8; png compressed", Some(Compression::Png));
+        check_from_str("png", Some(Compression::Png));
     }
 
     #[test]
     #[cfg(feature = "img2yuv-webp")]
     fn test_from_str_webp() {
-        check("webp", Some(Compression::WebP));
+        check_from_str("webp", Some(Compression::WebP));
     }
 
     #[test]
     fn test_from_str_unknown() {
-        check("gif", None);
-        check("rgb8; gif compressed", None);
-        check("rgb8; compressed jpeg", None);
-        check("some unrelated png metadata", None);
-        check("png jpeg", None);
-        check("rgb8; png", None);
-        check("rgb8; png compressed bgr8 extra", None);
+        check_from_str("gif", None);
+        // `from_str` only accepts a bare codec name, not a ROS format string.
+        check_from_str("rgb8; png compressed", None);
     }
 
     #[test]
-    fn test_from_str_compressed_depth_is_unknown() {
+    #[cfg(feature = "img2yuv-jpeg")]
+    fn test_try_from_ros_format_jpeg() {
+        check_ros_format("jpeg", Some(Compression::Jpeg));
+        check_ros_format("bgr8; jpeg compressed bgr8", Some(Compression::Jpeg));
+        check_ros_format("BGR8; JPEG compressed RGB8", Some(Compression::Jpeg));
+    }
+
+    #[test]
+    #[cfg(feature = "img2yuv-png")]
+    fn test_try_from_ros_format_png() {
+        check_ros_format("png", Some(Compression::Png));
+        check_ros_format("rgba8; png compressed", Some(Compression::Png));
+    }
+
+    #[test]
+    #[cfg(feature = "img2yuv-webp")]
+    fn test_try_from_ros_format_webp() {
+        check_ros_format("webp", Some(Compression::WebP));
+    }
+
+    #[test]
+    fn test_try_from_ros_format_unknown() {
+        check_ros_format("gif", None);
+        check_ros_format("rgb8; gif compressed", None);
+        check_ros_format("rgb8; compressed jpeg", None);
+        check_ros_format("some unrelated png metadata", None);
+        check_ros_format("png jpeg", None);
+        check_ros_format("rgb8; png", None);
+        check_ros_format("rgb8; png compressed bgr8 extra", None);
+    }
+
+    #[test]
+    fn test_try_from_ros_format_compressed_depth_is_unknown() {
         // `compressed_depth_image_transport` prepends a transport-specific header before the
         // codec's data, so we can't decode it as an ordinary compressed image, even though the
         // codec name (e.g. "png") is otherwise recognized.
-        check("16UC1; compressedDepth png", None);
-        check("32FC1; compressedDepth rvl", None);
+        check_ros_format("16UC1; compressedDepth png", None);
+        check_ros_format("32FC1; compressedDepth rvl", None);
     }
 }
