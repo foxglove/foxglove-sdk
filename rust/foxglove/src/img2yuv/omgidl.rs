@@ -6,7 +6,6 @@
 //! Foxglove vocabulary.
 
 use std::borrow::Cow;
-use std::str::FromStr;
 
 use crate::messages::Timestamp;
 use serde::{Deserialize, Serialize};
@@ -102,7 +101,7 @@ impl<'a> TryFrom<OmgidlCompressedImage<'a>> for ImageMessage<'a> {
     type Error = OmgidlDecodeError;
 
     fn try_from(image: OmgidlCompressedImage<'a>) -> std::result::Result<Self, Self::Error> {
-        let compression = Compression::from_str(&image.format)?;
+        let compression = Compression::try_from_ros_format(&image.format)?;
         Ok(ImageMessage {
             timestamp: Some(image.timestamp.try_into()?),
             frame_id: image.frame_id.into(),

@@ -1,7 +1,5 @@
 //! FlatBuffer message decoder.
 
-use std::str::FromStr;
-
 use flatbuffers::{
     Follow, ForwardsUOffset, InvalidFlatbuffer, Table, VOffsetT, Vector, Verifiable, Verifier,
 };
@@ -134,7 +132,7 @@ pub fn decode_compressed_image(data: &[u8]) -> Result<ImageMessage<'_>, Flatbuff
     let bytes = unsafe { table.get::<ForwardsUOffset<Vector<u8>>>(compressed::VT_DATA, None) }
         .map(|v| v.bytes())
         .unwrap_or(&[]);
-    let compression = Compression::from_str(format)?;
+    let compression = Compression::try_from_ros_format(format)?;
     Ok(ImageMessage {
         timestamp: read_timestamp(&table, compressed::VT_TIMESTAMP)?,
         frame_id: frame_id.to_string(),

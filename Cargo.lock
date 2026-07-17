@@ -1364,7 +1364,6 @@ dependencies = [
  "prost 0.14.4",
  "prost-types 0.14.4",
  "rcgen",
- "regex",
  "reqwest 0.13.4",
  "rustls",
  "schemars 1.2.1",
