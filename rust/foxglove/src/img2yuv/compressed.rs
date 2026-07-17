@@ -50,7 +50,19 @@ impl Compression {
         }
     }
 
-    /// Parses a format string from a ROS `sensor_msgs/CompressedImage` message.
+    /// Returns the canonical format string for this compression.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            #[cfg(feature = "img2yuv-png")]
+            Self::Png => "png",
+            #[cfg(feature = "img2yuv-jpeg")]
+            Self::Jpeg => "jpeg",
+            #[cfg(feature = "img2yuv-webp")]
+            Self::WebP => "webp",
+        }
+    }
+
+    /// Parses a format string from a ROS `CompressedImage` message.
     ///
     /// This accepts a bare codec name (e.g. `"png"`), as well as the documented [ROS 1][ros1] and
     /// [ROS 2][ros2] format string, which additionally encodes the original pixel format and a
@@ -83,18 +95,6 @@ impl Compression {
                 Self::from_codec(codec).ok_or_else(unknown)
             }
             _ => Err(unknown()),
-        }
-    }
-
-    /// Returns the canonical format string for this compression.
-    pub fn as_str(self) -> &'static str {
-        match self {
-            #[cfg(feature = "img2yuv-png")]
-            Self::Png => "png",
-            #[cfg(feature = "img2yuv-jpeg")]
-            Self::Jpeg => "jpeg",
-            #[cfg(feature = "img2yuv-webp")]
-            Self::WebP => "webp",
         }
     }
 }
