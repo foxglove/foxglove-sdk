@@ -1,4 +1,4 @@
-use std::{borrow::Cow, io::Cursor, str::FromStr};
+use std::{borrow::Cow, io::Cursor};
 
 use image::ImageReader;
 
@@ -32,14 +32,6 @@ impl From<Compression> for image::ImageFormat {
             #[cfg(feature = "img2yuv-webp")]
             Compression::WebP => Self::WebP,
         }
-    }
-}
-impl FromStr for Compression {
-    type Err = UnknownCompressionError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let normalized = s.trim().to_ascii_lowercase();
-        Self::from_codec(&normalized).ok_or_else(|| UnknownCompressionError(s.to_string()))
     }
 }
 impl Compression {
@@ -81,7 +73,7 @@ impl Compression {
         let unknown = || UnknownCompressionError(format.to_string());
 
         let Some((orig, rest)) = normalized.split_once(';') else {
-            return Self::from_str(format);
+            return Self::from_codec(&normalized).ok_or_else(unknown);
         };
         let orig: Vec<&str> = orig.split_whitespace().collect();
         let rest: Vec<&str> = rest.split_whitespace().collect();
@@ -147,12 +139,6 @@ impl CompressedImage<'_> {
 mod tests {
     use super::Compression;
 
-    fn check_from_str(input: &str, expect: Option<Compression>) {
-        println!("{input:?} -> {expect:?}");
-        let compression = input.parse::<Compression>().ok();
-        assert_eq!(compression, expect);
-    }
-
     fn check_ros_format(input: &str, expect: Option<Compression>) {
         println!("{input:?} -> {expect:?}");
         let compression = Compression::try_from_ros_format(input).ok();
@@ -161,34 +147,9 @@ mod tests {
 
     #[test]
     #[cfg(feature = "img2yuv-jpeg")]
-    fn test_from_str_jpeg() {
-        check_from_str("jpeg", Some(Compression::Jpeg));
-        check_from_str("  JPG  ", Some(Compression::Jpeg));
-    }
-
-    #[test]
-    #[cfg(feature = "img2yuv-png")]
-    fn test_from_str_png() {
-        check_from_str("png", Some(Compression::Png));
-    }
-
-    #[test]
-    #[cfg(feature = "img2yuv-webp")]
-    fn test_from_str_webp() {
-        check_from_str("webp", Some(Compression::WebP));
-    }
-
-    #[test]
-    fn test_from_str_unknown() {
-        check_from_str("gif", None);
-        // `from_str` only accepts a bare codec name, not a ROS format string.
-        check_from_str("rgb8; png compressed", None);
-    }
-
-    #[test]
-    #[cfg(feature = "img2yuv-jpeg")]
     fn test_try_from_ros_format_jpeg() {
         check_ros_format("jpeg", Some(Compression::Jpeg));
+        check_ros_format("  JPG  ", Some(Compression::Jpeg));
         check_ros_format("bgr8; jpeg compressed bgr8", Some(Compression::Jpeg));
         check_ros_format("BGR8; JPEG compressed RGB8", Some(Compression::Jpeg));
     }
