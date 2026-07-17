@@ -5,15 +5,16 @@
   <arg name="tls"                             default="false" />
   <arg name="certfile"                        default="" />
   <arg name="keyfile"                         default="" />
-  <arg name="topic_allowlist"                 default="['.*']" />
-  <arg name="param_allowlist"                 default="['.*']" />
-  <arg name="service_allowlist"               default="['.*']" />
-  <arg name="client_topic_allowlist"          default="['.*']" />
-  <!-- Deprecated aliases for the *_allowlist args above. -->
-  <arg name="topic_whitelist"                 default="$(var topic_allowlist)" />
-  <arg name="param_whitelist"                 default="$(var param_allowlist)" />
-  <arg name="service_whitelist"               default="$(var service_allowlist)" />
-  <arg name="client_topic_whitelist"          default="$(var client_topic_allowlist)" />
+  <arg name="topic_whitelist"                 default="['.*']" />
+  <arg name="param_whitelist"                 default="['.*']" />
+  <arg name="service_whitelist"               default="['.*']" />
+  <arg name="client_topic_whitelist"          default="['.*']" />
+  <!-- Deprecated names for the *_allowlist args below. An explicit *_allowlist value always wins;
+       *_whitelist only applies when *_allowlist is left at its default. -->
+  <arg name="topic_allowlist"                 default="$(var topic_whitelist)" />
+  <arg name="param_allowlist"                 default="$(var param_whitelist)" />
+  <arg name="service_allowlist"               default="$(var service_whitelist)" />
+  <arg name="client_topic_allowlist"          default="$(var client_topic_whitelist)" />
   <arg name="min_qos_depth"                   default="1" />
   <arg name="max_qos_depth"                   default="10" />
   <arg name="num_threads"                     default="0" />
@@ -41,10 +42,10 @@
     <param name="tls"                             value="$(var tls)" />
     <param name="certfile"                        value="$(var certfile)" />
     <param name="keyfile"                         value="$(var keyfile)" />
-    <param name="topic_allowlist"                 value="$(var topic_whitelist)" />
-    <param name="service_allowlist"               value="$(var service_whitelist)" />
-    <param name="param_allowlist"                 value="$(var param_whitelist)" />
-    <param name="client_topic_allowlist"          value="$(var client_topic_whitelist)" />
+    <param name="topic_allowlist"                 value="$(var topic_allowlist)" />
+    <param name="service_allowlist"               value="$(var service_allowlist)" />
+    <param name="param_allowlist"                 value="$(var param_allowlist)" />
+    <param name="client_topic_allowlist"          value="$(var client_topic_allowlist)" />
     <param name="min_qos_depth"                   value="$(var min_qos_depth)" />
     <param name="max_qos_depth"                   value="$(var max_qos_depth)" />
     <param name="num_threads"                     value="$(var num_threads)" />
