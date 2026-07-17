@@ -42,8 +42,8 @@ pub(crate) struct PointCloudCompressionConfig {
 /// Selects, per channel, the point-cloud compression applied over remote access.
 ///
 /// This callback is invoked when a compressible point-cloud channel — one carrying a
-/// supported input schema, currently protobuf-encoded `foxglove.PointCloud` or CDR-encoded
-/// `sensor_msgs/msg/PointCloud2` — is registered with Lossy QoS. Returning
+/// supported input schema, currently protobuf- or JSON-encoded `foxglove.PointCloud`, or
+/// CDR-encoded `sensor_msgs/msg/PointCloud2` — is registered with Lossy QoS. Returning
 /// `Some(options)` compresses the channel's messages with those
 /// settings; returning `None` advertises the channel with its original schema and delivers
 /// its messages unchanged. Return `None` unconditionally to disable point-cloud

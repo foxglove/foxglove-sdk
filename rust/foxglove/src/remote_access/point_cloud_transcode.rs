@@ -1,10 +1,10 @@
 //! Transparent point-cloud transcoding for the remote-access sink.
 //!
-//! Detects channels carrying point-cloud messages — protobuf `foxglove.PointCloud` or
-//! CDR-encoded ROS 2 `sensor_msgs/msg/PointCloud2` — rewrites their advertisement to the
-//! `foxglove.CompressedPointCloud` schema, and transcodes individual messages using the
-//! Draco mechanism in [`crate::draco`]. Every input format is decoded to a
-//! `foxglove.PointCloud` before Draco encoding.
+//! Detects channels carrying point-cloud messages — protobuf- or JSON-encoded
+//! `foxglove.PointCloud`, or CDR-encoded ROS 2 `sensor_msgs/msg/PointCloud2` — rewrites
+//! their advertisement to the `foxglove.CompressedPointCloud` schema, and transcodes
+//! individual messages using the Draco mechanism in [`crate::draco`]. Every input format
+//! is decoded to a `foxglove.PointCloud` before Draco encoding.
 
 mod ros2;
 
@@ -25,6 +25,8 @@ pub(crate) enum TranscodeError {
     Decode(#[from] prost::DecodeError),
     #[error("failed to decode PointCloud2 message: {0}")]
     Ros2(#[from] ros2::Ros2PointCloudError),
+    #[error("failed to decode JSON PointCloud message: {0}")]
+    Json(#[from] serde_json::Error),
     #[error(transparent)]
     Encode(#[from] DracoEncodeError),
 }
@@ -38,6 +40,8 @@ pub(crate) enum TranscodeError {
 pub(crate) enum PointCloudInputSchema {
     /// `foxglove.PointCloud` with protobuf encoding.
     FoxgloveProtobuf,
+    /// `foxglove.PointCloud` with json encoding.
+    FoxgloveJson,
     /// ROS 2 `sensor_msgs/msg/PointCloud2` with cdr encoding.
     Ros2PointCloud2,
 }
@@ -49,6 +53,7 @@ pub(crate) enum PointCloudInputSchema {
 fn detect_point_cloud_schema(encoding: &str, schema_name: &str) -> Option<PointCloudInputSchema> {
     match (encoding, schema_name) {
         ("protobuf", "foxglove.PointCloud") => Some(PointCloudInputSchema::FoxgloveProtobuf),
+        ("json", "foxglove.PointCloud") => Some(PointCloudInputSchema::FoxgloveJson),
         ("cdr", "sensor_msgs/msg/PointCloud2") => Some(PointCloudInputSchema::Ros2PointCloud2),
         _ => None,
     }
@@ -71,6 +76,7 @@ pub(crate) fn transcode_point_cloud_message(
 ) -> Result<Bytes, TranscodeError> {
     let mut cloud = match input_schema {
         PointCloudInputSchema::FoxgloveProtobuf => <PointCloud as Decode>::decode(msg)?,
+        PointCloudInputSchema::FoxgloveJson => serde_json::from_slice::<PointCloud>(msg)?,
         PointCloudInputSchema::Ros2PointCloud2 => ros2::Ros2PointCloud2::decode(msg)?.try_into()?,
     };
     // The conditioning passes and Draco encoding run on the converted cloud, so every
@@ -444,6 +450,56 @@ mod tests {
             point_cloud_input_schema(&ch),
             Some(PointCloudInputSchema::Ros2PointCloud2)
         );
+    }
+
+    #[test]
+    fn test_detects_json_point_cloud() {
+        let ch = make_channel(
+            "json",
+            Some(Schema::new("foxglove.PointCloud", "jsonschema", b"{}")),
+        );
+        assert_eq!(
+            point_cloud_input_schema(&ch),
+            Some(PointCloudInputSchema::FoxgloveJson)
+        );
+    }
+
+    #[test]
+    fn test_transcodes_json_point_cloud_to_compressed_point_cloud() {
+        use crate::Decode;
+        use base64::Engine;
+
+        // Wire-format JSON as the Foxglove JSON conventions produce it: base64-encoded
+        // data, enum fields as string names.
+        let mut data = Vec::new();
+        for c in [1.0f32, 2.0, 3.0] {
+            data.extend_from_slice(&c.to_le_bytes());
+        }
+        let data_b64 = base64::engine::general_purpose::STANDARD.encode(&data);
+        let json = serde_json::json!({
+            "timestamp": { "sec": 1, "nsec": 2 },
+            "frame_id": "lidar",
+            "point_stride": 12,
+            "fields": [
+                { "name": "x", "offset": 0, "type": "FLOAT32" },
+                { "name": "y", "offset": 4, "type": "FLOAT32" },
+                { "name": "z", "offset": 8, "type": "FLOAT32" },
+            ],
+            "data": data_b64,
+        })
+        .to_string();
+
+        let transcoded = transcode_point_cloud_message(
+            json.as_bytes(),
+            PointCloudInputSchema::FoxgloveJson,
+            &PointCloudCompression::default(),
+        )
+        .unwrap();
+        let compressed =
+            <crate::messages::CompressedPointCloud as Decode>::decode(transcoded.as_ref()).unwrap();
+        assert_eq!(compressed.format, "draco");
+        assert_eq!(compressed.frame_id, "lidar");
+        assert!(!compressed.data.is_empty());
     }
 
     // A ROS 2 `sensor_msgs/msg/PointCloud2`, CDR-encoded like a ROS 2 publisher would.
@@ -1234,7 +1290,7 @@ mod tests {
 
         // Wrong encoding.
         let ch = make_channel(
-            "json",
+            "msgpack",
             Some(Schema::new("foxglove.PointCloud", "jsonschema", b"{}")),
         );
         assert_eq!(point_cloud_input_schema(&ch), None);
