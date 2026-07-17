@@ -1,0 +1,14 @@
+[package]
+name = "example_remote_access_point_cloud"
+edition = "2024"
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+foxglove = { path = "../../foxglove", features = ["remote-access"] }
+tokio = { version = "1.47", features = ["full"] }
+clap = { version = "4.5", features = ["derive"] }
+env_logger = "0.11.5"
+tracing = "0.1"
