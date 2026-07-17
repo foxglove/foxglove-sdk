@@ -72,8 +72,10 @@ jobs:
       - name: Set up Emscripten
         run: |
           git clone https://github.com/emscripten-core/emsdk.git
-          ./emsdk/emsdk install 6.0.3
-          ./emsdk/emsdk activate 6.0.3
+          # Must match the Emscripten version bundled by the `pyodide` package in
+          # playground/package.json, or Pyodide will refuse to load this wheel.
+          ./emsdk/emsdk install 5.0.3
+          ./emsdk/emsdk activate 5.0.3
           echo "$(pwd)/emsdk" >> $GITHUB_PATH
           echo "$(pwd)/emsdk/upstream/emscripten" >> $GITHUB_PATH
 

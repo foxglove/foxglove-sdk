@@ -15,10 +15,13 @@ Set up the emscripten toolchain with
 
 ```sh
 git clone https://github.com/emscripten-core/emsdk.git
-emsdk/emsdk install 6.0.3
-emsdk/emsdk activate 6.0.3
+emsdk/emsdk install 5.0.3
+emsdk/emsdk activate 5.0.3
 source emsdk/emsdk_env.sh
 ```
+
+This must match the Emscripten version bundled by the `pyodide` package in
+`playground/package.json`, or Pyodide will refuse to load the built wheel.
 
 Add the `wasm32-unknown-emscripten` target to your rust toolchain:
 
