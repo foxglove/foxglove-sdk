@@ -20,6 +20,8 @@ draco = ["dep:draco-core"]
 draco-ros2 = ["draco", "dep:cdr"]
 # Adds JSON-encoded `foxglove.PointCloud` as a point-cloud compression input.
 draco-json = ["draco", "serde"]
+# Adds FlatBuffer-encoded `foxglove.PointCloud` as a point-cloud compression input.
+draco-flatbuffer = ["draco", "dep:flatbuffers"]
 sysinfo = ["dep:sysinfo", "dep:tokio", "tokio/rt-multi-thread", "tokio/time"]
 _remote-common = [
   "dep:base64",
@@ -103,6 +105,7 @@ full = [
   "data_provider",
   "derive",
   "draco",
+  "draco-flatbuffer",
   "draco-json",
   "draco-ros2",
   "img2yuv",

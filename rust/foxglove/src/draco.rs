@@ -15,8 +15,8 @@
 //! The remote-access sink can also transcode point-cloud channels transparently; see
 //! [`CompressPointCloudOptions`]. Protobuf-encoded `foxglove.PointCloud` channels are
 //! always eligible; the `draco-ros2` feature adds CDR-encoded ROS 2
-//! `sensor_msgs/msg/PointCloud2` channels, and the `draco-json` feature adds JSON-encoded
-//! `foxglove.PointCloud` channels.
+//! `sensor_msgs/msg/PointCloud2` channels, and the `draco-json` and `draco-flatbuffer`
+//! features add JSON- and FlatBuffer-encoded `foxglove.PointCloud` channels.
 
 use bytes::Bytes;
 
@@ -31,6 +31,8 @@ use draco_core::metadata::Metadata;
 
 use crate::messages::{CompressedPointCloud, PointCloud};
 
+#[cfg(all(feature = "draco-flatbuffer", feature = "remote-access"))]
+mod flatbuffer;
 #[cfg(all(feature = "draco-ros2", feature = "remote-access"))]
 mod ros2;
 
@@ -437,6 +439,9 @@ pub(crate) mod transcode {
         #[cfg(feature = "draco-json")]
         #[error("failed to decode JSON PointCloud message: {0}")]
         Json(#[from] serde_json::Error),
+        #[cfg(feature = "draco-flatbuffer")]
+        #[error("failed to decode FlatBuffer PointCloud message: {0}")]
+        Flatbuffer(#[from] super::flatbuffer::FlatbufferPointCloudError),
         #[error(transparent)]
         Encode(#[from] DracoEncodeError),
     }
@@ -456,6 +461,9 @@ pub(crate) mod transcode {
         /// `foxglove.PointCloud` with json encoding.
         #[cfg(feature = "draco-json")]
         FoxgloveJson,
+        /// `foxglove.PointCloud` with flatbuffer encoding.
+        #[cfg(feature = "draco-flatbuffer")]
+        FoxgloveFlatbuffer,
     }
 
     /// Maps a channel's message encoding and schema name to a point-cloud input format.
@@ -473,6 +481,10 @@ pub(crate) mod transcode {
             ("cdr", "sensor_msgs/msg/PointCloud2") => Some(PointCloudInputSchema::Ros2PointCloud2),
             #[cfg(feature = "draco-json")]
             ("json", "foxglove.PointCloud") => Some(PointCloudInputSchema::FoxgloveJson),
+            #[cfg(feature = "draco-flatbuffer")]
+            ("flatbuffer", "foxglove.PointCloud") => {
+                Some(PointCloudInputSchema::FoxgloveFlatbuffer)
+            }
             _ => None,
         }
     }
@@ -500,6 +512,10 @@ pub(crate) mod transcode {
             }
             #[cfg(feature = "draco-json")]
             PointCloudInputSchema::FoxgloveJson => serde_json::from_slice::<PointCloud>(msg)?,
+            #[cfg(feature = "draco-flatbuffer")]
+            PointCloudInputSchema::FoxgloveFlatbuffer => {
+                super::flatbuffer::decode_point_cloud(msg)?
+            }
         };
         let compressed = compress_point_cloud(&cloud, &options.draco_options())?;
         Ok(Bytes::from(compressed.encode_to_vec()))
@@ -609,6 +625,19 @@ mod transcode_tests {
         assert_eq!(compressed.format, "draco");
         assert_eq!(compressed.frame_id, "lidar");
         assert!(!compressed.data.is_empty());
+    }
+
+    #[cfg(feature = "draco-flatbuffer")]
+    #[test]
+    fn test_detects_flatbuffer_point_cloud() {
+        let ch = make_channel(
+            "flatbuffer",
+            Some(Schema::new("foxglove.PointCloud", "flatbuffer", b"")),
+        );
+        assert_eq!(
+            point_cloud_input_schema(&ch),
+            Some(PointCloudInputSchema::FoxgloveFlatbuffer)
+        );
     }
 
     #[cfg(feature = "draco-ros2")]
