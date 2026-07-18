@@ -156,7 +156,11 @@ class PyodideCdnDownloadPlugin {
     this.#assets = Promise.all(
       assets.map(async ({ name, url }) => {
         console.log("fetching", url);
-        const data = await (await fetch(url)).arrayBuffer();
+        const res = await fetch(url);
+        if (!res.ok) {
+          throw new Error(`Failed to fetch ${url}: ${res.status} ${res.statusText}`);
+        }
+        const data = await res.arrayBuffer();
         return { name, data: Buffer.from(data) };
       }),
     );
