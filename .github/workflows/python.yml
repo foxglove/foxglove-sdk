@@ -85,8 +85,8 @@ jobs:
         run: uv run maturin build --release --out dist --target wasm32-unknown-emscripten -i python3.12
         env:
           CFLAGS: "-fPIC"
-          RUSTC_BOOTSTRAP: "1"
           MATURIN_NO_MISSING_BUILD_BACKEND_WARNING: 1
+          MATURIN_PYEMSCRIPTEN_PLATFORM_VERSION: "2026_0"
 
       - name: Upload wheel
         uses: actions/upload-artifact@v7

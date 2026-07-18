@@ -26,21 +26,13 @@ export default (_env: unknown, argv: WebpackArgv): Configuration => {
   const allowUnusedVariables = isDev;
   return {
     entry: "./src/index",
-    target: "web",
-    // Pyodide's runtime (pyodide.asm.mjs) is an ES module and refuses to run in a classic worker,
-    // so RunnerWorker must be a module-type worker. Webpack can only emit module-type worker
-    // chunks if the whole build output is ESM (see
-    // https://github.com/pyodide/pyodide-webpack-plugin/blob/main/examples/esm/webpack.config.js).
-    experiments: {
-      outputModule: true,
-    },
     output: {
       filename: "index.js",
+      module: true,
       path: path.resolve(thisDirname, "dist"),
-      chunkFormat: "module",
-      library: {
-        type: "module",
-      },
+    },
+    experiments: {
+      outputModule: true,
     },
     devtool: argv.mode === "production" ? false : "eval-source-map",
     module: {
@@ -74,38 +66,16 @@ export default (_env: unknown, argv: WebpackArgv): Configuration => {
           use: ["style-loader", "css-loader"],
           sideEffects: true,
         },
-        {
-          // pyodide.mjs uses `await import(url)` with a runtime-computed URL to fetch its own
-          // asm module and lazily-loaded packages. Its source annotates these with a
-          // `/* webpackIgnore: true */` magic comment so bundlers leave them as native dynamic
-          // imports, but Pyodide's published build (esbuild) strips comments during
-          // minification, so the published pyodide.mjs no longer carries the hint. Without it,
-          // webpack tries to statically resolve these expression-based imports itself and fails
-          // at runtime with "Cannot find module". This loader re-adds the hint before webpack's
-          // own parser sees the source.
-          test: /pyodide\.mjs$/,
-          loader: path.resolve(thisDirname, "webpack/pyodide-dynamic-import-loader.cjs"),
-        },
       ],
     },
     resolve: {
       extensions: [".tsx", ".ts", ".js"],
       fallback: {
-        // pyodide.mjs conditionally imports these Node builtins for its non-browser code path;
-        // they're unreachable at runtime in the browser, but webpack still needs to resolve them.
         fs: false,
-        "fs/promises": false,
         path: false,
-        url: false,
-        vm: false,
       },
     },
     plugins: [
-      // resolve.fallback doesn't match "node:"-prefixed specifiers (webpack/webpack#14166), so
-      // strip the prefix first and let the bare-name fallbacks above handle it.
-      new webpack.NormalModuleReplacementPlugin(/^node:/, (resource) => {
-        resource.request = resource.request.replace(/^node:/, "");
-      }),
       new webpack.ProvidePlugin({
         Buffer: ["buffer", "Buffer"],
       }),

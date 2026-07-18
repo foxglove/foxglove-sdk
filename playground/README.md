@@ -20,10 +20,8 @@ emsdk/emsdk activate 5.0.3
 source emsdk/emsdk_env.sh
 ```
 
-This must match the Emscripten version bundled by the `pyodide` package in
-`playground/package.json`, or Pyodide will refuse to load the built wheel.
-
-Add the `wasm32-unknown-emscripten` target to your rust toolchain:
+Pyodide's `pyemscripten_2026_0` platform requires Rust 1.93.0 or later. Add the
+`wasm32-unknown-emscripten` target to your rust toolchain:
 
 ```sh
 rustup target add wasm32-unknown-emscripten
@@ -34,7 +32,7 @@ Now you can build the wheel.
 ```sh
 cd ../python/foxglove-sdk
 CFLAGS=-fPIC \
-  RUSTC_BOOTSTRAP=1 \
+  MATURIN_PYEMSCRIPTEN_PLATFORM_VERSION=2026_0 \
   uv run maturin build --release --out dist --target wasm32-unknown-emscripten -i python3.12
 cp dist/foxglove_sdk-*.whl ../../playground/public/
 ```
