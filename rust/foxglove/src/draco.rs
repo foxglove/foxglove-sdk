@@ -825,6 +825,35 @@ mod tests {
     }
 
     #[test]
+    fn test_kd_tree_extra_field_values_roundtrip() {
+        // Integer extra fields are copied losslessly under kd-tree; only point order changes.
+        let (cloud, _, intensities) = test_cloud();
+        let compressed = compress_point_cloud(&cloud, &DracoEncodeOptions::default()).unwrap();
+
+        let mut decoded = DracoCloud::new();
+        let mut buf = DecoderBuffer::new(&compressed.data);
+        PointCloudDecoder::new()
+            .decode(&mut buf, &mut decoded)
+            .expect("draco decode failed");
+
+        let generic_id = decoded.named_attribute_id(GeometryAttributeType::Generic);
+        assert!(generic_id >= 0, "decoded cloud has no generic attribute");
+        let attr = decoded.attribute(generic_id);
+        let stride = attr.byte_stride() as usize;
+        let data = attr.buffer().data();
+        let mut decoded_intensities: Vec<u16> = (0..decoded.num_points())
+            .map(|p| {
+                let base = p * stride;
+                u16::from_le_bytes(data[base..base + 2].try_into().unwrap())
+            })
+            .collect();
+        let mut expected = intensities;
+        decoded_intensities.sort_unstable();
+        expected.sort_unstable();
+        assert_eq!(decoded_intensities, expected);
+    }
+
+    #[test]
     fn test_encode_draco_sugar() {
         let (cloud, _, _) = test_cloud();
         let compressed = cloud.encode_draco(&DracoEncodeOptions::default()).unwrap();
