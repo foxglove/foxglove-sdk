@@ -26,9 +26,21 @@ export default (_env: unknown, argv: WebpackArgv): Configuration => {
   const allowUnusedVariables = isDev;
   return {
     entry: "./src/index",
+    target: "web",
+    // Pyodide's runtime (pyodide.asm.mjs) is an ES module and refuses to run in a classic worker,
+    // so RunnerWorker must be a module-type worker. Webpack can only emit module-type worker
+    // chunks if the whole build output is ESM (see
+    // https://github.com/pyodide/pyodide-webpack-plugin/blob/main/examples/esm/webpack.config.js).
+    experiments: {
+      outputModule: true,
+    },
     output: {
       filename: "index.js",
       path: path.resolve(thisDirname, "dist"),
+      chunkFormat: "module",
+      library: {
+        type: "module",
+      },
     },
     devtool: argv.mode === "production" ? false : "eval-source-map",
     module: {
@@ -62,16 +74,38 @@ export default (_env: unknown, argv: WebpackArgv): Configuration => {
           use: ["style-loader", "css-loader"],
           sideEffects: true,
         },
+        {
+          // pyodide.mjs uses `await import(url)` with a runtime-computed URL to fetch its own
+          // asm module and lazily-loaded packages. Its source annotates these with a
+          // `/* webpackIgnore: true */` magic comment so bundlers leave them as native dynamic
+          // imports, but Pyodide's published build (esbuild) strips comments during
+          // minification, so the published pyodide.mjs no longer carries the hint. Without it,
+          // webpack tries to statically resolve these expression-based imports itself and fails
+          // at runtime with "Cannot find module". This loader re-adds the hint before webpack's
+          // own parser sees the source.
+          test: /pyodide\.mjs$/,
+          loader: path.resolve(thisDirname, "webpack/pyodide-dynamic-import-loader.cjs"),
+        },
       ],
     },
     resolve: {
       extensions: [".tsx", ".ts", ".js"],
       fallback: {
+        // pyodide.mjs conditionally imports these Node builtins for its non-browser code path;
+        // they're unreachable at runtime in the browser, but webpack still needs to resolve them.
         fs: false,
+        "fs/promises": false,
         path: false,
+        url: false,
+        vm: false,
       },
     },
     plugins: [
+      // resolve.fallback doesn't match "node:"-prefixed specifiers (webpack/webpack#14166), so
+      // strip the prefix first and let the bare-name fallbacks above handle it.
+      new webpack.NormalModuleReplacementPlugin(/^node:/, (resource) => {
+        resource.request = resource.request.replace(/^node:/, "");
+      }),
       new webpack.ProvidePlugin({
         Buffer: ["buffer", "Buffer"],
       }),
@@ -82,6 +116,7 @@ export default (_env: unknown, argv: WebpackArgv): Configuration => {
         patterns: [{ from: path.resolve(thisDirname, "public") }],
       }),
       new HtmlWebpackPlugin({
+        scriptLoading: "module",
         templateContent: /* html */ `
 <!doctype html>
 <html>
@@ -110,18 +145,18 @@ export default (_env: unknown, argv: WebpackArgv): Configuration => {
           // Pyodide is distributed with a list of packages that it knows about. These filenames match
           // the ones it will try to download at runtime when calling pyodide.loadPackage(). See the
           // list at: https://pyodide.org/en/stable/usage/packages-in-pyodide.html
-          "micropip-0.9.0-py3-none-any.whl",
-          "numpy-2.0.2-cp312-cp312-pyodide_2024_0_wasm32.whl",
-          "openblas-0.3.26.zip",
-          "opencv_python-4.10.0.84-cp312-cp312-pyodide_2024_0_wasm32.whl",
-          "packaging-24.2-py3-none-any.whl",
-          "pandas-2.2.3-cp312-cp312-pyodide_2024_0_wasm32.whl",
-          "parso-0.8.4-py2.py3-none-any.whl",
-          "protobuf-5.29.2-cp312-cp312-pyodide_2024_0_wasm32.whl",
+          "micropip-0.11.1-py3-none-any.whl",
+          "numpy-2.4.3-cp314-cp314-pyemscripten_2026_0_wasm32.whl",
+          "libopenblas-0.3.28.zip",
+          "opencv_python-4.11.0.86-cp314-cp314-pyemscripten_2026_0_wasm32.whl",
+          "packaging-26.1-py3-none-any.whl",
+          "pandas-3.0.2-cp314-cp314-pyemscripten_2026_0_wasm32.whl",
+          "parso-0.8.6-py2.py3-none-any.whl",
+          "protobuf-7.34.1-cp314-cp314-pyemscripten_2026_0_wasm32.whl",
           "python_dateutil-2.9.0.post0-py2.py3-none-any.whl",
-          "pytz-2024.1-py2.py3-none-any.whl",
-          "scipy-1.14.1-cp312-cp312-pyodide_2024_0_wasm32.whl",
-          "six-1.16.0-py2.py3-none-any.whl",
+          "pytz-2026.1.post1-py2.py3-none-any.whl",
+          "scipy-1.18.0-cp314-cp314-pyemscripten_2026_0_wasm32.whl",
+          "six-1.17.0-py2.py3-none-any.whl",
         ],
         pypiPackageUrls: [
           // upgraded version of jedi to fix https://github.com/davidhalter/jedi/issues/2087 and https://github.com/davidhalter/jedi/issues/2073
