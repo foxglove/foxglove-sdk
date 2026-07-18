@@ -310,14 +310,16 @@ struct RemoteAccessGatewayOptions {
   /// with default settings. Note that the default settings are lossy: kd-tree encoding
   /// with positions quantized to 12 bits. Set the mode to
   /// @ref PointCloudCompressionMode::Disabled to deliver point clouds unmodified, or to
-  /// @ref PointCloudCompressionMode::Draco to customize the Draco settings.
+  /// @ref PointCloudCompressionMode::Draco to customize the Draco settings. Channels
+  /// classified as Reliable skip compression and deliver the raw point cloud on the
+  /// control bytestream.
   PointCloudCompression point_cloud_compression;
   /// @brief A point-cloud-compression opt-out callback.
   ///
-  /// If set, this callback is invoked for each compressible `foxglove.PointCloud` channel;
-  /// returning true delivers the channel unmodified instead of compressing it. If not set,
-  /// all compressible point-cloud channels use the compression configured by
-  /// `point_cloud_compression`.
+  /// If set, this callback is invoked for each compressible Lossy `foxglove.PointCloud`
+  /// channel; returning true delivers the channel unmodified instead of compressing it.
+  /// Reliable channels skip compression automatically. If not set, all compressible Lossy
+  /// point-cloud channels use the compression configured by `point_cloud_compression`.
   SuppressPointCloudCompressionFn suppress_point_cloud_compression;
   // New fields are appended last so that adding them preserves the layout of pre-existing fields.
 };

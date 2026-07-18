@@ -322,10 +322,11 @@ try:
             background task before delivery. Pass a :py:class:`DracoEncodeOptions` to customize
             the settings, or ``False`` to disable compression. By default, compression is enabled
             with default settings; note that the defaults are lossy (kd-tree encoding with
-            positions quantized to 12 bits).
+            positions quantized to 12 bits). Channels classified as Reliable skip compression
+            and deliver the raw point cloud on the control bytestream.
         :param suppress_point_cloud_compression: A ``Callable`` that returns ``True`` to deliver
             a given channel unmodified rather than compressing its point clouds. If not set, all
-            compressible point-cloud channels use the compression configured by
+            compressible Lossy point-cloud channels use the compression configured by
             ``point_cloud_compression``.
         """
         return _foxglove.start_gateway(

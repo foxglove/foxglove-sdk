@@ -440,27 +440,18 @@ impl Sink for RemoteAccessSession {
             for &ch in &filtered {
                 if advertised_ids.contains(&u64::from(ch.id())) {
                     state.insert_channel(ch);
-                    #[cfg(feature = "draco")]
-                    if let Some(config) = resolve_point_cloud_compression(
-                        ch,
-                        self.point_cloud_compression,
-                        self.suppress_point_cloud_compression.as_deref(),
-                    ) {
-                        // Only record the configuration here: the transcoding publisher
-                        // is created once the channel gains its first data subscriber,
-                        // so encoding never runs for output nobody receives.
-                        state.insert_point_cloud_compression(ch.id(), config);
-                    }
-                    let video_schema =
-                        resolve_video_input_schema(ch, self.suppress_video_transcode.as_deref());
-                    if let Some(input_schema) = video_schema {
-                        state.insert_video_schema(ch.id(), input_schema);
-                    }
+                    // Classify QoS before compression/video decisions so Reliable can
+                    // auto-suppress compression, and video can force Lossy.
                     let mut qos = self
                         .qos_classifier
                         .as_ref()
                         .map(|c| c.classify(ch.descriptor()))
                         .unwrap_or_default();
+                    let video_schema =
+                        resolve_video_input_schema(ch, self.suppress_video_transcode.as_deref());
+                    if let Some(input_schema) = video_schema {
+                        state.insert_video_schema(ch.id(), input_schema);
+                    }
                     if video_schema.is_some() && qos.reliability == Reliability::Reliable {
                         warn!(
                             "Forcing QoS to Lossy for video channel {:?} (topic={}): \
@@ -469,6 +460,19 @@ impl Sink for RemoteAccessSession {
                             ch.topic()
                         );
                         qos.reliability = Reliability::Lossy;
+                    }
+                    #[cfg(feature = "draco")]
+                    if let Some(config) = resolve_point_cloud_compression(
+                        ch,
+                        self.point_cloud_compression,
+                        self.suppress_point_cloud_compression.as_deref(),
+                        qos.reliability,
+                    ) {
+                        // Only record the configuration here: the transcoding publisher
+                        // is created once the channel gains its first data subscriber,
+                        // so encoding never runs for output nobody receives. Reliable
+                        // channels never reach this path (see resolve).
+                        state.insert_point_cloud_compression(ch.id(), config);
                     }
                     state.insert_qos_profile(ch.id(), qos);
                     if qos.reliability != Reliability::Reliable {
@@ -687,11 +691,12 @@ impl RemoteAccessSession {
     }
 
     /// Delivers a transcoded `foxglove.CompressedPointCloud` message to the channel's
-    /// current subscribers, using the reliable control stream or the lossy data track
-    /// according to the channel's QoS.
+    /// current subscribers over the lossy data track.
     ///
-    /// Called from the channel's background [`PointCloudPublisher`] task. Mirrors the
-    /// delivery logic of [`Sink::log`], re-resolving subscribers at delivery time.
+    /// Called from the channel's background [`PointCloudPublisher`] task. Compression is
+    /// only enabled for Lossy channels; Reliable point clouds are delivered raw on the
+    /// control stream instead. Mirrors the delivery logic of [`Sink::log`], re-resolving
+    /// subscribers at delivery time.
     #[cfg(feature = "draco")]
     pub(super) fn deliver_transcoded_point_cloud(
         &self,

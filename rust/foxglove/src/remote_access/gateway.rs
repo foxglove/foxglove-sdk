@@ -486,6 +486,11 @@ impl Gateway {
     /// [`DracoEncodeOptions::quantization_bits`](crate::draco::DracoEncodeOptions::quantization_bits)
     /// to `0` for lossless positions.
     ///
+    /// Channels classified as [`Reliability::Reliable`](crate::remote_access::Reliability::Reliable)
+    /// skip compression automatically and deliver the raw point cloud on the control
+    /// bytestream, preserving the Reliable contract (no silent drops). Use Lossy QoS (the
+    /// default) when you want compression.
+    ///
     /// Pass `None` to disable compression: point clouds are delivered unmodified.
     ///
     /// [`CompressPointCloudOptions::default()`]: crate::draco::CompressPointCloudOptions
@@ -502,7 +507,8 @@ impl Gateway {
     /// Opts selected channels out of point-cloud compression.
     ///
     /// See [`SuppressPointCloudCompression`] for more information. If not set, all compressible
-    /// point-cloud channels use the compression configured by [`Self::compress_point_clouds`].
+    /// Lossy point-cloud channels use the compression configured by
+    /// [`Self::compress_point_clouds`]. Reliable channels skip compression automatically.
     #[cfg(feature = "draco")]
     #[cfg_attr(docsrs, doc(cfg(feature = "draco")))]
     pub fn suppress_point_cloud_compression(

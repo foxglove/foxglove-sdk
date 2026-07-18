@@ -42,6 +42,8 @@ struct DracoEncodeOptions {
 /// advertised with the `foxglove.CompressedPointCloud` schema, and each logged point cloud
 /// is compressed in a background task (off the logging hot path) before delivery. If
 /// compression falls behind the log rate, the oldest queued message is dropped.
+/// Channels classified as Reliable skip compression and deliver the raw point cloud on
+/// the control bytestream.
 struct PointCloudCompression {
   /// @brief The compression mode.
   PointCloudCompressionMode mode = PointCloudCompressionMode::Default;
