@@ -202,10 +202,9 @@ impl ViewerConnection {
                 topic,
                 ..
             } = event
+                && topic == "control"
             {
-                if topic == "control" {
-                    break stream_reader.take().context("reader already taken")?;
-                }
+                break stream_reader.take().context("reader already taken")?;
             }
         };
         Ok(Self {

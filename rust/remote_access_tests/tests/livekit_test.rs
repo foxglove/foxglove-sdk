@@ -1095,12 +1095,11 @@ async fn livekit_video_metadata_advertised_after_image_logged() -> Result<()> {
             .context("timeout waiting for re-advertisement with video metadata")?
             .context("failed to read server message")?;
 
-        if let ServerMessage::Advertise(adv) = msg {
-            if let Some(ch) = adv.channels.iter().find(|c| c.id == channel_id) {
-                if ch.metadata.contains_key("foxglove.videoSourceEncoding") {
-                    break ch.metadata.clone();
-                }
-            }
+        if let ServerMessage::Advertise(adv) = msg
+            && let Some(ch) = adv.channels.iter().find(|c| c.id == channel_id)
+            && ch.metadata.contains_key("foxglove.videoSourceEncoding")
+        {
+            break ch.metadata.clone();
         }
         // Otherwise keep reading (might receive other messages).
     };
@@ -1261,16 +1260,16 @@ async fn livekit_video_1080p_resolution_not_capped() -> Result<()> {
             }
         }
         // Stop once we have a codec reading and the platform-appropriate target is met.
-        if !last_codec.is_empty() {
-            if let Some((w, h, _, received)) = last {
-                let ready = if expect_vp8 {
-                    (w, h) == (WIDTH, HEIGHT)
-                } else {
-                    received >= 60
-                };
-                if ready {
-                    break;
-                }
+        if !last_codec.is_empty()
+            && let Some((w, h, _, received)) = last
+        {
+            let ready = if expect_vp8 {
+                (w, h) == (WIDTH, HEIGHT)
+            } else {
+                received >= 60
+            };
+            if ready {
+                break;
             }
         }
     }

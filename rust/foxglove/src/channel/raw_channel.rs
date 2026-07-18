@@ -105,10 +105,10 @@ impl RawChannel {
     ///
     /// Attempts to log on a closed channel will elicit a throttled warning message.
     pub fn close(&self) {
-        if !self.is_closed() {
-            if let Some(ctx) = self.context.upgrade() {
-                ctx.remove_channel(self.descriptor.id());
-            }
+        if !self.is_closed()
+            && let Some(ctx) = self.context.upgrade()
+        {
+            ctx.remove_channel(self.descriptor.id());
         }
     }
 
