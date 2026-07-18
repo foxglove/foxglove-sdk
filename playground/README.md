@@ -10,6 +10,10 @@ To run the playground locally, you'll need to build the Python wheel and copy it
 into the `playground/public` directory. In order to build the wheel, you'll need
 to configure emscripten and rust toolchains.
 
+Pyodide's Python 3.14 runtime uses the [`pyemscripten_2026_0`
+platform](https://pyodide.org/en/stable/development/abi/314.html), which
+requires Emscripten 5.0.3 and rust 1.93.0 or later.
+
 Set up the emscripten toolchain with
 [emsdk](https://github.com/emscripten-core/emsdk).
 
@@ -20,8 +24,7 @@ emsdk/emsdk activate 5.0.3
 source emsdk/emsdk_env.sh
 ```
 
-Pyodide's `pyemscripten_2026_0` platform requires Rust 1.93.0 or later. Add the
-`wasm32-unknown-emscripten` target to your rust toolchain:
+Add the `wasm32-unknown-emscripten` target to your rust toolchain:
 
 ```sh
 rustup target add wasm32-unknown-emscripten
