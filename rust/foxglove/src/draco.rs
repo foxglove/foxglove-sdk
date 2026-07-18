@@ -4,8 +4,9 @@
 //! [`PointCloud`] into a Draco-compressed
 //! [`CompressedPointCloud`] (`format = "draco"`).
 //!
-//! The `x`, `y`, and `z` fields are required and are combined into a single 3-component
-//! float32 POSITION attribute (what the Foxglove app's Draco decoder requires). Every other
+//! At least two of the `x`, `y`, and `z` fields are required; they are combined into a
+//! single 3-component float32 POSITION attribute (what the Foxglove app's Draco decoder
+//! requires), with a missing axis padded with 0.0. Every other
 //! field becomes a single-component generic Draco attribute with its native numeric type:
 //! integer fields are always copied losslessly, and float fields are quantized under
 //! [`DracoMethod::KdTree`] (the default) or copied losslessly under
@@ -119,8 +120,8 @@ pub enum DracoEncodeError {
         /// The point stride in bytes.
         stride: usize,
     },
-    /// The point cloud is missing one of the required `x`, `y`, or `z` fields.
-    #[error("point cloud is missing one of the x/y/z position fields")]
+    /// The point cloud has fewer than two of the `x`, `y`, and `z` fields.
+    #[error("point cloud has fewer than two of the x/y/z position fields")]
     MissingPositionFields,
     /// A field has an unsupported numeric type.
     #[error("field '{name}' has unsupported numeric type {numeric_type}")]
@@ -188,8 +189,9 @@ fn read_as_f32(bytes: &[u8], off: usize, dtype: DataType) -> f32 {
 /// `timestamp`, `frame_id`, and `pose` are copied from the input cloud, and `format` is set
 /// to `"draco"`.
 ///
-/// The cloud must contain `x`, `y`, and `z` fields, which are combined into a 3-component
-/// float32 POSITION attribute. When [`DracoEncodeOptions::quantization_bits`] is non-zero,
+/// The cloud must contain at least two of the `x`, `y`, and `z` fields, which are combined
+/// into a 3-component float32 POSITION attribute; a missing axis is padded with 0.0.
+/// When [`DracoEncodeOptions::quantization_bits`] is non-zero,
 /// positions are quantized (lossy). Every other field becomes a generic Draco attribute
 /// with its native numeric type: integer fields are copied losslessly, and float fields
 /// are quantized under [`DracoMethod::KdTree`] (the default) or copied losslessly under
@@ -256,9 +258,11 @@ fn encode_draco(
     }
     let num_points = cloud.data.len() / stride;
 
-    // Resolve each field's Draco type/size and validate it fits in the stride.
+    // Resolve each field's Draco type/size and validate it fits in the stride, locating
+    // the x/y/z position fields along the way.
     let mut fields = Vec::with_capacity(cloud.fields.len());
-    for f in &cloud.fields {
+    let (mut xi, mut yi, mut zi) = (None, None, None);
+    for (idx, f) in cloud.fields.iter().enumerate() {
         let (dtype, size) =
             numeric_type(f.r#type).ok_or_else(|| DracoEncodeError::UnsupportedFieldType {
                 name: f.name.clone(),
@@ -273,6 +277,12 @@ fn encode_draco(
                 stride,
             });
         }
+        match f.name.as_str() {
+            "x" => xi = Some(idx),
+            "y" => yi = Some(idx),
+            "z" => zi = Some(idx),
+            _ => {}
+        }
         fields.push(Field {
             offset,
             dtype,
@@ -281,11 +291,12 @@ fn encode_draco(
     }
 
     // x/y/z become a single 3-component float32 POSITION attribute (required by the
-    // Foxglove decoder). All three must be present.
-    let find = |n: &str| cloud.fields.iter().position(|f| f.name == n);
-    let ((Some(xi), Some(yi)), Some(zi)) = ((find("x"), find("y")), find("z")) else {
+    // Foxglove decoder). The schema requires at least two of the three; a missing axis
+    // is padded with 0.0 (2D clouds).
+    let present = usize::from(xi.is_some()) + usize::from(yi.is_some()) + usize::from(zi.is_some());
+    if present < 2 {
         return Err(DracoEncodeError::MissingPositionFields);
-    };
+    }
 
     // kd-tree encoding requires quantization and doesn't support float64 attributes; fall
     // back to sequential encoding in those cases (see `DracoMethod::KdTree`).
@@ -309,15 +320,15 @@ fn encode_draco(
     );
     {
         let dst = pos.buffer_mut().data_mut();
-        let coords = [
-            (fields[xi].offset, fields[xi].dtype),
-            (fields[yi].offset, fields[yi].dtype),
-            (fields[zi].offset, fields[zi].dtype),
-        ];
+        // A missing axis (`None`) is padded with 0.0.
+        let coords = [xi, yi, zi].map(|i| i.map(|i| (fields[i].offset, fields[i].dtype)));
         for p in 0..num_points {
             let base = p * stride;
-            for (c, &(off, dt)) in coords.iter().enumerate() {
-                let v = read_as_f32(&cloud.data, base + off, dt);
+            for (c, coord) in coords.iter().enumerate() {
+                let v = match *coord {
+                    Some((off, dt)) => read_as_f32(&cloud.data, base + off, dt),
+                    None => 0.0,
+                };
                 let o = (p * 3 + c) * 4;
                 dst[o..o + 4].copy_from_slice(&v.to_le_bytes());
             }
@@ -332,7 +343,7 @@ fn encode_draco(
     // `add_attribute` assigns the attribute's unique id sequentially, overwriting any id
     // set beforehand; the metadata is keyed by the id it returns.
     for (idx, field) in fields.iter().enumerate() {
-        if idx == xi || idx == yi || idx == zi {
+        if Some(idx) == xi || Some(idx) == yi || Some(idx) == zi {
             continue;
         }
         let mut attr = PointAttribute::new();
@@ -881,10 +892,27 @@ mod tests {
 
     #[test]
     fn test_missing_position_fields_error() {
+        // Fewer than two of x/y/z is rejected.
         let (mut cloud, _, _) = test_cloud();
-        cloud.fields.retain(|f| f.name != "z");
+        cloud.fields.retain(|f| f.name != "y" && f.name != "z");
         let err = compress_point_cloud(&cloud, &DracoEncodeOptions::default()).unwrap_err();
         assert!(matches!(err, DracoEncodeError::MissingPositionFields));
+    }
+
+    #[test]
+    fn test_two_axis_cloud_pads_missing_axis_with_zero() {
+        // A cloud with only x/y fields (2D) encodes with the missing z padded to 0.0.
+        let (mut cloud, positions, _) = test_cloud();
+        cloud.fields.retain(|f| f.name != "z");
+
+        // Sequential + lossless so decoded values compare exactly.
+        let options = DracoEncodeOptions {
+            method: DracoMethod::Sequential,
+            quantization_bits: 0,
+        };
+        let draco = encode_draco(&cloud, &options).unwrap();
+        let expected: Vec<[f32; 3]> = positions.iter().map(|&[x, y, _]| [x, y, 0.0]).collect();
+        assert_eq!(decode_positions(&draco), expected);
     }
 
     #[test]
