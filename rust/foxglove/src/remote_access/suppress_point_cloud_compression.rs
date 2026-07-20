@@ -1,13 +1,18 @@
 //! The point-cloud-compression opt-out predicate for remote access.
 
 use crate::draco::CompressPointCloudOptions;
+use crate::remote_access::qos::Reliability;
 use crate::{ChannelDescriptor, RawChannel};
 
 /// Decides, per channel, whether to opt out of point-cloud compression over remote access.
 ///
-/// This callback is invoked when a compressible `foxglove.PointCloud` channel is registered.
-/// Returning `true` advertises the channel with its original schema and delivers its messages
-/// unchanged.
+/// This callback is invoked when a compressible `foxglove.PointCloud` channel is registered
+/// with Lossy QoS. Returning `true` advertises the channel with its original schema and
+/// delivers its messages unchanged.
+///
+/// Channels classified as [`Reliability::Reliable`] are always delivered unmodified on the
+/// control stream (compression is skipped automatically), so this callback is not consulted
+/// for them.
 ///
 /// Configured via [`Gateway::suppress_point_cloud_compression`] (this trait) or
 /// [`Gateway::suppress_point_cloud_compression_fn`] (a closure).
@@ -32,15 +37,28 @@ where
     }
 }
 
-/// Returns the compression options for a channel, or `None` when compression is disabled, the
-/// channel is not compressible, or the gateway's suppression predicate opts it out.
+/// Returns the compression options for a channel, or `None` when compression is disabled,
+/// the channel is not compressible, QoS is Reliable, or the gateway's suppression predicate
+/// opts it out.
+///
+/// Reliable channels keep the raw point cloud on the control bytestream: compression is
+/// lossy (and the publisher may drop when behind), which would violate the Reliable
+/// contract.
 pub(super) fn resolve_point_cloud_compression(
     channel: &RawChannel,
     options: Option<CompressPointCloudOptions>,
     suppress: Option<&dyn SuppressPointCloudCompression>,
+    reliability: Reliability,
 ) -> Option<CompressPointCloudOptions> {
     let options = options?;
     if !crate::draco::transcode::is_point_cloud_channel(channel) {
+        return None;
+    }
+    if reliability == Reliability::Reliable {
+        tracing::debug!(
+            topic = %channel.topic(),
+            "skipping point-cloud compression for Reliable channel; delivering unmodified"
+        );
         return None;
     }
     if suppress.is_some_and(|suppress| suppress.should_suppress(channel.descriptor())) {
@@ -57,6 +75,7 @@ pub(super) fn resolve_point_cloud_compression(
 mod tests {
     use super::{SuppressPointCloudCompressionFn, resolve_point_cloud_compression};
     use crate::draco::CompressPointCloudOptions;
+    use crate::remote_access::qos::Reliability;
     use crate::{ChannelBuilder, ChannelDescriptor, Context, Encode, RawChannel};
     use std::sync::Arc;
 
@@ -77,15 +96,42 @@ mod tests {
         let suppress =
             SuppressPointCloudCompressionFn(|ch: &ChannelDescriptor| ch.topic() == "/cloud");
         assert_eq!(
-            resolve_point_cloud_compression(&cloud, Some(options), Some(&suppress)),
+            resolve_point_cloud_compression(
+                &cloud,
+                Some(options),
+                Some(&suppress),
+                Reliability::Lossy
+            ),
             None
         );
 
         let other =
             SuppressPointCloudCompressionFn(|ch: &ChannelDescriptor| ch.topic() == "/other");
         assert_eq!(
-            resolve_point_cloud_compression(&cloud, Some(options), Some(&other)),
+            resolve_point_cloud_compression(
+                &cloud,
+                Some(options),
+                Some(&other),
+                Reliability::Lossy
+            ),
             Some(options)
+        );
+    }
+
+    #[test]
+    fn skips_compression_when_qos_is_reliable() {
+        let options = CompressPointCloudOptions::default();
+        let cloud = make_channel("/cloud");
+        let suppress =
+            SuppressPointCloudCompressionFn(|_: &ChannelDescriptor| panic!("unexpected callback"));
+        assert_eq!(
+            resolve_point_cloud_compression(
+                &cloud,
+                Some(options),
+                Some(&suppress),
+                Reliability::Reliable
+            ),
+            None
         );
     }
 
@@ -95,7 +141,7 @@ mod tests {
         let suppress =
             SuppressPointCloudCompressionFn(|_: &ChannelDescriptor| panic!("unexpected callback"));
         assert_eq!(
-            resolve_point_cloud_compression(&cloud, None, Some(&suppress)),
+            resolve_point_cloud_compression(&cloud, None, Some(&suppress), Reliability::Lossy),
             None
         );
     }
