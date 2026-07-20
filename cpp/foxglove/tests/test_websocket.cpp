@@ -296,6 +296,45 @@ TEST_CASE("Start and stop server") {
   REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
 }
 
+TEST_CASE("WebSocket server advertises point cloud channels unmodified") {
+  auto context = foxglove::Context::create();
+
+  foxglove::WebSocketServerOptions options;
+  options.context = context;
+  options.name = "unit-test";
+
+  // Point-cloud compression is a remote-access-only feature: the WebSocket server always
+  // advertises `foxglove.PointCloud` channels with their original schema.
+  std::string expected_schema_name = "foxglove.PointCloud";
+
+  auto server = startServer(std::move(options));
+
+  const std::string schema_data = "\x01";
+  foxglove::Schema schema;
+  schema.name = "foxglove.PointCloud";
+  schema.encoding = "protobuf";
+  schema.data = reinterpret_cast<const std::byte*>(schema_data.data());
+  schema.data_len = schema_data.size();
+  auto channel_result = foxglove::RawChannel::create("/cloud", "protobuf", schema, context);
+  foxglove::RawChannel channel = std::move(requireValue(channel_result));
+
+  WebSocketClient client;
+  client.start(server.port());
+  client.waitForConnection();
+
+  auto advertise = client.filterRecv([](const std::string& payload) {
+    auto parsed = Json::parse(payload, nullptr, false);
+    return parsed.is_object() && parsed.contains("op") && parsed["op"] == "advertise";
+  });
+  REQUIRE(advertise.has_value());
+  auto parsed = Json::parse(advertise.value_or(""));
+  REQUIRE(parsed["channels"].size() == 1);
+  REQUIRE(parsed["channels"][0]["topic"] == "/cloud");
+  REQUIRE(parsed["channels"][0]["schemaName"] == expected_schema_name);
+
+  REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
+}
+
 TEST_CASE("name is not valid utf-8") {
   foxglove::WebSocketServerOptions options;
   options.name = "\x80\x80\x80\x80";
