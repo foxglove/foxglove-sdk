@@ -366,6 +366,8 @@ fn _foxglove_py(m: &Bound<'_, PyModule>) -> PyResult<()> {
     #[cfg(not(target_family = "wasm"))]
     {
         m.add_class::<remote_common::PyConnectionGraph>()?;
+        m.add_class::<remote_common::PyDracoEncodeOptions>()?;
+        m.add_class::<remote_common::PyDracoMethod>()?;
         m.add_class::<remote_common::PyMessageSchema>()?;
         m.add_class::<remote_common::PyParameter>()?;
         m.add_class::<remote_common::PyParameterType>()?;

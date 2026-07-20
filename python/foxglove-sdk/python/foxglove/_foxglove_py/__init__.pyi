@@ -162,6 +162,35 @@ class ChannelDescriptor:
 
 SinkChannelFilter = Callable[[ChannelDescriptor], bool]
 
+class DracoMethod(Enum):
+    """
+    Draco encoding method for point-cloud compression.
+    """
+
+    Sequential = ...
+    """Sequential encoding: preserves point order and copies all extra fields losslessly."""
+
+    KdTree = ...
+    """kd-tree encoding: better compression ratios, but reorders points, and float32 extra
+    fields are quantized with the same number of bits as positions. Encoding falls back to
+    sequential when ``quantization_bits`` is 0 (lossless) or the cloud contains a float64
+    field."""
+
+class DracoEncodeOptions:
+    """
+    Options for Draco point-cloud encoding.
+    """
+
+    method: DracoMethod
+    quantization_bits: int
+
+    def __init__(
+        self,
+        *,
+        method: DracoMethod = DracoMethod.KdTree,
+        quantization_bits: int = 12,
+    ) -> None: ...
+
 class ConnectionGraph:
     """
     A graph of connections between clients.
@@ -381,6 +410,8 @@ def start_gateway(
     foxglove_api_url: str | None = None,
     foxglove_api_timeout: float | None = None,
     video_encoder: VideoEncoderBackend | None = None,
+    point_cloud_compression: DracoEncodeOptions | bool | None = None,
+    suppress_point_cloud_compression: Callable[[ChannelDescriptor], bool] | None = None,
 ) -> RemoteAccessGateway:
     """
     Start a remote access gateway for live visualization and teleop in Foxglove.
