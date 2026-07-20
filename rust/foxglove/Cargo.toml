@@ -18,6 +18,10 @@ derive = ["dep:foxglove_derive"]
 draco = ["dep:draco-core"]
 # Adds ROS 2 `sensor_msgs/msg/PointCloud2` (cdr) as a point-cloud compression input.
 draco-ros2 = ["draco", "dep:cdr"]
+# Adds JSON-encoded `foxglove.PointCloud` as a point-cloud compression input.
+draco-json = ["draco", "serde"]
+# Adds FlatBuffer-encoded `foxglove.PointCloud` as a point-cloud compression input.
+draco-flatbuffer = ["draco", "dep:flatbuffers"]
 sysinfo = ["dep:sysinfo", "dep:tokio", "tokio/rt-multi-thread", "tokio/time"]
 _remote-common = [
   "dep:base64",
@@ -101,6 +105,8 @@ full = [
   "data_provider",
   "derive",
   "draco",
+  "draco-flatbuffer",
+  "draco-json",
   "draco-ros2",
   "img2yuv",
   "live_visualization",

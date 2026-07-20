@@ -14,8 +14,9 @@
 //!
 //! The remote-access sink can also transcode point-cloud channels transparently; see
 //! [`CompressPointCloudOptions`]. Protobuf-encoded `foxglove.PointCloud` channels are
-//! always eligible; with the `draco-ros2` feature, CDR-encoded ROS 2
-//! `sensor_msgs/msg/PointCloud2` channels are too.
+//! always eligible; the `draco-ros2` feature adds CDR-encoded ROS 2
+//! `sensor_msgs/msg/PointCloud2` channels, and the `draco-json` and `draco-flatbuffer`
+//! features add JSON- and FlatBuffer-encoded `foxglove.PointCloud` channels.
 
 use bytes::Bytes;
 
@@ -30,6 +31,8 @@ use draco_core::metadata::Metadata;
 
 use crate::messages::{CompressedPointCloud, PointCloud};
 
+#[cfg(all(feature = "draco-flatbuffer", feature = "remote-access"))]
+mod flatbuffer;
 #[cfg(all(feature = "draco-ros2", feature = "remote-access"))]
 mod ros2;
 
@@ -433,6 +436,12 @@ pub(crate) mod transcode {
         #[cfg(feature = "draco-ros2")]
         #[error("failed to decode PointCloud2 message: {0}")]
         Ros2(#[from] super::ros2::Ros2PointCloudError),
+        #[cfg(feature = "draco-json")]
+        #[error("failed to decode JSON PointCloud message: {0}")]
+        Json(#[from] serde_json::Error),
+        #[cfg(feature = "draco-flatbuffer")]
+        #[error("failed to decode FlatBuffer PointCloud message: {0}")]
+        Flatbuffer(#[from] super::flatbuffer::FlatbufferPointCloudError),
         #[error(transparent)]
         Encode(#[from] DracoEncodeError),
     }
@@ -449,6 +458,12 @@ pub(crate) mod transcode {
         /// ROS 2 `sensor_msgs/msg/PointCloud2` with cdr encoding.
         #[cfg(feature = "draco-ros2")]
         Ros2PointCloud2,
+        /// `foxglove.PointCloud` with json encoding.
+        #[cfg(feature = "draco-json")]
+        FoxgloveJson,
+        /// `foxglove.PointCloud` with flatbuffer encoding.
+        #[cfg(feature = "draco-flatbuffer")]
+        FoxgloveFlatbuffer,
     }
 
     /// Maps a channel's message encoding and schema name to a point-cloud input format.
@@ -464,6 +479,12 @@ pub(crate) mod transcode {
             ("protobuf", "foxglove.PointCloud") => Some(PointCloudInputSchema::FoxgloveProtobuf),
             #[cfg(feature = "draco-ros2")]
             ("cdr", "sensor_msgs/msg/PointCloud2") => Some(PointCloudInputSchema::Ros2PointCloud2),
+            #[cfg(feature = "draco-json")]
+            ("json", "foxglove.PointCloud") => Some(PointCloudInputSchema::FoxgloveJson),
+            #[cfg(feature = "draco-flatbuffer")]
+            ("flatbuffer", "foxglove.PointCloud") => {
+                Some(PointCloudInputSchema::FoxgloveFlatbuffer)
+            }
             _ => None,
         }
     }
@@ -488,6 +509,12 @@ pub(crate) mod transcode {
             #[cfg(feature = "draco-ros2")]
             PointCloudInputSchema::Ros2PointCloud2 => {
                 super::ros2::Ros2PointCloud2::decode(msg)?.try_into()?
+            }
+            #[cfg(feature = "draco-json")]
+            PointCloudInputSchema::FoxgloveJson => serde_json::from_slice::<PointCloud>(msg)?,
+            #[cfg(feature = "draco-flatbuffer")]
+            PointCloudInputSchema::FoxgloveFlatbuffer => {
+                super::flatbuffer::decode_point_cloud(msg)?
             }
         };
         let compressed = compress_point_cloud(&cloud, &options.draco_options())?;
@@ -544,6 +571,72 @@ mod transcode_tests {
         assert_eq!(
             point_cloud_input_schema(&ch),
             Some(PointCloudInputSchema::FoxgloveProtobuf)
+        );
+    }
+
+    #[cfg(feature = "draco-json")]
+    #[test]
+    fn test_detects_json_point_cloud() {
+        let ch = make_channel(
+            "json",
+            Some(Schema::new("foxglove.PointCloud", "jsonschema", b"{}")),
+        );
+        assert_eq!(
+            point_cloud_input_schema(&ch),
+            Some(PointCloudInputSchema::FoxgloveJson)
+        );
+    }
+
+    #[cfg(feature = "draco-json")]
+    #[test]
+    fn test_transcodes_json_point_cloud_to_compressed_point_cloud() {
+        use crate::Decode;
+
+        // Wire-format JSON as the Foxglove JSON conventions produce it: base64 data,
+        // sec/nsec timestamp.
+        use base64::Engine;
+        let mut data = Vec::new();
+        for c in [1.0f32, 2.0, 3.0] {
+            data.extend_from_slice(&c.to_le_bytes());
+        }
+        let data_b64 = base64::engine::general_purpose::STANDARD.encode(&data);
+        let json = serde_json::json!({
+            "timestamp": { "sec": 1, "nsec": 2 },
+            "frame_id": "lidar",
+            "point_stride": 12,
+            "fields": [
+                { "name": "x", "offset": 0, "type": "FLOAT32" },
+                { "name": "y", "offset": 4, "type": "FLOAT32" },
+                { "name": "z", "offset": 8, "type": "FLOAT32" },
+            ],
+            "data": data_b64,
+        })
+        .to_string();
+
+        let compressed_bytes = super::transcode::transcode_point_cloud_message(
+            json.as_bytes(),
+            PointCloudInputSchema::FoxgloveJson,
+            &super::CompressPointCloudOptions::default(),
+        )
+        .unwrap();
+        let compressed =
+            <crate::messages::CompressedPointCloud as Decode>::decode(compressed_bytes.as_ref())
+                .unwrap();
+        assert_eq!(compressed.format, "draco");
+        assert_eq!(compressed.frame_id, "lidar");
+        assert!(!compressed.data.is_empty());
+    }
+
+    #[cfg(feature = "draco-flatbuffer")]
+    #[test]
+    fn test_detects_flatbuffer_point_cloud() {
+        let ch = make_channel(
+            "flatbuffer",
+            Some(Schema::new("foxglove.PointCloud", "flatbuffer", b"")),
+        );
+        assert_eq!(
+            point_cloud_input_schema(&ch),
+            Some(PointCloudInputSchema::FoxgloveFlatbuffer)
         );
     }
 
@@ -650,8 +743,8 @@ mod transcode_tests {
 
         // Wrong encoding.
         let ch = make_channel(
-            "json",
-            Some(Schema::new("foxglove.PointCloud", "jsonschema", b"{}")),
+            "msgpack",
+            Some(Schema::new("foxglove.PointCloud", "msgpack", b"{}")),
         );
         assert_eq!(point_cloud_input_schema(&ch), None);
 
