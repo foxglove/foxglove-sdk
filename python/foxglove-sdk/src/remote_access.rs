@@ -12,7 +12,9 @@ use pyo3::types::PyBytes;
 use crate::PyContext;
 use crate::errors::PyFoxgloveError;
 use crate::logging::init_logging;
-use crate::remote_common::{PyConnectionGraph, PyParameter, PyService, PyStatusLevel};
+use crate::remote_common::{
+    PyConnectionGraph, PyParameter, PyPointCloudCompression, PyService, PyStatusLevel,
+};
 use crate::sink_channel_filter::{PyChannelDescriptor, PySinkChannelFilter};
 
 /// A client connected to a running remote access gateway.
@@ -638,9 +640,39 @@ impl foxglove::remote_access::SuppressVideoTranscode for PySuppressVideoTranscod
     }
 }
 
+/// A point-cloud-compression opt-out predicate wrapping a Python callable.
+///
+/// The callable should accept a `ChannelDescriptor` and return a `bool`; returning `True`
+/// delivers the channel unmodified rather than compressing its point clouds.
+pub struct PySuppressPointCloudCompression(pub Py<PyAny>);
+
+impl foxglove::remote_access::SuppressPointCloudCompression for PySuppressPointCloudCompression {
+    fn should_suppress(&self, channel: &foxglove::ChannelDescriptor) -> bool {
+        Python::attach(|py| {
+            let handler = self.0.clone_ref(py);
+            let descriptor = PyChannelDescriptor(channel.clone());
+            let result = handler
+                .bind(py)
+                .call((descriptor,), None)
+                .and_then(|f| f.extract::<bool>());
+
+            match result {
+                Ok(suppress) => suppress,
+                Err(err) => {
+                    tracing::error!(
+                        "Error in point-cloud-compression opt-out predicate: {}",
+                        err.to_string()
+                    );
+                    false
+                }
+            }
+        })
+    }
+}
+
 /// Start a remote access gateway for live visualization and teleop in Foxglove.
 #[pyfunction]
-#[pyo3(signature = (*, name=None, device_token=None, capabilities=None, listener=None, supported_encodings=None, services=None, context=None, channel_filter=None, qos_classifier=None, suppress_video_transcode=None, message_backlog_size=None, foxglove_api_url=None, foxglove_api_timeout=None, video_encoder=None))]
+#[pyo3(signature = (*, name=None, device_token=None, capabilities=None, listener=None, supported_encodings=None, services=None, context=None, channel_filter=None, qos_classifier=None, suppress_video_transcode=None, message_backlog_size=None, foxglove_api_url=None, foxglove_api_timeout=None, video_encoder=None, point_cloud_compression=None, suppress_point_cloud_compression=None))]
 #[allow(clippy::too_many_arguments)]
 pub fn start_gateway(
     py: Python<'_>,
@@ -658,6 +690,8 @@ pub fn start_gateway(
     foxglove_api_url: Option<String>,
     foxglove_api_timeout: Option<f64>,
     video_encoder: Option<PyVideoEncoderBackend>,
+    point_cloud_compression: Option<PyPointCloudCompression>,
+    suppress_point_cloud_compression: Option<Py<PyAny>>,
 ) -> PyResult<PyRemoteAccessGateway> {
     init_logging(py, None);
 
@@ -724,6 +758,17 @@ pub fn start_gateway(
 
     if let Some(video_encoder) = video_encoder {
         gateway = gateway.video_encoder(video_encoder.into());
+    }
+
+    // When unset, leave the SDK default in place (compression enabled).
+    if let Some(compression) = point_cloud_compression {
+        gateway = gateway.compress_point_clouds(compression.into_options());
+    }
+
+    if let Some(suppress_point_cloud_compression) = suppress_point_cloud_compression {
+        gateway = gateway.suppress_point_cloud_compression(Arc::new(
+            PySuppressPointCloudCompression(suppress_point_cloud_compression),
+        ));
     }
 
     let handle = py

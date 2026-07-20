@@ -35,6 +35,25 @@ def test_start_gateway_requires_device_token() -> None:
         start_gateway()
 
 
+def test_start_gateway_accepts_point_cloud_compression_options() -> None:
+    """
+    The point-cloud compression kwargs are converted before the gateway starts, so the
+    missing-token error proves they were accepted.
+    """
+    from foxglove import DracoEncodeOptions, DracoMethod
+
+    with pytest.raises(RuntimeError, match="No device token provided"):
+        start_gateway(
+            point_cloud_compression=DracoEncodeOptions(
+                method=DracoMethod.Sequential, quantization_bits=0
+            ),
+            suppress_point_cloud_compression=lambda _channel: False,
+        )
+
+    with pytest.raises(RuntimeError, match="No device token provided"):
+        start_gateway(point_cloud_compression=False)
+
+
 def test_capability_enum() -> None:
     """
     Verify the Capability enum variants are accessible.
