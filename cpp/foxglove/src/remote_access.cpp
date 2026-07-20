@@ -112,6 +112,22 @@ bool forwardSuppressVideoTranscode(
   }
 }
 
+bool forwardSuppressPointCloudCompression(
+  const void* context, const foxglove_channel_descriptor* channel
+) {
+  if (context == nullptr) {
+    return false;
+  }
+  try {
+    const auto* predicate = static_cast<const SuppressPointCloudCompressionFn*>(context);
+    auto cpp_channel = ChannelDescriptor(channel);
+    return (*predicate)(cpp_channel);
+  } catch (const std::exception& exc) {
+    warn() << "Point-cloud-compression opt-out predicate failed: " << exc.what();
+    return false;
+  }
+}
+
 // Populates `c` with forward function pointers for every callback set on `cb`,
 // and reports whether any callback was set. Callers should leave both the
 // heap-allocated callbacks wrapper unallocated and `c_options.callbacks` null
@@ -252,6 +268,24 @@ FoxgloveResult<RemoteAccessGateway> RemoteAccessGateway::create(
     c_options.suppress_video_transcode = &forwardSuppressVideoTranscode;
   }
 
+  // Point-cloud compression
+  c_options.point_cloud_compression.mode =
+    static_cast<foxglove_point_cloud_compression_mode>(options.point_cloud_compression.mode);
+  c_options.point_cloud_compression.draco.method =
+    static_cast<foxglove_draco_method>(options.point_cloud_compression.draco.method);
+  c_options.point_cloud_compression.draco.quantization_bits =
+    options.point_cloud_compression.draco.quantization_bits;
+
+  // Suppress point-cloud compression
+  std::unique_ptr<SuppressPointCloudCompressionFn> suppress_point_cloud_compression;
+  if (options.suppress_point_cloud_compression) {
+    suppress_point_cloud_compression = std::make_unique<SuppressPointCloudCompressionFn>(
+      std::move(options.suppress_point_cloud_compression)
+    );
+    c_options.suppress_point_cloud_compression_context = suppress_point_cloud_compression.get();
+    c_options.suppress_point_cloud_compression = &forwardSuppressPointCloudCompression;
+  }
+
   // Fetch asset handler
   internal::wireFetchAsset(c_options, std::move(options.fetch_asset), fetch_asset);
 
@@ -301,6 +335,7 @@ FoxgloveResult<RemoteAccessGateway> RemoteAccessGateway::create(
     std::move(sink_channel_filter),
     std::move(qos_classifier),
     std::move(suppress_video_transcode),
+    std::move(suppress_point_cloud_compression),
     std::move(parameter_handler)
   );
 }
@@ -311,6 +346,7 @@ RemoteAccessGateway::RemoteAccessGateway(
   std::unique_ptr<SinkChannelFilterFn> sink_channel_filter,
   std::unique_ptr<QosClassifierFn> qos_classifier,
   std::unique_ptr<SuppressVideoTranscodeFn> suppress_video_transcode,
+  std::unique_ptr<SuppressPointCloudCompressionFn> suppress_point_cloud_compression,
   std::unique_ptr<ParameterHandler> parameter_handler
 )
     : callbacks_(std::move(callbacks))
@@ -318,6 +354,7 @@ RemoteAccessGateway::RemoteAccessGateway(
     , sink_channel_filter_(std::move(sink_channel_filter))
     , qos_classifier_(std::move(qos_classifier))
     , suppress_video_transcode_(std::move(suppress_video_transcode))
+    , suppress_point_cloud_compression_(std::move(suppress_point_cloud_compression))
     , parameter_handler_(std::move(parameter_handler))
     , impl_(gateway, foxglove_gateway_stop) {}
 

@@ -112,6 +112,35 @@ impl foxglove::remote_access::SuppressVideoTranscode for SuppressVideoTranscode 
     }
 }
 
+/// A point-cloud-compression opt-out predicate that wraps a C callback.
+#[derive(Clone)]
+struct SuppressPointCloudCompression {
+    callback_context: *const c_void,
+    callback: unsafe extern "C" fn(*const c_void, *const FoxgloveChannelDescriptor) -> bool,
+}
+
+impl SuppressPointCloudCompression {
+    fn new(
+        callback_context: *const c_void,
+        callback: unsafe extern "C" fn(*const c_void, *const FoxgloveChannelDescriptor) -> bool,
+    ) -> Self {
+        Self {
+            callback_context,
+            callback,
+        }
+    }
+}
+
+unsafe impl Send for SuppressPointCloudCompression {}
+unsafe impl Sync for SuppressPointCloudCompression {}
+
+impl foxglove::remote_access::SuppressPointCloudCompression for SuppressPointCloudCompression {
+    fn should_suppress(&self, channel: &foxglove::ChannelDescriptor) -> bool {
+        let c_channel_descriptor = FoxgloveChannelDescriptor(channel.clone());
+        unsafe { (self.callback)(self.callback_context, &raw const c_channel_descriptor) }
+    }
+}
+
 /// The status of the remote access gateway connection.
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -699,6 +728,29 @@ pub struct FoxgloveGatewayOptions<'a> {
     /// Maximum lossy data-track message size in bytes. A value of 0 means use the default
     /// (102400). Must be at least 1200.
     pub max_data_track_message_size: usize,
+
+    /// Transparent point-cloud compression configuration.
+    ///
+    /// Zero-initialize (mode 0) to use the SDK default: Draco compression with default
+    /// settings. Note that the default settings are lossy; see
+    /// `foxglove_point_cloud_compression`.
+    pub point_cloud_compression: crate::FoxglovePointCloudCompression,
+
+    /// Context provided to the `suppress_point_cloud_compression` callback.
+    pub suppress_point_cloud_compression_context: *const c_void,
+
+    /// Opts channels out of point-cloud compression, delivering them unmodified.
+    ///
+    /// Return true to advertise the given channel with its original schema and deliver its
+    /// messages unchanged, rather than transcoding them to `foxglove.CompressedPointCloud`.
+    /// If not set, all compressible point-cloud channels use the compression configured by
+    /// `point_cloud_compression`.
+    pub suppress_point_cloud_compression: Option<
+        unsafe extern "C" fn(
+            context: *const c_void,
+            channel: *const FoxgloveChannelDescriptor,
+        ) -> bool,
+    >,
     // New fields are appended last so that adding them preserves the memory offsets of all
     // pre-existing fields.
 }
@@ -840,6 +892,21 @@ unsafe fn do_foxglove_gateway_start(
             options.suppress_video_transcode_context,
             suppress_video_transcode,
         )));
+    }
+
+    // Point-cloud compression. Mode `Default` (0) means "unset" — leave it off so the SDK
+    // applies its default.
+    if let Some(compression) = options.point_cloud_compression.to_builder_options() {
+        gateway = gateway.compress_point_clouds(compression);
+    }
+
+    // Suppress point-cloud compression
+    if let Some(suppress_point_cloud_compression) = options.suppress_point_cloud_compression {
+        gateway =
+            gateway.suppress_point_cloud_compression(Arc::new(SuppressPointCloudCompression::new(
+                options.suppress_point_cloud_compression_context,
+                suppress_point_cloud_compression,
+            )));
     }
 
     // Fetch asset handler
