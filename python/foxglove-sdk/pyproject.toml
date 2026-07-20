@@ -22,7 +22,7 @@ dev = [
   "enum-tools[sphinx]>=0.13.0,<0.14",
   "flake8>=7.0.0,<8",
   "isort>=6.0.0,<7",
-  "maturin>=1.7.4,<2",
+  "maturin>=1.14.1,<2",
   "mypy>=1.13.0,<2",
   "pytest>=8.3.4,<10",
   "pytest-benchmark>=5.1.0,<6",
@@ -38,7 +38,7 @@ dev = [
 package = false
 
 [build-system]
-requires = ["maturin>=1.7,<2.0"]
+requires = ["maturin>=1.14.1,<2.0"]
 # Custom build backend for building frontend assets. See custom_build.py.
 build-backend = "custom_build"
 backend-path = ["."]

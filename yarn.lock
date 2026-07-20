@@ -2298,6 +2298,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/emscripten@npm:^1.41.4":
+  version: 1.41.5
+  resolution: "@types/emscripten@npm:1.41.5"
+  checksum: 10c0/ae816da716f896434e59df7a71b67c71ae7e85ca067a32aef1616572fc4757459515d42ade6f5b8fd8d69733a9dbd0cf23010fec5b2f41ce52c09501aa350e45
+  languageName: node
+  linkType: hard
+
 "@types/eslint-scope@npm:^3.7.7":
   version: 3.7.7
   resolution: "@types/eslint-scope@npm:3.7.7"
@@ -8527,7 +8534,7 @@ __metadata:
     html-webpack-plugin: "npm:^5.6.4"
     monaco-editor: "npm:^0.52.2"
     monaco-editor-webpack-plugin: "npm:^7.1.0"
-    pyodide: "npm:0.27.7"
+    pyodide: "npm:314.0.2"
     react: "npm:19.1.1"
     react-dom: "npm:19.1.1"
     react-hot-toast: "npm:^2.6.0"
@@ -8776,12 +8783,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"pyodide@npm:0.27.7":
-  version: 0.27.7
-  resolution: "pyodide@npm:0.27.7"
+"pyodide@npm:314.0.2":
+  version: 314.0.2
+  resolution: "pyodide@npm:314.0.2"
   dependencies:
+    "@types/emscripten": "npm:^1.41.4"
     ws: "npm:^8.5.0"
-  checksum: 10c0/9ea914db3f75dd89e494d68e9809c64d96b29e0bdbc32dbb790889974f6379aac621b61712891508b4df0c0bfc6e7c370ff963f64c306c95e3fa1a190095dcec
+  checksum: 10c0/007a47cc17644da9c29a0123279ee16b379f0aa1853fb6c7549753c80f30adb13c9889d7f4f0b8aa8ba6c6b9c9863ccd71417e949b4fd419b4e61907258ac9b6
   languageName: node
   linkType: hard
 
