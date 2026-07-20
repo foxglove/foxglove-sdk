@@ -82,7 +82,7 @@ impl Default for DracoEncodeOptions {
 /// The remote access sink enables compression by default with the default options. Use
 /// `Gateway::compress_point_clouds` to customize the settings or pass `None` to disable
 /// compression, and `Gateway::suppress_point_cloud_compression` to opt individual channels
-/// out.
+/// out. Channels with Reliable QoS skip compression automatically.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum CompressPointCloudOptions {

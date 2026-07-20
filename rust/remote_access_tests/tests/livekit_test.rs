@@ -2994,6 +2994,70 @@ async fn livekit_point_cloud_compression_transcodes_messages() -> Result<()> {
     Ok(())
 }
 
+/// Test that a Reliable point-cloud channel skips compression: advertised with the raw
+/// `foxglove.PointCloud` schema and delivered unmodified on the control bytestream.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_reliable_point_cloud_skips_compression() -> Result<()> {
+    let ctx = foxglove::Context::new();
+    let cloud_channel = ctx
+        .channel_builder("/cloud")
+        .message_encoding("protobuf")
+        .schema(<foxglove::messages::PointCloud as Encode>::get_schema().unwrap())
+        .build_raw()
+        .context("create point cloud channel")?;
+
+    // Compression is on by default; Reliable QoS should auto-suppress it.
+    let gw = TestGateway::start_with_options(
+        &ctx,
+        TestGatewayOptions {
+            qos_classifier: Some(Box::new(|_| {
+                QosProfile::builder()
+                    .reliability(Reliability::Reliable)
+                    .build()
+            })),
+            ..Default::default()
+        },
+    )
+    .await?;
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+
+    let _server_info = viewer.expect_server_info().await?;
+    let advertise = viewer.expect_advertise().await?;
+    let ch = &advertise.channels[0];
+    let channel_id = ch.id;
+
+    assert_eq!(ch.id, u64::from(cloud_channel.id()));
+    assert_eq!(ch.schema_name, "foxglove.PointCloud");
+    assert_eq!(
+        ch.metadata.get("foxglove.reliable"),
+        Some(&"true".to_string()),
+        "reliable point cloud should keep Reliable metadata"
+    );
+
+    viewer
+        .subscribe_and_wait(&[channel_id], &cloud_channel)
+        .await?;
+
+    let encoded = encoded_point_cloud();
+    cloud_channel.log(&encoded);
+
+    let msg_data = viewer.expect_message_data().await?;
+    assert_eq!(msg_data.channel_id, channel_id);
+    assert_eq!(
+        msg_data.data.as_ref(),
+        encoded.as_slice(),
+        "raw PointCloud should be delivered unmodified on the control stream"
+    );
+    info!("reliable point cloud skips compression validated");
+
+    viewer.close().await?;
+    gw.stop().await?;
+    Ok(())
+}
+
 /// Test that a classifier returning Reliable for a video-capable channel is
 /// overridden to Lossy, and that a warning is logged.
 #[traced_test]
