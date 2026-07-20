@@ -338,6 +338,17 @@
 //!   [`Timestamp`][crate::messages::Timestamp].
 //! - `derive`: enables the use of `#[derive(Encode)]` to derive the [`Encode`] trait for logging
 //!   custom structs. Enabled by default.
+//! - `draco`: enables [Draco](https://google.github.io/draco/) point-cloud compression: the
+//!   [`draco`][mod@crate::draco] module and transparent compression of `foxglove.PointCloud`
+//!   channels in the remote access sink. Enabled by the `remote-access` feature; with it
+//!   enabled, the remote access sink compresses point clouds by default, and its builder
+//!   can opt out.
+//! - `draco-flatbuffer`: adds FlatBuffer-encoded `foxglove.PointCloud` channels as a
+//!   point-cloud compression input in the remote access sink.
+//! - `draco-json`: adds JSON-encoded `foxglove.PointCloud` channels as a point-cloud
+//!   compression input in the remote access sink.
+//! - `draco-ros2`: adds CDR-encoded ROS 2 `sensor_msgs/msg/PointCloud2` channels as a
+//!   point-cloud compression input in the remote access sink.
 //! - `full`: the full set of supported features, with opinionated picks for mutually exclusive
 //!   choices.
 //! - `lz4`: enables support for the LZ4 compression algorithm for mcap files. Enabled by default.
@@ -451,6 +462,10 @@ pub use remote_data_loader_backend as data_provider;
 #[cfg(feature = "img2yuv-core")]
 #[allow(unused)]
 mod img2yuv;
+
+#[cfg(feature = "draco")]
+#[cfg_attr(docsrs, doc(cfg(feature = "draco")))]
+pub mod draco;
 
 pub use app_url::AppUrl;
 // Re-export bytes crate for convenience when implementing the `Encode` trait

@@ -50,6 +50,8 @@ __all__ = [
 try:
     from ._foxglove_py import (  # noqa: F401
         ConnectionGraph,
+        DracoEncodeOptions,
+        DracoMethod,
         MessageSchema,
         Parameter,
         ParameterType,
@@ -91,6 +93,8 @@ try:
             "AnyParameterValue",
             "AssetHandler",
             "ConnectionGraph",
+            "DracoEncodeOptions",
+            "DracoMethod",
             "MessageSchema",
             "Parameter",
             "ParameterType",
@@ -277,6 +281,10 @@ try:
         foxglove_api_url: str | None = None,
         foxglove_api_timeout: float | None = None,
         video_encoder: VideoEncoderBackend | None = None,
+        point_cloud_compression: DracoEncodeOptions | bool | None = None,
+        suppress_point_cloud_compression: (
+            Callable[[ChannelDescriptor], bool] | None
+        ) = None,
     ) -> RemoteAccessGateway:
         """
         Start a remote access gateway for live visualization and teleop in Foxglove.
@@ -308,6 +316,18 @@ try:
             or set to :py:attr:`~foxglove.remote_access.VideoEncoderBackend.Auto`, the SDK chooses
             (honoring the ``FOXGLOVE_VIDEO_ENCODER`` environment variable). If the requested
             backend is unavailable, the SDK falls back to another compatible encoder.
+        :param point_cloud_compression: Transparent point-cloud compression for remote
+            participants. When enabled, ``foxglove.PointCloud`` channels are advertised as
+            ``foxglove.CompressedPointCloud`` and each logged point cloud is compressed in a
+            background task before delivery. Pass a :py:class:`DracoEncodeOptions` to customize
+            the settings, or ``False`` to disable compression. By default, compression is enabled
+            with default settings; note that the defaults are lossy (kd-tree encoding with
+            positions quantized to 12 bits). Channels classified as Reliable skip compression
+            and deliver the raw point cloud on the control bytestream.
+        :param suppress_point_cloud_compression: A ``Callable`` that returns ``True`` to deliver
+            a given channel unmodified rather than compressing its point clouds. If not set, all
+            compressible Lossy point-cloud channels use the compression configured by
+            ``point_cloud_compression``.
         """
         return _foxglove.start_gateway(
             name=name,
@@ -324,6 +344,8 @@ try:
             foxglove_api_url=foxglove_api_url,
             foxglove_api_timeout=foxglove_api_timeout,
             video_encoder=video_encoder,
+            point_cloud_compression=point_cloud_compression,
+            suppress_point_cloud_compression=suppress_point_cloud_compression,
         )
 
     __all__ += ["start_gateway"]

@@ -92,6 +92,103 @@ impl From<FoxgloveServerCapability> for FoxgloveServerCapabilityBitFlags {
     }
 }
 
+/// Draco encoding method for point-cloud compression.
+#[cfg(feature = "remote-access")]
+#[repr(u8)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FoxgloveDracoMethod {
+    /// Sequential encoding: preserves point order and copies all extra fields losslessly.
+    Sequential = 0,
+    /// kd-tree encoding: better compression ratios, but reorders points, and float32 extra
+    /// fields are quantized with the same number of bits as positions.
+    ///
+    /// Encoding falls back to sequential when `quantization_bits` is 0 (lossless) or the
+    /// cloud contains a float64 field.
+    KdTree = 1,
+}
+
+#[cfg(feature = "remote-access")]
+impl From<FoxgloveDracoMethod> for foxglove::draco::DracoMethod {
+    fn from(method: FoxgloveDracoMethod) -> Self {
+        match method {
+            FoxgloveDracoMethod::Sequential => Self::Sequential,
+            FoxgloveDracoMethod::KdTree => Self::KdTree,
+        }
+    }
+}
+
+/// Options for Draco point-cloud encoding.
+#[cfg(feature = "remote-access")]
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct FoxgloveDracoEncodeOptions {
+    /// The Draco encoding method.
+    pub method: FoxgloveDracoMethod,
+    /// Quantization bits for the position attribute. `0` encodes positions as lossless
+    /// float32 (much larger output, and falls back to sequential encoding).
+    pub quantization_bits: u8,
+}
+
+#[cfg(feature = "remote-access")]
+impl From<FoxgloveDracoEncodeOptions> for foxglove::draco::DracoEncodeOptions {
+    fn from(options: FoxgloveDracoEncodeOptions) -> Self {
+        Self {
+            method: options.method.into(),
+            quantization_bits: options.quantization_bits,
+        }
+    }
+}
+
+/// Transparent point-cloud compression mode for a sink.
+#[cfg(feature = "remote-access")]
+#[repr(u8)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FoxglovePointCloudCompressionMode {
+    /// Use the SDK default: Draco compression with default settings (kd-tree encoding with
+    /// positions quantized to 12 bits, which is lossy). This is the default (0).
+    Default = 0,
+    /// Disable transparent point-cloud compression: point clouds are delivered unmodified.
+    Disabled = 1,
+    /// Draco compression with the settings in `draco`.
+    Draco = 2,
+}
+
+/// Transparent point-cloud compression configuration for a sink.
+///
+/// When compression is enabled, channels carrying `foxglove.PointCloud` messages are
+/// advertised with the `foxglove.CompressedPointCloud` schema, and each logged point cloud
+/// is compressed in a background task (off the logging hot path) before delivery. If
+/// compression falls behind the log rate, the oldest queued message is dropped.
+///
+/// Zero-initialize this struct (mode 0) to use the SDK default.
+#[cfg(feature = "remote-access")]
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct FoxglovePointCloudCompression {
+    /// The compression mode.
+    pub mode: FoxglovePointCloudCompressionMode,
+    /// Draco encoding settings. Only used when `mode` is
+    /// `FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DRACO`.
+    pub draco: FoxgloveDracoEncodeOptions,
+}
+
+#[cfg(feature = "remote-access")]
+impl FoxglovePointCloudCompression {
+    /// Maps to the `compress_point_clouds` builder argument. The outer `None` means "leave
+    /// the SDK default in place" (i.e. don't call the builder method at all).
+    pub(crate) fn to_builder_options(
+        self,
+    ) -> Option<Option<foxglove::draco::CompressPointCloudOptions>> {
+        match self.mode {
+            FoxglovePointCloudCompressionMode::Default => None,
+            FoxglovePointCloudCompressionMode::Disabled => Some(None),
+            FoxglovePointCloudCompressionMode::Draco => Some(Some(
+                foxglove::draco::CompressPointCloudOptions::Draco(self.draco.into()),
+            )),
+        }
+    }
+}
+
 #[repr(C)]
 pub struct FoxgloveServerOptions<'a> {
     /// `context` can be null, or a valid pointer to a context created via `foxglove_context_new`.
@@ -201,6 +298,8 @@ pub struct FoxgloveServerOptions<'a> {
     /// When provided, both `get` and `set` on the handler are required; otherwise
     /// `foxglove_server_start` returns `FOXGLOVE_ERROR_VALUE_ERROR`.
     pub parameter_handler: Option<&'a FoxgloveParameterHandler>,
+    // New fields are appended last so that adding them preserves the memory offsets of all
+    // pre-existing fields.
 }
 
 #[repr(C)]

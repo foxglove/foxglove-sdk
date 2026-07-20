@@ -180,10 +180,10 @@ impl DataTrack {
         payload.extend_from_slice(&seq.to_le_bytes());
         payload.extend_from_slice(msg);
         let frame = DataTrackFrame::new(payload).with_user_timestamp(metadata.log_time);
-        if let Err(e) = track.try_push(frame) {
-            if self.drop_throttler.lock().try_acquire() {
-                debug!("data track message dropped for channel {channel_id:?}: {e:?}");
-            }
+        if let Err(e) = track.try_push(frame)
+            && self.drop_throttler.lock().try_acquire()
+        {
+            debug!("data track message dropped for channel {channel_id:?}: {e:?}");
         }
         Ok(())
     }

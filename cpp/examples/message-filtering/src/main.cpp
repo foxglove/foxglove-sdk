@@ -30,6 +30,7 @@ using foxglove::messages::PackedElementField;
 using foxglove::messages::PointCloud;
 using foxglove::messages::Pose;
 using foxglove::messages::Quaternion;
+using foxglove::messages::Timestamp;
 using foxglove::messages::Vector3;
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
@@ -228,17 +229,6 @@ int main() {
 
   const auto start = std::chrono::system_clock::now();
 
-  // Create a static transform for the point cloud
-  foxglove::messages::FrameTransform tf;
-  tf.parent_frame_id = "world";
-  tf.child_frame_id = "points";
-  tf.translation = foxglove::messages::Vector3{
-    -10.0,
-    -10.0,
-    0.0,
-  };
-  foxglove::messages::FrameTransforms point_cloud_tf{{tf}};
-
   while (!done) {
     const auto now = std::chrono::system_clock::now();
     const auto elapsed = now - start;
@@ -255,7 +245,22 @@ int main() {
     // Generate and log point cloud
     const auto point_cloud = makePointCloud(std::chrono::duration<double>(elapsed));
     point_cloud_channel.log(point_cloud, timestamp);
-    point_cloud_tf_channel.log(point_cloud_tf, timestamp);
+
+    // Log transform for the point cloud
+    const auto time_since_epoch = now.time_since_epoch();
+    const auto seconds = std::chrono::duration_cast<std::chrono::seconds>(time_since_epoch);
+    const auto nanoseconds =
+      std::chrono::duration_cast<std::chrono::nanoseconds>(time_since_epoch - seconds);
+    foxglove::messages::FrameTransform tf;
+    tf.timestamp = Timestamp{
+      static_cast<uint32_t>(seconds.count()),
+      static_cast<uint32_t>(nanoseconds.count()),
+    };
+    tf.parent_frame_id = "world";
+    tf.child_frame_id = "points";
+    tf.translation = Vector3{-10.0, -10.0, 0.0};
+    tf.rotation = Quaternion{0.0, 0.0, 0.0, 1.0};
+    point_cloud_tf_channel.log(foxglove::messages::FrameTransforms{{tf}}, timestamp);
 
     std::this_thread::sleep_for(33ms);
   }

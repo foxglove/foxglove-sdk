@@ -17,6 +17,10 @@ use crate::{
 };
 
 use super::qos::{QosClassifier, QosClassifierFn, QosProfile};
+#[cfg(feature = "draco")]
+use super::suppress_point_cloud_compression::{
+    SuppressPointCloudCompression, SuppressPointCloudCompressionFn,
+};
 use super::suppress_video_transcode::{SuppressVideoTranscode, SuppressVideoTranscodeFn};
 
 use super::connection::{ConnectionParams, ConnectionStatus, RemoteAccessConnection};
@@ -136,6 +140,10 @@ impl GatewayHandle {
             max_data_track_message_size: None,
             video_codec_override: None,
             video_encoder: VideoEncoderBackend::Auto,
+            #[cfg(feature = "draco")]
+            point_cloud_compression: Some(crate::draco::CompressPointCloudOptions::default()),
+            #[cfg(feature = "draco")]
+            suppress_point_cloud_compression: None,
             context: std::sync::Weak::new(),
         };
         let services = Arc::new(parking_lot::RwLock::new(ServiceMap::default()));
@@ -255,6 +263,10 @@ pub struct Gateway {
     message_backlog_size: Option<usize>,
     max_data_track_message_size: Option<usize>,
     video_encoder: VideoEncoderBackend,
+    #[cfg(feature = "draco")]
+    point_cloud_compression: Option<crate::draco::CompressPointCloudOptions>,
+    #[cfg(feature = "draco")]
+    suppress_point_cloud_compression: Option<Arc<dyn SuppressPointCloudCompression>>,
     context: std::sync::Weak<Context>,
 }
 
@@ -279,6 +291,11 @@ impl Default for Gateway {
             message_backlog_size: None,
             max_data_track_message_size: None,
             video_encoder: VideoEncoderBackend::Auto,
+            // Transparent point-cloud compression is opt-out: enabled by default.
+            #[cfg(feature = "draco")]
+            point_cloud_compression: Some(crate::draco::CompressPointCloudOptions::default()),
+            #[cfg(feature = "draco")]
+            suppress_point_cloud_compression: None,
             context: Arc::downgrade(&Context::get_default()),
         }
     }
@@ -315,6 +332,11 @@ impl std::fmt::Debug for Gateway {
             )
             .field("video_encoder", &self.video_encoder)
             .field("has_context", &(self.context.strong_count() > 0));
+        #[cfg(feature = "draco")]
+        dbg.field(
+            "has_suppress_point_cloud_compression",
+            &self.suppress_point_cloud_compression.is_some(),
+        );
         dbg.finish()
     }
 }
@@ -448,6 +470,66 @@ impl Gateway {
     /// `nvenc`, `vaapi`, `videotoolbox`), ultimately falling back to [`VideoEncoderBackend::Auto`].
     pub fn video_encoder(mut self, backend: VideoEncoderBackend) -> Self {
         self.video_encoder = backend;
+        self
+    }
+
+    /// Configures transparent point-cloud compression for remote participants.
+    ///
+    /// When enabled, channels carrying `foxglove.PointCloud` messages are advertised with
+    /// the `foxglove.CompressedPointCloud` schema, and each logged point cloud is compressed
+    /// in a background task (off the logging hot path) before delivery. If compression falls
+    /// behind the log rate, the oldest queued message is dropped.
+    ///
+    /// Compression is enabled by default with [`CompressPointCloudOptions::default()`].
+    /// Note that the default settings are lossy: kd-tree encoding with positions quantized
+    /// to 12 bits. Set
+    /// [`DracoEncodeOptions::quantization_bits`](crate::draco::DracoEncodeOptions::quantization_bits)
+    /// to `0` for lossless positions.
+    ///
+    /// Channels classified as [`Reliability::Reliable`](crate::remote_access::Reliability::Reliable)
+    /// skip compression automatically and deliver the raw point cloud on the control
+    /// bytestream, preserving the Reliable contract (no silent drops). Use Lossy QoS (the
+    /// default) when you want compression.
+    ///
+    /// Pass `None` to disable compression: point clouds are delivered unmodified.
+    ///
+    /// [`CompressPointCloudOptions::default()`]: crate::draco::CompressPointCloudOptions
+    #[cfg(feature = "draco")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "draco")))]
+    pub fn compress_point_clouds(
+        mut self,
+        options: Option<crate::draco::CompressPointCloudOptions>,
+    ) -> Self {
+        self.point_cloud_compression = options;
+        self
+    }
+
+    /// Opts selected channels out of point-cloud compression.
+    ///
+    /// See [`SuppressPointCloudCompression`] for more information. If not set, all compressible
+    /// Lossy point-cloud channels use the compression configured by
+    /// [`Self::compress_point_clouds`]. Reliable channels skip compression automatically.
+    #[cfg(feature = "draco")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "draco")))]
+    pub fn suppress_point_cloud_compression(
+        mut self,
+        suppress: Arc<dyn SuppressPointCloudCompression>,
+    ) -> Self {
+        self.suppress_point_cloud_compression = Some(suppress);
+        self
+    }
+
+    /// Sets a point-cloud-compression opt-out function.
+    ///
+    /// See [`SuppressPointCloudCompression`] for more information.
+    #[cfg(feature = "draco")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "draco")))]
+    pub fn suppress_point_cloud_compression_fn(
+        mut self,
+        suppress: impl Fn(&ChannelDescriptor) -> bool + Sync + Send + 'static,
+    ) -> Self {
+        self.suppress_point_cloud_compression =
+            Some(Arc::new(SuppressPointCloudCompressionFn(suppress)));
         self
     }
 
@@ -634,16 +716,15 @@ impl Gateway {
                     encodings.insert(encoding.to_string());
                 }
             }
-            if encodings.is_empty() {
-                if let Some(svc) = self
+            if encodings.is_empty()
+                && let Some(svc) = self
                     .services
                     .values()
                     .find(|s| s.request_encoding().is_none())
-                {
-                    return Err(FoxgloveError::MissingRequestEncoding(
-                        svc.name().to_string(),
-                    ));
-                }
+            {
+                return Err(FoxgloveError::MissingRequestEncoding(
+                    svc.name().to_string(),
+                ));
             }
         }
         // If the gateway was declared with a fetch asset handler, automatically add the "assets" capability.
@@ -664,13 +745,13 @@ impl Gateway {
                     .to_string(),
             ));
         }
-        if let Some(size) = self.max_data_track_message_size {
-            if size < MIN_DATA_TRACK_MESSAGE_SIZE {
-                return Err(FoxgloveError::ConfigurationError(format!(
-                    "max_data_track_message_size ({size} bytes) is below the minimum of \
+        if let Some(size) = self.max_data_track_message_size
+            && size < MIN_DATA_TRACK_MESSAGE_SIZE
+        {
+            return Err(FoxgloveError::ConfigurationError(format!(
+                "max_data_track_message_size ({size} bytes) is below the minimum of \
                      {MIN_DATA_TRACK_MESSAGE_SIZE} bytes (one data-channel packet)."
-                )));
-            }
+            )));
         }
         let runtime = self.runtime.unwrap_or_else(get_runtime_handle);
         let services = Arc::new(parking_lot::RwLock::new(ServiceMap::from_iter(
@@ -695,6 +776,10 @@ impl Gateway {
             max_data_track_message_size: self.max_data_track_message_size,
             video_codec_override,
             video_encoder,
+            #[cfg(feature = "draco")]
+            point_cloud_compression: self.point_cloud_compression,
+            #[cfg(feature = "draco")]
+            suppress_point_cloud_compression: self.suppress_point_cloud_compression,
             context: self.context,
         };
         let connection = RemoteAccessConnection::new(params, services);

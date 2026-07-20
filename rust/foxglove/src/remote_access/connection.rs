@@ -14,6 +14,8 @@ use tokio::{runtime::Handle, sync::OnceCell, sync::mpsc::UnboundedReceiver, task
 use tokio_util::sync::CancellationToken;
 use tracing::{error, info, warn};
 
+#[cfg(feature = "draco")]
+use crate::remote_access::suppress_point_cloud_compression::SuppressPointCloudCompression;
 use crate::{
     Context, FoxgloveError, SinkChannelFilter, SinkId,
     api_client::{
@@ -104,6 +106,10 @@ pub(super) struct ConnectionParams {
     pub(super) max_data_track_message_size: Option<usize>,
     pub(super) video_codec_override: Option<VideoCodec>,
     pub(super) video_encoder: super::gateway::VideoEncoderBackend,
+    #[cfg(feature = "draco")]
+    pub(super) point_cloud_compression: Option<crate::draco::CompressPointCloudOptions>,
+    #[cfg(feature = "draco")]
+    pub(super) suppress_point_cloud_compression: Option<Arc<dyn SuppressPointCloudCompression>>,
     pub(super) context: Weak<Context>,
 }
 
@@ -144,6 +150,10 @@ pub(super) struct RemoteAccessConnection {
     max_data_track_message_size: Option<usize>,
     video_codec_override: Option<VideoCodec>,
     video_encoder: super::gateway::VideoEncoderBackend,
+    #[cfg(feature = "draco")]
+    point_cloud_compression: Option<crate::draco::CompressPointCloudOptions>,
+    #[cfg(feature = "draco")]
+    suppress_point_cloud_compression: Option<Arc<dyn SuppressPointCloudCompression>>,
     context: Weak<Context>,
     cancellation_token: CancellationToken,
     services: Arc<parking_lot::RwLock<ServiceMap>>,
@@ -178,6 +188,10 @@ impl RemoteAccessConnection {
             max_data_track_message_size: params.max_data_track_message_size,
             video_codec_override: params.video_codec_override,
             video_encoder: params.video_encoder,
+            #[cfg(feature = "draco")]
+            point_cloud_compression: params.point_cloud_compression,
+            #[cfg(feature = "draco")]
+            suppress_point_cloud_compression: params.suppress_point_cloud_compression,
             context: params.context,
             cancellation_token: CancellationToken::new(),
             services,
@@ -337,6 +351,10 @@ impl RemoteAccessConnection {
                 .unwrap_or(DEFAULT_MAX_DATA_TRACK_MESSAGE_SIZE),
             video_codec_override: self.video_codec_override,
             video_encoder: self.video_encoder,
+            #[cfg(feature = "draco")]
+            point_cloud_compression: self.point_cloud_compression,
+            #[cfg(feature = "draco")]
+            suppress_point_cloud_compression: self.suppress_point_cloud_compression.clone(),
             services: self.services.clone(),
             connection_graph: self.connection_graph.clone(),
             remote_access_session_id: remote_access_session_id.map(str::to_string),
@@ -604,10 +622,8 @@ impl RemoteAccessConnection {
             let mut graph = self.connection_graph.lock();
             let had_subscribers = graph.has_subscribers();
             graph.clear_subscribers();
-            if had_subscribers {
-                if let Some(listener) = &self.listener {
-                    listener.on_connection_graph_unsubscribe();
-                }
+            if had_subscribers && let Some(listener) = &self.listener {
+                listener.on_connection_graph_unsubscribe();
             }
         }
         context.remove_sink(session.sink_id());

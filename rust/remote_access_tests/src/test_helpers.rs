@@ -202,10 +202,9 @@ impl ViewerConnection {
                 topic,
                 ..
             } = event
+                && topic == "control"
             {
-                if topic == "control" {
-                    break stream_reader.take().context("reader already taken")?;
-                }
+                break stream_reader.take().context("reader already taken")?;
             }
         };
         Ok(Self {
@@ -873,6 +872,10 @@ pub struct TestGatewayOptions {
     pub qos_classifier: Option<QosClassifierFn>,
     pub suppress_video_transcode: Option<SuppressVideoTranscodeFn>,
     pub max_data_track_message_size: Option<usize>,
+    /// When set, overrides the gateway's point-cloud compression config: `Some(None)`
+    /// disables compression, `Some(Some(opts))` customizes it. `None` leaves the gateway
+    /// default (compression enabled).
+    pub point_cloud_compression: Option<Option<foxglove::draco::CompressPointCloudOptions>>,
 }
 
 /// A test gateway backed by a mock Foxglove API server and a LiveKit room.
@@ -961,6 +964,9 @@ impl TestGateway {
         }
         if let Some(size) = options.max_data_track_message_size {
             gateway = gateway.max_data_track_message_size(size);
+        }
+        if let Some(compression) = options.point_cloud_compression {
+            gateway = gateway.compress_point_clouds(compression);
         }
 
         let handle = gateway.start().context("start Gateway")?;

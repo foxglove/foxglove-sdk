@@ -132,16 +132,15 @@ pub(crate) fn create_server(
                 .services
                 .values()
                 .any(|s| s.request_encoding().is_some());
-        if !has_encodings {
-            if let Some(svc) = opts
+        if !has_encodings
+            && let Some(svc) = opts
                 .services
                 .values()
                 .find(|s| s.request_encoding().is_none())
-            {
-                return Err(FoxgloveError::MissingRequestEncoding(
-                    svc.name().to_string(),
-                ));
-            }
+        {
+            return Err(FoxgloveError::MissingRequestEncoding(
+                svc.name().to_string(),
+            ));
         }
     }
 
@@ -447,10 +446,10 @@ impl Server {
             }
         }
 
-        if !new_names.is_empty() {
-            if let Some(listener) = self.listener.as_ref() {
-                listener.on_parameters_subscribe(new_names);
-            }
+        if !new_names.is_empty()
+            && let Some(listener) = self.listener.as_ref()
+        {
+            listener.on_parameters_subscribe(new_names);
         }
     }
 
@@ -461,18 +460,19 @@ impl Server {
         // Update subscriptions, keeping track of params that now have no subscribers.
         let mut old_names = vec![];
         for name in names {
-            if let Some(entry) = subs.get_mut(&name) {
-                if entry.remove(&client_id) && entry.is_empty() {
-                    subs.remove(&name);
-                    old_names.push(name);
-                }
+            if let Some(entry) = subs.get_mut(&name)
+                && entry.remove(&client_id)
+                && entry.is_empty()
+            {
+                subs.remove(&name);
+                old_names.push(name);
             }
         }
 
-        if !old_names.is_empty() {
-            if let Some(listener) = self.listener.as_ref() {
-                listener.on_parameters_unsubscribe(old_names);
-            }
+        if !old_names.is_empty()
+            && let Some(listener) = self.listener.as_ref()
+        {
+            listener.on_parameters_unsubscribe(old_names);
         }
     }
 
@@ -491,10 +491,10 @@ impl Server {
             subs.remove(name);
         }
 
-        if !old_names.is_empty() {
-            if let Some(listener) = self.listener.as_ref() {
-                listener.on_parameters_unsubscribe(old_names);
-            }
+        if !old_names.is_empty()
+            && let Some(listener) = self.listener.as_ref()
+        {
+            listener.on_parameters_unsubscribe(old_names);
         }
     }
 
@@ -510,10 +510,8 @@ impl Server {
         }
 
         // Notify listener, if this is the first subscriber.
-        if first {
-            if let Some(listener) = self.listener.as_ref() {
-                listener.on_connection_graph_subscribe();
-            }
+        if first && let Some(listener) = self.listener.as_ref() {
+            listener.on_connection_graph_subscribe();
         }
 
         let initial_update = Message::from(&graph.as_initial_update());
@@ -530,10 +528,10 @@ impl Server {
         }
 
         // Notify listener, if this was the last subscriber.
-        if !graph.has_subscribers() {
-            if let Some(listener) = self.listener.as_ref() {
-                listener.on_connection_graph_unsubscribe();
-            }
+        if !graph.has_subscribers()
+            && let Some(listener) = self.listener.as_ref()
+        {
+            listener.on_connection_graph_unsubscribe();
         }
 
         true

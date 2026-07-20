@@ -11,9 +11,9 @@
 //!
 //! In this example, we log some point cloud data to one MCAP file, and some minimal metadata to
 //! another.
-use foxglove::messages::{FrameTransform, FrameTransforms};
 use foxglove::messages::{
-    PackedElementField, PointCloud, Pose, Quaternion, Vector3, packed_element_field::NumericType,
+    FrameTransform, FrameTransforms, PackedElementField, PointCloud, Pose, Quaternion, Timestamp,
+    Vector3, packed_element_field::NumericType,
 };
 use foxglove::{Encode, LazyChannel, McapWriter};
 use std::sync::Arc;
@@ -65,18 +65,6 @@ fn main() {
         .expect("Server failed to start");
 
     let start = SystemTime::now();
-    let cloud_tf = FrameTransforms {
-        transforms: vec![FrameTransform {
-            parent_frame_id: "world".to_string(),
-            child_frame_id: "points".to_string(),
-            translation: Some(Vector3 {
-                x: -10.0,
-                y: -10.0,
-                z: 0.0,
-            }),
-            ..Default::default()
-        }],
-    };
 
     while !done.load(Ordering::Relaxed) {
         let elapsed = SystemTime::now()
@@ -88,7 +76,24 @@ fn main() {
 
         let point_cloud = make_point_cloud(elapsed);
         POINT_CLOUD_CHANNEL.log(&point_cloud);
-        POINT_CLOUD_TF_CHANNEL.log(&cloud_tf);
+        POINT_CLOUD_TF_CHANNEL.log(&FrameTransforms {
+            transforms: vec![FrameTransform {
+                timestamp: Some(Timestamp::now()),
+                parent_frame_id: "world".to_string(),
+                child_frame_id: "points".to_string(),
+                translation: Some(Vector3 {
+                    x: -10.0,
+                    y: -10.0,
+                    z: 0.0,
+                }),
+                rotation: Some(Quaternion {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                    w: 1.0,
+                }),
+            }],
+        });
 
         std::thread::sleep(Duration::from_millis(33));
     }
