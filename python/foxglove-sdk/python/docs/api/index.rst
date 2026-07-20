@@ -8,7 +8,7 @@ foxglove
 
 .. automodule:: foxglove
    :members:
-   :exclude-members: Capability, MCAPWriter, ParameterType, ParameterValue, StatusLevel, init_notebook_buffer
+   :exclude-members: Capability, DracoMethod, MCAPWriter, ParameterType, ParameterValue, StatusLevel, init_notebook_buffer
 
 
 Message Types
@@ -108,6 +108,22 @@ Enums
    .. py:data:: Info
    .. py:data:: Warning
    .. py:data:: Error
+
+.. py:enum:: DracoMethod
+
+   Draco encoding method for point-cloud compression. Used with
+   :py:class:`DracoEncodeOptions`.
+
+   .. py:data:: Sequential
+
+      Sequential encoding: preserves point order and copies all extra fields losslessly.
+
+   .. py:data:: KdTree
+
+      kd-tree encoding: better compression ratios, but reorders points, and float32 extra
+      fields are quantized with the same number of bits as positions. Encoding falls back
+      to sequential when ``quantization_bits`` is 0 (lossless) or the cloud contains a
+      float64 field.
 
 foxglove.mcap
 ------------------
