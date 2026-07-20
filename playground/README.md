@@ -31,7 +31,7 @@ rustup target add wasm32-unknown-emscripten --toolchain 1.86.0
 Now you can build the wheel.
 
 ```sh
-cd ../python/foxglove-sdk
+cd ../../python/foxglove-sdk
 CFLAGS=-fPIC \
   RUSTC_BOOTSTRAP=1 \
   RUSTUP_TOOLCHAIN=1.86.0 \
