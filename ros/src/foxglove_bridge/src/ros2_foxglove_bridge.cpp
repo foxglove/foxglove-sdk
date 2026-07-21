@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cctype>
+#include <cinttypes>
 #include <filesystem>
 #include <fstream>
 #include <optional>
@@ -547,8 +548,8 @@ void FoxgloveBridge::updateAdvertisedTopics(
       const TopicAndDatatype topicAndSchemaName = {topic, schemaName};
       if (latestTopics.find(topicAndSchemaName) == latestTopics.end()) {
         const auto channelId = channel.id();
-        RCLCPP_INFO(this->get_logger(), "Removing channel %lu for topic \"%s\" (%s)", channelId,
-                    topic.c_str(), schemaName.c_str());
+        RCLCPP_INFO(this->get_logger(), "Removing channel %" PRIu64 " for topic \"%s\" (%s)",
+                    static_cast<uint64_t>(channelId), topic.c_str(), schemaName.c_str());
         // Remove any active subscriptions for this channel
         _subscriptions.erase(channelId);
         channelsToClose.push_back(std::move(channel));
@@ -617,8 +618,8 @@ void FoxgloveBridge::updateAdvertisedTopics(
       }
 
       const ChannelId channelId = channelResult.value().id();
-      RCLCPP_INFO(this->get_logger(), "Advertising new channel %lu for topic \"%s\"", channelId,
-                  topic.c_str());
+      RCLCPP_INFO(this->get_logger(), "Advertising new channel %" PRIu64 " for topic \"%s\"",
+                  static_cast<uint64_t>(channelId), topic.c_str());
       _channels.insert({channelId, std::move(channelResult.value())});
     }
   }
@@ -882,8 +883,9 @@ void FoxgloveBridge::subscribeConnectionGraph(bool subscribe) {
 }
 
 void FoxgloveBridge::subscribe(ChannelId channelId, const foxglove::ClientMetadata& client) {
-  RCLCPP_INFO(this->get_logger(), "received subscribe request for channel %lu from client %u",
-              channelId, client.id);
+  RCLCPP_INFO(this->get_logger(),
+              "received subscribe request for channel %" PRIu64 " from client %u",
+              static_cast<uint64_t>(channelId), client.id);
   createOrIncrementSubscription(channelId, client.id, false, client.sink_id);
 }
 
@@ -935,8 +937,8 @@ void FoxgloveBridge::createOrIncrementSubscriptionLocked(ChannelId channelId, Cl
                                                          std::optional<SinkId> sinkId) {
   auto channelIt = _channels.find(channelId);
   if (channelIt == _channels.end()) {
-    RCLCPP_ERROR(this->get_logger(), "received subscribe request for unknown channel: %lu",
-                 channelId);
+    RCLCPP_ERROR(this->get_logger(), "received subscribe request for unknown channel: %" PRIu64,
+                 static_cast<uint64_t>(channelId));
     return;
   }
 
@@ -966,8 +968,8 @@ void FoxgloveBridge::createOrIncrementSubscriptionLocked(ChannelId channelId, Cl
     auto [it, inserted] = _subscriptions.emplace(channelId, std::move(channelSub));
     subIt = it;
 
-    RCLCPP_INFO(this->get_logger(), "Created ROS subscription on %s (%s) for channel %lu",
-                topic.c_str(), datatype.c_str(), channelId);
+    RCLCPP_INFO(this->get_logger(), "Created ROS subscription on %s (%s) for channel %" PRIu64,
+                topic.c_str(), datatype.c_str(), static_cast<uint64_t>(channelId));
   }
 
   // For transient_local topics, replay cached messages to the new client before adding
@@ -990,8 +992,9 @@ void FoxgloveBridge::createOrIncrementSubscriptionLocked(ChannelId channelId, Cl
 }
 
 void FoxgloveBridge::unsubscribe(ChannelId channelId, const foxglove::ClientMetadata& client) {
-  RCLCPP_INFO(this->get_logger(), "received unsubscribe request for channel %lu from client %u",
-              channelId, client.id);
+  RCLCPP_INFO(this->get_logger(),
+              "received unsubscribe request for channel %" PRIu64 " from client %u",
+              static_cast<uint64_t>(channelId), client.id);
   removeOrDecrementSubscription(channelId, client.id, false);
 }
 
@@ -1006,8 +1009,9 @@ void FoxgloveBridge::removeOrDecrementSubscriptionLocked(ChannelId channelId, Cl
   auto subIt = _subscriptions.find(channelId);
   if (subIt == _subscriptions.end()) {
     RCLCPP_ERROR(this->get_logger(),
-                 "Client %u tried unsubscribing from channel %lu but no subscription exists",
-                 clientId, channelId);
+                 "Client %u tried unsubscribing from channel %" PRIu64
+                 " but no subscription exists",
+                 clientId, static_cast<uint64_t>(channelId));
     return;
   }
 
@@ -1021,7 +1025,8 @@ void FoxgloveBridge::removeOrDecrementSubscriptionLocked(ChannelId channelId, Cl
   // If no more subscribers, destroy the ROS subscription
   if (subIt->second.wsClientIds.empty() && subIt->second.gatewayClientIds.empty()) {
     RCLCPP_INFO(this->get_logger(),
-                "Cleaned up ROS subscription for channel %lu (no more subscribers)", channelId);
+                "Cleaned up ROS subscription for channel %" PRIu64 " (no more subscribers)",
+                static_cast<uint64_t>(channelId));
     _subscriptions.erase(subIt);
   }
 }
@@ -1160,8 +1165,9 @@ void FoxgloveBridge::clientUnadvertise(ClientId clientId, ChannelId clientChanne
 
   const auto& publisher = it->second.publisher;
   RCLCPP_INFO(this->get_logger(),
-              "Client ID %u is no longer advertising %s (%zu subscribers) on channel %lu", clientId,
-              publisher->get_topic_name(), publisher->get_subscription_count(), clientChannelId);
+              "Client ID %u is no longer advertising %s (%zu subscribers) on channel %" PRIu64,
+              clientId, publisher->get_topic_name(), publisher->get_subscription_count(),
+              static_cast<uint64_t>(clientChannelId));
 
   _clientAdvertisedTopics.erase(it);
 
@@ -1651,22 +1657,25 @@ void FoxgloveBridge::gatewaySubscribe(uint32_t clientId,
   auto sinkId = _gateway->sinkId();
   if (!sinkId.has_value()) {
     RCLCPP_WARN(this->get_logger(),
-                "Gateway: subscribe request for channel %lu (\"%s\") from client %u "
+                "Gateway: subscribe request for channel %" PRIu64
+                " (\"%s\") from client %u "
                 "but gateway session has no sink ID (reconnecting?); "
                 "cached transient_local messages will not be replayed",
-                channel.id(), std::string(channel.topic()).c_str(), clientId);
+                static_cast<uint64_t>(channel.id()), std::string(channel.topic()).c_str(),
+                clientId);
   }
   RCLCPP_INFO(this->get_logger(),
-              "Gateway: received subscribe request for channel %lu (\"%s\") from client %u",
-              channel.id(), std::string(channel.topic()).c_str(), clientId);
+              "Gateway: received subscribe request for channel %" PRIu64 " (\"%s\") from client %u",
+              static_cast<uint64_t>(channel.id()), std::string(channel.topic()).c_str(), clientId);
   createOrIncrementSubscription(channel.id(), clientId, true, sinkId);
 }
 
 void FoxgloveBridge::gatewayUnsubscribe(uint32_t clientId,
                                         const foxglove::ChannelDescriptor& channel) {
   RCLCPP_INFO(this->get_logger(),
-              "Gateway: received unsubscribe request for channel %lu (\"%s\") from client %u",
-              channel.id(), std::string(channel.topic()).c_str(), clientId);
+              "Gateway: received unsubscribe request for channel %" PRIu64
+              " (\"%s\") from client %u",
+              static_cast<uint64_t>(channel.id()), std::string(channel.topic()).c_str(), clientId);
   removeOrDecrementSubscription(channel.id(), clientId, true);
 }
 
@@ -1680,8 +1689,9 @@ void FoxgloveBridge::gatewayClientAdvertise(uint32_t clientId,
 
   ChannelAndClientId key = {channelId, clientId};
   if (_gatewayClientAdvertisedTopics.find(key) != _gatewayClientAdvertisedTopics.end()) {
-    RCLCPP_WARN(this->get_logger(), "Gateway: client %u already advertised channel %lu (\"%s\")",
-                clientId, channelId, topicName.c_str());
+    RCLCPP_WARN(this->get_logger(),
+                "Gateway: client %u already advertised channel %" PRIu64 " (\"%s\")", clientId,
+                static_cast<uint64_t>(channelId), topicName.c_str());
     return;
   }
 
@@ -1697,21 +1707,25 @@ void FoxgloveBridge::gatewayClientAdvertise(uint32_t clientId,
 
   if (topicType.empty()) {
     RCLCPP_ERROR(this->get_logger(),
-                 "Gateway: client %u advertised channel %lu (\"%s\") with empty schema name",
-                 clientId, channelId, topicName.c_str());
+                 "Gateway: client %u advertised channel %" PRIu64
+                 " (\"%s\") with empty schema name",
+                 clientId, static_cast<uint64_t>(channelId), topicName.c_str());
     return;
   }
 
   try {
     auto ad = createClientPublisher(topicName, topicType, encoding, schemaData, schemaLen);
     RCLCPP_INFO(this->get_logger(),
-                "Gateway: client %u is advertising channel %lu \"%s\" (%s) with encoding \"%s\"",
-                clientId, channelId, topicName.c_str(), topicType.c_str(), encoding.c_str());
+                "Gateway: client %u is advertising channel %" PRIu64
+                " \"%s\" (%s) with encoding \"%s\"",
+                clientId, static_cast<uint64_t>(channelId), topicName.c_str(), topicType.c_str(),
+                encoding.c_str());
     _gatewayClientAdvertisedTopics.emplace(key, std::move(ad));
   } catch (const std::exception& ex) {
     RCLCPP_ERROR(this->get_logger(),
-                 "Gateway: failed to create publisher for client %u channel %lu (\"%s\"): %s",
-                 clientId, channelId, topicName.c_str(), ex.what());
+                 "Gateway: failed to create publisher for client %u channel %" PRIu64
+                 " (\"%s\"): %s",
+                 clientId, static_cast<uint64_t>(channelId), topicName.c_str(), ex.what());
   }
 }
 
@@ -1724,14 +1738,15 @@ void FoxgloveBridge::gatewayClientUnadvertise(uint32_t clientId,
 
   auto it = _gatewayClientAdvertisedTopics.find(key);
   if (it == _gatewayClientAdvertisedTopics.end()) {
-    RCLCPP_WARN(this->get_logger(), "Gateway: client %u unadvertised unknown channel %lu (\"%s\")",
-                clientId, channelId, std::string(channel.topic()).c_str());
+    RCLCPP_WARN(this->get_logger(),
+                "Gateway: client %u unadvertised unknown channel %" PRIu64 " (\"%s\")", clientId,
+                static_cast<uint64_t>(channelId), std::string(channel.topic()).c_str());
     return;
   }
 
   RCLCPP_INFO(this->get_logger(),
-              "Gateway: client %u is no longer advertising channel %lu (\"%s\")", clientId,
-              channelId, it->second.topicName.c_str());
+              "Gateway: client %u is no longer advertising channel %" PRIu64 " (\"%s\")", clientId,
+              static_cast<uint64_t>(channelId), it->second.topicName.c_str());
   _gatewayClientAdvertisedTopics.erase(it);
 
   if (!_shuttingDown && rclcpp::ok()) {
@@ -1754,8 +1769,8 @@ void FoxgloveBridge::gatewayClientMessage(uint32_t clientId,
     auto it = _gatewayClientAdvertisedTopics.find(key);
     if (it == _gatewayClientAdvertisedTopics.end()) {
       RCLCPP_ERROR(this->get_logger(),
-                   "Gateway: dropping message from client %u for unknown channel %lu", clientId,
-                   channelId);
+                   "Gateway: dropping message from client %u for unknown channel %" PRIu64,
+                   clientId, static_cast<uint64_t>(channelId));
       return;
     }
 
@@ -1765,8 +1780,9 @@ void FoxgloveBridge::gatewayClientMessage(uint32_t clientId,
   try {
     publishClientData(ad, data, dataLen);
   } catch (const std::exception& ex) {
-    RCLCPP_ERROR(this->get_logger(), "Gateway: dropping message from client %u for channel %lu: %s",
-                 clientId, channelId, ex.what());
+    RCLCPP_ERROR(this->get_logger(),
+                 "Gateway: dropping message from client %u for channel %" PRIu64 ": %s", clientId,
+                 static_cast<uint64_t>(channelId), ex.what());
   }
 }
 #endif
