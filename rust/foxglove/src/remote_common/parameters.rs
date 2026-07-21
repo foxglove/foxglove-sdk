@@ -165,11 +165,11 @@ impl SetParametersResponder {
     /// Entries with `value: None` are dropped before serialization (see the note on the
     /// [`ParameterHandler`] trait).
     pub fn respond(mut self, parameters: Vec<Parameter>) {
-        if let Some(inner) = self.inner.take() {
-            if inner.request_id.is_some() {
-                self.client
-                    .send_parameter_values(parameters, inner.request_id);
-            }
+        if let Some(inner) = self.inner.take()
+            && inner.request_id.is_some()
+        {
+            self.client
+                .send_parameter_values(parameters, inner.request_id);
         }
     }
 }

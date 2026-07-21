@@ -35,6 +35,24 @@ pub enum VideoInputSchema {
     FoxgloveCompressedImage,
     /// `foxglove.RawImage` with protobuf encoding.
     FoxgloveRawImage,
+    /// `foxglove.CompressedImage` with json encoding.
+    #[cfg(feature = "img2yuv-json")]
+    FoxgloveJsonCompressedImage,
+    /// `foxglove.RawImage` with json encoding.
+    #[cfg(feature = "img2yuv-json")]
+    FoxgloveJsonRawImage,
+    /// `foxglove.CompressedImage` with flatbuffer encoding.
+    #[cfg(feature = "img2yuv-flatbuffer")]
+    FoxgloveFlatbufferCompressedImage,
+    /// `foxglove.RawImage` with flatbuffer encoding.
+    #[cfg(feature = "img2yuv-flatbuffer")]
+    FoxgloveFlatbufferRawImage,
+    /// `foxglove::CompressedImage` (OMG IDL) with cdr encoding.
+    #[cfg(feature = "img2yuv-omgidl")]
+    FoxgloveOmgidlCompressedImage,
+    /// `foxglove::RawImage` (OMG IDL) with cdr encoding.
+    #[cfg(feature = "img2yuv-omgidl")]
+    FoxgloveOmgidlRawImage,
     /// ROS 1 `sensor_msgs/CompressedImage` with ros1 encoding.
     #[cfg(feature = "img2yuv-ros1")]
     Ros1CompressedImage,
@@ -56,6 +74,22 @@ fn detect_video_schema(encoding: &str, schema_name: &str) -> Option<VideoInputSc
     match (encoding, schema_name) {
         ("protobuf", "foxglove.CompressedImage") => Some(VideoInputSchema::FoxgloveCompressedImage),
         ("protobuf", "foxglove.RawImage") => Some(VideoInputSchema::FoxgloveRawImage),
+        #[cfg(feature = "img2yuv-json")]
+        ("json", "foxglove.CompressedImage") => Some(VideoInputSchema::FoxgloveJsonCompressedImage),
+        #[cfg(feature = "img2yuv-json")]
+        ("json", "foxglove.RawImage") => Some(VideoInputSchema::FoxgloveJsonRawImage),
+        #[cfg(feature = "img2yuv-flatbuffer")]
+        ("flatbuffer", "foxglove.CompressedImage") => {
+            Some(VideoInputSchema::FoxgloveFlatbufferCompressedImage)
+        }
+        #[cfg(feature = "img2yuv-flatbuffer")]
+        ("flatbuffer", "foxglove.RawImage") => Some(VideoInputSchema::FoxgloveFlatbufferRawImage),
+        #[cfg(feature = "img2yuv-omgidl")]
+        ("cdr", "foxglove::CompressedImage") => {
+            Some(VideoInputSchema::FoxgloveOmgidlCompressedImage)
+        }
+        #[cfg(feature = "img2yuv-omgidl")]
+        ("cdr", "foxglove::RawImage") => Some(VideoInputSchema::FoxgloveOmgidlRawImage),
         #[cfg(feature = "img2yuv-ros1")]
         ("ros1", "sensor_msgs/CompressedImage") => Some(VideoInputSchema::Ros1CompressedImage),
         #[cfg(feature = "img2yuv-ros1")]
@@ -68,10 +102,24 @@ fn detect_video_schema(encoding: &str, schema_name: &str) -> Option<VideoInputSc
     }
 }
 
-/// Convenience function to detect a video input schema from a [`RawChannel`].
-pub fn get_video_input_schema(channel: &RawChannel) -> Option<VideoInputSchema> {
+/// Returns the video input schema a channel should be advertised with, or `None` when the channel
+/// is not video-capable or the gateway's `suppress_video_transcode` predicate opts it out
+/// (delivered as data instead, e.g. compressed depth).
+pub fn resolve_video_input_schema(
+    channel: &RawChannel,
+    suppress: Option<&dyn crate::remote_access::SuppressVideoTranscode>,
+) -> Option<VideoInputSchema> {
     let schema_name = channel.schema().map(|s| s.name.as_str()).unwrap_or("");
-    detect_video_schema(channel.message_encoding(), schema_name)
+    let video_schema = detect_video_schema(channel.message_encoding(), schema_name)?;
+    // Detect first so the predicate (and its log) only apply to channels we'd actually transcode.
+    if suppress.is_some_and(|suppress| suppress.should_suppress(channel.descriptor())) {
+        debug!(
+            topic = %channel.topic(),
+            "opted out of video transcoding; delivering as data"
+        );
+        return None;
+    }
+    Some(video_schema)
 }
 
 /// Metadata extracted from image messages on a video channel.
@@ -304,6 +352,36 @@ fn decode_image_message<'a>(
                 .map_err(|e| VideoEncodeError::Decode(e.to_string()))?;
             ImageMessage::try_from(msg).map_err(|e| VideoEncodeError::Decode(e.to_string()))
         }
+        #[cfg(feature = "img2yuv-json")]
+        VideoInputSchema::FoxgloveJsonCompressedImage => {
+            crate::img2yuv::json::decode_compressed_image(data)
+                .map_err(|e| VideoEncodeError::Decode(e.to_string()))
+        }
+        #[cfg(feature = "img2yuv-json")]
+        VideoInputSchema::FoxgloveJsonRawImage => crate::img2yuv::json::decode_raw_image(data)
+            .map_err(|e| VideoEncodeError::Decode(e.to_string())),
+        #[cfg(feature = "img2yuv-flatbuffer")]
+        VideoInputSchema::FoxgloveFlatbufferCompressedImage => {
+            crate::img2yuv::flatbuffer::decode_compressed_image(data)
+                .map_err(|e| VideoEncodeError::Decode(e.to_string()))
+        }
+        #[cfg(feature = "img2yuv-flatbuffer")]
+        VideoInputSchema::FoxgloveFlatbufferRawImage => {
+            crate::img2yuv::flatbuffer::decode_raw_image(data)
+                .map_err(|e| VideoEncodeError::Decode(e.to_string()))
+        }
+        #[cfg(feature = "img2yuv-omgidl")]
+        VideoInputSchema::FoxgloveOmgidlCompressedImage => {
+            let msg = crate::img2yuv::omgidl::OmgidlCompressedImage::decode(data)
+                .map_err(|e| VideoEncodeError::Decode(e.to_string()))?;
+            ImageMessage::try_from(msg).map_err(|e| VideoEncodeError::Decode(e.to_string()))
+        }
+        #[cfg(feature = "img2yuv-omgidl")]
+        VideoInputSchema::FoxgloveOmgidlRawImage => {
+            let msg = crate::img2yuv::omgidl::OmgidlRawImage::decode(data)
+                .map_err(|e| VideoEncodeError::Decode(e.to_string()))?;
+            ImageMessage::try_from(msg).map_err(|e| VideoEncodeError::Decode(e.to_string()))
+        }
         #[cfg(feature = "img2yuv-ros1")]
         VideoInputSchema::Ros1CompressedImage => {
             let msg = crate::img2yuv::ros1::Ros1CompressedImage::decode(data)
@@ -387,10 +465,91 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "img2yuv-json")]
+    #[test]
+    fn test_foxglove_json_images() {
+        assert_eq!(
+            detect_video_schema("json", "foxglove.CompressedImage"),
+            Some(VideoInputSchema::FoxgloveJsonCompressedImage)
+        );
+        assert_eq!(
+            detect_video_schema("json", "foxglove.RawImage"),
+            Some(VideoInputSchema::FoxgloveJsonRawImage)
+        );
+    }
+
+    #[cfg(feature = "img2yuv-flatbuffer")]
+    #[test]
+    fn test_foxglove_flatbuffer_images() {
+        assert_eq!(
+            detect_video_schema("flatbuffer", "foxglove.CompressedImage"),
+            Some(VideoInputSchema::FoxgloveFlatbufferCompressedImage)
+        );
+        assert_eq!(
+            detect_video_schema("flatbuffer", "foxglove.RawImage"),
+            Some(VideoInputSchema::FoxgloveFlatbufferRawImage)
+        );
+    }
+
+    #[cfg(feature = "img2yuv-omgidl")]
+    #[test]
+    fn test_foxglove_omgidl_images() {
+        assert_eq!(
+            detect_video_schema("cdr", "foxglove::CompressedImage"),
+            Some(VideoInputSchema::FoxgloveOmgidlCompressedImage)
+        );
+        assert_eq!(
+            detect_video_schema("cdr", "foxglove::RawImage"),
+            Some(VideoInputSchema::FoxgloveOmgidlRawImage)
+        );
+    }
+
     #[test]
     fn test_unknown_schema() {
         assert_eq!(detect_video_schema("json", "SomeCustomType"), None);
         assert_eq!(detect_video_schema("protobuf", "foxglove.Pose"), None);
+    }
+
+    fn make_video_channel() -> Arc<RawChannel> {
+        use crate::{ChannelBuilder, Context, Schema};
+        let ctx = Context::new();
+        ChannelBuilder::new("/camera")
+            .context(&ctx)
+            .message_encoding("protobuf")
+            .schema(Schema::new(
+                "foxglove.CompressedImage",
+                "protobuf",
+                &b""[..],
+            ))
+            .build_raw()
+            .unwrap()
+    }
+
+    #[test]
+    fn resolve_video_input_schema_detects_video_capable_channel() {
+        let ch = make_video_channel();
+        let no_suppress = None;
+        assert_eq!(
+            resolve_video_input_schema(&ch, no_suppress),
+            Some(VideoInputSchema::FoxgloveCompressedImage)
+        );
+    }
+
+    #[test]
+    fn resolve_video_input_schema_honors_suppress_predicate() {
+        use crate::remote_access::suppress_video_transcode::SuppressVideoTranscodeFn;
+        let ch = make_video_channel();
+        // Opt the channel out → no video schema despite a video-capable schema.
+        let suppress =
+            SuppressVideoTranscodeFn(|desc: &crate::ChannelDescriptor| desc.topic() == "/camera");
+        assert_eq!(resolve_video_input_schema(&ch, Some(&suppress)), None);
+        // A predicate that doesn't match leaves detection intact.
+        let other =
+            SuppressVideoTranscodeFn(|desc: &crate::ChannelDescriptor| desc.topic() == "/other");
+        assert_eq!(
+            resolve_video_input_schema(&ch, Some(&other)),
+            Some(VideoInputSchema::FoxgloveCompressedImage)
+        );
     }
 
     #[test]

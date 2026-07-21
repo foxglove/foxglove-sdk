@@ -24,7 +24,7 @@ inline size_t saturatingToSizeT(int64_t value, int64_t min = 0) {
   return static_cast<size_t>(std::min(u, kMax));
 }
 
-inline bool isWhitelisted(const std::string& name, const std::vector<std::regex>& regexPatterns) {
+inline bool matchesRegex(const std::string& name, const std::vector<std::regex>& regexPatterns) {
   return std::find_if(regexPatterns.begin(), regexPatterns.end(), [name](const auto& regex) {
            return std::regex_match(name, regex);
          }) != regexPatterns.end();

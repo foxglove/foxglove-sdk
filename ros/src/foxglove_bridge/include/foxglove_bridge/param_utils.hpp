@@ -39,6 +39,7 @@ constexpr char PARAM_DEVICE_TOKEN[] = "device_token";
 constexpr char PARAM_FOXGLOVE_API_URL[] = "foxglove_api_url";
 constexpr char PARAM_VIDEO_ENCODER[] = "video_encoder";
 constexpr char PARAM_MAX_DATA_TRACK_MESSAGE_SIZE[] = "max_data_track_message_size";
+constexpr char PARAM_VIDEO_TRANSCODE_TOPIC_DENYLIST[] = "video_transcode_topic_denylist";
 
 constexpr int64_t DEFAULT_PORT = 8765;
 constexpr char DEFAULT_ADDRESS[] = "0.0.0.0";
@@ -49,8 +50,16 @@ constexpr char DEFAULT_SYSINFO_TOPIC[] = "/foxglove_bridge/sysinfo";
 constexpr int64_t DEFAULT_SYSINFO_REFRESH_INTERVAL_MS = 500;
 constexpr int64_t DEFAULT_MESSAGE_BACKLOG_SIZE = 1024;
 constexpr int64_t DEFAULT_MAX_DATA_TRACK_MESSAGE_SIZE = 102400;
+constexpr char DEFAULT_VIDEO_TRANSCODE_TOPIC_DENYLIST[] = ".*/compressedDepth";
 
 void declareParameters(rclcpp::Node* node);
+
+/// Compiles a topic-matching regex with the flags the bridge applies to every topic pattern
+/// (ECMAScript, case-insensitive). Shared by parseRegexStrings and tests so both exercise the
+/// same regex behavior.
+inline std::regex compileTopicRegex(const std::string& pattern) {
+  return std::regex(pattern, std::regex_constants::ECMAScript | std::regex_constants::icase);
+}
 
 std::vector<std::regex> parseRegexStrings(rclcpp::Node* node,
                                           const std::vector<std::string>& strings);

@@ -3,8 +3,8 @@ use std::borrow::Cow;
 use crate::messages::Timestamp;
 
 use super::{
-    CompressedImage, Endian, Image, RawImage, RawImageEncoding, UnknownCompressionError,
-    UnknownEncodingError,
+    CompressedImage, Compression, Endian, Image, RawImage, RawImageEncoding,
+    UnknownCompressionError, UnknownEncodingError,
 };
 
 /// An image message.
@@ -25,7 +25,7 @@ impl TryFrom<crate::messages::CompressedImage> for ImageMessage<'static> {
             timestamp: image.timestamp,
             frame_id: image.frame_id,
             image: Image::Compressed(CompressedImage {
-                compression: image.format.parse()?,
+                compression: Compression::try_from_ros_format(&image.format)?,
                 data: Cow::Owned(image.data.into()),
             }),
         })

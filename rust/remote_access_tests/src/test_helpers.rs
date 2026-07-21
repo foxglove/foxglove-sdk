@@ -59,6 +59,10 @@ pub const CONNECT_RETRY_SLEEP: Duration = Duration::from_millis(500);
 pub type ChannelFilterFn =
     Box<dyn Fn(&foxglove::ChannelDescriptor) -> bool + Send + Sync + 'static>;
 
+/// Type alias for a video-transcode opt-out predicate passed via [`TestGatewayOptions`].
+pub type SuppressVideoTranscodeFn =
+    Box<dyn Fn(&foxglove::ChannelDescriptor) -> bool + Send + Sync + 'static>;
+
 // ---------------------------------------------------------------------------
 // FrameReader: accumulates bytes from a LiveKit byte stream reader and
 // parses successive byte stream frames.
@@ -198,10 +202,9 @@ impl ViewerConnection {
                 topic,
                 ..
             } = event
+                && topic == "control"
             {
-                if topic == "control" {
-                    break stream_reader.take().context("reader already taken")?;
-                }
+                break stream_reader.take().context("reader already taken")?;
             }
         };
         Ok(Self {
@@ -867,6 +870,7 @@ pub struct TestGatewayOptions {
     pub capabilities: Vec<foxglove::remote_access::Capability>,
     pub services: Vec<Service>,
     pub qos_classifier: Option<QosClassifierFn>,
+    pub suppress_video_transcode: Option<SuppressVideoTranscodeFn>,
     pub max_data_track_message_size: Option<usize>,
 }
 
@@ -950,6 +954,9 @@ impl TestGateway {
         }
         if let Some(classifier) = options.qos_classifier {
             gateway = gateway.qos_classifier_fn(classifier);
+        }
+        if let Some(suppress) = options.suppress_video_transcode {
+            gateway = gateway.suppress_video_transcode_fn(suppress);
         }
         if let Some(size) = options.max_data_track_message_size {
             gateway = gateway.max_data_track_message_size(size);

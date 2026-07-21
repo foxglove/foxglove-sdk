@@ -192,6 +192,13 @@ struct QosProfile {
 /// Accepts any callable with signature `QosProfile(const ChannelDescriptor&)`.
 using QosClassifierFn = std::function<QosProfile(const ChannelDescriptor&)>;
 
+/// @brief A callable that decides, per channel, whether to opt out of video transcoding.
+///
+/// Accepts any callable with signature `bool(const ChannelDescriptor&)`. Return true to deliver
+/// the channel as data rather than transcoding it to video; this is required for compressed depth
+/// maps, whose pixel values encode depth and would be corrupted by lossy video transcoding.
+using SuppressVideoTranscodeFn = std::function<bool(const ChannelDescriptor&)>;
+
 /// @brief Preferred backend for encoding published video tracks.
 ///
 /// This preference applies to every video track the gateway publishes. If the requested
@@ -240,6 +247,12 @@ struct RemoteAccessGatewayOptions {
   /// If set, this callback is invoked for each channel to determine its quality-of-service
   /// profile. If not set, all channels use the default lossy profile.
   QosClassifierFn qos_classifier;
+  /// @brief A video-transcode opt-out callback.
+  ///
+  /// If set, this callback is invoked for each channel; returning true delivers the channel as
+  /// data instead of transcoding it to video. If not set, all video-capable channels are
+  /// transcoded.
+  SuppressVideoTranscodeFn suppress_video_transcode;
   /// @brief A parameter handler.
   ///
   /// When set, this handler takes precedence over the deprecated
@@ -361,6 +374,7 @@ private:
     std::unique_ptr<FetchAssetHandler> fetch_asset,
     std::unique_ptr<SinkChannelFilterFn> sink_channel_filter,
     std::unique_ptr<QosClassifierFn> qos_classifier,
+    std::unique_ptr<SuppressVideoTranscodeFn> suppress_video_transcode,
     std::unique_ptr<ParameterHandler> parameter_handler
   );
 
@@ -368,6 +382,7 @@ private:
   std::unique_ptr<FetchAssetHandler> fetch_asset_;
   std::unique_ptr<SinkChannelFilterFn> sink_channel_filter_;
   std::unique_ptr<QosClassifierFn> qos_classifier_;
+  std::unique_ptr<SuppressVideoTranscodeFn> suppress_video_transcode_;
   std::unique_ptr<ParameterHandler> parameter_handler_;
   std::unique_ptr<foxglove_gateway, foxglove_error (*)(foxglove_gateway*)> impl_;
 };

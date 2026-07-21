@@ -139,10 +139,10 @@ impl ContextInner {
 
     /// Subscribes a sink to the specified channels.
     fn subscribe_channels(&mut self, sink_id: SinkId, channel_ids: &[ChannelId]) {
-        if let Some(sink) = self.sinks.get(&sink_id) {
-            if self.subs.subscribe_channels(sink, channel_ids) {
-                self.update_channel_sinks_by_ids(channel_ids);
-            }
+        if let Some(sink) = self.sinks.get(&sink_id)
+            && self.subs.subscribe_channels(sink, channel_ids)
+        {
+            self.update_channel_sinks_by_ids(channel_ids);
         }
     }
 

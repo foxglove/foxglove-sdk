@@ -10,22 +10,24 @@ To run the playground locally, you'll need to build the Python wheel and copy it
 into the `playground/public` directory. In order to build the wheel, you'll need
 to configure emscripten and rust toolchains.
 
+Pyodide's Python 3.14 runtime uses the [`pyemscripten_2026_0`
+platform](https://pyodide.org/en/stable/development/abi/314.html), which
+requires Emscripten 5.0.3 and rust 1.93.0 or later.
+
 Set up the emscripten toolchain with
 [emsdk](https://github.com/emscripten-core/emsdk).
 
 ```sh
 git clone https://github.com/emscripten-core/emsdk.git
-emsdk/emsdk install 3.1.58
-emsdk/emsdk activate 3.1.58
+emsdk/emsdk install 5.0.3
+emsdk/emsdk activate 5.0.3
 source emsdk/emsdk_env.sh
 ```
 
-We currently use an older version of rust to work around limitations in this
-version of emscripten. To install the 1.86.0 toolchain:
+Add the `wasm32-unknown-emscripten` target to your rust toolchain:
 
 ```sh
-rustup toolchain install 1.86.0
-rustup target add wasm32-unknown-emscripten --toolchain 1.86.0
+rustup target add wasm32-unknown-emscripten
 ```
 
 Now you can build the wheel.
@@ -33,8 +35,7 @@ Now you can build the wheel.
 ```sh
 cd ../python/foxglove-sdk
 CFLAGS=-fPIC \
-  RUSTC_BOOTSTRAP=1 \
-  RUSTUP_TOOLCHAIN=1.86.0 \
+  MATURIN_PYEMSCRIPTEN_PLATFORM_VERSION=2026_0 \
   uv run maturin build --release --out dist --target wasm32-unknown-emscripten -i python3.12
 cp dist/foxglove_sdk-*.whl ../../playground/public/
 ```

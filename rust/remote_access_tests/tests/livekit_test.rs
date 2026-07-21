@@ -138,11 +138,8 @@ async fn livekit_viewer_receives_message_after_subscribe() -> Result<()> {
     Ok(())
 }
 
-/// Test that a message exceeding the configured data-track size limit is dropped
-/// at the gateway, while smaller messages on the same channel are delivered. The
-/// viewer receives the two small payloads and never the oversized one logged
-/// between them, proving the oversized message was shed at publish rather than
-/// merely delayed (FLE-592).
+/// Oversized data-track messages are dropped, surfaced as channel-scoped
+/// warnings, replayed to late subscribers, and cleared on unsubscribe/removal.
 #[traced_test]
 #[ignore]
 #[tokio::test]
@@ -197,14 +194,76 @@ async fn livekit_oversized_data_track_message_is_dropped() -> Result<()> {
          received a frame"
     );
 
-    // 3. A later small message is delivered, confirming the stream is still
-    //    healthy — the absence above was the drop, not a broken channel.
+    // The subscribed viewer is warned with a stable per-channel status id.
+    let status = viewer.expect_status().await?;
+    assert_eq!(
+        status.level,
+        foxglove::protocol::v2::server::status::Level::Warning
+    );
+    assert_eq!(
+        status.id.as_deref(),
+        Some(format!("channel-drops-{channel_id}").as_str())
+    );
+    assert!(
+        status.message.contains("per-message size limit"),
+        "unexpected status message: {}",
+        status.message
+    );
+    info!("viewer received oversized-drop status warning");
+
+    // 3. A later small message is delivered, confirming the stream is healthy.
     channel.log(b"after");
     let after = ch_reader.next_message_data().await?;
     assert_eq!(after.data.as_ref(), b"after");
     info!("oversized data-track message correctly dropped at the gateway");
 
+    let expected_status_id = format!("channel-drops-{channel_id}");
+
+    // 4. Unsubscribe clears the warning for the departing viewer.
+    viewer.send_unsubscribe(&[channel_id]).await?;
+    let unsub_clear = viewer.expect_remove_status().await?;
+    assert_eq!(
+        unsub_clear.status_ids,
+        vec![expected_status_id.clone()],
+        "unsubscribing viewer-1 should have its drop status cleared"
+    );
+    info!("unsubscribe eagerly cleared the drop status for the departing viewer");
+
+    // 5. A late subscriber receives the active warning immediately.
+    let mut viewer2 = ViewerConnection::connect(&gw.room_name, "viewer-2").await?;
+    let _server_info = viewer2.expect_server_info().await?;
+    let _advertise = viewer2.expect_advertise().await?;
+    viewer2.subscribe_and_wait(&[channel_id], &channel).await?;
+
+    let replayed = viewer2.expect_status().await?;
+    assert_eq!(
+        replayed.level,
+        foxglove::protocol::v2::server::status::Level::Warning
+    );
+    assert_eq!(replayed.id.as_deref(), Some(expected_status_id.as_str()));
+    assert!(
+        replayed.message.contains("per-message size limit"),
+        "unexpected replayed status message: {}",
+        replayed.message
+    );
+    info!("late subscriber received replayed oversized-drop status warning");
+
+    // 6. Removing the channel clears the warning for connected participants.
+    channel.close();
+    for (name, v) in [("viewer-1", &mut viewer), ("viewer-2", &mut viewer2)] {
+        let unadvertise = v.expect_unadvertise().await?;
+        assert_eq!(unadvertise.channel_ids, vec![channel_id]);
+        let removed = v.expect_remove_status().await?;
+        assert_eq!(
+            removed.status_ids,
+            vec![expected_status_id.clone()],
+            "{name} should have the drop status cleared on channel removal"
+        );
+    }
+    info!("channel removal eagerly cleared the drop status for all viewers");
+
     viewer.close().await?;
+    viewer2.close().await?;
     gw.stop().await?;
     Ok(())
 }
@@ -490,6 +549,80 @@ async fn livekit_video_channel_has_video_track_metadata() -> Result<()> {
         }
     }
     info!("video track metadata validated");
+
+    viewer.close().await?;
+    gw.stop().await?;
+    Ok(())
+}
+
+/// Test that a video-capable channel opted out via the gateway's `suppress_video_transcode`
+/// predicate is advertised WITHOUT `foxglove.hasVideoTrack` (so the app takes the data track,
+/// e.g. for compressed depth maps), while an equivalent channel without the opt-out still
+/// advertises the video track.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_suppress_video_transcode_opts_out_of_video_track() -> Result<()> {
+    let ctx = foxglove::Context::new();
+
+    // Same schema (foxglove.CompressedImage); the gateway opts /depth out by topic.
+    let depth_channel = ctx
+        .channel_builder("/depth")
+        .message_encoding("protobuf")
+        .schema(Schema::new(
+            "foxglove.CompressedImage",
+            "protobuf",
+            &b""[..],
+        ))
+        .build_raw()
+        .context("create depth channel")?;
+    let camera_channel = ctx
+        .channel_builder("/camera")
+        .message_encoding("protobuf")
+        .schema(Schema::new(
+            "foxglove.CompressedImage",
+            "protobuf",
+            &b""[..],
+        ))
+        .build_raw()
+        .context("create camera channel")?;
+
+    let gw = TestGateway::start_with_options(
+        &ctx,
+        TestGatewayOptions {
+            // Opt the depth channel out of video transcoding via the gateway, not metadata.
+            suppress_video_transcode: Some(Box::new(|ch: &foxglove::ChannelDescriptor| {
+                ch.topic() == "/depth"
+            })),
+            ..Default::default()
+        },
+    )
+    .await?;
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+
+    let _server_info = viewer.expect_server_info().await?;
+    let advertise = viewer.expect_advertise().await?;
+
+    assert_eq!(advertise.channels.len(), 2);
+    for ch in &advertise.channels {
+        if ch.id == u64::from(depth_channel.id()) {
+            assert!(
+                !ch.metadata.contains_key("foxglove.hasVideoTrack"),
+                "opted-out channel should not advertise a video track"
+            );
+        } else {
+            assert_eq!(ch.id, u64::from(camera_channel.id()));
+            assert_eq!(
+                ch.metadata
+                    .get("foxglove.hasVideoTrack")
+                    .map(|s| s.as_str()),
+                Some("true"),
+                "channel without opt-out should still advertise a video track"
+            );
+        }
+    }
+    info!("suppress_video_transcode opt-out validated");
 
     viewer.close().await?;
     gw.stop().await?;
@@ -962,12 +1095,11 @@ async fn livekit_video_metadata_advertised_after_image_logged() -> Result<()> {
             .context("timeout waiting for re-advertisement with video metadata")?
             .context("failed to read server message")?;
 
-        if let ServerMessage::Advertise(adv) = msg {
-            if let Some(ch) = adv.channels.iter().find(|c| c.id == channel_id) {
-                if ch.metadata.contains_key("foxglove.videoSourceEncoding") {
-                    break ch.metadata.clone();
-                }
-            }
+        if let ServerMessage::Advertise(adv) = msg
+            && let Some(ch) = adv.channels.iter().find(|c| c.id == channel_id)
+            && ch.metadata.contains_key("foxglove.videoSourceEncoding")
+        {
+            break ch.metadata.clone();
         }
         // Otherwise keep reading (might receive other messages).
     };
@@ -1128,16 +1260,16 @@ async fn livekit_video_1080p_resolution_not_capped() -> Result<()> {
             }
         }
         // Stop once we have a codec reading and the platform-appropriate target is met.
-        if !last_codec.is_empty() {
-            if let Some((w, h, _, received)) = last {
-                let ready = if expect_vp8 {
-                    (w, h) == (WIDTH, HEIGHT)
-                } else {
-                    received >= 60
-                };
-                if ready {
-                    break;
-                }
+        if !last_codec.is_empty()
+            && let Some((w, h, _, received)) = last
+        {
+            let ready = if expect_vp8 {
+                (w, h) == (WIDTH, HEIGHT)
+            } else {
+                received >= 60
+            };
+            if ready {
+                break;
             }
         }
     }

@@ -3,7 +3,13 @@
 #![warn(missing_docs)]
 
 mod compressed;
+#[cfg(feature = "img2yuv-flatbuffer")]
+pub mod flatbuffer;
+#[cfg(feature = "img2yuv-json")]
+pub mod json;
 mod message;
+#[cfg(feature = "img2yuv-omgidl")]
+pub mod omgidl;
 mod raw;
 #[cfg(feature = "img2yuv-ros1")]
 pub mod ros1;
@@ -196,7 +202,7 @@ impl Yuv420Vec {
     /// for proper chroma subsampling.
     pub fn new(width: u32, height: u32) -> Self {
         assert!(
-            width % 2 == 0 && height % 2 == 0,
+            width.is_multiple_of(2) && height.is_multiple_of(2),
             "YUV 4:2:0 requires even dimensions, got {width}x{height}"
         );
         let len = ((width as usize * height as usize) / 2) * 3;

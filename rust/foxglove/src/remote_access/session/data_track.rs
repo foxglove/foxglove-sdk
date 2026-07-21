@@ -12,6 +12,23 @@ use crate::{ChannelId, Metadata};
 
 const FRAME_HEADER_SIZE: usize = 8; // u16 LE flags + u16 LE data_offset + u32 LE sequence
 
+/// Minimum interval between oversized-drop warnings for a track.
+///
+/// Drops between warnings are counted and folded into the next report.
+pub(super) const OVERSIZED_WARN_INTERVAL: Duration = Duration::from_secs(30);
+
+/// Details of a throttled oversized-message drop, surfaced to viewers as a
+/// `Status` warning.
+///
+/// Returned by [`DataTrack::log`] only when the gateway-side warning fires.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct OversizedDropReport {
+    /// Oversized messages dropped since the last report, including this one.
+    pub dropped_since_last: u64,
+    /// The configured per-message size limit, in bytes.
+    pub size_limit: usize,
+}
+
 /// Manages the lifecycle of a single published data track.
 pub(crate) struct DataTrack {
     /// Shared cell where the publish task deposits the track on success.
@@ -111,7 +128,7 @@ impl DataTrack {
             max_message_size,
             oversized_dropped: AtomicU64::new(0),
             oversized_throttler: parking_lot::Mutex::new(crate::throttler::Throttler::new(
-                Duration::from_secs(30),
+                OVERSIZED_WARN_INTERVAL,
             )),
         }
     }
@@ -121,7 +138,15 @@ impl DataTrack {
     /// Drops the message (with a throttled warning) if it exceeds
     /// [`max_message_size`](Self::max_message_size), or with a throttled debug
     /// log if the track is not ready or full.
-    pub fn log(&self, channel_id: ChannelId, msg: &[u8], metadata: &Metadata) {
+    ///
+    /// Returns `Err(OversizedDropReport)` only when an oversized-drop warning
+    /// fires. All other delivered or dropped messages return `Ok(())`.
+    pub fn log(
+        &self,
+        channel_id: ChannelId,
+        msg: &[u8],
+        metadata: &Metadata,
+    ) -> Result<(), OversizedDropReport> {
         if msg.len() > self.max_message_size {
             if self.oversized_throttler.lock().try_acquire() {
                 let dropped = 1 + self.oversized_dropped.swap(0, Ordering::Relaxed);
@@ -131,16 +156,19 @@ impl DataTrack {
                     msg.len(),
                     self.max_message_size
                 );
-            } else {
-                self.oversized_dropped.fetch_add(1, Ordering::Relaxed);
+                return Err(OversizedDropReport {
+                    dropped_since_last: dropped,
+                    size_limit: self.max_message_size,
+                });
             }
-            return;
+            self.oversized_dropped.fetch_add(1, Ordering::Relaxed);
+            return Ok(());
         }
         let Some(track) = self.track.get() else {
             if self.drop_throttler.lock().try_acquire() {
                 debug!("data track not ready, dropping message for channel {channel_id:?}");
             }
-            return;
+            return Ok(());
         };
         let seq = self.sequence.fetch_add(1, Ordering::Relaxed);
         let mut payload = Vec::with_capacity(FRAME_HEADER_SIZE + msg.len());
@@ -152,11 +180,12 @@ impl DataTrack {
         payload.extend_from_slice(&seq.to_le_bytes());
         payload.extend_from_slice(msg);
         let frame = DataTrackFrame::new(payload).with_user_timestamp(metadata.log_time);
-        if let Err(e) = track.try_push(frame) {
-            if self.drop_throttler.lock().try_acquire() {
-                debug!("data track message dropped for channel {channel_id:?}: {e:?}");
-            }
+        if let Err(e) = track.try_push(frame)
+            && self.drop_throttler.lock().try_acquire()
+        {
+            debug!("data track message dropped for channel {channel_id:?}: {e:?}");
         }
+        Ok(())
     }
 
     /// Oversized messages dropped since the last warning was logged (test-only).
@@ -204,7 +233,7 @@ mod tests {
                 max_message_size,
                 oversized_dropped: AtomicU64::new(0),
                 oversized_throttler: parking_lot::Mutex::new(crate::throttler::Throttler::new(
-                    Duration::from_secs(30),
+                    OVERSIZED_WARN_INTERVAL,
                 )),
             }
         }
@@ -217,13 +246,22 @@ mod tests {
         let metadata = Metadata::default();
 
         // The first oversized message fires the throttled warning, which resets
-        // the pending counter, so send a second to leave one pending drop.
-        track.log(channel_id, &[0u8; 17], &metadata);
-        track.log(channel_id, &[0u8; 17], &metadata);
+        // the pending counter and returns a report for the viewer signal.
+        let report = track.log(channel_id, &[0u8; 17], &metadata);
+        assert_eq!(
+            report,
+            Err(OversizedDropReport {
+                dropped_since_last: 1,
+                size_limit: 16,
+            })
+        );
+
+        // A second oversized message is throttled: no report, one pending drop.
+        assert_eq!(track.log(channel_id, &[0u8; 17], &metadata), Ok(()));
         assert_eq!(track.oversized_dropped(), 1);
 
-        // An at-limit message takes the normal path and is not counted.
-        track.log(channel_id, &[0u8; 16], &metadata);
+        // An at-limit message takes the normal path: no report, not counted.
+        assert_eq!(track.log(channel_id, &[0u8; 16], &metadata), Ok(()));
         assert_eq!(track.oversized_dropped(), 1);
     }
 }

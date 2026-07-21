@@ -113,11 +113,11 @@ impl ConnectionGraph {
 
         // Get new or changed published topics
         for (name, publisher_ids) in &other.published_topics {
-            if let Some(self_publisher_ids) = self.published_topics.get(name) {
-                if self_publisher_ids == publisher_ids {
-                    // No change
-                    continue;
-                }
+            if let Some(self_publisher_ids) = self.published_topics.get(name)
+                && self_publisher_ids == publisher_ids
+            {
+                // No change
+                continue;
             }
 
             diff.published_topics.push(PublishedTopic {
@@ -128,11 +128,11 @@ impl ConnectionGraph {
 
         // Get new or changed subscribed topics
         for (name, subscriber_ids) in &other.subscribed_topics {
-            if let Some(self_subscriber_ids) = self.subscribed_topics.get(name) {
-                if self_subscriber_ids == subscriber_ids {
-                    // No change
-                    continue;
-                }
+            if let Some(self_subscriber_ids) = self.subscribed_topics.get(name)
+                && self_subscriber_ids == subscriber_ids
+            {
+                // No change
+                continue;
             }
 
             diff.subscribed_topics.push(SubscribedTopic {
@@ -143,11 +143,11 @@ impl ConnectionGraph {
 
         // Get new or changed advertised services
         for (name, provider_ids) in &other.advertised_services {
-            if let Some(self_provider_ids) = self.advertised_services.get(name) {
-                if self_provider_ids == provider_ids {
-                    // No change
-                    continue;
-                }
+            if let Some(self_provider_ids) = self.advertised_services.get(name)
+                && self_provider_ids == provider_ids
+            {
+                // No change
+                continue;
             }
 
             diff.advertised_services.push(AdvertisedService {

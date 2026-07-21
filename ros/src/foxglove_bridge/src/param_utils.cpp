@@ -300,6 +300,20 @@ void declareParameters(rclcpp::Node* node) {
   maxDataTrackMessageSizeDescription.integer_range[0].step = 1;
   node->declare_parameter(PARAM_MAX_DATA_TRACK_MESSAGE_SIZE, DEFAULT_MAX_DATA_TRACK_MESSAGE_SIZE,
                           maxDataTrackMessageSizeDescription);
+
+  auto videoTranscodeTopicDenylistDescription = rcl_interfaces::msg::ParameterDescriptor{};
+  videoTranscodeTopicDenylistDescription.name = PARAM_VIDEO_TRANSCODE_TOPIC_DENYLIST;
+  videoTranscodeTopicDenylistDescription.type =
+    rcl_interfaces::msg::ParameterType::PARAMETER_STRING_ARRAY;
+  videoTranscodeTopicDenylistDescription.description =
+    "List of regular expressions (ECMAScript) of topic names delivered as data over remote access "
+    "instead of being transcoded to video. Use this for image topics whose pixel values must not "
+    "pass through lossy video, such as compressed depth maps. Defaults to match the "
+    "'compressed_depth_image_transport' '/compressedDepth' suffix.";
+  videoTranscodeTopicDenylistDescription.read_only = true;
+  node->declare_parameter(PARAM_VIDEO_TRANSCODE_TOPIC_DENYLIST,
+                          std::vector<std::string>({DEFAULT_VIDEO_TRANSCODE_TOPIC_DENYLIST}),
+                          videoTranscodeTopicDenylistDescription);
 }
 
 std::vector<std::regex> parseRegexStrings(rclcpp::Node* node,
@@ -309,8 +323,7 @@ std::vector<std::regex> parseRegexStrings(rclcpp::Node* node,
 
   for (const auto& pattern : strings) {
     try {
-      regexVector.push_back(
-        std::regex(pattern, std::regex_constants::ECMAScript | std::regex_constants::icase));
+      regexVector.push_back(compileTopicRegex(pattern));
     } catch (const std::exception& ex) {
       RCLCPP_ERROR(node->get_logger(), "Ignoring invalid regular expression '%s': %s",
                    pattern.c_str(), ex.what());
