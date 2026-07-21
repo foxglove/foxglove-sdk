@@ -877,12 +877,8 @@ TEST(SmokeTest, spinReturnsOnContextShutdown) {
   spinThread.join();
 }
 
+#if __has_include(<service_msgs/msg/service_event_info.hpp>)
 TEST(SmokeTest, serviceEventTopicDoesNotPreventFutureAdvertisements) {
-  // Regression test: topics typed with a rosidl-generated service event message (<Srv>_Event,
-  // published when service introspection is enabled) have no definition file on disk. They used
-  // to be advertised with a null schema, and every subsequent rosgraph poll then threw
-  // bad_optional_access (channel.schema().value()) before advertising anything, permanently
-  // stopping discovery of new topics.
   auto node = rclcpp::Node::make_shared("service_event_publisher");
   auto eventPub =
     node->create_publisher<std_srvs::srv::SetBool::Event>("/service_event_before", 10);
@@ -903,6 +899,7 @@ TEST(SmokeTest, serviceEventTopicDoesNotPreventFutureAdvertisements) {
   ASSERT_EQ(std::future_status::ready, afterChannelFuture.wait_for(DEFAULT_TIMEOUT));
   EXPECT_EQ("std_msgs/msg/String", afterChannelFuture.get().schemaName);
 }
+#endif
 
 // Run all the tests that were declared with TEST()
 int main(int argc, char** argv) {
