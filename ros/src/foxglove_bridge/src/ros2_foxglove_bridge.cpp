@@ -975,9 +975,9 @@ void FoxgloveBridge::createOrIncrementSubscriptionLocked(ChannelId channelId, Cl
       const auto topicIt = topicNamesAndTypes.find(topic);
       if (topicIt == topicNamesAndTypes.end() || topicIt->second.empty()) {
         RCLCPP_ERROR(this->get_logger(),
-                     "Cannot subscribe to topic \"%s\" on channel %lu: no schema and no matching "
-                     "topic in the ROS graph",
-                     topic.c_str(), channelId);
+                     "Cannot subscribe to topic \"%s\" on channel %" PRIu64
+                     ": no schema and no matching topic in the ROS graph",
+                     topic.c_str(), static_cast<uint64_t>(channelId));
         return;
       }
       datatype = topicIt->second.front();
