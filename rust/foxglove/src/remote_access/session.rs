@@ -101,6 +101,11 @@ const DROP_STATUS_QUIET_PERIOD: Duration =
 /// How often the drop-status sweeper checks for expired drop statuses.
 const DROP_STATUS_SWEEP_INTERVAL: Duration = Duration::from_secs(15);
 
+/// Interval between throttled errors for transcoded point clouds dropped because their
+/// channel is Reliable (never expected; see [`RemoteAccessSession::deliver_transcoded_point_cloud`]).
+#[cfg(feature = "draco")]
+const POINT_CLOUD_QOS_ERROR_INTERVAL: Duration = Duration::from_secs(30);
+
 /// Default per-message size limit for lossy data-track channels, in bytes.
 /// Messages larger than this are dropped before publish so one oversized channel
 /// cannot monopolize the shared data channel and starve the others (see FLE-592).
@@ -334,6 +339,11 @@ pub(super) struct RemoteAccessSession {
     point_cloud_compression: Option<crate::draco::CompressPointCloudOptions>,
     #[cfg(feature = "draco")]
     suppress_point_cloud_compression: Option<Arc<dyn SuppressPointCloudCompression>>,
+    /// Throttles the error logged when a transcoded point cloud is dropped because its
+    /// channel is Reliable, which is never expected (publishers are not created for
+    /// Reliable channels) but would otherwise flood the log on every message.
+    #[cfg(feature = "draco")]
+    point_cloud_qos_error_throttler: parking_lot::Mutex<crate::throttler::Throttler>,
 }
 
 impl Sink for RemoteAccessSession {
@@ -612,6 +622,10 @@ impl RemoteAccessSession {
             point_cloud_compression: params.point_cloud_compression,
             #[cfg(feature = "draco")]
             suppress_point_cloud_compression: params.suppress_point_cloud_compression,
+            #[cfg(feature = "draco")]
+            point_cloud_qos_error_throttler: parking_lot::Mutex::new(
+                crate::throttler::Throttler::new(POINT_CLOUD_QOS_ERROR_INTERVAL),
+            ),
         })
     }
 
@@ -694,9 +708,9 @@ impl RemoteAccessSession {
     /// current subscribers over the lossy data track.
     ///
     /// Called from the channel's background [`PointCloudPublisher`] task. Compression is
-    /// only enabled for Lossy channels; Reliable point clouds are delivered raw on the
-    /// control stream instead. Mirrors the delivery logic of [`Sink::log`], re-resolving
-    /// subscribers at delivery time.
+    /// never enabled for Reliable channels (they deliver the raw cloud on the control
+    /// stream instead), so delivery always uses the data track. Mirrors the delivery
+    /// logic of [`Sink::log`], re-resolving subscribers at delivery time.
     #[cfg(feature = "draco")]
     pub(super) fn deliver_transcoded_point_cloud(
         &self,
@@ -707,27 +721,30 @@ impl RemoteAccessSession {
         let metadata = Metadata { log_time };
         let mut drop_report: Option<(OversizedDropReport, SmallVec<[ParticipantSid; 4]>)> = None;
 
-        let reliable_sids = {
+        {
             let state = self.channel_registry.read();
             if !state.has_data_subscribers(&channel_id) {
-                SmallVec::new()
-            } else if state.qos_profile(&channel_id).reliability == Reliability::Reliable {
-                state.data_subscriber_sids(&channel_id)
-            } else {
-                if let Some(track) = state.get_subscribed_data_track(&channel_id)
-                    && let Err(report) = track.log(channel_id, msg, &metadata)
-                {
-                    drop_report = Some((report, state.data_subscriber_sids(&channel_id)));
-                }
-                SmallVec::new()
+                return;
             }
-        };
-
-        if !reliable_sids.is_empty() {
-            let message = MessageData::new(u64::from(channel_id), log_time, msg);
-            let encoded = encode_binary_message(&message);
-            for participant in self.participant_registry.resolve_sids(reliable_sids) {
-                participant.send_control(encoded.clone());
+            if state.qos_profile(&channel_id).reliability == Reliability::Reliable {
+                // Publishers are never created for Reliable channels, so this is a bug;
+                // delivering anyway would send a compressed payload on a channel whose
+                // advertised schema is the raw `foxglove.PointCloud`. Drop the message
+                // (panicking in debug builds).
+                debug_assert!(false, "point-cloud publisher exists for Reliable channel");
+                if self.point_cloud_qos_error_throttler.lock().try_acquire() {
+                    error!(
+                        "dropping transcoded point cloud for Reliable channel \
+                         {channel_id:?}: compression should never be enabled for \
+                         Reliable channels"
+                    );
+                }
+                return;
+            }
+            if let Some(track) = state.get_subscribed_data_track(&channel_id)
+                && let Err(report) = track.log(channel_id, msg, &metadata)
+            {
+                drop_report = Some((report, state.data_subscriber_sids(&channel_id)));
             }
         }
 
