@@ -2,6 +2,16 @@
 Changelog for package foxglove_bridge
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+3.4.3 (2026-07-22)
+------------------
+* Add support for ROS 2 service introspection event schemas
+* Fix an issue where a topic with a null schema could disrupt the discovery of subsequent topics
+* Add ``video_transcode_topic_denylist`` parameter to exempt image topics (e.g. compressed depth) from video transcoding over remote access
+* Add ``max_data_track_message_size`` parameter to configure the remote access gateway's lossy data-track message size limit
+* Add ``video_encoder`` parameter to select the preferred video encoder backend
+* Fix a crash on SIGTERM/context shutdown; the bridge now exits cleanly instead of calling ``std::terminate()``
+* Update Foxglove SDK version to 0.26.0
+
 3.4.2 (2026-06-24)
 ------------------
 * Fix a bug where the bridge would not initialize SDK logging unless ``debug:=true``
