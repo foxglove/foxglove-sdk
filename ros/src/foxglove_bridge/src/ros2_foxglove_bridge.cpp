@@ -543,10 +543,21 @@ void FoxgloveBridge::updateAdvertisedTopics(
     // Remove channels for which the topic does not exist anymore
     for (auto channelIt = _channels.begin(); channelIt != _channels.end();) {
       auto& channel = channelIt->second;
-      std::string schemaName = channel.schema().value().name;
+      const auto channelSchema = channel.schema();
+      // Channels advertised without a schema (definition lookup failed) have no schema name.
+      // Accessing .value() unconditionally would throw bad_optional_access and abort the whole
+      // topic update, permanently stopping advertisement of new topics. Match those channels by
+      // topic alone.
+      std::string schemaName = channelSchema.has_value() ? channelSchema->name : "";
       std::string topic(channel.topic());
       const TopicAndDatatype topicAndSchemaName = {topic, schemaName};
-      if (latestTopics.find(topicAndSchemaName) == latestTopics.end()) {
+      const bool topicStillExists =
+        channelSchema.has_value() ? latestTopics.find(topicAndSchemaName) != latestTopics.end()
+                                  : std::any_of(latestTopics.begin(), latestTopics.end(),
+                                                [&topic](const TopicAndDatatype& topicAndDatatype) {
+                                                  return topicAndDatatype.first == topic;
+                                                });
+      if (!topicStillExists) {
         const auto channelId = channel.id();
         RCLCPP_INFO(this->get_logger(), "Removing channel %" PRIu64 " for topic \"%s\" (%s)",
                     static_cast<uint64_t>(channelId), topic.c_str(), schemaName.c_str());
@@ -566,7 +577,11 @@ void FoxgloveBridge::updateAdvertisedTopics(
 
       if (std::find_if(_channels.begin(), _channels.end(), [&topic, &schemaName](const auto& kvp) {
             const auto& [channelId, channel] = kvp;
-            return channel.topic() == topic && channel.schema().value().name == schemaName;
+            const auto channelSchema = channel.schema();
+            // A channel without a schema (definition lookup failed) matches by topic alone so
+            // that the topic is not re-advertised on every graph change.
+            return channel.topic() == topic &&
+                   (!channelSchema.has_value() || channelSchema->name == schemaName);
           }) != _channels.end()) {
         continue;
       }
@@ -950,7 +965,23 @@ void FoxgloveBridge::createOrIncrementSubscriptionLocked(ChannelId channelId, Cl
   if (isNewSubscription) {
     // First subscriber for this channel -- create the ROS subscription
     const std::string topic(channel.topic());
-    const std::string datatype = channel.schema().value().name;
+    std::string datatype;
+    if (const auto channelSchema = channel.schema(); channelSchema.has_value()) {
+      datatype = channelSchema->name;
+    } else {
+      // The channel was advertised without a schema (definition lookup failed). Resolve the
+      // datatype from the ROS graph instead so the subscription can still be created.
+      const auto topicNamesAndTypes = get_topic_names_and_types();
+      const auto topicIt = topicNamesAndTypes.find(topic);
+      if (topicIt == topicNamesAndTypes.end() || topicIt->second.empty()) {
+        RCLCPP_ERROR(this->get_logger(),
+                     "Cannot subscribe to topic \"%s\" on channel %" PRIu64
+                     ": no schema and no matching topic in the ROS graph",
+                     topic.c_str(), static_cast<uint64_t>(channelId));
+        return;
+      }
+      datatype = topicIt->second.front();
+    }
     const rclcpp::QoS qos = determineQoS(topic);
 
     ChannelSubscription channelSub;

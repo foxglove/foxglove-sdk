@@ -248,6 +248,10 @@ if(BUILD_TESTING)
   ament_add_gtest(utils_test tests/utils_test.cpp)
   target_link_libraries(utils_test foxglove_bridge_component)
   enable_strict_compiler_warnings(utils_test)
+
+  ament_add_gtest(message_definition_cache_test tests/message_definition_cache_test.cpp)
+  target_link_libraries(message_definition_cache_test foxglove_bridge_component)
+  enable_strict_compiler_warnings(message_definition_cache_test)
 endif()
 
 install(FILES include/foxglove_bridge/ros2_foxglove_bridge.hpp
