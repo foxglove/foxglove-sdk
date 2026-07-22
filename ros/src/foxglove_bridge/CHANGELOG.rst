@@ -2,7 +2,7 @@
 Changelog for package foxglove_bridge
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-3.4.3 (2026-07-21)
+3.4.3 (2026-07-22)
 ------------------
 * Add support for ROS 2 service introspection event schemas
 * Fix an issue where a topic with a null schema could disrupt the discovery of subsequent topics
