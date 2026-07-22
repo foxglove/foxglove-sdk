@@ -53,14 +53,17 @@ impl DracoMethod {
     }
 }
 
+/// The maximum supported value for [`DracoEncodeOptions::quantization_bits`].
+pub const MAX_QUANTIZATION_BITS: u8 = 31;
+
 /// Options for Draco point-cloud encoding.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct DracoEncodeOptions {
     /// The Draco encoding method. Defaults to [`DracoMethod::KdTree`].
     pub method: DracoMethod,
-    /// Quantization bits for the position attribute. `0` encodes positions as lossless
-    /// float32 (much larger output, and falls back to [`DracoMethod::Sequential`]).
-    /// Defaults to 12.
+    /// Quantization bits for the position attribute, at most [`MAX_QUANTIZATION_BITS`].
+    /// `0` encodes positions as lossless float32 (much larger output, and falls back to
+    /// [`DracoMethod::Sequential`]). Defaults to 12.
     pub quantization_bits: u8,
 }
 
@@ -97,6 +100,25 @@ impl CompressPointCloudOptions {
             CompressPointCloudOptions::Draco(options) => *options,
         }
     }
+
+    /// Validates the configuration, so misconfiguration surfaces at startup rather than
+    /// as a per-message encode failure.
+    #[cfg(feature = "remote-access")]
+    pub(crate) fn validate(&self) -> Result<(), DracoEncodeError> {
+        match self {
+            CompressPointCloudOptions::Draco(options) => validate_options(options),
+        }
+    }
+}
+
+/// Validates [`DracoEncodeOptions`].
+fn validate_options(options: &DracoEncodeOptions) -> Result<(), DracoEncodeError> {
+    if options.quantization_bits > MAX_QUANTIZATION_BITS {
+        return Err(DracoEncodeError::InvalidQuantizationBits {
+            bits: options.quantization_bits,
+        });
+    }
+    Ok(())
 }
 
 impl Default for CompressPointCloudOptions {
@@ -109,6 +131,12 @@ impl Default for CompressPointCloudOptions {
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
 pub enum DracoEncodeError {
+    /// The requested `quantization_bits` exceeds [`MAX_QUANTIZATION_BITS`].
+    #[error("quantization_bits ({bits}) exceeds the maximum of {MAX_QUANTIZATION_BITS}")]
+    InvalidQuantizationBits {
+        /// The requested quantization bits.
+        bits: u8,
+    },
     /// The point cloud's `point_stride` is zero.
     #[error("point_stride is 0")]
     ZeroStride,
@@ -245,6 +273,8 @@ fn encode_draco(
         dtype: DataType,
         size: usize,
     }
+
+    validate_options(options)?;
 
     let stride = cloud.point_stride as usize;
     if stride == 0 {
@@ -870,6 +900,30 @@ mod tests {
         let compressed = cloud.encode_draco(&DracoEncodeOptions::default()).unwrap();
         assert_eq!(compressed.format, "draco");
         assert!(!compressed.data.is_empty());
+    }
+
+    #[test]
+    fn test_invalid_quantization_bits_error() {
+        let (cloud, _, _) = test_cloud();
+        for method in [DracoMethod::KdTree, DracoMethod::Sequential] {
+            // The maximum is accepted...
+            let options = DracoEncodeOptions {
+                method,
+                quantization_bits: MAX_QUANTIZATION_BITS,
+            };
+            compress_point_cloud(&cloud, &options).unwrap();
+
+            // ...and anything above it is rejected up front.
+            let options = DracoEncodeOptions {
+                method,
+                quantization_bits: MAX_QUANTIZATION_BITS + 1,
+            };
+            let err = compress_point_cloud(&cloud, &options).unwrap_err();
+            assert!(matches!(
+                err,
+                DracoEncodeError::InvalidQuantizationBits { bits } if bits == MAX_QUANTIZATION_BITS + 1
+            ));
+        }
     }
 
     #[test]
