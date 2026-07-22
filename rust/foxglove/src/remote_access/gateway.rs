@@ -484,7 +484,9 @@ impl Gateway {
     /// Note that the default settings are lossy: kd-tree encoding with positions quantized
     /// to 12 bits. Set
     /// [`DracoEncodeOptions::quantization_bits`](crate::draco::DracoEncodeOptions::quantization_bits)
-    /// to `0` for lossless positions.
+    /// to `0` for lossless positions; values above
+    /// [`MAX_QUANTIZATION_BITS`](crate::draco::MAX_QUANTIZATION_BITS) are rejected by
+    /// [`Self::start`].
     ///
     /// Channels classified as [`Reliability::Reliable`](crate::remote_access::Reliability::Reliable)
     /// skip compression automatically and deliver the raw point cloud on the control
@@ -753,6 +755,14 @@ impl Gateway {
                  {MIN_DATA_TRACK_MESSAGE_SIZE} bytes (one data-channel packet)."
             )));
         }
+        #[cfg(feature = "draco")]
+        if let Some(options) = &self.point_cloud_compression
+            && let Err(e) = options.validate()
+        {
+            return Err(FoxgloveError::ConfigurationError(format!(
+                "compress_point_clouds: {e}"
+            )));
+        }
         let runtime = self.runtime.unwrap_or_else(get_runtime_handle);
         let services = Arc::new(parking_lot::RwLock::new(ServiceMap::from_iter(
             self.services.into_values(),
@@ -848,6 +858,25 @@ mod tests {
                 .max_data_track_message_size,
             Some(64 * 1024)
         );
+    }
+
+    #[test]
+    #[cfg(feature = "draco")]
+    fn point_cloud_quantization_bits_above_maximum_rejected() {
+        use crate::draco::{
+            CompressPointCloudOptions, DracoEncodeOptions, MAX_QUANTIZATION_BITS,
+        };
+
+        // An out-of-range quantization setting would otherwise only surface as a
+        // per-message encode failure at runtime; reject it at startup instead.
+        let result = Gateway::new()
+            .device_token("test-token")
+            .compress_point_clouds(Some(CompressPointCloudOptions::Draco(DracoEncodeOptions {
+                quantization_bits: MAX_QUANTIZATION_BITS + 1,
+                ..Default::default()
+            })))
+            .start();
+        assert!(matches!(result, Err(FoxgloveError::ConfigurationError(_))));
     }
 
     #[test]
