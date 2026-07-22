@@ -863,9 +863,7 @@ mod tests {
     #[test]
     #[cfg(feature = "draco")]
     fn point_cloud_quantization_bits_above_maximum_rejected() {
-        use crate::draco::{
-            CompressPointCloudOptions, DracoEncodeOptions, MAX_QUANTIZATION_BITS,
-        };
+        use crate::draco::{CompressPointCloudOptions, DracoEncodeOptions, MAX_QUANTIZATION_BITS};
 
         // An out-of-range quantization setting would otherwise only surface as a
         // per-message encode failure at runtime; reject it at startup instead.
