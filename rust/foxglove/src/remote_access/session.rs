@@ -1058,6 +1058,12 @@ impl RemoteAccessSession {
             state.unsubscribe_video(participant.participant_sid(), &data_channel_ids);
         drop(state);
 
+        // Publishers must exist before `subscribe_channels` opens message flow to this
+        // sink: a message logged in between would find no publisher and be delivered as a
+        // raw `foxglove.PointCloud` on a channel advertised as `CompressedPointCloud`.
+        #[cfg(feature = "draco")]
+        self.start_point_cloud_publishers(&subscribe_result.first_subscribed);
+
         if !subscribe_result.first_subscribed.is_empty()
             && let Some(context) = self.context.upgrade()
         {
@@ -1066,8 +1072,6 @@ impl RemoteAccessSession {
 
         self.start_video_tracks(&first_video_subscribed);
         self.stop_video_tracks(&last_video_unsubscribed);
-        #[cfg(feature = "draco")]
-        self.start_point_cloud_publishers(&subscribe_result.first_subscribed);
 
         if let Some(listener) = &self.listener
             && !subscribe_result.newly_subscribed_descriptors.is_empty()
