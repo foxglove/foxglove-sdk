@@ -328,11 +328,21 @@ fn encode_draco(
         return Err(DracoEncodeError::MissingPositionFields);
     }
 
+    // Quantization is computed over the range of the points, which is undefined for an
+    // empty cloud: both encoders fail on zero quantized points. Quantizing nothing is a
+    // no-op anyway, so encode empty clouds losslessly. Empty clouds are a legitimate
+    // "nothing detected this frame" signal and must round-trip rather than error.
+    let quantization_bits = if num_points == 0 {
+        0
+    } else {
+        options.quantization_bits
+    };
+
     // kd-tree encoding requires quantization and doesn't support float64 attributes; fall
     // back to sequential encoding in those cases (see `DracoMethod::KdTree`).
     let has_f64 = fields.iter().any(|f| f.dtype == DataType::Float64);
     let method = match options.method {
-        DracoMethod::KdTree if options.quantization_bits == 0 || has_f64 => DracoMethod::Sequential,
+        DracoMethod::KdTree if quantization_bits == 0 || has_f64 => DracoMethod::Sequential,
         method => method,
     };
 
@@ -404,17 +414,16 @@ fn encode_draco(
 
     let mut encoder_options = EncoderOptions::new();
     encoder_options.set_encoding_method(method.code());
-    if options.quantization_bits > 0 {
+    if quantization_bits > 0 {
         encoder_options.set_attribute_int(
             position_attr_id,
             "quantization_bits",
-            i32::from(options.quantization_bits),
+            i32::from(quantization_bits),
         );
         if method == DracoMethod::KdTree {
             // The kd-tree encoder quantizes every float32 attribute and fails on
             // unquantized ones, so extra float32 fields inherit the position setting.
-            encoder_options
-                .set_global_int("quantization_bits", i32::from(options.quantization_bits));
+            encoder_options.set_global_int("quantization_bits", i32::from(quantization_bits));
         }
     }
 
@@ -951,6 +960,32 @@ mod tests {
         cloud.fields.retain(|f| f.name != "y" && f.name != "z");
         let err = compress_point_cloud(&cloud, &DracoEncodeOptions::default()).unwrap_err();
         assert!(matches!(err, DracoEncodeError::MissingPositionFields));
+    }
+
+    #[test]
+    fn test_zero_point_cloud_roundtrip() {
+        // An empty cloud is a legitimate "nothing detected this frame / clear the
+        // display" signal and must round-trip rather than error. Quantization is
+        // undefined over zero points, so empty clouds are encoded losslessly regardless
+        // of the requested method and bits.
+        for method in [DracoMethod::KdTree, DracoMethod::Sequential] {
+            let (mut cloud, _, _) = test_cloud();
+            cloud.data = Bytes::new();
+
+            let options = DracoEncodeOptions {
+                method,
+                quantization_bits: 12,
+            };
+            let compressed = compress_point_cloud(&cloud, &options).unwrap();
+            assert!(!compressed.data.is_empty());
+
+            let decoded = decode_cloud(&compressed.data);
+            assert_eq!(decoded.num_points(), 0);
+            // The POSITION attribute must survive: decoders (including the app's)
+            // require it even for an empty cloud.
+            let pos_id = decoded.named_attribute_id(GeometryAttributeType::Position);
+            assert!(pos_id >= 0, "decoded empty cloud has no position attribute");
+        }
     }
 
     #[test]
