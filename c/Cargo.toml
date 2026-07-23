@@ -41,7 +41,6 @@ foxglove = { path = "../rust/foxglove", default-features = false }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 foxglove = { path = "../rust/foxglove", default-features = false, features = [
-  "draco",
   "lz4",
   "sysinfo",
   "websocket",
