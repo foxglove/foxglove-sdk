@@ -657,7 +657,6 @@ impl From<PyStatusLevel> for StatusLevel {
 }
 
 /// Draco encoding method for point-cloud compression.
-#[cfg(feature = "remote-access")]
 #[pyclass(from_py_object, name = "DracoMethod", module = "foxglove", eq, eq_int)]
 #[derive(Clone, PartialEq)]
 pub enum PyDracoMethod {
@@ -670,7 +669,6 @@ pub enum PyDracoMethod {
     KdTree,
 }
 
-#[cfg(feature = "remote-access")]
 #[pymethods]
 impl PyDracoMethod {
     #[getter]
@@ -708,7 +706,6 @@ impl From<PyDracoMethod> for foxglove::draco::DracoMethod {
 ///     positions as lossless float32 (much larger output, and falls back to sequential
 ///     encoding). Defaults to 12.
 /// :type quantization_bits: int
-#[cfg(feature = "remote-access")]
 #[pyclass(from_py_object, name = "DracoEncodeOptions", module = "foxglove")]
 #[derive(Clone)]
 pub struct PyDracoEncodeOptions {
@@ -718,7 +715,6 @@ pub struct PyDracoEncodeOptions {
     pub quantization_bits: u8,
 }
 
-#[cfg(feature = "remote-access")]
 #[pymethods]
 impl PyDracoEncodeOptions {
     #[new]
