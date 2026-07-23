@@ -8,9 +8,9 @@
 //! single 3-component float32 POSITION attribute (what the Foxglove app's Draco decoder
 //! requires), with a missing axis padded with 0.0. Every other
 //! field becomes a single-component generic Draco attribute with its native numeric type:
-//! integer fields are always copied losslessly, and float fields are quantized under
-//! [`DracoMethod::KdTree`] (the default) or copied losslessly under
-//! [`DracoMethod::Sequential`].
+//! integer fields are always copied losslessly, and float fields are quantized with the
+//! same setting as positions (or copied losslessly when
+//! [`DracoEncodeOptions::quantization_bits`] is `0`).
 //!
 //! The remote-access sink can also transcode `foxglove.PointCloud` channels transparently;
 //! see [`CompressPointCloudOptions`].
@@ -29,8 +29,16 @@ use draco_core::metadata::Metadata;
 use crate::messages::{CompressedPointCloud, PointCloud};
 
 /// Draco encoding method.
+///
+/// Crate-internal for now: explicitly selecting sequential encoding is not exposed via the
+/// public API, because draco-core's sequential encoder emits bitstreams that the reference
+/// Draco decoder rejects whenever positions are quantized (`quantization_bits > 0`).
+/// Sequential encoding remains in use internally as the lossless fallback (zero
+/// quantization bits, float64 fields, empty clouds), which the reference decoder accepts.
+/// Re-export this (and the `method` field on [`DracoEncodeOptions`]) once the upstream
+/// encoder is fixed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum DracoMethod {
+pub(crate) enum DracoMethod {
     /// Sequential encoding: preserves point order and copies all extra fields losslessly.
     Sequential,
     /// kd-tree encoding: better compression ratios, but reorders points, and float32 extra
@@ -57,13 +65,20 @@ impl DracoMethod {
 pub const MAX_QUANTIZATION_BITS: u8 = 31;
 
 /// Options for Draco point-cloud encoding.
+///
+/// Construct with [`Default::default`] and adjust the public fields:
+///
+/// ```
+/// let mut options = foxglove::draco::DracoEncodeOptions::default();
+/// options.quantization_bits = 10;
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct DracoEncodeOptions {
-    /// The Draco encoding method. Defaults to [`DracoMethod::KdTree`].
-    pub method: DracoMethod,
+    /// The Draco encoding method. Crate-internal for now; see [`DracoMethod`].
+    pub(crate) method: DracoMethod,
     /// Quantization bits for the position attribute, at most [`MAX_QUANTIZATION_BITS`].
-    /// `0` encodes positions as lossless float32 (much larger output, and falls back to
-    /// [`DracoMethod::Sequential`]). Defaults to 12.
+    /// `0` encodes positions as lossless float32 (much larger output, using sequential
+    /// encoding internally). Defaults to 12.
     pub quantization_bits: u8,
 }
 
@@ -222,8 +237,8 @@ fn read_as_f32(bytes: &[u8], off: usize, dtype: DataType) -> f32 {
 /// When [`DracoEncodeOptions::quantization_bits`] is non-zero,
 /// positions are quantized (lossy). Every other field becomes a generic Draco attribute
 /// with its native numeric type: integer fields are copied losslessly, and float fields
-/// are quantized under [`DracoMethod::KdTree`] (the default) or copied losslessly under
-/// [`DracoMethod::Sequential`].
+/// are quantized with the same setting as positions (or copied losslessly when
+/// [`DracoEncodeOptions::quantization_bits`] is `0`).
 ///
 /// # Example
 ///
