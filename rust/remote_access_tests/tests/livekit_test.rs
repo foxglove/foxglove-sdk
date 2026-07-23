@@ -3058,6 +3058,101 @@ async fn livekit_reliable_point_cloud_skips_compression() -> Result<()> {
     Ok(())
 }
 
+/// Test that a float64 field in a compressed point cloud surfaces a throttled
+/// lossless-downgrade warning to viewers, while the message is still delivered.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_point_cloud_float64_downgrade_warns() -> Result<()> {
+    use foxglove::messages::{PackedElementField, PointCloud, packed_element_field::NumericType};
+
+    let ctx = foxglove::Context::new();
+    let cloud_channel = ctx
+        .channel_builder("/cloud")
+        .message_encoding("protobuf")
+        .schema(<PointCloud as Encode>::get_schema().unwrap())
+        .build_raw()
+        .context("create point cloud channel")?;
+
+    // Compression is on by default with quantization; a float64 field forces a
+    // per-message lossless downgrade, which must be surfaced.
+    let gw = TestGateway::start(&ctx).await?;
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+
+    let _server_info = viewer.expect_server_info().await?;
+    let advertise = viewer.expect_advertise().await?;
+    let channel_id = advertise.channels[0].id;
+    viewer
+        .subscribe_and_wait(&[channel_id], &cloud_channel)
+        .await?;
+    viewer.ensure_device_data_track(channel_id).await?;
+
+    let field = |name: &str, offset: u32, t: NumericType| PackedElementField {
+        name: name.to_string(),
+        offset,
+        r#type: t as i32,
+    };
+    let mut data = Vec::new();
+    for i in 0..16 {
+        for v in [i as f32, i as f32 * 2.0, 1.5f32] {
+            data.extend_from_slice(&v.to_le_bytes());
+        }
+        data.extend_from_slice(&(i as f64 * 0.001).to_le_bytes());
+    }
+    let cloud = PointCloud {
+        timestamp: None,
+        frame_id: "lidar".to_string(),
+        pose: None,
+        point_stride: 20,
+        fields: vec![
+            field("x", 0, NumericType::Float32),
+            field("y", 4, NumericType::Float32),
+            field("z", 8, NumericType::Float32),
+            field("stamp", 12, NumericType::Float64),
+        ],
+        data: data.into(),
+    };
+    let mut encoded = Vec::new();
+    Encode::encode(&cloud, &mut encoded).context("encode PointCloud")?;
+    cloud_channel.log(&encoded);
+
+    // The compressed message is still delivered on the data track.
+    let msg = viewer
+        .expect_new_data_track_and_message_data(channel_id)
+        .await?;
+    let compressed =
+        <foxglove::messages::CompressedPointCloud as foxglove::Decode>::decode(msg.data.as_ref())
+            .context("decode CompressedPointCloud")?;
+    assert_eq!(compressed.format, "draco");
+
+    // A warning status arrives on the control stream naming the offending field.
+    let deadline = tokio::time::Instant::now() + EVENT_TIMEOUT;
+    let status = loop {
+        let msg = tokio::time::timeout_at(deadline, viewer.frame_reader.next_server_message())
+            .await
+            .context("timeout waiting for downgrade warning status")?
+            .context("failed to read server message")?;
+        if let ServerMessage::Status(s) = msg {
+            break s;
+        }
+    };
+    assert_eq!(
+        status.level,
+        foxglove::protocol::v2::server::status::Level::Warning
+    );
+    assert!(
+        status.message.contains("float64") && status.message.contains("stamp"),
+        "unexpected status message: {}",
+        status.message
+    );
+    info!("float64 lossless-downgrade warning validated");
+
+    viewer.close().await?;
+    gw.stop().await?;
+    Ok(())
+}
+
 /// Test that a classifier returning Reliable for a video-capable channel is
 /// overridden to Lossy, and that a warning is logged.
 #[traced_test]
