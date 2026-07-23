@@ -11,6 +11,11 @@
 //! fit the raw cloud under the cap and compare the two topics side by side instead. The
 //! startup log prints both sizes and their deliverability verdicts.
 //!
+//! `--method` and `--quantization-bits` control the Draco settings for `/cloud/compressed`,
+//! for eyeballing the quality/size trade-offs: fewer bits shrink the message but show
+//! visible quantization stepping in the wave, and sequential encoding preserves point
+//! order at a larger size.
+//!
 //! Requires `FOXGLOVE_DEVICE_TOKEN` (and `FOXGLOVE_API_URL` for a local platform stack).
 //!
 //! To view: connect to the device in the Foxglove app, add a 3D panel, enable
@@ -22,6 +27,9 @@
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use clap::Parser;
+use foxglove::draco::{
+    CompressPointCloudOptions, DracoEncodeOptions, DracoMethod, MAX_QUANTIZATION_BITS,
+};
 use foxglove::messages::{
     FrameTransform, PackedElementField, PointCloud, Quaternion, Timestamp, Vector3,
     packed_element_field::NumericType,
@@ -50,6 +58,33 @@ struct Args {
     /// Frames per second.
     #[arg(long, default_value_t = 10, value_parser = clap::value_parser!(u32).range(1..))]
     fps: u32,
+
+    /// Draco encoding method for /cloud/compressed. kd-tree compresses better but
+    /// reorders points; sequential preserves point order.
+    #[arg(long, value_enum, default_value = "kd-tree")]
+    method: Method,
+
+    /// Quantization bits for positions on /cloud/compressed. 0 encodes positions as
+    /// lossless float32 (larger output, and falls back to sequential encoding).
+    #[arg(long, default_value_t = 12,
+          value_parser = clap::value_parser!(u8).range(0..=MAX_QUANTIZATION_BITS as i64))]
+    quantization_bits: u8,
+}
+
+/// Draco encoding method (mirrors [`DracoMethod`] for clap).
+#[derive(Clone, Copy, clap::ValueEnum)]
+enum Method {
+    KdTree,
+    Sequential,
+}
+
+impl From<Method> for DracoMethod {
+    fn from(method: Method) -> Self {
+        match method {
+            Method::KdTree => Self::KdTree,
+            Method::Sequential => Self::Sequential,
+        }
+    }
 }
 
 /// A wave surface animated over time, with an intensity field.
@@ -130,7 +165,7 @@ fn encoded_size(msg: &impl Encode) -> usize {
 }
 
 /// Reports the raw and compressed message sizes against the data-track cap.
-fn report_sizes(cloud: &PointCloud) {
+fn report_sizes(cloud: &PointCloud, options: &DracoEncodeOptions) {
     let verdict = |size: usize| {
         if size > DATA_TRACK_MESSAGE_CAP {
             "WILL BE DROPPED"
@@ -146,11 +181,8 @@ fn report_sizes(cloud: &PointCloud) {
     );
 
     // Preview what the sink's background transcoder will produce for the compressed
-    // topic, using the same default settings (kd-tree, 12-bit quantization).
-    match foxglove::draco::compress_point_cloud(
-        cloud,
-        &foxglove::draco::DracoEncodeOptions::default(),
-    ) {
+    // topic, using the same settings configured on the gateway.
+    match foxglove::draco::compress_point_cloud(cloud, options) {
         Ok(compressed) => {
             let compressed_size = encoded_size(&compressed);
             tracing::info!(
@@ -178,13 +210,19 @@ async fn main() {
         args.fps
     );
 
-    // Report the deliverability verdicts up front, before connecting.
-    report_sizes(&make_cloud(side, 0.0));
+    let options = DracoEncodeOptions {
+        method: args.method.into(),
+        quantization_bits: args.quantization_bits,
+    };
 
-    // Point-cloud compression is on by default for every compressible channel; the raw
-    // topic opts out so the two delivery paths can be compared. The handle is held for
-    // the life of the process; the connection runs until exit.
+    // Report the deliverability verdicts up front, before connecting.
+    report_sizes(&make_cloud(side, 0.0), &options);
+
+    // Compression applies to every compressible channel; the raw topic opts out so the
+    // two delivery paths can be compared. The handle is held for the life of the
+    // process; the connection runs until exit.
     let _gateway = Gateway::new()
+        .compress_point_clouds(Some(CompressPointCloudOptions::Draco(options)))
         .suppress_point_cloud_compression_fn(|channel: &ChannelDescriptor| {
             channel.topic() == "/cloud/raw"
         })
@@ -203,7 +241,7 @@ async fn main() {
 
         let cloud = make_cloud(side, t);
         if last_report.elapsed().unwrap_or_default() >= SIZE_REPORT_INTERVAL {
-            report_sizes(&cloud);
+            report_sizes(&cloud, &options);
             last_report = SystemTime::now();
         }
 
