@@ -547,6 +547,12 @@ typedef uint8_t foxglove_point_cloud_compression_mode;
 #if (!defined(__wasm__) && defined(FOXGLOVE_REMOTE_ACCESS))
 /**
  * Draco encoding method for point-cloud compression.
+ *
+ * kd-tree is currently the only offered method: sequential encoding is withheld because
+ * draco-core emits sequential bitstreams that the reference Draco decoder rejects
+ * whenever positions are quantized (upstream conformance bug). The enum and the `method`
+ * field are kept so that re-offering sequential later is ABI-compatible; a `Sequential`
+ * variant will be added once the upstream encoder is fixed.
  */
 enum foxglove_draco_method
 #if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
@@ -555,19 +561,10 @@ enum foxglove_draco_method
  {
 #if !defined(__wasm__)
   /**
-   * Sequential encoding: preserves point order and copies all extra fields losslessly.
+   * kd-tree encoding: reorders points, and float32 extra fields are quantized with the
+   * same number of bits as positions. This is the default (0).
    */
-  FOXGLOVE_DRACO_METHOD_SEQUENTIAL = 0,
-#endif
-#if !defined(__wasm__)
-  /**
-   * kd-tree encoding: better compression ratios, but reorders points, and float32 extra
-   * fields are quantized with the same number of bits as positions.
-   *
-   * Encoding falls back to sequential when `quantization_bits` is 0 (lossless) or the
-   * cloud contains a float64 field.
-   */
-  FOXGLOVE_DRACO_METHOD_KD_TREE = 1,
+  FOXGLOVE_DRACO_METHOD_KD_TREE = 0,
 #endif
 };
 #ifndef __cplusplus
@@ -2832,14 +2829,16 @@ typedef struct foxglove_parameter_handler {
  */
 typedef struct foxglove_draco_encode_options {
   /**
-   * The Draco encoding method.
+   * The Draco encoding method. Currently kd-tree is the only choice; see
+   * `foxglove_draco_method`.
    */
   foxglove_draco_method method;
   /**
-   * Quantization bits for the position attribute, at most 31. `0` encodes positions as
-   * lossless float32 (much larger output, and falls back to sequential encoding).
-   * Values above 31 cause `foxglove_gateway_start` to fail with
-   * `FOXGLOVE_ERROR_CONFIGURATION_ERROR`.
+   * Quantization bits for the position attribute; must be between 1 and 31 inclusive.
+   * Values outside that range cause `foxglove_gateway_start` to fail with
+   * `FOXGLOVE_ERROR_CONFIGURATION_ERROR`: values above 31 exceed what Draco supports,
+   * and `0` (lossless) provides no size reduction over the raw point cloud — use
+   * `FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DISABLED` instead.
    */
   uint8_t quantization_bits;
 } foxglove_draco_encode_options;
@@ -2854,9 +2853,13 @@ typedef struct foxglove_draco_encode_options {
  * is compressed in a background task (off the logging hot path) before delivery. If
  * compression falls behind the log rate, the oldest queued message is dropped.
  * Channels classified as Reliable skip compression automatically and deliver the raw
- * point cloud on the control bytestream.
+ * point cloud on the control bytestream. Clouds containing float64 fields cannot be
+ * quantized and are delivered losslessly (no size reduction); a throttled warning is
+ * emitted when this happens.
  *
- * Zero-initialize this struct (mode 0) to use the SDK default.
+ * Zero-initialize this struct (mode 0) to use the SDK default. Note that when `mode` is
+ * `FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DRACO`, `draco.quantization_bits` must be set
+ * to a value between 1 and 31; a zero-initialized `draco` is rejected at startup.
  */
 typedef struct foxglove_point_cloud_compression {
   /**

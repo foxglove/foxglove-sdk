@@ -93,28 +93,19 @@ impl From<FoxgloveServerCapability> for FoxgloveServerCapabilityBitFlags {
 }
 
 /// Draco encoding method for point-cloud compression.
+///
+/// kd-tree is currently the only offered method: sequential encoding is withheld because
+/// draco-core emits sequential bitstreams that the reference Draco decoder rejects
+/// whenever positions are quantized (upstream conformance bug). The enum and the `method`
+/// field are kept so that re-offering sequential later is ABI-compatible; a `Sequential`
+/// variant will be added once the upstream encoder is fixed.
 #[cfg(feature = "remote-access")]
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FoxgloveDracoMethod {
-    /// Sequential encoding: preserves point order and copies all extra fields losslessly.
-    Sequential = 0,
-    /// kd-tree encoding: better compression ratios, but reorders points, and float32 extra
-    /// fields are quantized with the same number of bits as positions.
-    ///
-    /// Encoding falls back to sequential when `quantization_bits` is 0 (lossless) or the
-    /// cloud contains a float64 field.
-    KdTree = 1,
-}
-
-#[cfg(feature = "remote-access")]
-impl From<FoxgloveDracoMethod> for foxglove::draco::DracoMethod {
-    fn from(method: FoxgloveDracoMethod) -> Self {
-        match method {
-            FoxgloveDracoMethod::Sequential => Self::Sequential,
-            FoxgloveDracoMethod::KdTree => Self::KdTree,
-        }
-    }
+    /// kd-tree encoding: reorders points, and float32 extra fields are quantized with the
+    /// same number of bits as positions. This is the default (0).
+    KdTree = 0,
 }
 
 /// Options for Draco point-cloud encoding.
@@ -122,22 +113,26 @@ impl From<FoxgloveDracoMethod> for foxglove::draco::DracoMethod {
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct FoxgloveDracoEncodeOptions {
-    /// The Draco encoding method.
+    /// The Draco encoding method. Currently kd-tree is the only choice; see
+    /// `foxglove_draco_method`.
     pub method: FoxgloveDracoMethod,
-    /// Quantization bits for the position attribute, at most 31. `0` encodes positions as
-    /// lossless float32 (much larger output, and falls back to sequential encoding).
-    /// Values above 31 cause `foxglove_gateway_start` to fail with
-    /// `FOXGLOVE_ERROR_CONFIGURATION_ERROR`.
+    /// Quantization bits for the position attribute; must be between 1 and 31 inclusive.
+    /// Values outside that range cause `foxglove_gateway_start` to fail with
+    /// `FOXGLOVE_ERROR_CONFIGURATION_ERROR`: values above 31 exceed what Draco supports,
+    /// and `0` (lossless) provides no size reduction over the raw point cloud — use
+    /// `FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DISABLED` instead.
     pub quantization_bits: u8,
 }
 
 #[cfg(feature = "remote-access")]
 impl From<FoxgloveDracoEncodeOptions> for foxglove::draco::DracoEncodeOptions {
     fn from(options: FoxgloveDracoEncodeOptions) -> Self {
-        Self {
-            method: options.method.into(),
-            quantization_bits: options.quantization_bits,
-        }
+        // `method` has a single variant (kd-tree), which is also the only method the SDK
+        // derives for quantized encoding, so only the quantization setting is forwarded.
+        let FoxgloveDracoMethod::KdTree = options.method;
+        let mut draco = Self::default();
+        draco.quantization_bits = options.quantization_bits;
+        draco
     }
 }
 
@@ -162,9 +157,13 @@ pub enum FoxglovePointCloudCompressionMode {
 /// is compressed in a background task (off the logging hot path) before delivery. If
 /// compression falls behind the log rate, the oldest queued message is dropped.
 /// Channels classified as Reliable skip compression automatically and deliver the raw
-/// point cloud on the control bytestream.
+/// point cloud on the control bytestream. Clouds containing float64 fields cannot be
+/// quantized and are delivered losslessly (no size reduction); a throttled warning is
+/// emitted when this happens.
 ///
-/// Zero-initialize this struct (mode 0) to use the SDK default.
+/// Zero-initialize this struct (mode 0) to use the SDK default. Note that when `mode` is
+/// `FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DRACO`, `draco.quantization_bits` must be set
+/// to a value between 1 and 31; a zero-initialized `draco` is rejected at startup.
 #[cfg(feature = "remote-access")]
 #[repr(C)]
 #[derive(Clone, Copy)]
@@ -199,7 +198,7 @@ mod point_cloud_compression_tests {
         FoxgloveDracoEncodeOptions, FoxgloveDracoMethod, FoxglovePointCloudCompression,
         FoxglovePointCloudCompressionMode,
     };
-    use foxglove::draco::{CompressPointCloudOptions, DracoEncodeOptions, DracoMethod};
+    use foxglove::draco::{CompressPointCloudOptions, DracoEncodeOptions};
 
     #[test]
     fn test_zero_initialized_struct_keeps_sdk_default() {
@@ -209,6 +208,12 @@ mod point_cloud_compression_tests {
         assert!(matches!(
             compression.mode,
             FoxglovePointCloudCompressionMode::Default
+        ));
+        // The zero value of the method enum must be a valid variant (kd-tree), so a
+        // zero-initialized struct never holds an invalid discriminant.
+        assert!(matches!(
+            compression.draco.method,
+            FoxgloveDracoMethod::KdTree
         ));
         assert_eq!(compression.to_builder_options(), None);
     }
@@ -226,20 +231,19 @@ mod point_cloud_compression_tests {
     }
 
     #[test]
-    fn test_draco_maps_method_and_quantization_bits() {
+    fn test_draco_maps_quantization_bits() {
         let compression = FoxglovePointCloudCompression {
             mode: FoxglovePointCloudCompressionMode::Draco,
             draco: FoxgloveDracoEncodeOptions {
-                method: FoxgloveDracoMethod::Sequential,
+                method: FoxgloveDracoMethod::KdTree,
                 quantization_bits: 14,
             },
         };
+        let mut expected = DracoEncodeOptions::default();
+        expected.quantization_bits = 14;
         assert_eq!(
             compression.to_builder_options(),
-            Some(Some(CompressPointCloudOptions::Draco(DracoEncodeOptions {
-                method: DracoMethod::Sequential,
-                quantization_bits: 14,
-            })))
+            Some(Some(CompressPointCloudOptions::Draco(expected)))
         );
     }
 }
