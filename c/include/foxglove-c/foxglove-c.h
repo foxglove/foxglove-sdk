@@ -2853,6 +2853,8 @@ typedef struct foxglove_draco_encode_options {
  * advertised with the `foxglove.CompressedPointCloud` schema, and each logged point cloud
  * is compressed in a background task (off the logging hot path) before delivery. If
  * compression falls behind the log rate, the oldest queued message is dropped.
+ * Channels classified as Reliable skip compression automatically and deliver the raw
+ * point cloud on the control bytestream.
  *
  * Zero-initialize this struct (mode 0) to use the SDK default.
  */
@@ -3023,8 +3025,11 @@ typedef struct foxglove_gateway_options {
    *
    * Return true to advertise the given channel with its original schema and deliver its
    * messages unchanged, rather than transcoding them to `foxglove.CompressedPointCloud`.
-   * If not set, all compressible point-cloud channels use the compression configured by
-   * `point_cloud_compression`.
+   * If not set, all compressible Lossy point-cloud channels use the compression
+   * configured by `point_cloud_compression`.
+   *
+   * This callback is only consulted for compressible channels with Lossy QoS; channels
+   * classified as Reliable skip compression automatically and are delivered unmodified.
    */
   bool (*suppress_point_cloud_compression)(const void *context,
                                            const struct foxglove_channel_descriptor *channel);

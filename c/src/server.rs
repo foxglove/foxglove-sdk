@@ -161,6 +161,8 @@ pub enum FoxglovePointCloudCompressionMode {
 /// advertised with the `foxglove.CompressedPointCloud` schema, and each logged point cloud
 /// is compressed in a background task (off the logging hot path) before delivery. If
 /// compression falls behind the log rate, the oldest queued message is dropped.
+/// Channels classified as Reliable skip compression automatically and deliver the raw
+/// point cloud on the control bytestream.
 ///
 /// Zero-initialize this struct (mode 0) to use the SDK default.
 #[cfg(feature = "remote-access")]
