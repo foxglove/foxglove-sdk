@@ -136,9 +136,9 @@ def test_draco_encode_options_defaults() -> None:
     assert options.method == DracoMethod.KdTree
     assert options.quantization_bits == 12
 
-    options = DracoEncodeOptions(method=DracoMethod.Sequential, quantization_bits=0)
-    assert options.method == DracoMethod.Sequential
-    assert options.quantization_bits == 0
+    options = DracoEncodeOptions(method=DracoMethod.KdTree, quantization_bits=10)
+    assert options.method == DracoMethod.KdTree
+    assert options.quantization_bits == 10
 
 
 @typing.no_type_check

@@ -112,18 +112,13 @@ Enums
 .. py:enum:: DracoMethod
 
    Draco encoding method for point-cloud compression. Used with
-   :py:class:`DracoEncodeOptions`.
-
-   .. py:data:: Sequential
-
-      Sequential encoding: preserves point order and copies all extra fields losslessly.
+   :py:class:`DracoEncodeOptions`. kd-tree is currently the only offered method; a
+   ``Sequential`` value will be added once an upstream encoder conformance bug is fixed.
 
    .. py:data:: KdTree
 
-      kd-tree encoding: better compression ratios, but reorders points, and float32 extra
-      fields are quantized with the same number of bits as positions. Encoding falls back
-      to sequential when ``quantization_bits`` is 0 (lossless) or the cloud contains a
-      float64 field.
+      kd-tree encoding: reorders points, and float32 extra fields are quantized with the
+      same number of bits as positions. This is the default.
 
 foxglove.mcap
 ------------------
