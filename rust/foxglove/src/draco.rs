@@ -30,25 +30,23 @@ use crate::messages::{CompressedPointCloud, PointCloud};
 
 /// Draco encoding method.
 ///
-/// Crate-internal for now: explicitly selecting sequential encoding is not exposed via the
-/// public API, because draco-core's sequential encoder emits bitstreams that the reference
-/// Draco decoder rejects whenever positions are quantized (`quantization_bits > 0`).
-/// Sequential encoding remains in use internally as the lossless fallback (zero
-/// quantization bits, float64 fields, empty clouds), which the reference decoder accepts.
-/// Re-export this (and the `method` field on [`DracoEncodeOptions`]) once the upstream
-/// encoder is fixed.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub(crate) enum DracoMethod {
+/// Internal: the method is derived from the cloud and options in [`encode_draco`], not
+/// selected by callers. Explicitly choosing sequential encoding is not exposed because
+/// draco-core's sequential encoder emits bitstreams that the reference Draco decoder
+/// rejects whenever positions are quantized (`quantization_bits > 0`). Sequential encoding
+/// is used only as the lossless fallback (zero quantization bits, float64 fields, empty
+/// clouds), which the reference decoder accepts. Once the upstream encoder is fixed, a
+/// public `method` field can be added back to [`DracoEncodeOptions`] non-breakingly (the
+/// struct is `#[non_exhaustive]`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum DracoMethod {
     /// Sequential encoding: preserves point order and copies all extra fields losslessly.
     Sequential,
     /// kd-tree encoding: better compression ratios, but reorders points, and float32 extra
     /// fields are quantized with the same number of bits as positions.
     ///
-    /// kd-tree encoding requires quantization and doesn't support float64 fields, so
-    /// encoding falls back to [`DracoMethod::Sequential`] when
-    /// [`DracoEncodeOptions::quantization_bits`] is `0` (lossless) or the cloud contains a
-    /// float64 field.
-    #[default]
+    /// kd-tree encoding requires quantization and doesn't support float64 fields;
+    /// [`encode_draco`] uses [`DracoMethod::Sequential`] in those cases.
     KdTree,
 }
 
@@ -73,19 +71,18 @@ pub const MAX_QUANTIZATION_BITS: u8 = 31;
 /// options.quantization_bits = 10;
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct DracoEncodeOptions {
-    /// The Draco encoding method. Crate-internal for now; see [`DracoMethod`].
-    pub(crate) method: DracoMethod,
     /// Quantization bits for the position attribute, at most [`MAX_QUANTIZATION_BITS`].
-    /// `0` encodes positions as lossless float32 (much larger output, using sequential
-    /// encoding internally). Defaults to 12.
+    /// `0` encodes positions as lossless float32 (no size reduction over the raw cloud,
+    /// using sequential encoding internally); the remote access sink rejects `0` at
+    /// startup — disable compression there instead. Defaults to 12.
     pub quantization_bits: u8,
 }
 
 impl Default for DracoEncodeOptions {
     fn default() -> Self {
         Self {
-            method: DracoMethod::KdTree,
             quantization_bits: 12,
         }
     }
@@ -343,22 +340,28 @@ fn encode_draco(
         return Err(DracoEncodeError::MissingPositionFields);
     }
 
-    // Quantization is computed over the range of the points, which is undefined for an
-    // empty cloud: both encoders fail on zero quantized points. Quantizing nothing is a
-    // no-op anyway, so encode empty clouds losslessly. Empty clouds are a legitimate
-    // "nothing detected this frame" signal and must round-trip rather than error.
-    let quantization_bits = if num_points == 0 {
+    // Encode losslessly when quantization can't be used:
+    // - An empty cloud has no point range to quantize over; both encoders fail on zero
+    //   quantized points, and empty clouds are a legitimate "nothing detected this
+    //   frame" signal that must round-trip rather than error.
+    // - The kd-tree encoder doesn't support float64 attributes, and sequential encoding
+    //   with quantized positions is rejected by the reference Draco decoder (upstream
+    //   draco-core conformance bug; see `DracoMethod`), so float64-bearing clouds must
+    //   be fully lossless to stay decodable.
+    let has_f64 = fields.iter().any(|f| f.dtype == DataType::Float64);
+    let quantization_bits = if num_points == 0 || has_f64 {
         0
     } else {
         options.quantization_bits
     };
 
-    // kd-tree encoding requires quantization and doesn't support float64 attributes; fall
-    // back to sequential encoding in those cases (see `DracoMethod::KdTree`).
-    let has_f64 = fields.iter().any(|f| f.dtype == DataType::Float64);
-    let method = match options.method {
-        DracoMethod::KdTree if quantization_bits == 0 || has_f64 => DracoMethod::Sequential,
-        method => method,
+    // The method is derived, not configurable: kd-tree requires quantization, and
+    // sequential is only reachable as the lossless fallback until the upstream encoder
+    // bug is fixed (see `DracoMethod`).
+    let method = if quantization_bits == 0 {
+        DracoMethod::Sequential
+    } else {
+        DracoMethod::KdTree
     };
 
     let mut draco_cloud = DracoCloud::new();
@@ -481,15 +484,45 @@ pub(crate) mod transcode {
                 .is_some_and(|s| s.name == "foxglove.PointCloud")
     }
 
+    /// A transcoded `foxglove.CompressedPointCloud` message, with a note about any
+    /// encoding downgrade applied along the way.
+    pub(crate) struct TranscodedPointCloud {
+        /// The serialized `foxglove.CompressedPointCloud` message.
+        pub data: Bytes,
+        /// When quantization was configured but the cloud had to be encoded losslessly
+        /// (no size reduction) because it contains a float64 field, the name of the
+        /// first such field. Used to surface a throttled warning: the downgrade is
+        /// data-driven and would otherwise be silent.
+        pub lossless_fallback_field: Option<String>,
+    }
+
     /// Transcodes a serialized `foxglove.PointCloud` message into a serialized
     /// `foxglove.CompressedPointCloud` message.
     pub(crate) fn transcode_point_cloud_message(
         msg: &[u8],
         options: &CompressPointCloudOptions,
-    ) -> Result<Bytes, TranscodeError> {
+    ) -> Result<TranscodedPointCloud, TranscodeError> {
+        use crate::messages::packed_element_field::NumericType;
+
         let cloud = <PointCloud as Decode>::decode(msg)?;
-        let compressed = compress_point_cloud(&cloud, &options.draco_options())?;
-        Ok(Bytes::from(compressed.encode_to_vec()))
+        let draco_options = options.draco_options();
+        // Empty clouds are excluded: they fold to lossless regardless of fields, and
+        // their output is header-sized, so there is no size reduction to lose.
+        let lossless_fallback_field =
+            if draco_options.quantization_bits > 0 && !cloud.data.is_empty() {
+                cloud
+                    .fields
+                    .iter()
+                    .find(|f| f.r#type == NumericType::Float64 as i32)
+                    .map(|f| f.name.clone())
+            } else {
+                None
+            };
+        let compressed = compress_point_cloud(&cloud, &draco_options)?;
+        Ok(TranscodedPointCloud {
+            data: Bytes::from(compressed.encode_to_vec()),
+            lossless_fallback_field,
+        })
     }
 
     /// Rewrites a channel advertisement to report the `foxglove.CompressedPointCloud`
@@ -532,6 +565,68 @@ mod transcode_tests {
             <crate::messages::PointCloud as Encode>::get_schema(),
         );
         assert!(is_point_cloud_channel(&ch));
+    }
+
+    #[test]
+    fn test_transcode_flags_float64_lossless_fallback() {
+        use super::transcode::transcode_point_cloud_message;
+        use crate::Encode;
+        use crate::draco::CompressPointCloudOptions;
+        use crate::messages::{PackedElementField, PointCloud, packed_element_field::NumericType};
+
+        let field = |name: &str, offset: u32, t: NumericType| PackedElementField {
+            name: name.to_string(),
+            offset,
+            r#type: t as i32,
+        };
+        let make = |with_f64: bool, points: usize| {
+            let stride = if with_f64 { 20 } else { 16 };
+            let mut fields = vec![
+                field("x", 0, NumericType::Float32),
+                field("y", 4, NumericType::Float32),
+                field("z", 8, NumericType::Float32),
+            ];
+            if with_f64 {
+                fields.push(field("stamp", 12, NumericType::Float64));
+            } else {
+                fields.push(field("intensity", 12, NumericType::Float32));
+            }
+            let mut data = Vec::new();
+            for i in 0..points {
+                for v in [i as f32, i as f32 * 2.0, 0.5] {
+                    data.extend_from_slice(&v.to_le_bytes());
+                }
+                if with_f64 {
+                    data.extend_from_slice(&(i as f64).to_le_bytes());
+                } else {
+                    data.extend_from_slice(&1.0f32.to_le_bytes());
+                }
+            }
+            let cloud = PointCloud {
+                timestamp: None,
+                frame_id: "t".to_string(),
+                pose: None,
+                point_stride: stride,
+                fields,
+                data: data.into(),
+            };
+            let mut buf = Vec::new();
+            cloud.encode(&mut buf).unwrap();
+            buf
+        };
+        let options = CompressPointCloudOptions::default();
+
+        // A float64 field with quantization configured is a data-driven downgrade.
+        let transcoded = transcode_point_cloud_message(&make(true, 8), &options).unwrap();
+        assert_eq!(transcoded.lossless_fallback_field.as_deref(), Some("stamp"));
+
+        // No float64 field: no downgrade.
+        let transcoded = transcode_point_cloud_message(&make(false, 8), &options).unwrap();
+        assert_eq!(transcoded.lossless_fallback_field, None);
+
+        // Empty clouds fold to lossless regardless of fields; not worth a warning.
+        let transcoded = transcode_point_cloud_message(&make(true, 0), &options).unwrap();
+        assert_eq!(transcoded.lossless_fallback_field, None);
     }
 
     #[test]
@@ -671,9 +766,9 @@ mod tests {
             data: Bytes::from(data),
         };
 
-        // Sequential + lossless so decoded values compare exactly.
+        // Lossless, which uses the order-preserving sequential encoding internally, so
+        // decoded values compare exactly.
         let options = DracoEncodeOptions {
-            method: DracoMethod::Sequential,
             quantization_bits: 0,
         };
         let draco = encode_draco(&cloud, &options).unwrap();
@@ -743,18 +838,19 @@ mod tests {
     }
 
     #[test]
-    fn test_sequential_roundtrip_within_quantization_error() {
+    fn test_quantization_error_within_tolerance() {
         let (cloud, positions, _) = test_cloud();
         let options = DracoEncodeOptions {
-            method: DracoMethod::Sequential,
             quantization_bits: 14,
         };
         let compressed = compress_point_cloud(&cloud, &options).unwrap();
-        let decoded = decode_positions(&compressed.data);
+        let mut decoded = decode_positions(&compressed.data);
         assert_eq!(decoded.len(), positions.len());
 
         // With 14-bit quantization, the max error per component is bounded by the position
-        // range divided by the number of quantization steps.
+        // range divided by the number of quantization steps. kd-tree encoding reorders
+        // points, so pair them up by sorting both sequences; the test cloud's x values are
+        // spaced 0.25 apart, far wider than the tolerance, so sorting pairs correctly.
         let (mut min, mut max) = (f32::INFINITY, f32::NEG_INFINITY);
         for pos in &positions {
             for &c in pos {
@@ -763,7 +859,10 @@ mod tests {
             }
         }
         let tolerance = (max - min) / (1 << 14) as f32;
-        for (orig, got) in positions.iter().zip(&decoded) {
+        let mut expected = positions;
+        expected.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        decoded.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        for (orig, got) in expected.iter().zip(&decoded) {
             for c in 0..3 {
                 assert!(
                     (orig[c] - got[c]).abs() <= tolerance,
@@ -779,7 +878,6 @@ mod tests {
     fn test_lossless_positions_with_zero_quantization_bits() {
         let (cloud, positions, _) = test_cloud();
         let options = DracoEncodeOptions {
-            method: DracoMethod::Sequential,
             quantization_bits: 0,
         };
         let compressed = compress_point_cloud(&cloud, &options).unwrap();
@@ -791,7 +889,6 @@ mod tests {
     fn test_kd_tree_roundtrip_point_count() {
         let (cloud, positions, _) = test_cloud();
         let options = DracoEncodeOptions {
-            method: DracoMethod::KdTree,
             quantization_bits: 12,
         };
         let compressed = compress_point_cloud(&cloud, &options).unwrap();
@@ -822,10 +919,9 @@ mod tests {
     }
 
     #[test]
-    fn test_kd_tree_falls_back_to_sequential_for_lossless() {
+    fn test_lossless_uses_sequential_fallback() {
         let (cloud, positions, _) = test_cloud();
         let options = DracoEncodeOptions {
-            method: DracoMethod::KdTree,
             quantization_bits: 0,
         };
         let compressed = compress_point_cloud(&cloud, &options).unwrap();
@@ -836,7 +932,7 @@ mod tests {
     }
 
     #[test]
-    fn test_kd_tree_falls_back_to_sequential_for_float64_fields() {
+    fn test_float64_fields_use_sequential_fallback() {
         let (mut cloud, positions, intensities) = test_cloud();
         cloud.fields[3] = field("intensity", 12, NumericType::Float64);
         cloud.point_stride = 20;
@@ -849,23 +945,23 @@ mod tests {
         }
         cloud.data = Bytes::from(data);
 
-        // The kd-tree encoder doesn't support float64 attributes; sequential fallback keeps
-        // the encode from failing.
+        // The kd-tree encoder doesn't support float64 attributes, so the cloud must be
+        // encoded fully losslessly despite the requested quantization (quantized
+        // sequential output would be rejected by the reference decoder). The exact,
+        // order-preserving round-trip proves the lossless sequential path was used.
         let options = DracoEncodeOptions {
-            method: DracoMethod::KdTree,
             quantization_bits: 12,
         };
         let compressed = compress_point_cloud(&cloud, &options).unwrap();
-        let decoded = decode_positions(&compressed.data);
-        assert_eq!(decoded.len(), positions.len());
+        assert_eq!(decode_positions(&compressed.data), positions);
     }
 
     #[test]
     fn test_extra_field_values_roundtrip() {
+        // Lossless encoding preserves point order, so extra field values compare exactly.
         let (cloud, _, intensities) = test_cloud();
         let options = DracoEncodeOptions {
-            method: DracoMethod::Sequential,
-            quantization_bits: 14,
+            quantization_bits: 0,
         };
         let compressed = compress_point_cloud(&cloud, &options).unwrap();
 
@@ -929,25 +1025,21 @@ mod tests {
     #[test]
     fn test_invalid_quantization_bits_error() {
         let (cloud, _, _) = test_cloud();
-        for method in [DracoMethod::KdTree, DracoMethod::Sequential] {
-            // The maximum is accepted...
-            let options = DracoEncodeOptions {
-                method,
-                quantization_bits: MAX_QUANTIZATION_BITS,
-            };
-            compress_point_cloud(&cloud, &options).unwrap();
+        // The maximum is accepted...
+        let options = DracoEncodeOptions {
+            quantization_bits: MAX_QUANTIZATION_BITS,
+        };
+        compress_point_cloud(&cloud, &options).unwrap();
 
-            // ...and anything above it is rejected up front.
-            let options = DracoEncodeOptions {
-                method,
-                quantization_bits: MAX_QUANTIZATION_BITS + 1,
-            };
-            let err = compress_point_cloud(&cloud, &options).unwrap_err();
-            assert!(matches!(
-                err,
-                DracoEncodeError::InvalidQuantizationBits { bits } if bits == MAX_QUANTIZATION_BITS + 1
-            ));
-        }
+        // ...and anything above it is rejected up front.
+        let options = DracoEncodeOptions {
+            quantization_bits: MAX_QUANTIZATION_BITS + 1,
+        };
+        let err = compress_point_cloud(&cloud, &options).unwrap_err();
+        assert!(matches!(
+            err,
+            DracoEncodeError::InvalidQuantizationBits { bits } if bits == MAX_QUANTIZATION_BITS + 1
+        ));
     }
 
     #[test]
@@ -982,25 +1074,22 @@ mod tests {
         // An empty cloud is a legitimate "nothing detected this frame / clear the
         // display" signal and must round-trip rather than error. Quantization is
         // undefined over zero points, so empty clouds are encoded losslessly regardless
-        // of the requested method and bits.
-        for method in [DracoMethod::KdTree, DracoMethod::Sequential] {
-            let (mut cloud, _, _) = test_cloud();
-            cloud.data = Bytes::new();
+        // of the requested bits.
+        let (mut cloud, _, _) = test_cloud();
+        cloud.data = Bytes::new();
 
-            let options = DracoEncodeOptions {
-                method,
-                quantization_bits: 12,
-            };
-            let compressed = compress_point_cloud(&cloud, &options).unwrap();
-            assert!(!compressed.data.is_empty());
+        let options = DracoEncodeOptions {
+            quantization_bits: 12,
+        };
+        let compressed = compress_point_cloud(&cloud, &options).unwrap();
+        assert!(!compressed.data.is_empty());
 
-            let decoded = decode_cloud(&compressed.data);
-            assert_eq!(decoded.num_points(), 0);
-            // The POSITION attribute must survive: decoders (including the app's)
-            // require it even for an empty cloud.
-            let pos_id = decoded.named_attribute_id(GeometryAttributeType::Position);
-            assert!(pos_id >= 0, "decoded empty cloud has no position attribute");
-        }
+        let decoded = decode_cloud(&compressed.data);
+        assert_eq!(decoded.num_points(), 0);
+        // The POSITION attribute must survive: decoders (including the app's)
+        // require it even for an empty cloud.
+        let pos_id = decoded.named_attribute_id(GeometryAttributeType::Position);
+        assert!(pos_id >= 0, "decoded empty cloud has no position attribute");
     }
 
     #[test]
@@ -1009,9 +1098,8 @@ mod tests {
         let (mut cloud, positions, _) = test_cloud();
         cloud.fields.retain(|f| f.name != "z");
 
-        // Sequential + lossless so decoded values compare exactly.
+        // Lossless so decoded values compare exactly.
         let options = DracoEncodeOptions {
-            method: DracoMethod::Sequential,
             quantization_bits: 0,
         };
         let draco = encode_draco(&cloud, &options).unwrap();
