@@ -743,8 +743,11 @@ pub struct FoxgloveGatewayOptions<'a> {
     ///
     /// Return true to advertise the given channel with its original schema and deliver its
     /// messages unchanged, rather than transcoding them to `foxglove.CompressedPointCloud`.
-    /// If not set, all compressible point-cloud channels use the compression configured by
-    /// `point_cloud_compression`.
+    /// If not set, all compressible Lossy point-cloud channels use the compression
+    /// configured by `point_cloud_compression`.
+    ///
+    /// This callback is only consulted for compressible channels with Lossy QoS; channels
+    /// classified as Reliable skip compression automatically and are delivered unmodified.
     pub suppress_point_cloud_compression: Option<
         unsafe extern "C" fn(
             context: *const c_void,
