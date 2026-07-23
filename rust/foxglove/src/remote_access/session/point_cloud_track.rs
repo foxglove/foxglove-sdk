@@ -49,19 +49,41 @@ impl PointCloudPublisher {
         runtime.spawn(async move {
             // Throttles compression warnings so a stream of bad clouds doesn't flood the log.
             let mut warn_throttler = Throttler::new(TRANSCODE_WARN_INTERVAL);
+            // Separate throttler for lossless-downgrade notices, so a burst of transcode
+            // errors can't mask them (or vice versa).
+            let mut lossless_throttler = Throttler::new(TRANSCODE_WARN_INTERVAL);
             while let Ok((data, log_time)) = consumer_rx.recv_async().await {
                 let result = tokio::task::spawn_blocking(move || {
                     transcode_point_cloud_message(&data, &options)
                 })
                 .await;
                 match result {
-                    Ok(Ok(encoded)) => {
+                    Ok(Ok(transcoded)) => {
                         // Subscribers are re-resolved at delivery time, since they may have
                         // changed while the message was being transcoded.
                         let Some(session) = session.upgrade() else {
                             break;
                         };
-                        session.deliver_transcoded_point_cloud(channel_id, &encoded, log_time);
+                        // The downgrade is data-driven (the configuration requested
+                        // quantization), so it must not stay silent: lossless output
+                        // provides no size reduction over the raw cloud.
+                        if let Some(field) = &transcoded.lossless_fallback_field
+                            && lossless_throttler.try_acquire()
+                        {
+                            let message = format!(
+                                "point cloud compression on channel {channel_id:?}: field \
+                                 '{field}' is float64 and cannot be quantized; delivering \
+                                 lossless Draco (no size reduction). Use float32 or integer \
+                                 fields, or suppress compression for this channel."
+                            );
+                            warn!("{message}");
+                            session.publish_status(Status::warning(message));
+                        }
+                        session.deliver_transcoded_point_cloud(
+                            channel_id,
+                            &transcoded.data,
+                            log_time,
+                        );
                     }
                     Ok(Err(e)) => {
                         if warn_throttler.try_acquire() {

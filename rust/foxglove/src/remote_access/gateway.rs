@@ -482,11 +482,17 @@ impl Gateway {
     ///
     /// Compression is enabled by default with [`CompressPointCloudOptions::default()`].
     /// Note that the default settings are lossy: kd-tree encoding with positions quantized
-    /// to 12 bits. Set
+    /// to 12 bits.
     /// [`DracoEncodeOptions::quantization_bits`](crate::draco::DracoEncodeOptions::quantization_bits)
-    /// to `0` for lossless positions; values above
-    /// [`MAX_QUANTIZATION_BITS`](crate::draco::MAX_QUANTIZATION_BITS) are rejected by
-    /// [`Self::start`].
+    /// must be between `1` and
+    /// [`MAX_QUANTIZATION_BITS`](crate::draco::MAX_QUANTIZATION_BITS) inclusive;
+    /// [`Self::start`] rejects values outside that range. In particular `0` (lossless) is
+    /// rejected because lossless Draco encoding provides no size reduction over the raw
+    /// point cloud — pass `None` instead to deliver point clouds unmodified.
+    ///
+    /// Clouds containing float64 fields cannot be quantized and are delivered losslessly
+    /// (no size reduction); a throttled warning is emitted on the device and to viewers
+    /// when this happens.
     ///
     /// Channels classified as [`Reliability::Reliable`](crate::remote_access::Reliability::Reliable)
     /// skip compression automatically and deliver the raw point cloud on the control
@@ -756,12 +762,24 @@ impl Gateway {
             )));
         }
         #[cfg(feature = "draco")]
-        if let Some(options) = &self.point_cloud_compression
-            && let Err(e) = options.validate()
-        {
-            return Err(FoxgloveError::ConfigurationError(format!(
-                "compress_point_clouds: {e}"
-            )));
+        if let Some(options) = &self.point_cloud_compression {
+            if let Err(e) = options.validate() {
+                return Err(FoxgloveError::ConfigurationError(format!(
+                    "compress_point_clouds: {e}"
+                )));
+            }
+            // Lossless Draco encoding provides no size reduction over the raw point
+            // cloud, so on the transparent path it is all overhead: reject it rather
+            // than transcode for nothing. (The direct compress_point_cloud API still
+            // accepts 0 for lossless encoding.)
+            if options.draco_options().quantization_bits == 0 {
+                return Err(FoxgloveError::ConfigurationError(
+                    "compress_point_clouds: quantization_bits is 0 (lossless), which \
+                     provides no size reduction; pass None to deliver raw point clouds \
+                     instead"
+                        .to_string(),
+                ));
+            }
         }
         let runtime = self.runtime.unwrap_or_else(get_runtime_handle);
         let services = Arc::new(parking_lot::RwLock::new(ServiceMap::from_iter(
@@ -848,6 +866,22 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "draco")]
+    fn point_cloud_quantization_bits_zero_rejected() {
+        use crate::draco::{CompressPointCloudOptions, DracoEncodeOptions};
+
+        // Lossless Draco provides no size reduction, so on the transparent path it is
+        // pure overhead; the configuration is rejected in favor of passing None.
+        let result = Gateway::new()
+            .device_token("test-token")
+            .compress_point_clouds(Some(CompressPointCloudOptions::Draco(DracoEncodeOptions {
+                quantization_bits: 0,
+            })))
+            .start();
+        assert!(matches!(result, Err(FoxgloveError::ConfigurationError(_))));
+    }
+
+    #[test]
     fn max_data_track_message_size_builder() {
         // Unset by default; the default value is applied downstream when building
         // SessionParams (see DEFAULT_MAX_DATA_TRACK_MESSAGE_SIZE).
@@ -871,7 +905,6 @@ mod tests {
             .device_token("test-token")
             .compress_point_clouds(Some(CompressPointCloudOptions::Draco(DracoEncodeOptions {
                 quantization_bits: MAX_QUANTIZATION_BITS + 1,
-                ..Default::default()
             })))
             .start();
         assert!(matches!(result, Err(FoxgloveError::ConfigurationError(_))));
