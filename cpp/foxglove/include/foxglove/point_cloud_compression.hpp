@@ -31,8 +31,10 @@ enum class DracoMethod : uint8_t {
 struct DracoEncodeOptions {
   /// @brief The Draco encoding method.
   DracoMethod method = DracoMethod::KdTree;
-  /// @brief Quantization bits for the position attribute. `0` encodes positions as lossless
-  /// float32 (much larger output, and falls back to sequential encoding).
+  /// @brief Quantization bits for the position attribute, at most 31. `0` encodes positions
+  /// as lossless float32 (much larger output, and falls back to sequential encoding).
+  /// Values above 31 cause @ref RemoteAccessGateway::create to fail with
+  /// @ref FoxgloveError::ConfigurationError.
   uint8_t quantization_bits = 12;
 };
 
