@@ -11,10 +11,9 @@
 //! fit the raw cloud under the cap and compare the two topics side by side instead. The
 //! startup log prints both sizes and their deliverability verdicts.
 //!
-//! `--method` and `--quantization-bits` control the Draco settings for `/cloud/compressed`,
-//! for eyeballing the quality/size trade-offs: fewer bits shrink the message but show
-//! visible quantization stepping in the wave, and sequential encoding preserves point
-//! order at a larger size.
+//! `--quantization-bits` controls the Draco position quantization for `/cloud/compressed`,
+//! for eyeballing the quality/size trade-off: fewer bits shrink the message but show
+//! visible quantization stepping in the wave.
 //!
 //! Requires `FOXGLOVE_DEVICE_TOKEN` (and `FOXGLOVE_API_URL` for a local platform stack).
 //!
@@ -27,9 +26,7 @@
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use clap::Parser;
-use foxglove::draco::{
-    CompressPointCloudOptions, DracoEncodeOptions, DracoMethod, MAX_QUANTIZATION_BITS,
-};
+use foxglove::draco::{CompressPointCloudOptions, DracoEncodeOptions, MAX_QUANTIZATION_BITS};
 use foxglove::messages::{
     FrameTransform, PackedElementField, PointCloud, Quaternion, Timestamp, Vector3,
     packed_element_field::NumericType,
@@ -59,32 +56,11 @@ struct Args {
     #[arg(long, default_value_t = 10, value_parser = clap::value_parser!(u32).range(1..))]
     fps: u32,
 
-    /// Draco encoding method for /cloud/compressed. kd-tree compresses better but
-    /// reorders points; sequential preserves point order.
-    #[arg(long, value_enum, default_value = "kd-tree")]
-    method: Method,
-
-    /// Quantization bits for positions on /cloud/compressed. 0 encodes positions as
-    /// lossless float32 (larger output, and falls back to sequential encoding).
+    /// Quantization bits for positions on /cloud/compressed, between 1 and 31. Fewer
+    /// bits produce smaller messages but coarser positions.
     #[arg(long, default_value_t = 12,
-          value_parser = clap::value_parser!(u8).range(0..=MAX_QUANTIZATION_BITS as i64))]
+          value_parser = clap::value_parser!(u8).range(1..=MAX_QUANTIZATION_BITS as i64))]
     quantization_bits: u8,
-}
-
-/// Draco encoding method (mirrors [`DracoMethod`] for clap).
-#[derive(Clone, Copy, clap::ValueEnum)]
-enum Method {
-    KdTree,
-    Sequential,
-}
-
-impl From<Method> for DracoMethod {
-    fn from(method: Method) -> Self {
-        match method {
-            Method::KdTree => Self::KdTree,
-            Method::Sequential => Self::Sequential,
-        }
-    }
 }
 
 /// A wave surface animated over time, with an intensity field.
@@ -210,10 +186,8 @@ async fn main() {
         args.fps
     );
 
-    let options = DracoEncodeOptions {
-        method: args.method.into(),
-        quantization_bits: args.quantization_bits,
-    };
+    let mut options = DracoEncodeOptions::default();
+    options.quantization_bits = args.quantization_bits;
 
     // Report the deliverability verdicts up front, before connecting.
     report_sizes(&make_cloud(side, 0.0), &options);
