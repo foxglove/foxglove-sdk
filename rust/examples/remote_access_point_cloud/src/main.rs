@@ -48,7 +48,7 @@ struct Args {
     points: usize,
 
     /// Frames per second.
-    #[arg(long, default_value_t = 10)]
+    #[arg(long, default_value_t = 10, value_parser = clap::value_parser!(u32).range(1..))]
     fps: u32,
 }
 
