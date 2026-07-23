@@ -362,12 +362,16 @@ fn _foxglove_py(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyContext>()?;
     m.add_class::<PySinkChannelFilter>()?;
     m.add_class::<PyChannelDescriptor>()?;
+    // Point-cloud compression options are only consumed by `start_gateway`.
+    #[cfg(feature = "remote-access")]
+    {
+        m.add_class::<remote_common::PyDracoEncodeOptions>()?;
+        m.add_class::<remote_common::PyDracoMethod>()?;
+    }
     // Shared types used by both websocket and remote_access.
     #[cfg(not(target_family = "wasm"))]
     {
         m.add_class::<remote_common::PyConnectionGraph>()?;
-        m.add_class::<remote_common::PyDracoEncodeOptions>()?;
-        m.add_class::<remote_common::PyDracoMethod>()?;
         m.add_class::<remote_common::PyMessageSchema>()?;
         m.add_class::<remote_common::PyParameter>()?;
         m.add_class::<remote_common::PyParameterType>()?;
