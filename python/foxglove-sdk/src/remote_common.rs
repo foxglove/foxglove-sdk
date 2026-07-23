@@ -657,15 +657,18 @@ impl From<PyStatusLevel> for StatusLevel {
 }
 
 /// Draco encoding method for point-cloud compression.
+///
+/// kd-tree is currently the only offered method: sequential encoding is withheld because
+/// the encoder emits sequential bitstreams that the reference Draco decoder rejects
+/// whenever positions are quantized (upstream draco-core conformance bug). The enum and
+/// the ``method`` argument are kept so that re-offering sequential later is
+/// backwards-compatible; a ``Sequential`` value will be added once the upstream encoder
+/// is fixed.
 #[pyclass(from_py_object, name = "DracoMethod", module = "foxglove", eq, eq_int)]
 #[derive(Clone, PartialEq)]
 pub enum PyDracoMethod {
-    /// Sequential encoding: preserves point order and copies all extra fields losslessly.
-    Sequential,
-    /// kd-tree encoding: better compression ratios, but reorders points, and float32 extra
-    /// fields are quantized with the same number of bits as positions. Encoding falls back
-    /// to sequential when ``quantization_bits`` is 0 (lossless) or the cloud contains a
-    /// float64 field.
+    /// kd-tree encoding: reorders points, and float32 extra fields are quantized with the
+    /// same number of bits as positions. This is the default.
     KdTree,
 }
 
@@ -674,7 +677,6 @@ impl PyDracoMethod {
     #[getter]
     fn name(&self) -> &'static str {
         match self {
-            Self::Sequential => "Sequential",
             Self::KdTree => "KdTree",
         }
     }
@@ -682,29 +684,21 @@ impl PyDracoMethod {
     #[getter]
     fn value(&self) -> i32 {
         match self {
-            Self::Sequential => 0,
-            Self::KdTree => 1,
-        }
-    }
-}
-
-#[cfg(feature = "remote-access")]
-impl From<PyDracoMethod> for foxglove::draco::DracoMethod {
-    fn from(value: PyDracoMethod) -> Self {
-        match value {
-            PyDracoMethod::Sequential => Self::Sequential,
-            PyDracoMethod::KdTree => Self::KdTree,
+            Self::KdTree => 0,
         }
     }
 }
 
 /// Options for Draco point-cloud encoding.
 ///
-/// :param method: The Draco encoding method. Defaults to :py:attr:`DracoMethod.KdTree`.
+/// :param method: The Draco encoding method. Currently kd-tree is the only choice; see
+///     :py:class:`DracoMethod`. Defaults to :py:attr:`DracoMethod.KdTree`.
 /// :type method: DracoMethod
-/// :param quantization_bits: Quantization bits for the position attribute. ``0`` encodes
-///     positions as lossless float32 (much larger output, and falls back to sequential
-///     encoding). Defaults to 12.
+/// :param quantization_bits: Quantization bits for the position attribute; must be
+///     between 1 and 31 inclusive. Values outside that range are rejected when starting
+///     the gateway: values above 31 exceed what Draco supports, and ``0`` (lossless)
+///     provides no size reduction over the raw point cloud — pass ``False`` as
+///     ``point_cloud_compression`` to disable compression instead. Defaults to 12.
 /// :type quantization_bits: int
 #[pyclass(from_py_object, name = "DracoEncodeOptions", module = "foxglove")]
 #[derive(Clone)]
@@ -730,10 +724,12 @@ impl PyDracoEncodeOptions {
 #[cfg(feature = "remote-access")]
 impl From<PyDracoEncodeOptions> for foxglove::draco::DracoEncodeOptions {
     fn from(value: PyDracoEncodeOptions) -> Self {
-        Self {
-            method: value.method.into(),
-            quantization_bits: value.quantization_bits,
-        }
+        // `method` has a single variant (kd-tree), which is also the only method the SDK
+        // derives for quantized encoding, so only the quantization setting is forwarded.
+        let PyDracoMethod::KdTree = value.method;
+        let mut draco = Self::default();
+        draco.quantization_bits = value.quantization_bits;
+        draco
     }
 }
 

@@ -45,7 +45,7 @@ def test_start_gateway_accepts_point_cloud_compression_options() -> None:
     with pytest.raises(RuntimeError, match="No device token provided"):
         start_gateway(
             point_cloud_compression=DracoEncodeOptions(
-                method=DracoMethod.Sequential, quantization_bits=0
+                method=DracoMethod.KdTree, quantization_bits=10
             ),
             suppress_point_cloud_compression=lambda _channel: False,
         )
