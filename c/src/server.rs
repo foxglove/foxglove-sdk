@@ -124,8 +124,10 @@ impl From<FoxgloveDracoMethod> for foxglove::draco::DracoMethod {
 pub struct FoxgloveDracoEncodeOptions {
     /// The Draco encoding method.
     pub method: FoxgloveDracoMethod,
-    /// Quantization bits for the position attribute. `0` encodes positions as lossless
-    /// float32 (much larger output, and falls back to sequential encoding).
+    /// Quantization bits for the position attribute, at most 31. `0` encodes positions as
+    /// lossless float32 (much larger output, and falls back to sequential encoding).
+    /// Values above 31 cause `foxglove_gateway_start` to fail with
+    /// `FOXGLOVE_ERROR_CONFIGURATION_ERROR`.
     pub quantization_bits: u8,
 }
 
@@ -186,6 +188,57 @@ impl FoxglovePointCloudCompression {
                 foxglove::draco::CompressPointCloudOptions::Draco(self.draco.into()),
             )),
         }
+    }
+}
+
+#[cfg(all(test, feature = "remote-access"))]
+mod point_cloud_compression_tests {
+    use super::{
+        FoxgloveDracoEncodeOptions, FoxgloveDracoMethod, FoxglovePointCloudCompression,
+        FoxglovePointCloudCompressionMode,
+    };
+    use foxglove::draco::{CompressPointCloudOptions, DracoEncodeOptions, DracoMethod};
+
+    #[test]
+    fn test_zero_initialized_struct_keeps_sdk_default() {
+        // The documented ABI contract: a zero-initialized struct (mode 0) means "leave
+        // the SDK default in place", i.e. the builder method is not called at all.
+        let compression: FoxglovePointCloudCompression = unsafe { std::mem::zeroed() };
+        assert!(matches!(
+            compression.mode,
+            FoxglovePointCloudCompressionMode::Default
+        ));
+        assert_eq!(compression.to_builder_options(), None);
+    }
+
+    #[test]
+    fn test_disabled_maps_to_explicit_opt_out() {
+        let compression = FoxglovePointCloudCompression {
+            mode: FoxglovePointCloudCompressionMode::Disabled,
+            draco: FoxgloveDracoEncodeOptions {
+                method: FoxgloveDracoMethod::KdTree,
+                quantization_bits: 12,
+            },
+        };
+        assert_eq!(compression.to_builder_options(), Some(None));
+    }
+
+    #[test]
+    fn test_draco_maps_method_and_quantization_bits() {
+        let compression = FoxglovePointCloudCompression {
+            mode: FoxglovePointCloudCompressionMode::Draco,
+            draco: FoxgloveDracoEncodeOptions {
+                method: FoxgloveDracoMethod::Sequential,
+                quantization_bits: 14,
+            },
+        };
+        assert_eq!(
+            compression.to_builder_options(),
+            Some(Some(CompressPointCloudOptions::Draco(DracoEncodeOptions {
+                method: DracoMethod::Sequential,
+                quantization_bits: 14,
+            })))
+        );
     }
 }
 

@@ -2836,8 +2836,10 @@ typedef struct foxglove_draco_encode_options {
    */
   foxglove_draco_method method;
   /**
-   * Quantization bits for the position attribute. `0` encodes positions as lossless
-   * float32 (much larger output, and falls back to sequential encoding).
+   * Quantization bits for the position attribute, at most 31. `0` encodes positions as
+   * lossless float32 (much larger output, and falls back to sequential encoding).
+   * Values above 31 cause `foxglove_gateway_start` to fail with
+   * `FOXGLOVE_ERROR_CONFIGURATION_ERROR`.
    */
   uint8_t quantization_bits;
 } foxglove_draco_encode_options;
