@@ -261,13 +261,18 @@ jobs:
     env:
       CC: clang
       CXX: clang++
+      # Pinned: the 2026-07-23 nightly ICEs while compiling tokio at opt-level 3
+      # (https://github.com/rust-lang/rust/issues/159815). Unpin back to `nightly`
+      # once that issue is fixed. The Makefile passes this name through to corrosion,
+      # which resolves it against the installed rustup toolchains.
+      SANITIZE_RUST_TOOLCHAIN: nightly-2026-07-22
     steps:
       - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref }}
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          toolchain: nightly
+          toolchain: ${{ env.SANITIZE_RUST_TOOLCHAIN }}
           components: rust-src
       - run: |
           bash "$GITHUB_WORKSPACE/.github/scripts/apt-retry.sh" --no-install-recommends \
