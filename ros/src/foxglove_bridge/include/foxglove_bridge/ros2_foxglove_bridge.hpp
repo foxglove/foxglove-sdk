@@ -136,6 +136,7 @@ private:
   std::vector<std::regex> _bestEffortQosTopicWhiteListPatterns;
 #ifdef FOXGLOVE_REMOTE_ACCESS
   std::vector<std::regex> _videoTranscodeTopicDenyPatterns;
+  std::vector<std::regex> _pointCloudCompressionTopicDenyPatterns;
 #endif
   std::shared_ptr<ParameterInterface> _paramInterface;
   rclcpp::CallbackGroup::SharedPtr _subscriptionCallbackGroup;
@@ -279,6 +280,7 @@ private:
   void gatewayConnectionStatusChanged(foxglove::RemoteAccessConnectionStatus status);
   foxglove::QosProfile classifyRemoteAccessQos(const foxglove::ChannelDescriptor& channel);
   bool shouldSuppressRemoteAccessVideoTranscode(const foxglove::ChannelDescriptor& channel);
+  bool shouldSuppressRemoteAccessPointCloudCompression(const foxglove::ChannelDescriptor& channel);
 #endif
 };
 

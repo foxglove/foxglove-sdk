@@ -15,7 +15,7 @@ crate-type = ["cdylib"]
 # set `--no-default-features` and select it explicitly.
 [features]
 default = ["aws-lc-rs"]
-remote-access = ["foxglove/remote-access"]
+remote-access = ["foxglove/draco-ros2", "foxglove/remote-access"]
 aws-lc-rs = ["foxglove/aws-lc-rs"]
 ring = ["foxglove/ring"]
 # Opts into a build-time check that NVENC hardware acceleration for video

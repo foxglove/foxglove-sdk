@@ -8,7 +8,7 @@ use tokio::runtime::Handle;
 use tracing::{error, warn};
 
 use crate::ChannelId;
-use crate::draco::CompressPointCloudOptions;
+use crate::draco::PointCloudCompressionConfig;
 use crate::draco::transcode::transcode_point_cloud_message;
 use crate::protocol::v2::server::Status;
 use crate::throttler::Throttler;
@@ -42,7 +42,7 @@ impl PointCloudPublisher {
         runtime: &Handle,
         session: Weak<RemoteAccessSession>,
         channel_id: ChannelId,
-        options: CompressPointCloudOptions,
+        config: PointCloudCompressionConfig,
     ) -> Self {
         let (tx, rx) = flume::bounded::<(Bytes, u64)>(Self::CHANNEL_CAPACITY);
         let consumer_rx = rx.clone();
@@ -54,7 +54,7 @@ impl PointCloudPublisher {
             let mut lossless_throttler = Throttler::new(TRANSCODE_WARN_INTERVAL);
             while let Ok((data, log_time)) = consumer_rx.recv_async().await {
                 let result = tokio::task::spawn_blocking(move || {
-                    transcode_point_cloud_message(&data, &options)
+                    transcode_point_cloud_message(&data, config.input_schema, &config.options)
                 })
                 .await;
                 match result {

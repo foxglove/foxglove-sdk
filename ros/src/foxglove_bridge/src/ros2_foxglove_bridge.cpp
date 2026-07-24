@@ -397,6 +397,10 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
       this, this->get_parameter(PARAM_VIDEO_TRANSCODE_TOPIC_DENYLIST).as_string_array());
     gatewayOptions.suppress_video_transcode =
       std::bind(&FoxgloveBridge::shouldSuppressRemoteAccessVideoTranscode, this, _1);
+    _pointCloudCompressionTopicDenyPatterns = parseRegexStrings(
+      this, this->get_parameter(PARAM_POINT_CLOUD_COMPRESSION_TOPIC_DENYLIST).as_string_array());
+    gatewayOptions.suppress_point_cloud_compression =
+      std::bind(&FoxgloveBridge::shouldSuppressRemoteAccessPointCloudCompression, this, _1);
 
     if (hasCapability(_capabilities, foxglove::WebSocketServerCapabilities::ClientPublish)) {
       gatewayOptions.callbacks.onClientAdvertise =
@@ -1640,6 +1644,17 @@ bool FoxgloveBridge::shouldSuppressRemoteAccessVideoTranscode(
     return false;
   }
   RCLCPP_INFO(this->get_logger(), "Delivering topic \"%s\" as data (no video transcoding)",
+              topic.c_str());
+  return true;
+}
+
+bool FoxgloveBridge::shouldSuppressRemoteAccessPointCloudCompression(
+  const foxglove::ChannelDescriptor& channel) {
+  const std::string topic(channel.topic());
+  if (!matchesRegex(topic, _pointCloudCompressionTopicDenyPatterns)) {
+    return false;
+  }
+  RCLCPP_INFO(this->get_logger(), "Delivering topic \"%s\" unmodified (no point cloud compression)",
               topic.c_str());
   return true;
 }
