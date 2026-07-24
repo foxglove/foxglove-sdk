@@ -326,6 +326,7 @@ struct WebSocketServerOptions {
   ///
   /// By default, the server buffers 1024 messages per client.
   std::optional<size_t> message_backlog_size = std::nullopt;
+  // New fields are appended last so that adding them preserves the layout of pre-existing fields.
 };
 
 /// @brief A WebSocket server for visualization in Foxglove.
