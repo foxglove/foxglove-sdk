@@ -480,6 +480,11 @@ impl Gateway {
     /// in a background task (off the logging hot path) before delivery. If compression falls
     /// behind the log rate, the oldest queued message is dropped.
     ///
+    /// Compression applies only to channels with Lossy QoS (the default). Channels classified
+    /// as [`Reliability::Reliable`](crate::remote_access::Reliability::Reliable) skip
+    /// compression automatically and deliver the raw point cloud on the control bytestream,
+    /// preserving the Reliable contract (no silent drops).
+    ///
     /// Compression is enabled by default with [`CompressPointCloudOptions::default()`].
     /// Note that the default settings are lossy: kd-tree encoding with positions quantized
     /// to 12 bits.
@@ -490,14 +495,10 @@ impl Gateway {
     /// rejected because lossless Draco encoding provides no size reduction over the raw
     /// point cloud — pass `None` instead to deliver point clouds unmodified.
     ///
-    /// Clouds containing float64 fields cannot be quantized and are delivered losslessly
-    /// (no size reduction); a throttled warning is emitted on the device and to viewers
-    /// when this happens.
-    ///
-    /// Channels classified as [`Reliability::Reliable`](crate::remote_access::Reliability::Reliable)
-    /// skip compression automatically and deliver the raw point cloud on the control
-    /// bytestream, preserving the Reliable contract (no silent drops). Use Lossy QoS (the
-    /// default) when you want compression.
+    /// Draco cannot quantize float64 fields, so non-empty clouds containing one (other
+    /// than the `x`/`y`/`z` position fields) fail to compress and are dropped, with a
+    /// throttled warning on the device and to viewers. Use float32 or integer fields,
+    /// or opt those channels out via [`Self::suppress_point_cloud_compression`].
     ///
     /// Pass `None` to disable compression: point clouds are delivered unmodified.
     ///
@@ -770,8 +771,7 @@ impl Gateway {
             }
             // Lossless Draco encoding provides no size reduction over the raw point
             // cloud, so on the transparent path it is all overhead: reject it rather
-            // than transcode for nothing. (The direct compress_point_cloud API still
-            // accepts 0 for lossless encoding.)
+            // than transcode for nothing.
             if options.draco_options().quantization_bits == 0 {
                 return Err(FoxgloveError::ConfigurationError(
                     "compress_point_clouds: quantization_bits is 0 (lossless), which \

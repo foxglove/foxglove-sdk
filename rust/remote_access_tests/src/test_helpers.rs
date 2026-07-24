@@ -872,9 +872,6 @@ pub struct TestGatewayOptions {
     pub qos_classifier: Option<QosClassifierFn>,
     pub suppress_video_transcode: Option<SuppressVideoTranscodeFn>,
     pub max_data_track_message_size: Option<usize>,
-    /// When set, overrides the gateway's point-cloud compression config: `Some(None)`
-    /// disables compression, `Some(Some(opts))` customizes it. `None` leaves the gateway
-    /// default (compression enabled).
     pub point_cloud_compression: Option<Option<foxglove::draco::CompressPointCloudOptions>>,
 }
 

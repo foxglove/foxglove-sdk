@@ -11,10 +11,6 @@ license.workspace = true
 default = ["aws-lc-rs", "derive", "lz4", "websocket", "zstd"]
 chrono = ["dep:chrono"]
 derive = ["dep:foxglove_derive"]
-# Draco point-cloud compression: enables `foxglove::draco` (the
-# `compress_point_cloud` helper) and transparent transcoding of
-# `foxglove.PointCloud` channels in the remote-access sink
-# (enabled by default on that sink; opt out via its builder).
 draco = ["dep:draco-core"]
 sysinfo = ["dep:sysinfo", "dep:tokio", "tokio/rt-multi-thread", "tokio/time"]
 _remote-common = [

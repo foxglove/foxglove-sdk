@@ -101,11 +101,6 @@ const DROP_STATUS_QUIET_PERIOD: Duration =
 /// How often the drop-status sweeper checks for expired drop statuses.
 const DROP_STATUS_SWEEP_INTERVAL: Duration = Duration::from_secs(15);
 
-/// Interval between throttled errors for transcoded point clouds dropped because their
-/// channel is Reliable (never expected; see [`RemoteAccessSession::deliver_transcoded_point_cloud`]).
-#[cfg(feature = "draco")]
-const POINT_CLOUD_QOS_ERROR_INTERVAL: Duration = Duration::from_secs(30);
-
 /// Default per-message size limit for lossy data-track channels, in bytes.
 /// Messages larger than this are dropped before publish so one oversized channel
 /// cannot monopolize the shared data channel and starve the others (see FLE-592).
@@ -339,11 +334,6 @@ pub(super) struct RemoteAccessSession {
     point_cloud_compression: Option<crate::draco::CompressPointCloudOptions>,
     #[cfg(feature = "draco")]
     suppress_point_cloud_compression: Option<Arc<dyn SuppressPointCloudCompression>>,
-    /// Throttles the error logged when a transcoded point cloud is dropped because its
-    /// channel is Reliable, which is never expected (publishers are not created for
-    /// Reliable channels) but would otherwise flood the log on every message.
-    #[cfg(feature = "draco")]
-    point_cloud_qos_error_throttler: parking_lot::Mutex<crate::throttler::Throttler>,
 }
 
 impl Sink for RemoteAccessSession {
@@ -622,10 +612,6 @@ impl RemoteAccessSession {
             point_cloud_compression: params.point_cloud_compression,
             #[cfg(feature = "draco")]
             suppress_point_cloud_compression: params.suppress_point_cloud_compression,
-            #[cfg(feature = "draco")]
-            point_cloud_qos_error_throttler: parking_lot::Mutex::new(
-                crate::throttler::Throttler::new(POINT_CLOUD_QOS_ERROR_INTERVAL),
-            ),
         })
     }
 
@@ -732,13 +718,6 @@ impl RemoteAccessSession {
                 // advertised schema is the raw `foxglove.PointCloud`. Drop the message
                 // (panicking in debug builds).
                 debug_assert!(false, "point-cloud publisher exists for Reliable channel");
-                if self.point_cloud_qos_error_throttler.lock().try_acquire() {
-                    error!(
-                        "dropping transcoded point cloud for Reliable channel \
-                         {channel_id:?}: compression should never be enabled for \
-                         Reliable channels"
-                    );
-                }
                 return;
             }
             if let Some(track) = state.get_subscribed_data_track(&channel_id)
