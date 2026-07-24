@@ -8,7 +8,7 @@ foxglove
 
 .. automodule:: foxglove
    :members:
-   :exclude-members: Capability, MCAPWriter, ParameterType, ParameterValue, StatusLevel, init_notebook_buffer
+   :exclude-members: Capability, DracoMethod, MCAPWriter, ParameterType, ParameterValue, StatusLevel, init_notebook_buffer
 
 
 Message Types
@@ -108,6 +108,17 @@ Enums
    .. py:data:: Info
    .. py:data:: Warning
    .. py:data:: Error
+
+.. py:enum:: DracoMethod
+
+   Draco encoding method for point-cloud compression. Used with
+   :py:class:`DracoEncodeOptions`. kd-tree is currently the only offered method; a
+   ``Sequential`` value will be added once an upstream encoder conformance bug is fixed.
+
+   .. py:data:: KdTree
+
+      kd-tree encoding: reorders points, and float32 extra fields are quantized with the
+      same number of bits as positions. This is the default.
 
 foxglove.mcap
 ------------------

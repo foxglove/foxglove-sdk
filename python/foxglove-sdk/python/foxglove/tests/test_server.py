@@ -6,6 +6,8 @@ import pytest
 from foxglove import (
     Channel,
     Context,
+    DracoEncodeOptions,
+    DracoMethod,
     ServerListener,
     Service,
     ServiceSchema,
@@ -127,6 +129,23 @@ def test_context_can_be_attached_to_server() -> None:
 
     server1.stop()
     server2.stop()
+
+
+def test_draco_encode_options_defaults() -> None:
+    options = DracoEncodeOptions()
+    assert options.method == DracoMethod.KdTree
+    assert options.quantization_bits == 12
+
+    options = DracoEncodeOptions(method=DracoMethod.KdTree, quantization_bits=10)
+    assert options.method == DracoMethod.KdTree
+    assert options.quantization_bits == 10
+
+
+@typing.no_type_check
+def test_draco_encode_options_rejects_invalid_quantization() -> None:
+    with pytest.raises(OverflowError):
+        # quantization_bits must fit in a u8
+        DracoEncodeOptions(quantization_bits=256)
 
 
 @typing.no_type_check
