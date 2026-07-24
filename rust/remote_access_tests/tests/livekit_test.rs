@@ -3058,13 +3058,14 @@ async fn livekit_reliable_point_cloud_skips_compression() -> Result<()> {
     Ok(())
 }
 
-/// Test that a float64 field in a compressed point cloud surfaces a throttled
-/// lossless-downgrade warning to viewers, while the message is still delivered.
+/// Test that a float64 field in a compressed point cloud fails transcoding: the message
+/// is dropped and a throttled warning naming the field is surfaced to viewers, while
+/// subsequent compressible clouds on the channel still flow.
 #[traced_test]
 #[ignore]
 #[tokio::test]
 #[serial(livekit)]
-async fn livekit_point_cloud_float64_downgrade_warns() -> Result<()> {
+async fn livekit_point_cloud_float64_rejected_warns() -> Result<()> {
     use foxglove::messages::{PackedElementField, PointCloud, packed_element_field::NumericType};
 
     let ctx = foxglove::Context::new();
@@ -3075,8 +3076,8 @@ async fn livekit_point_cloud_float64_downgrade_warns() -> Result<()> {
         .build_raw()
         .context("create point cloud channel")?;
 
-    // Compression is on by default with quantization; a float64 field forces a
-    // per-message lossless downgrade, which must be surfaced.
+    // Compression is on by default with quantization; Draco cannot quantize a float64
+    // field, so the message is rejected rather than delivered.
     let gw = TestGateway::start(&ctx).await?;
     let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
 
@@ -3102,7 +3103,7 @@ async fn livekit_point_cloud_float64_downgrade_warns() -> Result<()> {
     }
     let cloud = PointCloud {
         timestamp: None,
-        frame_id: "lidar".to_string(),
+        frame_id: "f64-cloud".to_string(),
         pose: None,
         point_stride: 20,
         fields: vec![
@@ -3117,21 +3118,12 @@ async fn livekit_point_cloud_float64_downgrade_warns() -> Result<()> {
     Encode::encode(&cloud, &mut encoded).context("encode PointCloud")?;
     cloud_channel.log(&encoded);
 
-    // The compressed message is still delivered on the data track.
-    let msg = viewer
-        .expect_new_data_track_and_message_data(channel_id)
-        .await?;
-    let compressed =
-        <foxglove::messages::CompressedPointCloud as foxglove::Decode>::decode(msg.data.as_ref())
-            .context("decode CompressedPointCloud")?;
-    assert_eq!(compressed.format, "draco");
-
     // A warning status arrives on the control stream naming the offending field.
     let deadline = tokio::time::Instant::now() + EVENT_TIMEOUT;
     let status = loop {
         let msg = tokio::time::timeout_at(deadline, viewer.frame_reader.next_server_message())
             .await
-            .context("timeout waiting for downgrade warning status")?
+            .context("timeout waiting for rejection warning status")?
             .context("failed to read server message")?;
         if let ServerMessage::Status(s) = msg {
             break s;
@@ -3146,7 +3138,22 @@ async fn livekit_point_cloud_float64_downgrade_warns() -> Result<()> {
         "unexpected status message: {}",
         status.message
     );
-    info!("float64 lossless-downgrade warning validated");
+
+    // The float64 cloud was dropped, not delivered: after logging a compressible cloud
+    // (frame_id "lidar"), the first frame on the data track is that cloud.
+    cloud_channel.log(&encoded_point_cloud());
+    let msg = viewer
+        .expect_new_data_track_and_message_data(channel_id)
+        .await?;
+    let compressed =
+        <foxglove::messages::CompressedPointCloud as foxglove::Decode>::decode(msg.data.as_ref())
+            .context("decode CompressedPointCloud")?;
+    assert_eq!(compressed.format, "draco");
+    assert_eq!(
+        compressed.frame_id, "lidar",
+        "the rejected float64 cloud must not be delivered"
+    );
+    info!("float64 rejection warning validated");
 
     viewer.close().await?;
     gw.stop().await?;
