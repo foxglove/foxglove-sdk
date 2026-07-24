@@ -34,15 +34,15 @@ pub(crate) enum Ros2PointCloudError {
         /// The unsupported element count.
         count: u32,
     },
-    /// The data length is inconsistent with the declared row layout.
-    #[error("data length {len} is smaller than height {height} x row_step {row_step}")]
+    /// The data length is inconsistent with the declared dimensions.
+    #[error(
+        "data length {len} is smaller than the {expected} bytes implied by the declared dimensions"
+    )]
     TruncatedData {
         /// The actual data length.
         len: usize,
-        /// The declared number of rows.
-        height: u32,
-        /// The declared row stride in bytes.
-        row_step: u32,
+        /// The data length implied by the declared dimensions.
+        expected: usize,
     },
     /// The declared row stride is smaller than one row of points.
     #[error("row_step {row_step} is smaller than width {width} x point_step {point_step}")]
@@ -205,8 +205,7 @@ impl TryFrom<Ros2PointCloud2<'_>> for PointCloud {
             if cloud.data.len() < needed {
                 return Err(Ros2PointCloudError::TruncatedData {
                     len: cloud.data.len(),
-                    height: cloud.height,
-                    row_step: cloud.row_step,
+                    expected: needed,
                 });
             }
             // Every row read below ends at most at (height - 1) * row_step +
@@ -219,7 +218,24 @@ impl TryFrom<Ros2PointCloud2<'_>> for PointCloud {
             }
             packed
         } else {
-            cloud.data.into_owned()
+            // `row_step` is deliberately not consulted here: unorganized (height <= 1)
+            // publishers commonly leave it 0 or otherwise meaningless, so the declared
+            // width x height is the source of truth for the point count instead. Short
+            // data is an error, and any trailing bytes (row padding on a single-row
+            // cloud, or excess payload) are trimmed so they cannot be misread as
+            // phantom points downstream, where the count is data length / stride.
+            let expected = packed_row_len
+                .checked_mul(cloud.height as usize)
+                .ok_or_else(overflow)?;
+            if cloud.data.len() < expected {
+                return Err(Ros2PointCloudError::TruncatedData {
+                    len: cloud.data.len(),
+                    expected,
+                });
+            }
+            let mut data = cloud.data.into_owned();
+            data.truncate(expected);
+            data
         };
 
         Ok(PointCloud {
@@ -413,6 +429,62 @@ mod tests {
         let mut expected = row.clone();
         expected.extend_from_slice(&row);
         assert_eq!(converted.data, expected);
+    }
+
+    #[test]
+    fn test_strips_padding_from_single_row_cloud() {
+        // A height == 1 cloud whose single row is padded to row_step. The padding must
+        // not survive conversion: foxglove.PointCloud has no width, so trailing bytes
+        // would be misread as phantom points (data length / stride).
+        let points = [[1.0f32, 2.0, 3.0], [4.0, 5.0, 6.0]];
+        let mut data = cloud_data(&points);
+        data.extend_from_slice(&[0u8; 8]);
+
+        let mut cloud = make_cloud(&points);
+        cloud.row_step = 12 * 2 + 8;
+        cloud.data = data.into();
+
+        let converted = PointCloud::try_from(cloud).unwrap();
+        assert_eq!(converted.data, cloud_data(&points));
+    }
+
+    #[test]
+    fn test_accepts_zero_row_step_on_single_row_cloud() {
+        // Unorganized publishers commonly leave row_step 0; the declared width is the
+        // source of truth, so conversion must not consult row_step for height == 1.
+        let points = [[1.0f32, 2.0, 3.0], [4.0, 5.0, 6.0]];
+        let mut cloud = make_cloud(&points);
+        cloud.row_step = 0;
+
+        let converted = PointCloud::try_from(cloud).unwrap();
+        assert_eq!(converted.data, cloud_data(&points));
+    }
+
+    #[test]
+    fn test_trims_excess_data_to_declared_dimensions() {
+        // Data carrying more whole points than width x height declares is trimmed to
+        // the declared dimensions rather than delivering phantom points.
+        let points = [[1.0f32, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]];
+        let mut cloud = make_cloud(&points[..2]);
+        cloud.data = cloud_data(&points).into();
+
+        let converted = PointCloud::try_from(cloud).unwrap();
+        assert_eq!(converted.data, cloud_data(&points[..2]));
+    }
+
+    #[test]
+    fn test_rejects_data_shorter_than_declared_dimensions() {
+        let points = [[1.0f32, 2.0, 3.0], [4.0, 5.0, 6.0]];
+        let mut cloud = make_cloud(&points);
+        cloud.data = cloud_data(&points[..1]).into();
+
+        assert!(matches!(
+            PointCloud::try_from(cloud),
+            Err(Ros2PointCloudError::TruncatedData {
+                len: 12,
+                expected: 24,
+            })
+        ));
     }
 
     #[test]
