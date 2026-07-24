@@ -22,6 +22,10 @@ use tracing::{debug, error, info, trace, warn};
 use crate::protocol::v2::DecodeError;
 use crate::protocol::v2::parameter::Parameter;
 use crate::protocol::v2::server::ParameterValues;
+#[cfg(feature = "draco")]
+use crate::remote_access::suppress_point_cloud_compression::{
+    SuppressPointCloudCompression, resolve_point_cloud_compression,
+};
 use crate::remote_common::connection_graph::ConnectionGraph;
 use crate::remote_common::{
     AnyClient,
@@ -56,6 +60,10 @@ use crate::{
 
 mod data_track;
 pub(super) use data_track::{DataTrack, OversizedDropReport};
+#[cfg(feature = "draco")]
+mod point_cloud_track;
+#[cfg(feature = "draco")]
+pub(super) use point_cloud_track::PointCloudPublisher;
 mod video_track;
 pub(super) use video_track::{
     VideoInputSchema, VideoMetadata, VideoPublisher, resolve_video_input_schema,
@@ -92,6 +100,11 @@ const DROP_STATUS_QUIET_PERIOD: Duration =
 
 /// How often the drop-status sweeper checks for expired drop statuses.
 const DROP_STATUS_SWEEP_INTERVAL: Duration = Duration::from_secs(15);
+
+/// Interval between throttled errors for transcoded point clouds dropped because their
+/// channel is Reliable (never expected; see [`RemoteAccessSession::deliver_transcoded_point_cloud`]).
+#[cfg(feature = "draco")]
+const POINT_CLOUD_QOS_ERROR_INTERVAL: Duration = Duration::from_secs(30);
 
 /// Default per-message size limit for lossy data-track channels, in bytes.
 /// Messages larger than this are dropped before publish so one oversized channel
@@ -262,6 +275,10 @@ fn build_advertise_services_msg(services: &[Arc<Service>]) -> Option<AdvertiseSe
 /// The Sink impl is at the RemoteAccessSession level (not per-participant)
 /// so that it can deliver messages via multi-cast to multiple participants.
 pub(super) struct RemoteAccessSession {
+    /// A weak reference to the Arc holding the session, handed to background tasks (e.g.
+    /// point-cloud publishers) that deliver messages back through the session.
+    #[cfg(feature = "draco")]
+    weak_self: Weak<Self>,
     sink_id: SinkId,
     room: Room,
     context: Weak<Context>,
@@ -316,6 +333,17 @@ pub(super) struct RemoteAccessSession {
     /// [`VideoEncoderBackend::Auto`](super::gateway::VideoEncoderBackend::Auto) leaves the
     /// choice to libwebrtc.
     video_encoder: super::gateway::VideoEncoderBackend,
+    /// If set, `foxglove.PointCloud` channels are transcoded to
+    /// `foxglove.CompressedPointCloud` before delivery to participants.
+    #[cfg(feature = "draco")]
+    point_cloud_compression: Option<crate::draco::CompressPointCloudOptions>,
+    #[cfg(feature = "draco")]
+    suppress_point_cloud_compression: Option<Arc<dyn SuppressPointCloudCompression>>,
+    /// Throttles the error logged when a transcoded point cloud is dropped because its
+    /// channel is Reliable, which is never expected (publishers are not created for
+    /// Reliable channels) but would otherwise flood the log on every message.
+    #[cfg(feature = "draco")]
+    point_cloud_qos_error_throttler: parking_lot::Mutex<crate::throttler::Throttler>,
 }
 
 impl Sink for RemoteAccessSession {
@@ -346,6 +374,16 @@ impl Sink for RemoteAccessSession {
             // publisher handle is not cloneable out of the map.
             if let Some(publisher) = state.get_video_publisher(&channel_id) {
                 publisher.send(Bytes::copy_from_slice(msg), metadata.log_time);
+            }
+
+            // Point-cloud transcoding fully replaces the raw cloud: the compressed
+            // payload is delivered asynchronously by the publisher's background task,
+            // and the raw message is never sent. The publisher exists only while the
+            // channel has data subscribers, so this never encodes for an empty audience.
+            #[cfg(feature = "draco")]
+            if let Some(publisher) = state.get_point_cloud_publisher(&channel_id) {
+                publisher.send(Bytes::copy_from_slice(msg), metadata.log_time);
+                return Ok(());
             }
 
             if !state.has_data_subscribers(&channel_id) {
@@ -412,16 +450,18 @@ impl Sink for RemoteAccessSession {
             for &ch in &filtered {
                 if advertised_ids.contains(&u64::from(ch.id())) {
                     state.insert_channel(ch);
-                    let video_schema =
-                        resolve_video_input_schema(ch, self.suppress_video_transcode.as_deref());
-                    if let Some(input_schema) = video_schema {
-                        state.insert_video_schema(ch.id(), input_schema);
-                    }
+                    // Classify QoS before compression/video decisions so Reliable can
+                    // auto-suppress compression, and video can force Lossy.
                     let mut qos = self
                         .qos_classifier
                         .as_ref()
                         .map(|c| c.classify(ch.descriptor()))
                         .unwrap_or_default();
+                    let video_schema =
+                        resolve_video_input_schema(ch, self.suppress_video_transcode.as_deref());
+                    if let Some(input_schema) = video_schema {
+                        state.insert_video_schema(ch.id(), input_schema);
+                    }
                     if video_schema.is_some() && qos.reliability == Reliability::Reliable {
                         warn!(
                             "Forcing QoS to Lossy for video channel {:?} (topic={}): \
@@ -431,6 +471,19 @@ impl Sink for RemoteAccessSession {
                         );
                         qos.reliability = Reliability::Lossy;
                     }
+                    #[cfg(feature = "draco")]
+                    if let Some(options) = resolve_point_cloud_compression(
+                        ch,
+                        self.point_cloud_compression,
+                        self.suppress_point_cloud_compression.as_deref(),
+                        qos.reliability,
+                    ) {
+                        // Only record the configuration here: the transcoding publisher
+                        // is created once the channel gains its first data subscriber,
+                        // so encoding never runs for output nobody receives. Reliable
+                        // channels never reach this path (see resolve).
+                        state.insert_point_cloud_compression(ch.id(), options);
+                    }
                     state.insert_qos_profile(ch.id(), qos);
                     if qos.reliability != Reliability::Reliable {
                         ids.push(ch.id());
@@ -438,6 +491,8 @@ impl Sink for RemoteAccessSession {
                 }
             }
             state.add_metadata_to_advertisement(&mut advertise_msg);
+            #[cfg(feature = "draco")]
+            state.rewrite_point_cloud_advertisements(&mut advertise_msg);
             ids
         };
 
@@ -520,13 +575,19 @@ pub(super) struct SessionParams {
     pub(super) device_wait_for_viewer: Option<Duration>,
     pub(super) video_codec_override: Option<VideoCodec>,
     pub(super) video_encoder: super::gateway::VideoEncoderBackend,
+    #[cfg(feature = "draco")]
+    pub(super) point_cloud_compression: Option<crate::draco::CompressPointCloudOptions>,
+    #[cfg(feature = "draco")]
+    pub(super) suppress_point_cloud_compression: Option<Arc<dyn SuppressPointCloudCompression>>,
 }
 
 impl RemoteAccessSession {
     pub(super) fn new(params: SessionParams) -> Arc<Self> {
         let (video_metadata_tx, video_metadata_rx) = tokio::sync::watch::channel(());
         let participant_registry = ParticipantRegistry::new(params.message_backlog_size);
-        Arc::new(Self {
+        Arc::new_cyclic(|_weak_self| Self {
+            #[cfg(feature = "draco")]
+            weak_self: _weak_self.clone(),
             sink_id: SinkId::next(),
             room: params.room,
             context: params.context,
@@ -557,6 +618,14 @@ impl RemoteAccessSession {
             max_data_track_message_size: params.max_data_track_message_size,
             active_drop_statuses: parking_lot::Mutex::new(HashMap::new()),
             video_encoder: params.video_encoder,
+            #[cfg(feature = "draco")]
+            point_cloud_compression: params.point_cloud_compression,
+            #[cfg(feature = "draco")]
+            suppress_point_cloud_compression: params.suppress_point_cloud_compression,
+            #[cfg(feature = "draco")]
+            point_cloud_qos_error_throttler: parking_lot::Mutex::new(
+                crate::throttler::Throttler::new(POINT_CLOUD_QOS_ERROR_INTERVAL),
+            ),
         })
     }
 
@@ -632,6 +701,58 @@ impl RemoteAccessSession {
         let encoded = encode_json_message(&status);
         for participant in self.participant_registry.resolve_sids(subscriber_sids) {
             participant.send_control(encoded.clone());
+        }
+    }
+
+    /// Delivers a transcoded `foxglove.CompressedPointCloud` message to the channel's
+    /// current subscribers over the lossy data track.
+    ///
+    /// Called from the channel's background [`PointCloudPublisher`] task. Compression is
+    /// never enabled for Reliable channels (they deliver the raw cloud on the control
+    /// stream instead), so delivery always uses the data track. Mirrors the delivery
+    /// logic of [`Sink::log`], re-resolving subscribers at delivery time.
+    #[cfg(feature = "draco")]
+    pub(super) fn deliver_transcoded_point_cloud(
+        &self,
+        channel_id: ChannelId,
+        msg: &[u8],
+        log_time: u64,
+    ) {
+        let metadata = Metadata { log_time };
+        let mut drop_report: Option<(OversizedDropReport, SmallVec<[ParticipantSid; 4]>)> = None;
+
+        {
+            let state = self.channel_registry.read();
+            if !state.has_data_subscribers(&channel_id) {
+                return;
+            }
+            if state.qos_profile(&channel_id).reliability == Reliability::Reliable {
+                // Publishers are never created for Reliable channels, so this is a bug;
+                // delivering anyway would send a compressed payload on a channel whose
+                // advertised schema is the raw `foxglove.PointCloud`. Drop the message
+                // (panicking in debug builds).
+                debug_assert!(false, "point-cloud publisher exists for Reliable channel");
+                if self.point_cloud_qos_error_throttler.lock().try_acquire() {
+                    error!(
+                        "dropping transcoded point cloud for Reliable channel \
+                         {channel_id:?}: compression should never be enabled for \
+                         Reliable channels"
+                    );
+                }
+                return;
+            }
+            if let Some(track) = state.get_subscribed_data_track(&channel_id)
+                && let Err(report) = track.log(channel_id, msg, &metadata)
+            {
+                drop_report = Some((report, state.data_subscriber_sids(&channel_id)));
+            }
+        }
+
+        if let Some((report, subscriber_sids)) = drop_report {
+            let channel = self.channel_registry.read().get_channel(&channel_id);
+            if let Some(channel) = channel {
+                self.emit_drop_status(&channel, report, subscriber_sids);
+            }
         }
     }
 
@@ -954,6 +1075,12 @@ impl RemoteAccessSession {
             state.unsubscribe_video(participant.participant_sid(), &data_channel_ids);
         drop(state);
 
+        // Publishers must exist before `subscribe_channels` opens message flow to this
+        // sink: a message logged in between would find no publisher and be delivered as a
+        // raw `foxglove.PointCloud` on a channel advertised as `CompressedPointCloud`.
+        #[cfg(feature = "draco")]
+        self.start_point_cloud_publishers(&subscribe_result.first_subscribed);
+
         if !subscribe_result.first_subscribed.is_empty()
             && let Some(context) = self.context.upgrade()
         {
@@ -1026,6 +1153,8 @@ impl RemoteAccessSession {
         }
 
         self.stop_video_tracks(&last_video_unsubscribed);
+        #[cfg(feature = "draco")]
+        self.stop_point_cloud_publishers(&unsubscribe_result.last_unsubscribed);
 
         if !unsubscribe_result
             .actually_unsubscribed_descriptors
@@ -1427,6 +1556,8 @@ impl RemoteAccessSession {
         }
 
         self.stop_video_tracks(&removed.last_video_unsubscribed);
+        #[cfg(feature = "draco")]
+        self.stop_point_cloud_publishers(&removed.last_unsubscribed);
 
         if !last_param_unsubscribed.is_empty()
             && let Some(listener) = &self.listener
@@ -1920,6 +2051,8 @@ impl RemoteAccessSession {
             }
             let mut msg = msg.into_owned();
             state.add_metadata_to_advertisement(&mut msg);
+            #[cfg(feature = "draco")]
+            state.rewrite_point_cloud_advertisements(&mut msg);
             Some(msg)
         })??;
         Some(encode_json_message(&msg))
@@ -2497,6 +2630,54 @@ impl RemoteAccessSession {
     fn stop_video_tracks(self: &Arc<Self>, last_unsubscribed: &[ChannelId]) {
         for &channel_id in last_unsubscribed {
             self.teardown_video_track(channel_id);
+        }
+    }
+
+    /// Creates point-cloud transcoding publishers for compression-enabled channels gaining
+    /// their first data subscriber.
+    ///
+    /// Publishers own a background task that Draco-encodes every logged cloud, so they
+    /// exist only while the channel has subscribers; see
+    /// [`Self::stop_point_cloud_publishers`]. Channels without compression enabled are
+    /// skipped.
+    ///
+    /// Caller must hold `subscription_lock`.
+    #[cfg(feature = "draco")]
+    fn start_point_cloud_publishers(self: &Arc<Self>, first_subscribed: &[ChannelId]) {
+        if first_subscribed.is_empty() {
+            return;
+        }
+        let mut state = self.channel_registry.write();
+        for &channel_id in first_subscribed {
+            let Some(options) = state.get_point_cloud_compression(&channel_id) else {
+                continue;
+            };
+            state.insert_point_cloud_publisher(
+                channel_id,
+                Arc::new(PointCloudPublisher::new(
+                    &self.runtime,
+                    self.weak_self.clone(),
+                    channel_id,
+                    options,
+                )),
+            );
+        }
+    }
+
+    /// Drops the point-cloud transcoding publishers for channels losing their last data
+    /// subscriber, terminating their background transcoding tasks. The compression
+    /// configuration (and the advertised `foxglove.CompressedPointCloud` schema) persists
+    /// for the lifetime of the channel.
+    ///
+    /// Caller must hold `subscription_lock`.
+    #[cfg(feature = "draco")]
+    fn stop_point_cloud_publishers(&self, last_unsubscribed: &[ChannelId]) {
+        if last_unsubscribed.is_empty() {
+            return;
+        }
+        let mut state = self.channel_registry.write();
+        for &channel_id in last_unsubscribed {
+            state.remove_point_cloud_publisher(&channel_id);
         }
     }
 
