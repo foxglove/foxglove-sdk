@@ -26,6 +26,8 @@
   <arg name="remote_access"                  default="false" />
   <arg name="device_token"                   default="" />
   <arg name="foxglove_api_url"               default="" />
+  <arg name="max_data_track_message_size"    default="102400" />
+  <arg name="video_transcode_topic_denylist" default="['.*/compressedDepth']" />
 
   <node pkg="foxglove_bridge" exec="foxglove_bridge">
     <param name="port"                            value="$(var port)" />
@@ -55,5 +57,7 @@
     <param name="remote_access"                  value="$(var remote_access)" />
     <param name="device_token"                   value="$(var device_token)" />
     <param name="foxglove_api_url"               value="$(var foxglove_api_url)" />
+    <param name="max_data_track_message_size"    value="$(var max_data_track_message_size)" />
+    <param name="video_transcode_topic_denylist" value="$(var video_transcode_topic_denylist)" />
   </node>
 </launch>

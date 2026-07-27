@@ -29,7 +29,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.10"
 
@@ -46,7 +46,7 @@ jobs:
         uses: ./.github/actions/common-deps
 
       - run: corepack enable
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: yarn
@@ -67,17 +67,15 @@ jobs:
       - uses: astral-sh/setup-uv@v7
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          # Use an older rust toolchain to avoid emscripten build error "Unknown option '--enable-bulk-memory-opt'"
-          # similar to https://github.com/godotengine/godot/issues/100841
-          toolchain: 1.86.0
           target: wasm32-unknown-emscripten
 
       - name: Set up Emscripten
         run: |
           git clone https://github.com/emscripten-core/emsdk.git
-          # Use an older emscripten version to avoid errors with building Rust packages https://github.com/pyodide/pyodide/pull/5646#issuecomment-3215934664
-          ./emsdk/emsdk install 3.1.58
-          ./emsdk/emsdk activate 3.1.58
+          # Must match the Emscripten version bundled by the `pyodide` package in
+          # playground/package.json, or Pyodide will refuse to load this wheel.
+          ./emsdk/emsdk install 5.0.3
+          ./emsdk/emsdk activate 5.0.3
           echo "$(pwd)/emsdk" >> $GITHUB_PATH
           echo "$(pwd)/emsdk/upstream/emscripten" >> $GITHUB_PATH
 
@@ -87,8 +85,8 @@ jobs:
         run: uv run maturin build --release --out dist --target wasm32-unknown-emscripten -i python3.12
         env:
           CFLAGS: "-fPIC"
-          RUSTC_BOOTSTRAP: "1"
           MATURIN_NO_MISSING_BUILD_BACKEND_WARNING: 1
+          MATURIN_PYEMSCRIPTEN_PLATFORM_VERSION: "2026_0"
 
       - name: Upload wheel
         uses: actions/upload-artifact@v7
@@ -107,7 +105,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - run: corepack enable
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: yarn
@@ -139,7 +137,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.10"
 
@@ -260,7 +258,7 @@ jobs:
             # No native armv7 runner; qemu emulation is too slow for CI.
             test: false
     steps:
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.10"
       - name: Download sdist
@@ -320,7 +318,7 @@ jobs:
             # No native armv7 musl runner; qemu emulation is too slow for CI.
             test: false
     steps:
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.10"
       - name: Download sdist
@@ -376,13 +374,13 @@ jobs:
           - runner: windows-latest
             target: x86
     steps:
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         if: ${{ matrix.platform.target == 'x86_64' }}
         with:
           python-version: "3.10"
 
       # The windows-latest image doesn't have 32-bit pythons.
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         if: ${{ matrix.platform.target == 'x86' }}
         with:
           architecture: x86
@@ -443,7 +441,7 @@ jobs:
             extra-args: --features pyo3/extension-module,remote-access
             remote_access: true
     steps:
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.10"
       - name: Download sdist
@@ -485,7 +483,7 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - uses: astral-sh/setup-uv@v7
       - run: corepack enable
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: yarn
@@ -551,12 +549,12 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: actions-rust-lang/setup-rust-toolchain@v1
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.10"
       - uses: astral-sh/setup-uv@v7
       - run: corepack enable
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: yarn
@@ -569,7 +567,21 @@ jobs:
   # individual matrix jobs.
   python-status:
     name: python-status
-    needs: [changes, lint, lint-and-test-sdk, schemas, sdist, linux, musllinux, windows, macos, playground-wasm, playground, test-sdk-examples]
+    needs:
+      [
+        changes,
+        lint,
+        lint-and-test-sdk,
+        schemas,
+        sdist,
+        linux,
+        musllinux,
+        windows,
+        macos,
+        playground-wasm,
+        playground,
+        test-sdk-examples,
+      ]
     if: always()
     runs-on: ubuntu-latest
     steps:

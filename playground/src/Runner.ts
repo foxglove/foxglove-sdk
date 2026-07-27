@@ -16,7 +16,7 @@ export class Runner extends EventEmitter<EventMap> {
 
   constructor() {
     super();
-    this.#worker = new Worker(new URL("./RunnerWorker", import.meta.url));
+    this.#worker = new Worker(new URL("./RunnerWorker", import.meta.url), { type: "module" });
     this.#remote = Comlink.wrap(this.#worker);
     void this.#remote.onReady(
       Comlink.proxy(() => {

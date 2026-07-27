@@ -9,7 +9,7 @@ if(POLICY CMP0024)
   set(CMAKE_POLICY_DEFAULT_CMP0024 NEW)
 endif()
 
-project(foxglove_bridge LANGUAGES CXX VERSION 3.4.2)
+project(foxglove_bridge LANGUAGES CXX VERSION 3.4.3)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -89,14 +89,14 @@ endif()
 # to point at a `make build-cpp-dist`-produced `cpp/dist` tree — the
 # ros/Makefile's FOXGLOVE_CPP_SDK_DIR variable does this for you (see
 # ros/README.md).
-set(FOXGLOVE_SDK_VERSION "0.25.3")
+set(FOXGLOVE_SDK_VERSION "0.26.0")
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
   set(FOXGLOVE_SDK_PLATFORM "aarch64-unknown-linux-gnu")
-  set(FOXGLOVE_SDK_SHA "c2223dcb29b0534b31cc9ed1a51fec93863c102de5a0a1fa749f70f21170fcd9")
+  set(FOXGLOVE_SDK_SHA "0710f2ec5abc3954acf6203b93a96768dccd19d742af9b78fcd8fbbba5f6225a")
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
   set(FOXGLOVE_SDK_PLATFORM "x86_64-unknown-linux-gnu")
-  set(FOXGLOVE_SDK_SHA "d48b53f142e9d91a497bde63c030b0120f376be569a4315decc034da019e5aa7")
+  set(FOXGLOVE_SDK_SHA "8fb03b061127788ad708918d186d74d4fdb58718b11cff97c9d605513ab57cc6")
 else()
   message(FATAL_ERROR "Unsupported platform/architecture combination: ${CMAKE_SYSTEM_PROCESSOR}-${CMAKE_SYSTEM_NAME}")
 endif()
@@ -248,6 +248,10 @@ if(BUILD_TESTING)
   ament_add_gtest(utils_test tests/utils_test.cpp)
   target_link_libraries(utils_test foxglove_bridge_component)
   enable_strict_compiler_warnings(utils_test)
+
+  ament_add_gtest(message_definition_cache_test tests/message_definition_cache_test.cpp)
+  target_link_libraries(message_definition_cache_test foxglove_bridge_component)
+  enable_strict_compiler_warnings(message_definition_cache_test)
 endif()
 
 install(FILES include/foxglove_bridge/ros2_foxglove_bridge.hpp

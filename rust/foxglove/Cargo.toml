@@ -69,9 +69,21 @@ img2yuv-core = ["dep:image", "dep:yuv"]
 img2yuv-png = ["img2yuv-core", "image/png"]
 img2yuv-jpeg = ["img2yuv-core", "image/jpeg"]
 img2yuv-webp = ["img2yuv-core", "image/webp"]
-img2yuv = ["img2yuv-png", "img2yuv-jpeg", "img2yuv-webp", "img2yuv-ros1", "img2yuv-ros2"]
-img2yuv-ros1 = ["img2yuv-core", "dep:regex"]
-img2yuv-ros2 = ["img2yuv-core", "dep:cdr", "dep:regex"]
+img2yuv = [
+  "img2yuv-png",
+  "img2yuv-jpeg",
+  "img2yuv-webp",
+  "img2yuv-ros1",
+  "img2yuv-ros2",
+  "img2yuv-json",
+  "img2yuv-flatbuffer",
+  "img2yuv-omgidl",
+]
+img2yuv-ros1 = ["img2yuv-core"]
+img2yuv-ros2 = ["img2yuv-core", "dep:cdr"]
+img2yuv-json = ["img2yuv-core", "serde"]
+img2yuv-flatbuffer = ["img2yuv-core", "dep:flatbuffers"]
+img2yuv-omgidl = ["img2yuv-core", "dep:cdr"]
 
 # The full set of supported features, with opinionated choices for mutually-
 # exclusive feature sets.
@@ -93,6 +105,7 @@ full = [
   "websocket-tls",
   "zstd",
 ]
+
 [lints]
 workspace = true
 
@@ -105,7 +118,7 @@ chrono = { workspace = true, optional = true }
 delegate = "0.13.2"
 flume = { version = "0.12", optional = true }
 indexmap = "2"
-foxglove_derive = { version = "0.25.3", path = "../foxglove_derive", optional = true }
+foxglove_derive = { version = "0.26.0", path = "../foxglove_derive", optional = true }
 futures = { version = "0.3.31", optional = true }
 futures-util = { version = "0.3.31", features = ["sink", "std"], optional = true }
 livekit = { workspace = true, optional = true }
@@ -151,8 +164,8 @@ urlencoding = "2.1.3"
 # img2yuv dependencies
 image = { version = "0.25.9", default-features = false, optional = true }
 yuv = { version = "0.8.9", optional = true }
-regex = { version = "1", optional = true }
 cdr = { version = "0.2.4", optional = true }
+flatbuffers = { version = "25", optional = true }
 
 [dev-dependencies]
 assert_matches = "1.5.0"

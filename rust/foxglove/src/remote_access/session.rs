@@ -42,6 +42,7 @@ use crate::{
         },
     },
     remote_access::qos::{QosClassifier, Reliability},
+    remote_access::suppress_video_transcode::SuppressVideoTranscode,
     remote_access::{
         AssetHandler, Capability, Listener, RemoteAccessError,
         channel_registry::ChannelRegistry,
@@ -54,10 +55,10 @@ use crate::{
 };
 
 mod data_track;
-pub(super) use data_track::DataTrack;
+pub(super) use data_track::{DataTrack, OversizedDropReport};
 mod video_track;
 pub(super) use video_track::{
-    VideoInputSchema, VideoMetadata, VideoPublisher, get_video_input_schema,
+    VideoInputSchema, VideoMetadata, VideoPublisher, resolve_video_input_schema,
 };
 
 #[derive(Debug)]
@@ -81,6 +82,16 @@ const MAX_MESSAGE_SIZE: usize = 16 * 1024 * 1024; // 16 MiB
 const ROOM_CLOSE_TIMEOUT: Duration = Duration::from_secs(5);
 
 pub(super) const DEFAULT_MESSAGE_BACKLOG_SIZE: usize = 1024;
+
+/// Idle period before clearing a channel's oversized-drop warning.
+///
+/// This is longer than the report throttle window, so a channel under
+/// continuous drops does not flap between warning and cleared states.
+const DROP_STATUS_QUIET_PERIOD: Duration =
+    Duration::from_secs(2 * data_track::OVERSIZED_WARN_INTERVAL.as_secs());
+
+/// How often the drop-status sweeper checks for expired drop statuses.
+const DROP_STATUS_SWEEP_INTERVAL: Duration = Duration::from_secs(15);
 
 /// Default per-message size limit for lossy data-track channels, in bytes.
 /// Messages larger than this are dropped before publish so one oversized channel
@@ -153,6 +164,76 @@ pub(super) fn encode_binary_message<'a>(message: &impl BinaryMessage<'a>) -> Byt
     Bytes::from(buf)
 }
 
+/// Stable per-channel id for the oversized-drop warning.
+fn drop_status_id(channel_id: ChannelId) -> String {
+    format!("channel-drops-{}", u64::from(channel_id))
+}
+
+/// Formats a byte count with binary units and trimmed decimal zeros.
+fn format_byte_size(bytes: usize) -> String {
+    const KIB: f64 = 1024.0;
+    const MIB: f64 = 1024.0 * 1024.0;
+    let bytes_f = bytes as f64;
+    if bytes_f >= MIB {
+        format!("{} MiB", trim_trailing_zeros(bytes_f / MIB))
+    } else if bytes_f >= KIB {
+        format!("{} KiB", trim_trailing_zeros(bytes_f / KIB))
+    } else {
+        format!("{bytes} bytes")
+    }
+}
+
+/// Renders `value` with up to two decimal places, dropping any trailing zeros
+/// and a bare trailing decimal point (`100.00` → `100`, `1.50` → `1.5`).
+fn trim_trailing_zeros(value: f64) -> String {
+    let formatted = format!("{value:.2}");
+    formatted
+        .trim_end_matches('0')
+        .trim_end_matches('.')
+        .to_string()
+}
+
+/// Builds the viewer-facing warning for a throttled oversized data-track drop.
+fn build_drop_status(channel_id: ChannelId, topic: &str, report: OversizedDropReport) -> Status {
+    let messages = if report.dropped_since_last == 1 {
+        "message"
+    } else {
+        "messages"
+    };
+    Status::warning(format!(
+        "Dropped {} {messages} on topic {topic}: exceeds {} per-message size limit",
+        report.dropped_since_last,
+        format_byte_size(report.size_limit),
+    ))
+    .with_id(drop_status_id(channel_id))
+}
+
+/// Latest oversized-drop warning state for a channel.
+#[derive(Debug, Clone, Copy)]
+struct ActiveDropStatus {
+    last_report: std::time::Instant,
+    report: OversizedDropReport,
+}
+
+/// Drains and returns the channels whose most recent drop report is at least
+/// `quiet_period` old, leaving fresher entries in place.
+fn drain_expired_drop_statuses(
+    statuses: &mut HashMap<ChannelId, ActiveDropStatus>,
+    now: std::time::Instant,
+    quiet_period: Duration,
+) -> Vec<ChannelId> {
+    let mut expired = Vec::new();
+    statuses.retain(|channel_id, status| {
+        if now.duration_since(status.last_report) >= quiet_period {
+            expired.push(*channel_id);
+            false
+        } else {
+            true
+        }
+    });
+    expired
+}
+
 fn build_advertise_services_msg(services: &[Arc<Service>]) -> Option<AdvertiseServices<'_>> {
     if services.is_empty() {
         return None;
@@ -195,6 +276,7 @@ pub(super) struct RemoteAccessSession {
     parameter_subscriptions: RwLock<ParameterSubscriptions>,
     channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     qos_classifier: Option<Arc<dyn QosClassifier>>,
+    suppress_video_transcode: Option<Arc<dyn SuppressVideoTranscode>>,
     listener: Option<Arc<dyn Listener>>,
     capabilities: Vec<Capability>,
     fetch_asset_handler: Option<Arc<dyn AssetHandler>>,
@@ -228,6 +310,8 @@ pub(super) struct RemoteAccessSession {
     video_codec_override: Option<VideoCodec>,
     /// Per-message size limit for lossy data-track channels; larger messages are dropped.
     max_data_track_message_size: usize,
+    /// Active oversized-drop warnings, keyed by channel.
+    active_drop_statuses: parking_lot::Mutex<HashMap<ChannelId, ActiveDropStatus>>,
     /// The preferred encoder backend applied to published video tracks.
     /// [`VideoEncoderBackend::Auto`](super::gateway::VideoEncoderBackend::Auto) leaves the
     /// choice to libwebrtc.
@@ -246,6 +330,9 @@ impl Sink for RemoteAccessSession {
         metadata: &Metadata,
     ) -> std::result::Result<(), FoxgloveError> {
         let channel_id = channel.id();
+
+        // Captured under the read lock and handled after the lock is released.
+        let mut drop_report: Option<(OversizedDropReport, SmallVec<[ParticipantSid; 4]>)> = None;
 
         // Snapshot subscriber SIDs under the channel-registry read lock and
         // release it before resolving against the participant registry. A
@@ -268,8 +355,10 @@ impl Sink for RemoteAccessSession {
             } else {
                 // Lossy channels: send via the eagerly-published data track
                 // inline, while we still hold the state read lock.
-                if let Some(track) = state.get_subscribed_data_track(&channel_id) {
-                    track.log(channel_id, msg, metadata);
+                if let Some(track) = state.get_subscribed_data_track(&channel_id)
+                    && let Err(report) = track.log(channel_id, msg, metadata)
+                {
+                    drop_report = Some((report, state.data_subscriber_sids(&channel_id)));
                 }
                 SmallVec::new()
             }
@@ -284,6 +373,10 @@ impl Sink for RemoteAccessSession {
             for participant in self.participant_registry.resolve_sids(reliable_sids) {
                 participant.send_control(encoded.clone());
             }
+        }
+
+        if let Some((report, subscriber_sids)) = drop_report {
+            self.emit_drop_status(channel, report, subscriber_sids);
         }
 
         Ok(())
@@ -319,7 +412,8 @@ impl Sink for RemoteAccessSession {
             for &ch in &filtered {
                 if advertised_ids.contains(&u64::from(ch.id())) {
                     state.insert_channel(ch);
-                    let video_schema = get_video_input_schema(ch);
+                    let video_schema =
+                        resolve_video_input_schema(ch, self.suppress_video_transcode.as_deref());
                     if let Some(input_schema) = video_schema {
                         state.insert_video_schema(ch.id(), input_schema);
                     }
@@ -380,6 +474,12 @@ impl Sink for RemoteAccessSession {
         let unadvertise = Unadvertise::new([u64::from(channel_id)]);
         self.broadcast_control(encode_json_message(&unadvertise));
 
+        // Clear any oversized-drop warning for the removed channel.
+        self.active_drop_statuses.lock().remove(&channel_id);
+        self.broadcast_control(encode_json_message(&RemoveStatus::new([drop_status_id(
+            channel_id,
+        )])));
+
         // Fire on_unsubscribe callbacks for subscribers of the removed channel.
         if let Some(listener) = &self.listener {
             let descriptor = channel.descriptor();
@@ -403,6 +503,7 @@ pub(super) struct SessionParams {
     pub(super) context: Weak<Context>,
     pub(super) channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     pub(super) qos_classifier: Option<Arc<dyn QosClassifier>>,
+    pub(super) suppress_video_transcode: Option<Arc<dyn SuppressVideoTranscode>>,
     pub(super) listener: Option<Arc<dyn Listener>>,
     pub(super) capabilities: Vec<Capability>,
     pub(super) supported_encodings: IndexSet<String>,
@@ -434,6 +535,7 @@ impl RemoteAccessSession {
             parameter_subscriptions: RwLock::new(ParameterSubscriptions::new()),
             channel_filter: params.channel_filter,
             qos_classifier: params.qos_classifier,
+            suppress_video_transcode: params.suppress_video_transcode,
             listener: params.listener,
             capabilities: params.capabilities,
             fetch_asset_handler: params.fetch_asset_handler,
@@ -453,6 +555,7 @@ impl RemoteAccessSession {
             device_wait_for_viewer: params.device_wait_for_viewer,
             video_codec_override: params.video_codec_override,
             max_data_track_message_size: params.max_data_track_message_size,
+            active_drop_statuses: parking_lot::Mutex::new(HashMap::new()),
             video_encoder: params.video_encoder,
         })
     }
@@ -497,6 +600,41 @@ impl RemoteAccessSession {
         participant.send_control(encode_json_message(&status));
     }
 
+    /// Warn current data subscribers about a throttled oversized data-track drop.
+    fn emit_drop_status(
+        &self,
+        channel: &RawChannel,
+        report: OversizedDropReport,
+        subscriber_sids: SmallVec<[ParticipantSid; 4]>,
+    ) {
+        let channel_id = channel.id();
+
+        // Don't take `subscription_lock` here: listeners can synchronously log
+        // from subscribe/unsubscribe callbacks while that lock is held. The
+        // subscriber snapshot may be stale, but the status will be eventually
+        // cleared by the sweeper.
+        if !self.channel_registry.read().has_channel(&channel_id) {
+            return;
+        }
+        self.active_drop_statuses.lock().insert(
+            channel_id,
+            ActiveDropStatus {
+                last_report: std::time::Instant::now(),
+                report,
+            },
+        );
+
+        if subscriber_sids.is_empty() {
+            return;
+        }
+
+        let status = build_drop_status(channel_id, channel.topic(), report);
+        let encoded = encode_json_message(&status);
+        for participant in self.participant_registry.resolve_sids(subscriber_sids) {
+            participant.send_control(encoded.clone());
+        }
+    }
+
     /// Enqueue a control plane message for all currently connected participants.
     /// If a participant's queue is full, a reset is requested for that participant.
     fn broadcast_control(&self, data: Bytes) {
@@ -520,6 +658,38 @@ impl RemoteAccessSession {
                 }
             }
         }
+    }
+
+    /// Auto-clears viewer-facing oversized-drop statuses once a channel has had
+    /// no drop reports for [`DROP_STATUS_QUIET_PERIOD`].
+    ///
+    /// Runs until the cancellation token fires.
+    pub(super) async fn run_drop_status_sweeper(session: Arc<Self>) {
+        let mut interval = tokio::time::interval(DROP_STATUS_SWEEP_INTERVAL);
+        interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+        loop {
+            tokio::select! {
+                biased;
+                () = session.cancellation_token.cancelled() => break,
+                _ = interval.tick() => {
+                    session.sweep_expired_drop_statuses(std::time::Instant::now());
+                }
+            }
+        }
+    }
+
+    /// Clears drop-status entries idle for at least [`DROP_STATUS_QUIET_PERIOD`].
+    fn sweep_expired_drop_statuses(&self, now: std::time::Instant) {
+        let expired = drain_expired_drop_statuses(
+            &mut self.active_drop_statuses.lock(),
+            now,
+            DROP_STATUS_QUIET_PERIOD,
+        );
+        if expired.is_empty() {
+            return;
+        }
+        let remove = RemoveStatus::new(expired.iter().map(|id| drop_status_id(*id)));
+        self.broadcast_control(encode_json_message(&remove));
     }
 
     /// Cancel the session's `CancellationToken`, signaling all session-scoped
@@ -784,23 +954,44 @@ impl RemoteAccessSession {
             state.unsubscribe_video(participant.participant_sid(), &data_channel_ids);
         drop(state);
 
-        if !subscribe_result.first_subscribed.is_empty() {
-            if let Some(context) = self.context.upgrade() {
-                context.subscribe_channels(self.sink_id, &subscribe_result.first_subscribed);
-            }
+        if !subscribe_result.first_subscribed.is_empty()
+            && let Some(context) = self.context.upgrade()
+        {
+            context.subscribe_channels(self.sink_id, &subscribe_result.first_subscribed);
         }
 
         self.start_video_tracks(&first_video_subscribed);
         self.stop_video_tracks(&last_video_unsubscribed);
 
-        if let Some(listener) = &self.listener {
-            if !subscribe_result.newly_subscribed_descriptors.is_empty() {
-                let client = Client::new(
-                    participant.client_id(),
-                    participant.participant_id().clone(),
-                );
+        if let Some(listener) = &self.listener
+            && !subscribe_result.newly_subscribed_descriptors.is_empty()
+        {
+            let client = Client::new(
+                participant.client_id(),
+                participant.participant_id().clone(),
+            );
+            for descriptor in &subscribe_result.newly_subscribed_descriptors {
+                listener.on_subscribe(&client, descriptor);
+            }
+        }
+
+        // Replay active drop warnings to new data subscribers. This is important to ensure that
+        // users are notified of drops in a timely fashion. Otherwise, they have to wait up to the
+        // throttle period, which is deliberately quite long.
+        //
+        // Hold the map lock while queueing so the sweeper cannot clear first.
+        {
+            let statuses = self.active_drop_statuses.lock();
+            if !statuses.is_empty() {
                 for descriptor in &subscribe_result.newly_subscribed_descriptors {
-                    listener.on_subscribe(&client, descriptor);
+                    if !data_channel_ids.contains(&descriptor.id()) {
+                        continue;
+                    }
+                    if let Some(active) = statuses.get(&descriptor.id()) {
+                        let status =
+                            build_drop_status(descriptor.id(), descriptor.topic(), active.report);
+                        participant.send_control(encode_json_message(&status));
+                    }
                 }
             }
         }
@@ -828,19 +1019,33 @@ impl RemoteAccessSession {
             state.unsubscribe_video(participant.participant_sid(), &channel_ids);
         drop(state);
 
-        if !unsubscribe_result.last_unsubscribed.is_empty() {
-            if let Some(context) = self.context.upgrade() {
-                context.unsubscribe_channels(self.sink_id, &unsubscribe_result.last_unsubscribed);
-            }
+        if !unsubscribe_result.last_unsubscribed.is_empty()
+            && let Some(context) = self.context.upgrade()
+        {
+            context.unsubscribe_channels(self.sink_id, &unsubscribe_result.last_unsubscribed);
         }
 
         self.stop_video_tracks(&last_video_unsubscribed);
 
-        if let Some(listener) = &self.listener {
-            if !unsubscribe_result
+        if !unsubscribe_result
+            .actually_unsubscribed_descriptors
+            .is_empty()
+        {
+            // Clear warnings for channels this participant just stopped watching.
+            let statuses = self.active_drop_statuses.lock();
+            let ids_to_clear: SmallVec<[ChannelId; 4]> = unsubscribe_result
                 .actually_unsubscribed_descriptors
-                .is_empty()
-            {
+                .iter()
+                .map(|descriptor| descriptor.id())
+                .filter(|id| statuses.contains_key(id))
+                .collect();
+            drop(statuses);
+            if !ids_to_clear.is_empty() {
+                let remove = RemoveStatus::new(ids_to_clear.iter().map(|id| drop_status_id(*id)));
+                participant.send_control(encode_json_message(&remove));
+            }
+
+            if let Some(listener) = &self.listener {
                 let client = Client::new(
                     participant.client_id(),
                     participant.participant_id().clone(),
@@ -1215,26 +1420,27 @@ impl RemoteAccessSession {
             .cleanup_for_removed_participant(participant_sid);
 
         // Listener / context / video-track / connection-graph aftercare.
-        if !removed.last_unsubscribed.is_empty() {
-            if let Some(context) = self.context.upgrade() {
-                context.unsubscribe_channels(self.sink_id, &removed.last_unsubscribed);
-            }
+        if !removed.last_unsubscribed.is_empty()
+            && let Some(context) = self.context.upgrade()
+        {
+            context.unsubscribe_channels(self.sink_id, &removed.last_unsubscribed);
         }
 
         self.stop_video_tracks(&removed.last_video_unsubscribed);
 
-        if !last_param_unsubscribed.is_empty() {
-            if let Some(listener) = &self.listener {
-                listener.on_parameters_unsubscribe(last_param_unsubscribed);
-            }
+        if !last_param_unsubscribed.is_empty()
+            && let Some(listener) = &self.listener
+        {
+            listener.on_parameters_unsubscribe(last_param_unsubscribed);
         }
 
         if self.has_capability(Capability::ConnectionGraph) {
             let mut graph = self.connection_graph.lock();
-            if graph.remove_subscriber(client_id) && !graph.has_subscribers() {
-                if let Some(listener) = &self.listener {
-                    listener.on_connection_graph_unsubscribe();
-                }
+            if graph.remove_subscriber(client_id)
+                && !graph.has_subscribers()
+                && let Some(listener) = &self.listener
+            {
+                listener.on_connection_graph_unsubscribe();
             }
         }
 
@@ -1966,10 +2172,10 @@ impl RemoteAccessSession {
             .parameter_subscriptions
             .write()
             .subscribe(participant.participant_sid(), names);
-        if !new_names.is_empty() {
-            if let Some(listener) = &self.listener {
-                listener.on_parameters_subscribe(new_names);
-            }
+        if !new_names.is_empty()
+            && let Some(listener) = &self.listener
+        {
+            listener.on_parameters_subscribe(new_names);
         }
     }
 
@@ -1991,10 +2197,10 @@ impl RemoteAccessSession {
             .parameter_subscriptions
             .write()
             .unsubscribe(participant.participant_sid(), names);
-        if !old_names.is_empty() {
-            if let Some(listener) = &self.listener {
-                listener.on_parameters_unsubscribe(old_names);
-            }
+        if !old_names.is_empty()
+            && let Some(listener) = &self.listener
+        {
+            listener.on_parameters_unsubscribe(old_names);
         }
     }
 
@@ -2084,10 +2290,8 @@ impl RemoteAccessSession {
                 return;
             }
 
-            if first {
-                if let Some(listener) = &self.listener {
-                    listener.on_connection_graph_subscribe();
-                }
+            if first && let Some(listener) = &self.listener {
+                listener.on_connection_graph_subscribe();
             }
 
             encode_json_message(&graph.as_initial_update())
@@ -2115,10 +2319,10 @@ impl RemoteAccessSession {
             return;
         }
 
-        if !graph.has_subscribers() {
-            if let Some(listener) = &self.listener {
-                listener.on_connection_graph_unsubscribe();
-            }
+        if !graph.has_subscribers()
+            && let Some(listener) = &self.listener
+        {
+            listener.on_connection_graph_unsubscribe();
         }
     }
 
@@ -2850,5 +3054,94 @@ mod tests {
         assert_eq!(status.level, StatusLevel::Error);
         assert!(status.message.contains("failed to send a response"));
         assert!(rx.try_recv().is_err());
+    }
+
+    #[test]
+    fn build_drop_status_has_warning_level_stable_id_and_message() {
+        let channel_id = ChannelId::new(7);
+        let report = OversizedDropReport {
+            dropped_since_last: 3,
+            size_limit: 100 * 1024,
+        };
+        let status = build_drop_status(channel_id, "/points", report);
+
+        assert_eq!(status.level, StatusLevel::Warning);
+        assert_eq!(status.id.as_deref(), Some("channel-drops-7"));
+        assert_eq!(
+            status.message,
+            "Dropped 3 messages on topic /points: exceeds 100 KiB per-message size limit"
+        );
+    }
+
+    #[test]
+    fn build_drop_status_uses_singular_for_one_dropped_message() {
+        let report = OversizedDropReport {
+            dropped_since_last: 1,
+            size_limit: 1200,
+        };
+        let status = build_drop_status(ChannelId::new(1), "/points", report);
+        assert_eq!(
+            status.message,
+            "Dropped 1 message on topic /points: exceeds 1.17 KiB per-message size limit"
+        );
+    }
+
+    #[test]
+    fn format_byte_size_renders_human_readable_units() {
+        assert_eq!(format_byte_size(512), "512 bytes");
+        assert_eq!(format_byte_size(1200), "1.17 KiB");
+        assert_eq!(format_byte_size(1536), "1.5 KiB");
+        assert_eq!(format_byte_size(100 * 1024), "100 KiB");
+        assert_eq!(format_byte_size(2 * 1024 * 1024), "2 MiB");
+    }
+
+    fn active_drop_status(last_report: std::time::Instant) -> ActiveDropStatus {
+        ActiveDropStatus {
+            last_report,
+            report: OversizedDropReport {
+                dropped_since_last: 1,
+                size_limit: 1200,
+            },
+        }
+    }
+
+    #[test]
+    fn drain_expired_drop_statuses_removes_only_stale_entries() {
+        let quiet = Duration::from_secs(60);
+        let now = std::time::Instant::now();
+
+        let stale = ChannelId::new(1);
+        let fresh = ChannelId::new(2);
+        let mut statuses = HashMap::from([
+            // Idle exactly the quiet period → expired (boundary is inclusive).
+            (stale, active_drop_status(now - quiet)),
+            // Idle less than the quiet period → retained.
+            (fresh, active_drop_status(now - Duration::from_secs(30))),
+        ]);
+
+        let expired = drain_expired_drop_statuses(&mut statuses, now, quiet);
+
+        assert_eq!(expired, vec![stale]);
+        assert!(
+            !statuses.contains_key(&stale),
+            "stale entry should be drained"
+        );
+        assert!(
+            statuses.contains_key(&fresh),
+            "fresh entry should be left alone"
+        );
+    }
+
+    #[test]
+    fn drain_expired_drop_statuses_noop_when_all_fresh() {
+        let quiet = Duration::from_secs(60);
+        let now = std::time::Instant::now();
+        let fresh = ChannelId::new(9);
+        let mut statuses = HashMap::from([(fresh, active_drop_status(now))]);
+
+        let expired = drain_expired_drop_statuses(&mut statuses, now, quiet);
+
+        assert!(expired.is_empty());
+        assert_eq!(statuses.len(), 1);
     }
 }

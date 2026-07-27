@@ -1,4 +1,17 @@
 //! Remote access implementation.
+//!
+//! # Video transcoding and the data opt-out
+//!
+//! For bandwidth-efficient live streaming, image channels are transcoded to a WebRTC video
+//! track rather than sent on the data plane: the `foxglove.CompressedImage` and `foxglove.RawImage`
+//! schemas (in protobuf, JSON, FlatBuffer, or OMG IDL encoding) and the ROS `sensor_msgs` image
+//! types. A channel with one of these schemas is advertised with a video track.
+//!
+//! To deliver an image channel as data instead, opt it out with
+//! [`Gateway::suppress_video_transcode`] / [`Gateway::suppress_video_transcode_fn`]: the channel is
+//! advertised without a video track and its messages are delivered on the data plane unchanged.
+//! This is needed for image channels whose pixels must not pass through lossy video — compressed
+//! depth maps are the motivating case. See [`SuppressVideoTranscode`] for details.
 
 mod capability;
 mod channel_registry;
@@ -14,6 +27,7 @@ mod rtt_tracker;
 pub mod service;
 mod session;
 mod sse;
+mod suppress_video_transcode;
 mod watch;
 mod watch_loop;
 
@@ -28,6 +42,7 @@ pub use connection::ConnectionStatus;
 pub use gateway::{Gateway, GatewayHandle, VideoEncoderBackend};
 pub use listener::Listener;
 pub use qos::{QosClassifier, QosProfile, QosProfileBuilder, Reliability};
+pub use suppress_video_transcode::SuppressVideoTranscode;
 
 use reqwest::StatusCode;
 use thiserror::Error;

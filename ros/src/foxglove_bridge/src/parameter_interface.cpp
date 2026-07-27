@@ -156,7 +156,7 @@ static foxglove::Parameter fromRosParam(const rclcpp::Parameter& p) {
 
 namespace foxglove_bridge {
 
-using foxglove_bridge::isWhitelisted;
+using foxglove_bridge::matchesRegex;
 
 ParameterList ParameterInterface::cloneParameterList(const ParameterList& other) {
   ParameterList result;
@@ -297,7 +297,7 @@ void ParameterInterface::setParams(const ParameterList& parameters,
 
   rclcpp::ParameterMap paramsByNode;
   for (const auto& param : parameters) {
-    if (!isWhitelisted(std::string(param.name()), _paramWhitelistPatterns)) {
+    if (!matchesRegex(std::string(param.name()), _paramWhitelistPatterns)) {
       continue;
     }
 
@@ -339,7 +339,7 @@ void ParameterInterface::subscribeParams(const std::vector<std::string_view>& pa
 
   std::unordered_set<std::string> nodesToSubscribe;
   for (const auto& paramName : paramNames) {
-    if (!isWhitelisted(std::string(paramName), _paramWhitelistPatterns)) {
+    if (!matchesRegex(std::string(paramName), _paramWhitelistPatterns)) {
       continue;
     }
 
@@ -451,7 +451,7 @@ ParameterList ParameterInterface::getNodeParameters(
   ParameterList result;
   for (const auto& param : params) {
     const auto fullParamName = prependNodeNameToParamName(param.get_name(), nodeName);
-    if (isWhitelisted(fullParamName, _paramWhitelistPatterns)) {
+    if (matchesRegex(fullParamName, _paramWhitelistPatterns)) {
       result.push_back(fromRosParam(rclcpp::Parameter(fullParamName, param.get_parameter_value())));
     }
   }

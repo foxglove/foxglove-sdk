@@ -16,8 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # rolling temporarily disabled while upstream changes land; re-enable when stable
-        ros_distribution: [humble, jazzy, kilted, lyrical]
+        ros_distribution: [humble, jazzy, kilted, lyrical, rolling]
     env:
       DOCKER_REPO: us-central1-docker.pkg.dev/foxglove-images/images/foxglove_bridge
 
@@ -72,6 +71,7 @@ jobs:
           push: true
           build-args: |
             ROS_DISTRIBUTION=${{ matrix.ros_distribution }}
+            USE_ROS_TESTING=${{ matrix.ros_distribution == 'rolling' }}
           tags: ${{ steps.compute-tags.outputs.tag }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

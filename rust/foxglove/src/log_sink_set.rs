@@ -52,10 +52,10 @@ impl LogSinkSet {
         P: Fn(&Arc<dyn Sink>) -> bool,
     {
         for sink in self.0.load().iter() {
-            if predicate(sink) {
-                if let Err(err) = f(sink) {
-                    tracing::warn!("{ERROR_LOGGING_MESSAGE}: {:?}", err);
-                }
+            if predicate(sink)
+                && let Err(err) = f(sink)
+            {
+                tracing::warn!("{ERROR_LOGGING_MESSAGE}: {:?}", err);
             }
         }
     }

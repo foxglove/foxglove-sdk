@@ -280,7 +280,11 @@ impl RawImage<'_> {
 
         // For Bayer, YUV 4:2:2, and NV12 formats, some image dimensions must be even. We could
         // handle odd dimensions by synthesizing subpixels, but it's probably not worth the effort.
-        match (self.encoding, self.width % 2 == 0, self.height % 2 == 0) {
+        match (
+            self.encoding,
+            self.width.is_multiple_of(2),
+            self.height.is_multiple_of(2),
+        ) {
             (RawImageEncoding::Bayer8(_), w, h) if !(w && h) => {
                 return Err(Error::BayerDimensionsMustBeEven {
                     width: self.width,

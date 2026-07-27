@@ -13,6 +13,10 @@ endif
 
 CMAKE_BUILD_TYPE?=RelWithDebInfo
 FOXGLOVE_REMOTE_ACCESS?=ON
+# Sanitizer builds need a nightly Rust toolchain (-Zbuild-std). Corrosion resolves this
+# name against the installed rustup toolchains, so CI can override it with a pinned
+# nightly (e.g. nightly-2026-07-22) when the floating nightly is broken.
+SANITIZE_RUST_TOOLCHAIN?=nightly
 
 .PHONY: lint
 lint:
@@ -37,7 +41,7 @@ build:
 	cmake \
 		-DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) \
 		-DCMAKE_EXPORT_COMPILE_COMMANDS=true \
-		$(if $(SANITIZE),-DSANITIZE=$(SANITIZE) -DRust_TOOLCHAIN=nightly) \
+		$(if $(SANITIZE),-DSANITIZE=$(SANITIZE) -DRust_TOOLCHAIN=$(SANITIZE_RUST_TOOLCHAIN)) \
 		$(if $(STRICT),-DSTRICT=$(STRICT)) \
 		$(if $(CLANG_TIDY),-DCLANG_TIDY=$(CLANG_TIDY)) \
 		$(if $(FOXGLOVE_BUILD_EXAMPLES),-DFOXGLOVE_BUILD_EXAMPLES=$(FOXGLOVE_BUILD_EXAMPLES)) \
@@ -56,7 +60,7 @@ build-integration:
 		-DCMAKE_EXPORT_COMPILE_COMMANDS=true \
 		-DFOXGLOVE_REMOTE_ACCESS=ON \
 		-DFOXGLOVE_BUILD_INTEGRATION_TESTS=ON \
-		$(if $(SANITIZE),-DSANITIZE=$(SANITIZE) -DRust_TOOLCHAIN=nightly) \
+		$(if $(SANITIZE),-DSANITIZE=$(SANITIZE) -DRust_TOOLCHAIN=$(SANITIZE_RUST_TOOLCHAIN)) \
 		$(if $(STRICT),-DSTRICT=$(STRICT)) \
 		$(if $(FOXGLOVE_BUILD_EXAMPLES),-DFOXGLOVE_BUILD_EXAMPLES=$(FOXGLOVE_BUILD_EXAMPLES)) \
 		$(if $(FOXGLOVE_PREBUILT_LIB_DIR),-DFOXGLOVE_PREBUILT_LIB_DIR=$(FOXGLOVE_PREBUILT_LIB_DIR)) \

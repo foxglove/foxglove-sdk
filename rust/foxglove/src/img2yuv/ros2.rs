@@ -40,6 +40,8 @@ impl TryFrom<Ros2Time> for Timestamp {
         if value.sec < 0 {
             return Err(Ros2DecodeError::NegativeTimestamp);
         }
+        // `sec` is bounded by `i32::MAX`, so the nanosecond carry cannot overflow the u32 seconds
+        // field, and `new` cannot panic here.
         Ok(Timestamp::new(value.sec as u32, value.nanosec))
     }
 }
@@ -163,5 +165,15 @@ mod tests {
         let encoded = cdr::serialize::<_, _, CdrLe>(&image, Infinite).unwrap();
         let decoded: Ros2CompressedImage = cdr::deserialize(&encoded).unwrap();
         assert_eq!(image, decoded);
+    }
+
+    #[test]
+    fn test_negative_timestamp_is_rejected() {
+        let err = Timestamp::try_from(Ros2Time {
+            sec: -1,
+            nanosec: 0,
+        })
+        .unwrap_err();
+        assert!(matches!(err, Ros2DecodeError::NegativeTimestamp));
     }
 }

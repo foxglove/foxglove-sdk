@@ -4,6 +4,7 @@
   "packageManager": "yarn@4.12.0",
   "resolutions": {
     "esbuild": "0.28.1",
+    "js-yaml": "^4.3.0",
     "minimatch": "^10.2.3",
     "serialize-javascript": "^7.0.5",
     "sockjs/uuid": "^11.1.1"

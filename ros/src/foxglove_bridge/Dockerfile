@@ -5,6 +5,11 @@ FROM ros:$ROS_DISTRIBUTION-ros-base
 # See: http://askubuntu.com/questions/506158/unable-to-initialize-frontend-dialog-when-using-ssh
 ENV DEBIAN_FRONTEND=noninteractive
 
+ARG USE_ROS_TESTING=false
+RUN if [ "$USE_ROS_TESTING" = "true" ]; then \
+      apt-get update && apt-get install -y ros2-testing-apt-source; \
+    fi
+
 # Keep ROS rolling base packages in sync.
 RUN apt-get update && apt-get -y dist-upgrade
 

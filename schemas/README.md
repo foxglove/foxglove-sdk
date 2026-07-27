@@ -29,6 +29,7 @@ If the IDL does not support optional fields (e.g. ROS) you must specify a value 
 - [CubePrimitive](#cubeprimitive)
 - [CylinderPrimitive](#cylinderprimitive)
 - [Duration](#duration)
+- [Event](#event)
 - [FrameTransform](#frametransform)
 - [FrameTransforms](#frametransforms)
 - [GeoJSON](#geojson)
@@ -1039,6 +1040,57 @@ uint32
 <td>
 
 The number of nanoseconds in the positive direction
+
+</td>
+</tr>
+</table>
+
+## Event
+
+A discrete event that occurred over a time range
+
+<table>
+  <tr>
+    <th>field</th>
+    <th>type</th>
+    <th>description</th>
+  </tr>
+<tr>
+<td><code>start_time</code></td>
+<td>
+
+[Timestamp](#timestamp)
+
+</td>
+<td>
+
+Event start time (inclusive)
+
+</td>
+</tr>
+<tr>
+<td><code>end_time</code></td>
+<td>
+
+[Timestamp](#timestamp)
+
+</td>
+<td>
+
+Event end time (inclusive)
+
+</td>
+</tr>
+<tr>
+<td><code>metadata</code> (optional)</td>
+<td>
+
+[KeyValuePair](#keyvaluepair)[]
+
+</td>
+<td>
+
+Additional key-value metadata. Keys must be unique.
 
 </td>
 </tr>

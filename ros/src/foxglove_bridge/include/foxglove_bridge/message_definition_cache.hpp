@@ -12,6 +12,7 @@ namespace foxglove_bridge {
 // https://github.com/ros2/rosidl/blob/a57baea5/rosidl_parser/rosidl_parser/definition.py
 constexpr char SERVICE_REQUEST_MESSAGE_SUFFIX[] = "_Request";
 constexpr char SERVICE_RESPONSE_MESSAGE_SUFFIX[] = "_Response";
+constexpr char SERVICE_EVENT_MESSAGE_SUFFIX[] = "_Event";
 constexpr char ACTION_GOAL_SERVICE_SUFFIX[] = "_SendGoal";
 constexpr char ACTION_RESULT_SERVICE_SUFFIX[] = "_GetResult";
 constexpr char ACTION_FEEDBACK_MESSAGE_SUFFIX[] = "_FeedbackMessage";

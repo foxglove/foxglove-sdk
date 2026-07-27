@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="3">
     <name>foxglove_bridge</name>
-    <version>3.4.2</version>
+    <version>3.4.3</version>
     <description>ROS Foxglove Bridge</description>
     <license>MIT</license>
     <url type="website">https://github.com/foxglove/foxglove-sdk</url>
@@ -26,6 +26,7 @@
     <test_depend>ament_lint_auto</test_depend>
     <test_depend>std_msgs</test_depend>
     <test_depend>std_srvs</test_depend>
+    <test_depend>test_msgs</test_depend>
     <test_depend>asio</test_depend>
     <test_depend>libwebsocketpp-dev</test_depend>
     <test_depend>nlohmann-json-dev</test_depend>
@@ -34,6 +35,9 @@
     <build_depend>ros_environment</build_depend>
 
     <depend>rcl_interfaces</depend>
+    <!-- Service event (<Srv>_Event) schemas synthesized by the message definition cache
+         reference service_msgs/msg/ServiceEventInfo, resolved via the ament index. -->
+    <exec_depend condition="$ROS_DISTRO != humble">service_msgs</exec_depend>
     <depend>rcpputils</depend>
     <depend>rcutils</depend>
     <depend>resource_retriever</depend>

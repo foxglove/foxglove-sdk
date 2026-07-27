@@ -83,12 +83,12 @@ impl Subscriptions {
     pub fn unsubscribe_channels(&mut self, sink_id: SinkId, channel_ids: &[ChannelId]) -> bool {
         let mut removed = false;
         for &channel_id in channel_ids {
-            if let Some(subs) = self.by_channel.get_mut(&channel_id) {
-                if subs.remove(&sink_id).is_some() {
-                    removed = true;
-                    if subs.is_empty() {
-                        self.by_channel.remove(&channel_id);
-                    }
+            if let Some(subs) = self.by_channel.get_mut(&channel_id)
+                && subs.remove(&sink_id).is_some()
+            {
+                removed = true;
+                if subs.is_empty() {
+                    self.by_channel.remove(&channel_id);
                 }
             }
         }

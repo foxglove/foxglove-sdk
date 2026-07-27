@@ -116,13 +116,13 @@ impl McapStreamHandle {
     /// This method will return an error if the MCAP writer fails to finish or if the
     /// [`McapStream`] has already been closed.
     pub async fn close(mut self) -> Result<(), FoxgloveError> {
-        if let Some(writer) = self.writer.take() {
-            if let Err(e) = writer.close() {
-                // If an error occurred still flush the buffer. We'll likely get a truncated MCAP
-                // but anything that was successfully written will be there.
-                let _ = Self::flush_shared_buffer(&mut self.sender, &mut self.buffer).await;
-                return Err(e);
-            }
+        if let Some(writer) = self.writer.take()
+            && let Err(e) = writer.close()
+        {
+            // If an error occurred still flush the buffer. We'll likely get a truncated MCAP
+            // but anything that was successfully written will be there.
+            let _ = Self::flush_shared_buffer(&mut self.sender, &mut self.buffer).await;
+            return Err(e);
         }
 
         Ok(Self::flush_shared_buffer(&mut self.sender, &mut self.buffer).await?)
@@ -168,10 +168,10 @@ impl McapStreamHandle {
 
 impl Drop for McapStreamHandle {
     fn drop(&mut self) {
-        if let Some(writer) = self.writer.take() {
-            if let Err(e) = writer.close() {
-                tracing::warn!("{e}");
-            }
+        if let Some(writer) = self.writer.take()
+            && let Err(e) = writer.close()
+        {
+            tracing::warn!("{e}");
         }
 
         let mut inner = self.buffer.0.lock();

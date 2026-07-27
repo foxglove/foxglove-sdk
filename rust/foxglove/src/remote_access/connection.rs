@@ -27,6 +27,7 @@ use crate::{
         protocol_version::{self, REMOTE_ACCESS_PROTOCOL_VERSION},
         qos::QosClassifier,
         session::{RemoteAccessSession, SessionParams},
+        suppress_video_transcode::SuppressVideoTranscode,
         watch::Watch,
         watch_loop::{
             ConnectAction, INITIAL_BACKOFF, MAX_BACKOFF, WatchAction, WatchRetryState,
@@ -97,6 +98,7 @@ pub(super) struct ConnectionParams {
     pub(super) runtime: Handle,
     pub(super) channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     pub(super) qos_classifier: Option<Arc<dyn QosClassifier>>,
+    pub(super) suppress_video_transcode: Option<Arc<dyn SuppressVideoTranscode>>,
     pub(super) server_info: Option<HashMap<String, String>>,
     pub(super) message_backlog_size: Option<usize>,
     pub(super) max_data_track_message_size: Option<usize>,
@@ -136,6 +138,7 @@ pub(super) struct RemoteAccessConnection {
     runtime: Handle,
     channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     qos_classifier: Option<Arc<dyn QosClassifier>>,
+    suppress_video_transcode: Option<Arc<dyn SuppressVideoTranscode>>,
     server_info: Option<HashMap<String, String>>,
     message_backlog_size: Option<usize>,
     max_data_track_message_size: Option<usize>,
@@ -169,6 +172,7 @@ impl RemoteAccessConnection {
             runtime: params.runtime,
             channel_filter: params.channel_filter,
             qos_classifier: params.qos_classifier,
+            suppress_video_transcode: params.suppress_video_transcode,
             server_info: params.server_info,
             message_backlog_size: params.message_backlog_size,
             max_data_track_message_size: params.max_data_track_message_size,
@@ -319,6 +323,7 @@ impl RemoteAccessConnection {
             context: self.context.clone(),
             channel_filter: self.channel_filter.clone(),
             qos_classifier: self.qos_classifier.clone(),
+            suppress_video_transcode: self.suppress_video_transcode.clone(),
             listener: self.listener.clone(),
             capabilities: self.capabilities.clone(),
             supported_encodings: self.supported_encodings.clone().unwrap_or_default(),
@@ -541,6 +546,9 @@ impl RemoteAccessConnection {
         let video_metadata_task = tokio::spawn(RemoteAccessSession::run_video_metadata_watcher(
             session.clone(),
         ));
+        let drop_status_task = tokio::spawn(RemoteAccessSession::run_drop_status_sweeper(
+            session.clone(),
+        ));
 
         // Send ServerInfo and channel advertisements to participants already in the room.
         // ParticipantConnected events only fire for participants joining after us.
@@ -596,10 +604,8 @@ impl RemoteAccessConnection {
             let mut graph = self.connection_graph.lock();
             let had_subscribers = graph.has_subscribers();
             graph.clear_subscribers();
-            if had_subscribers {
-                if let Some(listener) = &self.listener {
-                    listener.on_connection_graph_unsubscribe();
-                }
+            if had_subscribers && let Some(listener) = &self.listener {
+                listener.on_connection_graph_unsubscribe();
             }
         }
         context.remove_sink(session.sink_id());
@@ -609,6 +615,13 @@ impl RemoteAccessConnection {
                 remote_access_session_id,
                 error = %e,
                 "video metadata watcher failed"
+            );
+        }
+        if let Err(e) = drop_status_task.await {
+            error!(
+                remote_access_session_id,
+                error = %e,
+                "drop status sweeper failed"
             );
         }
 

@@ -703,8 +703,7 @@ fn test_compression_as_str_round_trip() {
     ];
     for compression in cases {
         let s = compression.as_str();
-        let parsed: Compression = s
-            .parse()
+        let parsed = Compression::try_from_ros_format(s)
             .unwrap_or_else(|e| panic!("failed to parse canonical string {s:?}: {e}"));
         assert_eq!(parsed, compression, "round-trip failed for {s:?}");
     }

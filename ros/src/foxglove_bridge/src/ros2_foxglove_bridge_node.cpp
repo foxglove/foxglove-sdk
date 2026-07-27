@@ -34,7 +34,11 @@ int main(int argc, char* argv[]) {
 
     auto node = std::make_shared<foxglove_bridge::FoxgloveBridge>();
     executor->add_node(node->get_node_base_interface());
-    executor->spin();
+    try {
+      executor->spin();
+    } catch (const rclcpp::exceptions::RCLError& e) {
+      RCLCPP_WARN(node->get_logger(), "Shutting down: %s", e.what());
+    }
     executor->remove_node(node->get_node_base_interface());
     // node and executor go out of scope here; node destructor stops the server while ROS is valid
   }

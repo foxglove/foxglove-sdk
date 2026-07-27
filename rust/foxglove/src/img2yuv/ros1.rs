@@ -28,6 +28,9 @@ pub enum Ros1DecodeError {
     /// Unknown compression codec.
     #[error(transparent)]
     UnknownCompression(#[from] UnknownCompressionError),
+    /// The timestamp cannot be represented (excess nanoseconds overflow the seconds field).
+    #[error("timestamp out of range")]
+    InvalidTimestamp,
 }
 impl From<bytes::TryGetError> for Ros1DecodeError {
     fn from(e: bytes::TryGetError) -> Self {
@@ -87,6 +90,12 @@ struct Ros1Header<'a> {
     nsec: u32,
     frame_id: &'a str,
 }
+impl Ros1Header<'_> {
+    /// Returns the header timestamp, rejecting values that overflow the seconds field.
+    fn timestamp(&self) -> Result<Timestamp, Ros1DecodeError> {
+        Timestamp::new_checked(self.sec, self.nsec).ok_or(Ros1DecodeError::InvalidTimestamp)
+    }
+}
 
 /// A ROS 1 `sensor_msgs/Image` message.
 #[derive(Debug, PartialEq, Eq)]
@@ -131,7 +140,7 @@ impl<'a> TryFrom<Ros1Image<'a>> for ImageMessage<'a> {
         };
         let encoding = RawImageEncoding::parse_endian(image.encoding, endian)?;
         Ok(Self {
-            timestamp: Some(Timestamp::new(image.header.sec, image.header.nsec)),
+            timestamp: Some(image.header.timestamp()?),
             frame_id: image.header.frame_id.to_string(),
             image: Image::Raw(RawImage {
                 encoding,
@@ -170,7 +179,7 @@ impl<'a> TryFrom<Ros1CompressedImage<'a>> for ImageMessage<'a> {
     fn try_from(image: Ros1CompressedImage<'a>) -> std::result::Result<Self, Self::Error> {
         let compression = Compression::try_from_ros_format(image.format)?;
         Ok(ImageMessage {
-            timestamp: Some(Timestamp::new(image.header.sec, image.header.nsec)),
+            timestamp: Some(image.header.timestamp()?),
             frame_id: image.header.frame_id.to_string(),
             image: Image::Compressed(CompressedImage {
                 compression,
@@ -244,5 +253,26 @@ mod tests {
         buf.put_slice(image.data);
         let decoded = Ros1CompressedImage::decode(&encoded).unwrap();
         assert_eq!(image, decoded);
+    }
+
+    #[test]
+    fn test_image_rejects_overflowing_timestamp() {
+        // Excess nanoseconds carry into seconds, overflowing the u32 seconds field.
+        let image = Ros1Image {
+            header: Ros1Header {
+                seq: 0,
+                sec: u32::MAX,
+                nsec: 1_000_000_000,
+                frame_id: "frame",
+            },
+            height: 1,
+            width: 1,
+            encoding: "mono8",
+            is_bigendian: 0,
+            step: 1,
+            data: &[0],
+        };
+        let err = ImageMessage::try_from(image).unwrap_err();
+        assert!(matches!(err, Ros1DecodeError::InvalidTimestamp));
     }
 }

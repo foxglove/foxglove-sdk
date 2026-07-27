@@ -17,6 +17,7 @@ use crate::{
 };
 
 use super::qos::{QosClassifier, QosClassifierFn, QosProfile};
+use super::suppress_video_transcode::{SuppressVideoTranscode, SuppressVideoTranscodeFn};
 
 use super::connection::{ConnectionParams, ConnectionStatus, RemoteAccessConnection};
 use super::session::MIN_DATA_TRACK_MESSAGE_SIZE;
@@ -129,6 +130,7 @@ impl GatewayHandle {
             runtime: runtime.clone(),
             channel_filter: None,
             qos_classifier: None,
+            suppress_video_transcode: None,
             server_info: None,
             message_backlog_size: None,
             max_data_track_message_size: None,
@@ -248,6 +250,7 @@ pub struct Gateway {
     runtime: Option<Handle>,
     channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     qos_classifier: Option<Arc<dyn QosClassifier>>,
+    suppress_video_transcode: Option<Arc<dyn SuppressVideoTranscode>>,
     server_info: Option<HashMap<String, String>>,
     message_backlog_size: Option<usize>,
     max_data_track_message_size: Option<usize>,
@@ -271,6 +274,7 @@ impl Default for Gateway {
             runtime: None,
             channel_filter: None,
             qos_classifier: None,
+            suppress_video_transcode: None,
             server_info: None,
             message_backlog_size: None,
             max_data_track_message_size: None,
@@ -299,6 +303,10 @@ impl std::fmt::Debug for Gateway {
             .field("has_runtime", &self.runtime.is_some())
             .field("has_channel_filter", &self.channel_filter.is_some())
             .field("has_qos_classifier", &self.qos_classifier.is_some())
+            .field(
+                "has_suppress_video_transcode",
+                &self.suppress_video_transcode.is_some(),
+            )
             .field("server_info", &self.server_info)
             .field("message_backlog_size", &self.message_backlog_size)
             .field(
@@ -472,6 +480,24 @@ impl Gateway {
         self
     }
 
+    /// Opts channels out of video transcoding, delivering them as data instead.
+    ///
+    /// See [`SuppressVideoTranscode`] for more information. If not set, all video-capable channels
+    /// are transcoded.
+    pub fn suppress_video_transcode(mut self, suppress: Arc<dyn SuppressVideoTranscode>) -> Self {
+        self.suppress_video_transcode = Some(suppress);
+        self
+    }
+
+    /// Sets a video-transcode opt-out function. See [`SuppressVideoTranscode`] for more information.
+    pub fn suppress_video_transcode_fn(
+        mut self,
+        suppress: impl Fn(&ChannelDescriptor) -> bool + Sync + Send + 'static,
+    ) -> Self {
+        self.suppress_video_transcode = Some(Arc::new(SuppressVideoTranscodeFn(suppress)));
+        self
+    }
+
     /// Configure the set of services to advertise to clients.
     ///
     /// Automatically adds [`Capability::Services`] to the set of advertised capabilities.
@@ -608,16 +634,15 @@ impl Gateway {
                     encodings.insert(encoding.to_string());
                 }
             }
-            if encodings.is_empty() {
-                if let Some(svc) = self
+            if encodings.is_empty()
+                && let Some(svc) = self
                     .services
                     .values()
                     .find(|s| s.request_encoding().is_none())
-                {
-                    return Err(FoxgloveError::MissingRequestEncoding(
-                        svc.name().to_string(),
-                    ));
-                }
+            {
+                return Err(FoxgloveError::MissingRequestEncoding(
+                    svc.name().to_string(),
+                ));
             }
         }
         // If the gateway was declared with a fetch asset handler, automatically add the "assets" capability.
@@ -638,13 +663,13 @@ impl Gateway {
                     .to_string(),
             ));
         }
-        if let Some(size) = self.max_data_track_message_size {
-            if size < MIN_DATA_TRACK_MESSAGE_SIZE {
-                return Err(FoxgloveError::ConfigurationError(format!(
-                    "max_data_track_message_size ({size} bytes) is below the minimum of \
-                     {MIN_DATA_TRACK_MESSAGE_SIZE} bytes (one data-channel packet)."
-                )));
-            }
+        if let Some(size) = self.max_data_track_message_size
+            && size < MIN_DATA_TRACK_MESSAGE_SIZE
+        {
+            return Err(FoxgloveError::ConfigurationError(format!(
+                "max_data_track_message_size ({size} bytes) is below the minimum of \
+                 {MIN_DATA_TRACK_MESSAGE_SIZE} bytes (one data-channel packet)."
+            )));
         }
         let runtime = self.runtime.unwrap_or_else(get_runtime_handle);
         let services = Arc::new(parking_lot::RwLock::new(ServiceMap::from_iter(
@@ -663,6 +688,7 @@ impl Gateway {
             runtime: runtime.clone(),
             channel_filter: self.channel_filter,
             qos_classifier: self.qos_classifier,
+            suppress_video_transcode: self.suppress_video_transcode,
             server_info: self.server_info,
             message_backlog_size: self.message_backlog_size,
             max_data_track_message_size: self.max_data_track_message_size,
