@@ -1,0 +1,197 @@
+{
+  "configById": {
+    "Image!4dgiuzp": {
+      "imageMode": {
+        "imageTopic": "/oak/rgb/image"
+      },
+      "cameraState": {
+        "distance": 20,
+        "perspective": true,
+        "phi": 60,
+        "target": [
+          0,
+          0,
+          0
+        ],
+        "targetOffset": [
+          0,
+          0,
+          0
+        ],
+        "targetOrientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "thetaOffset": 60,
+        "fovy": 45,
+        "near": 0.5,
+        "far": 5000
+      },
+      "followMode": "follow-pose",
+      "scene": {},
+      "transforms": {},
+      "topics": {},
+      "layers": {},
+      "publish": {
+        "type": "point",
+        "poseTopic": "/move_base_simple/goal",
+        "pointTopic": "/clicked_point",
+        "poseEstimateTopic": "/initialpose",
+        "poseEstimateXDeviation": 0.5,
+        "poseEstimateYDeviation": 0.5,
+        "poseEstimateThetaDeviation": 0.26179939
+      },
+      "synchronize": false
+    },
+    "3D!1en4c0z": {
+      "topics": {
+        "/oak/points": {
+          "visible": true,
+          "colorField": "x",
+          "colorMode": "rgba-fields",
+          "colorMap": "turbo",
+          "pointShape": "circle",
+          "decayTime": 0
+        },
+        "/oak/rgb/image": {
+          "visible": false,
+          "frameLocked": true,
+          "cameraInfoTopic": "/oak/rgb/calibration",
+          "distance": 1,
+          "planarProjectionFactor": 0,
+          "renderMode": "default",
+          "projectionFrameId": "oak",
+          "color": "#ffffff",
+          "rectifyImage": true,
+          "pointSize": 1.5,
+          "syncModeEnabled": false
+        }
+      },
+      "layers": {
+        "a842b49e-aeb6-44a9-a03a-ec490bc76aaf": {
+          "layerId": "foxglove.Grid",
+          "instanceId": "a842b49e-aeb6-44a9-a03a-ec490bc76aaf"
+        }
+      },
+      "cameraState": {
+        "perspective": true,
+        "distance": 4.078136514909814,
+        "phi": 69.73221010808032,
+        "thetaOffset": 86.03660614588918,
+        "targetOffset": [
+          -0.04998665046910344,
+          -0.3139073106185033,
+          -2.8870696187837278e-18
+        ],
+        "target": [
+          0,
+          0,
+          0
+        ],
+        "targetOrientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "fovy": 45,
+        "near": 0.5,
+        "far": 5000
+      },
+      "followMode": "follow-pose",
+      "scene": {},
+      "transforms": {},
+      "publish": {
+        "type": "point",
+        "poseTopic": "/move_base_simple/goal",
+        "pointTopic": "/clicked_point",
+        "poseEstimateTopic": "/initialpose",
+        "poseEstimateXDeviation": 0.5,
+        "poseEstimateYDeviation": 0.5,
+        "poseEstimateThetaDeviation": 0.26179939
+      },
+      "synchronize": false,
+      "imageMode": {}
+    },
+    "Plot!1iy0h6g": {
+      "paths": [
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/oak/imu.angular_velocity.x",
+          "enabled": true,
+          "color": "#4e98e2",
+          "id": "b0f7919e-5790-437f-901c-7ce92604ff11"
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/oak/imu.angular_velocity.y",
+          "enabled": true,
+          "color": "#f5774d",
+          "id": "fbacbee3-b9cf-4e7b-87da-b79a94dc75cd"
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/oak/imu.angular_velocity.z",
+          "enabled": true,
+          "color": "#f7df71",
+          "id": "29ea751b-d523-49eb-ae2e-0ffa5d56bf8b"
+        }
+      ]
+    },
+    "Tab!3tapk7x": {
+      "activeTabIdx": 0,
+      "tabs": [
+        {
+          "title": "Overview",
+          "layout": {
+            "direction": "column",
+            "first": "Image!4dgiuzp",
+            "second": "3D!1en4c0z",
+            "splitPercentage": 28.178374426796037
+          }
+        }
+      ]
+    },
+    "Plot!2viuvc6": {
+      "paths": [
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/oak/imu.linear_acceleration.x",
+          "enabled": true,
+          "color": "#4e98e2",
+          "id": "ee68393b-2037-4a54-addf-cd9510b20ffd"
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/oak/imu.linear_acceleration.y",
+          "enabled": true,
+          "color": "#f5774d",
+          "id": "40faaab2-846e-4e28-a37d-9bb8d109226f"
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/oak/imu.linear_acceleration.z",
+          "enabled": true,
+          "color": "#f7df71",
+          "id": "105b71e5-9eb5-4e67-8139-64f2d3d71559"
+        }
+      ]
+    }
+  },
+  "layout": {
+    "direction": "row",
+    "first": {
+      "first": "Plot!1iy0h6g",
+      "second": "Plot!2viuvc6",
+      "direction": "column"
+    },
+    "second": "Tab!3tapk7x"
+  },
+  "globalVariables": {},
+  "playbackConfig": {
+    "speed": 1
+  },
+  "userNodes": {}
+}
