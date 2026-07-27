@@ -1,6 +1,7 @@
 .cargo/*
 !.cargo/config.toml
 .claude/
+.cache/
 .catkin_tools
 .DS_Store
 .idea/
