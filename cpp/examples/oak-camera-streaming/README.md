@@ -1,14 +1,8 @@
 # OAK Camera Streaming Example
 
-This example streams data from an OAK camera to Foxglove using the C++ SDK and the DepthAI C++ library.
+This example streams data from an OAK camera to Foxglove using the C++ SDK and the DepthAI C++ library. It publishes the same topics as the [Python tutorial](../../../python/foxglove-sdk-examples/oak-camera-streaming/README.md) (`/oak/points`, `/oak/rgb/image`, `/oak/rgb/calibration`, `/oak/imu`, `/tf`).
 
-It publishes:
-
-- `/oak/points`: colored point cloud
-- `/oak/rgb/image`: RGB camera image
-- `/oak/rgb/calibration`: RGB camera calibration
-- `/oak/imu`: IMU samples as JSON
-- `/tf`: transform from `oak` to `oak_optical`
+For an explanation of the pipeline, coordinate frames, distortion mapping, and Foxglove setup, see the [Python README](../../../python/foxglove-sdk-examples/oak-camera-streaming/README.md). Use the shared layout at [`python/foxglove-sdk-examples/oak-camera-streaming/foxglove/oak_layout.json`](../../../python/foxglove-sdk-examples/oak-camera-streaming/foxglove/oak_layout.json) — in Foxglove, open the layout dropdown and choose **Import from file…**.
 
 ## Installing Dependencies
 
@@ -50,6 +44,4 @@ Useful options:
 
 `--point-unit auto` is the default. It detects whether DepthAI point coordinates are meter-scale or millimeter-scale before publishing Foxglove point clouds in meters.
 
-## Viewing in Foxglove
-
-Open Foxglove and connect to `ws://localhost:8765`. Add a 3D panel and set the display frame to `oak` to view the point cloud upright. Add an Image panel for `/oak/rgb/image` and select `/oak/rgb/calibration` as the calibration topic.
+Then open Foxglove and connect to `ws://localhost:8765`.

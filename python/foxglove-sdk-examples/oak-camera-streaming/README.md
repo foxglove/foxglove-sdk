@@ -27,7 +27,7 @@ uv run python main.py
 
 Then open [Foxglove](https://app.foxglove.dev), choose **Open connection…**, and connect to `ws://localhost:8765` (the script also prints a direct link at startup).
 
-Add these panels:
+Add these panels (or use the layout at `foxglove/oak_layout.json` via **Import from file…**):
 
 - **Image** → topic `/oak/rgb/image`, **Calibration** `/oak/rgb/calibration` — the live color feed, undistorted using the device's factory intrinsics.
 - **3D** → set the panel's **display frame** to `oak`, enable `/oak/points`, and optionally enable `/oak/rgb/calibration` under **Camera field-of-view** to see the camera frustum.
@@ -108,7 +108,7 @@ Foxglove supports a fixed set of distortion models. DepthAI's `Perspective` is O
 
 ## Going further
 
-- Encode video on the device (`dai.node.VideoEncoder` → `foxglove.CompressedVideo`) to cut bandwidth for remote viewing.
+- For remote viewing, see the [`remote-access`](../remote-access) example — the SDK can transcode video inline for you. On-device encoding (`dai.node.VideoEncoder` → `foxglove.CompressedVideo`) is another option if you want to cut bandwidth before the host.
 - See the [Foxglove SDK docs](https://docs.foxglove.dev/docs/sdk/introduction) and [DepthAI v3 examples](https://docs.luxonis.com/software-v3/depthai/examples/) for both halves of the integration.
 
 **Note:** the repo's `yarn run-python-sdk-examples` CI script skips this folder because it requires a physical OAK camera.

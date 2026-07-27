@@ -16,7 +16,7 @@ Topics:
 - ``/tf``                   optical -> upright transform (``foxglove.FrameTransforms``)
 
 Open https://app.foxglove.dev and connect to ws://localhost:8765 (or follow the
-printed link), then add a 3D panel with the display frame set to ``oak``.
+printed link), then import ``foxglove/oak_layout.json``.
 """
 
 from __future__ import annotations
@@ -24,6 +24,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import math
 import time
 from typing import Any
 
@@ -145,6 +146,43 @@ def point_scale_for_unit(points: np.ndarray, point_unit: str) -> float:
     if median_z > AUTO_MILLIMETER_Z_THRESHOLD:
         return MILLIMETERS_TO_METERS
     return 1.0
+
+
+def is_finite_imu_packet(accel: Any, gyro: Any) -> bool:
+    return all(
+        math.isfinite(float(v))
+        for v in (accel.x, accel.y, accel.z, gyro.x, gyro.y, gyro.z)
+    )
+
+
+def imu_json(packet: dai.IMUPacket) -> bytes | None:
+    """Serialize one IMU sample as JSON, or None if any axis is non-finite."""
+    accel = packet.acceleroMeter
+    gyro = packet.gyroscope
+    if not is_finite_imu_packet(accel, gyro):
+        logging.warning("Skipping IMU packet with non-finite values")
+        return None
+
+    stamp = to_timestamp(accel.getTimestamp())
+    return json.dumps(
+        {
+            "header": {
+                "stamp": {"sec": stamp.sec, "nsec": stamp.nsec},
+                "frame_id": OPTICAL_FRAME,
+            },
+            "angular_velocity": {
+                "x": float(gyro.x),
+                "y": float(gyro.y),
+                "z": float(gyro.z),
+            },
+            "linear_acceleration": {
+                "x": float(accel.x),
+                "y": float(accel.y),
+                "z": float(accel.z),
+            },
+        },
+        allow_nan=False,
+    ).encode("utf-8")
 
 
 def pointcloud_to_message(pcl: dai.PointCloudData, point_unit: str) -> PointCloud:
@@ -415,29 +453,9 @@ def main() -> None:
                 imu_data = imu_queue.tryGet()
                 if isinstance(imu_data, dai.IMUData):
                     for packet in imu_data.packets:
-                        accel = packet.acceleroMeter
-                        gyro = packet.gyroscope
-                        stamp = to_timestamp(accel.getTimestamp())
-                        imu_channel.log(
-                            json.dumps(
-                                {
-                                    "header": {
-                                        "stamp": {"sec": stamp.sec, "nsec": stamp.nsec},
-                                        "frame_id": OPTICAL_FRAME,
-                                    },
-                                    "angular_velocity": {
-                                        "x": float(gyro.x),
-                                        "y": float(gyro.y),
-                                        "z": float(gyro.z),
-                                    },
-                                    "linear_acceleration": {
-                                        "x": float(accel.x),
-                                        "y": float(accel.y),
-                                        "z": float(accel.z),
-                                    },
-                                }
-                            ).encode("utf-8")
-                        )
+                        payload = imu_json(packet)
+                        if payload is not None:
+                            imu_channel.log(payload)
 
                 time.sleep(0.001)
         except KeyboardInterrupt:
