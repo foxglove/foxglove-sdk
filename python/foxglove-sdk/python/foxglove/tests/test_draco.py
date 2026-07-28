@@ -22,7 +22,7 @@ def test_draco_encode_options_defaults() -> None:
 
 
 @typing.no_type_check
-def test_draco_encode_options_rejects_invalid_quantization() -> None:
+def test_draco_encode_options_rejects_non_u8_quantization_bits() -> None:
     with pytest.raises(OverflowError):
         # quantization_bits must fit in a u8
         DracoEncodeOptions(quantization_bits=256)
