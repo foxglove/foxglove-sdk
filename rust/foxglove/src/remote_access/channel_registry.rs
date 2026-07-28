@@ -9,9 +9,9 @@ use tracing::{debug, info};
 use crate::protocol::v2::server::advertise;
 
 use crate::remote_access::qos::{QosProfile, Reliability};
-#[cfg(feature = "draco")]
-use crate::remote_access::session::PointCloudPublisher;
 use crate::remote_access::session::{DataTrack, VideoInputSchema, VideoMetadata, VideoPublisher};
+#[cfg(feature = "draco")]
+use crate::remote_access::session::{PointCloudPublisher, SharedWarningState};
 use crate::{ChannelDescriptor, ChannelId, RawChannel};
 
 /// Channels that lost their last subscriber when a participant was removed.
@@ -42,18 +42,23 @@ pub(super) struct UnsubscribeResult {
     pub(super) actually_unsubscribed_descriptors: SmallVec<[ChannelDescriptor; 4]>,
 }
 
-/// Compression state for a point-cloud channel: the Draco settings plus the channel's
-/// topic.
+/// Compression state for a point-cloud channel: the Draco settings, the channel's topic,
+/// and the warning state shared across the channel's publisher generations.
 ///
 /// The topic is captured at advertise time so that publisher creation needs no second,
 /// fallible channel lookup: a silent miss there would deliver raw clouds on a channel
-/// advertised as `foxglove.CompressedPointCloud`.
+/// advertised as `foxglove.CompressedPointCloud`. This state lives for the channel's
+/// advertised lifetime — outlasting individual publishers — so it is the natural home
+/// for the per-channel [`SharedWarningState`], which a resubscribe's publisher must
+/// inherit rather than reset.
 #[cfg(feature = "draco")]
 pub(super) struct PointCloudCompressionState {
     /// The channel's topic, used to name the channel in viewer-facing warnings.
     pub(super) topic: String,
     /// The Draco encoding settings.
     pub(super) options: crate::draco::CompressPointCloudOptions,
+    /// Compression-warning state, shared with the channel's transcoding publisher.
+    pub(super) warning: SharedWarningState,
 }
 
 /// Channel registry and per-channel derived state for a remote access session.
@@ -1175,6 +1180,7 @@ mod tests {
                 channel_id,
                 "/cloud".to_string(),
                 CompressPointCloudOptions::default(),
+                make_compression_state().warning,
             ))
         }
 
@@ -1182,6 +1188,9 @@ mod tests {
             PointCloudCompressionState {
                 topic: "/cloud".to_string(),
                 options: CompressPointCloudOptions::default(),
+                warning: Arc::new(parking_lot::Mutex::new(
+                    crate::remote_access::session::WarningState::new(),
+                )),
             }
         }
 

@@ -64,6 +64,8 @@ pub(super) use data_track::{DataTrack, OversizedDropReport};
 mod point_cloud_track;
 #[cfg(feature = "draco")]
 pub(super) use point_cloud_track::PointCloudPublisher;
+#[cfg(feature = "draco")]
+pub(in crate::remote_access) use point_cloud_track::{SharedWarningState, WarningState};
 mod video_track;
 pub(super) use video_track::{
     VideoInputSchema, VideoMetadata, VideoPublisher, resolve_video_input_schema,
@@ -475,6 +477,7 @@ impl Sink for RemoteAccessSession {
                             super::channel_registry::PointCloudCompressionState {
                                 topic: ch.topic().to_string(),
                                 options,
+                                warning: Arc::new(parking_lot::Mutex::new(WarningState::new())),
                             },
                         );
                     }
@@ -2630,9 +2633,17 @@ impl RemoteAccessSession {
         for &channel_id in first_subscribed {
             // The compression state carries the topic, so no second (fallible) channel
             // lookup is needed here.
-            let Some((topic, options)) = state
+            let Some((topic, options, warning)) = state
                 .get_point_cloud_compression(&channel_id)
-                .map(|compression| (compression.topic.clone(), compression.options))
+                .map(|compression| {
+                    (
+                        compression.topic.clone(),
+                        compression.options,
+                        // Clone the handle so the publisher shares this channel's warning
+                        // state across resubscribes rather than starting blind.
+                        compression.warning.clone(),
+                    )
+                })
             else {
                 continue;
             };
@@ -2644,6 +2655,7 @@ impl RemoteAccessSession {
                     channel_id,
                     topic,
                     options,
+                    warning,
                 )),
             );
         }

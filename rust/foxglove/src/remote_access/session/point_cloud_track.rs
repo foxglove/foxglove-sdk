@@ -1,9 +1,10 @@
 //! Background point-cloud transcoding for remote access sessions.
 
-use std::sync::Weak;
+use std::sync::{Arc, Weak};
 use std::time::{Duration, Instant};
 
 use bytes::Bytes;
+use parking_lot::Mutex;
 use tokio::runtime::Handle;
 use tracing::{error, warn};
 
@@ -26,10 +27,20 @@ const TRANSCODE_RECOVERY_QUIET_PERIOD: Duration =
 
 /// Stable per-channel id for the compression-failure warning, so a repeat replaces the
 /// previous status in the app's problem list instead of stacking a new entry, and
-/// recovery can remove it.
+/// recovery or teardown can remove it.
 fn compression_status_id(channel_id: ChannelId) -> String {
     format!("point-cloud-compression-{}", u64::from(channel_id))
 }
+
+/// A per-channel [`WarningState`] shared across publisher generations.
+///
+/// The warning status id is per-channel, but publisher tasks come and go with the
+/// subscriber count. Sharing the state means a publisher created for a resubscribe
+/// inherits the live warning (and the throttle window) rather than starting blind, so
+/// overlapping publishers can't fight over the channel's single status: a draining
+/// predecessor won't retract a warning its successor owns, and the successor won't
+/// silently re-publish.
+pub(in crate::remote_access) type SharedWarningState = Arc<Mutex<WarningState>>;
 
 /// The lifecycle of a channel's viewer-facing compression warning, with explicit
 /// timestamps so the timing rules are unit-testable without sleeping.
@@ -40,7 +51,7 @@ fn compression_status_id(channel_id: ChannelId) -> String {
 /// [`TRANSCODE_RECOVERY_QUIET_PERIOD`]. Clearing on the first success would strobe the
 /// status (and the log) at message rate on a mixed good/bad stream, while clearing
 /// without resetting the throttle would leave intermittent failures mostly invisible.
-struct WarningState {
+pub(in crate::remote_access) struct WarningState {
     /// Earliest instant the next throttled warning may be emitted; `None` emits
     /// immediately.
     next_warn_at: Option<Instant>,
@@ -51,7 +62,7 @@ struct WarningState {
 }
 
 impl WarningState {
-    const fn new() -> Self {
+    pub(in crate::remote_access) const fn new() -> Self {
         Self {
             next_warn_at: None,
             active: false,
@@ -92,9 +103,16 @@ impl WarningState {
         {
             return false;
         }
+        self.clear();
+        true
+    }
+
+    /// Clears the warning and resets the throttle, so a channel with no remaining
+    /// publisher (teardown) or genuine recovery starts clean and a fresh failure reports
+    /// immediately.
+    fn clear(&mut self) {
         self.active = false;
         self.next_warn_at = None;
-        true
     }
 
     /// True if a warning status is live on viewers.
@@ -125,18 +143,19 @@ impl PointCloudPublisher {
     /// Creates a new publisher and spawns the background processing task.
     ///
     /// `topic` is the channel's topic, used to name the channel in viewer-facing
-    /// compression warnings.
+    /// compression warnings. `warning` is the channel's shared warning state, so this
+    /// publisher inherits any warning a predecessor left live (see [`SharedWarningState`]).
     pub fn new(
         runtime: &Handle,
         session: Weak<RemoteAccessSession>,
         channel_id: ChannelId,
         topic: String,
         options: CompressPointCloudOptions,
+        warning: SharedWarningState,
     ) -> Self {
         let (tx, rx) = flume::bounded::<(Bytes, u64)>(Self::CHANNEL_CAPACITY);
         let consumer_rx = rx.clone();
         runtime.spawn(async move {
-            let mut warning = WarningState::new();
             while let Ok((data, log_time)) = consumer_rx.recv_async().await {
                 let result = tokio::task::spawn_blocking(move || {
                     transcode_point_cloud_message(&data, &options)
@@ -149,13 +168,13 @@ impl PointCloudPublisher {
                         let Some(session) = session.upgrade() else {
                             break;
                         };
-                        if warning.on_success(Instant::now()) {
+                        if warning.lock().on_success(Instant::now()) {
                             session.remove_status(vec![compression_status_id(channel_id)]);
                         }
                         session.deliver_transcoded_point_cloud(channel_id, &transcoded, log_time);
                     }
                     Ok(Err(e)) => {
-                        if warning.on_failure(Instant::now()) {
+                        if warning.lock().on_failure(Instant::now()) {
                             let message =
                                 format!("point cloud compression error on topic {topic}: {e}");
                             warn!("{message}");
@@ -164,12 +183,12 @@ impl PointCloudPublisher {
                                     Status::warning(message)
                                         .with_id(compression_status_id(channel_id)),
                                 );
-                                warning.published();
+                                warning.lock().published();
                             }
                         }
                     }
                     Err(e) => {
-                        if warning.try_warn(Instant::now()) {
+                        if warning.lock().try_warn(Instant::now()) {
                             error!("point cloud compression task panicked: {e}");
                         }
                     }
@@ -179,19 +198,24 @@ impl PointCloudPublisher {
             // (or the session shuts down): retract a live warning so it doesn't sit in
             // participants' problem lists with nothing left running to clear it. A
             // resubscribe can create a successor publisher while this task drains its
-            // final in-flight encode, though; the successor owns the per-channel status
-            // id then, and retracting would clear a warning it just published. The
-            // status is orphaned — and retracted — only when no publisher is registered
-            // for the channel.
-            if warning.active()
-                && let Some(session) = session.upgrade()
+            // final in-flight encode, though; the successor shares this warning state and
+            // owns the per-channel status id, so retract only when no publisher is
+            // registered for the channel — and clear the shared state, so a future
+            // publisher for this channel starts clean rather than believing a
+            // now-removed warning is still live.
+            if let Some(session) = session.upgrade()
                 && session
                     .channel_registry
                     .read()
                     .get_point_cloud_publisher(&channel_id)
                     .is_none()
             {
-                session.remove_status(vec![compression_status_id(channel_id)]);
+                let mut warning = warning.lock();
+                if warning.active() {
+                    warning.clear();
+                    drop(warning);
+                    session.remove_status(vec![compression_status_id(channel_id)]);
+                }
             }
         });
         Self { tx, rx }
