@@ -64,7 +64,12 @@ impl DracoMethod {
 }
 
 /// The maximum supported value for [`DracoEncodeOptions::with_quantization_bits`].
-pub const MAX_QUANTIZATION_BITS: u8 = 31;
+///
+/// This follows the reference Draco decoder, whose `IsQuantizationValid` rejects
+/// bitstreams quantized above 30 bits ("Currently we allow only up to 30 bit
+/// quantization"). The draco-core encoder itself accepts 31, but emitting it would
+/// produce output the reference decoder — and the Foxglove app — cannot decode.
+pub const MAX_QUANTIZATION_BITS: u8 = 30;
 
 /// Options for Draco point-cloud encoding.
 ///
@@ -1083,11 +1088,16 @@ mod tests {
 
     #[test]
     fn test_quantization_bits_validated_at_construction() {
-        // The boundaries of the valid range are accepted and usable...
-        let (cloud, _, _) = test_cloud();
+        // The boundaries of the valid range are accepted, usable, and — at the maximum —
+        // decodable. The round-trip only exercises draco-core's own decoder, which is as
+        // permissive as its encoder; the conformance guarantee comes from
+        // MAX_QUANTIZATION_BITS itself matching the reference decoder's 30-bit cap (see
+        // the constant's docs).
+        let (cloud, positions, _) = test_cloud();
         DracoEncodeOptions::with_quantization_bits(1).unwrap();
         let options = DracoEncodeOptions::with_quantization_bits(MAX_QUANTIZATION_BITS).unwrap();
-        compress_point_cloud(&cloud, &options).unwrap();
+        let compressed = compress_point_cloud(&cloud, &options).unwrap();
+        assert_eq!(decode_positions(&compressed.data).len(), positions.len());
 
         // ...and anything outside it is unrepresentable: rejected at construction, so
         // encoding never sees invalid options. Lossless has its own constructor.
