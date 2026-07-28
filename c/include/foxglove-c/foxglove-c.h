@@ -2834,11 +2834,11 @@ typedef struct foxglove_draco_encode_options {
    */
   foxglove_draco_method method;
   /**
-   * Quantization bits for the position attribute; must be between 1 and 31 inclusive.
+   * Quantization bits for the position attribute; must be between 1 and 30 inclusive.
    * Values outside that range cause `foxglove_gateway_start` to fail with
-   * `FOXGLOVE_ERROR_CONFIGURATION_ERROR`: values above 31 exceed what Draco supports,
-   * and `0` (lossless) provides no size reduction over the raw point cloud — use
-   * `FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DISABLED` instead.
+   * `FOXGLOVE_ERROR_CONFIGURATION_ERROR`: values above 30 are rejected by the reference
+   * Draco decoder, and `0` (lossless) provides no size reduction over the raw point
+   * cloud — use `FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DISABLED` instead.
    */
   uint8_t quantization_bits;
 } foxglove_draco_encode_options;
@@ -2859,7 +2859,7 @@ typedef struct foxglove_draco_encode_options {
  *
  * Zero-initialize this struct (mode 0) to use the SDK default. Note that when `mode` is
  * `FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DRACO`, `draco.quantization_bits` must be set
- * to a value between 1 and 31; a zero-initialized `draco` is rejected at startup.
+ * to a value between 1 and 30; a zero-initialized `draco` is rejected at startup.
  */
 typedef struct foxglove_point_cloud_compression {
   /**

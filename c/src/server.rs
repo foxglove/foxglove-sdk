@@ -116,11 +116,11 @@ pub struct FoxgloveDracoEncodeOptions {
     /// The Draco encoding method. Currently kd-tree is the only choice; see
     /// `foxglove_draco_method`.
     pub method: FoxgloveDracoMethod,
-    /// Quantization bits for the position attribute; must be between 1 and 31 inclusive.
+    /// Quantization bits for the position attribute; must be between 1 and 30 inclusive.
     /// Values outside that range cause `foxglove_gateway_start` to fail with
-    /// `FOXGLOVE_ERROR_CONFIGURATION_ERROR`: values above 31 exceed what Draco supports,
-    /// and `0` (lossless) provides no size reduction over the raw point cloud — use
-    /// `FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DISABLED` instead.
+    /// `FOXGLOVE_ERROR_CONFIGURATION_ERROR`: values above 30 are rejected by the reference
+    /// Draco decoder, and `0` (lossless) provides no size reduction over the raw point
+    /// cloud — use `FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DISABLED` instead.
     pub quantization_bits: u8,
 }
 
@@ -165,7 +165,7 @@ pub enum FoxglovePointCloudCompressionMode {
 ///
 /// Zero-initialize this struct (mode 0) to use the SDK default. Note that when `mode` is
 /// `FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DRACO`, `draco.quantization_bits` must be set
-/// to a value between 1 and 31; a zero-initialized `draco` is rejected at startup.
+/// to a value between 1 and 30; a zero-initialized `draco` is rejected at startup.
 #[cfg(feature = "remote-access")]
 #[repr(C)]
 #[derive(Clone, Copy)]
@@ -254,9 +254,10 @@ mod point_cloud_compression_tests {
 
     #[test]
     fn test_invalid_quantization_bits_rejected() {
-        // The documented ABI contract: out-of-range bits (0 is lossless, above 31
-        // exceeds Draco's maximum) fail gateway startup with a configuration error.
-        for bits in [0, 32] {
+        // The documented ABI contract: out-of-range bits (0 is lossless, above 30 is
+        // rejected by the reference Draco decoder) fail gateway startup with a
+        // configuration error. 31 is the first rejected value above the maximum.
+        for bits in [0, 31] {
             let compression = FoxglovePointCloudCompression {
                 mode: FoxglovePointCloudCompressionMode::Draco,
                 draco: FoxgloveDracoEncodeOptions {

@@ -32,11 +32,11 @@ struct DracoEncodeOptions {
   /// @brief The Draco encoding method. Currently kd-tree is the only choice; see
   /// @ref DracoMethod.
   DracoMethod method = DracoMethod::KdTree;
-  /// @brief Quantization bits for the position attribute; must be between 1 and 31
+  /// @brief Quantization bits for the position attribute; must be between 1 and 30
   /// inclusive. Values outside that range cause @ref RemoteAccessGateway::create to fail
-  /// with @ref FoxgloveError::ConfigurationError. Values above 31 exceed what Draco
-  /// supports, and `0` (lossless) provides no size reduction over the raw point cloud —
-  /// use @ref PointCloudCompressionMode::Disabled instead.
+  /// with @ref FoxgloveError::ConfigurationError. Values above 30 are rejected by the
+  /// reference Draco decoder, and `0` (lossless) provides no size reduction over the raw
+  /// point cloud — use @ref PointCloudCompressionMode::Disabled instead.
   uint8_t quantization_bits = 12;
 };
 
