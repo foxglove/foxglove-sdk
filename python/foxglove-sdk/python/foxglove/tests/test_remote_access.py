@@ -41,13 +41,11 @@ def test_start_gateway_accepts_point_cloud_compression_options() -> None:
     The point-cloud compression kwargs are converted before the gateway starts, so the
     missing-token error proves they were accepted.
     """
-    from foxglove.remote_access import DracoEncodeOptions, DracoMethod
+    from foxglove.remote_access import DracoEncodeOptions
 
     with pytest.raises(RuntimeError, match="No device token provided"):
         start_gateway(
-            point_cloud_compression=DracoEncodeOptions(
-                method=DracoMethod.KdTree, quantization_bits=10
-            ),
+            point_cloud_compression=DracoEncodeOptions(quantization_bits=10),
             suppress_point_cloud_compression=lambda _channel: False,
         )
 
@@ -56,27 +54,25 @@ def test_start_gateway_accepts_point_cloud_compression_options() -> None:
 
 
 def test_draco_encode_options_defaults() -> None:
-    from foxglove.remote_access import DracoEncodeOptions, DracoMethod
+    from foxglove.remote_access import DracoEncodeOptions
 
     options = DracoEncodeOptions()
-    assert options.method == DracoMethod.KdTree
     assert options.quantization_bits == 12
 
-    options = DracoEncodeOptions(method=DracoMethod.KdTree, quantization_bits=10)
-    assert options.method == DracoMethod.KdTree
+    options = DracoEncodeOptions(quantization_bits=10)
     assert options.quantization_bits == 10
 
 
 @typing.no_type_check
 def test_draco_encode_options_reject_invalid_quantization_bits() -> None:
-    from foxglove.remote_access import DracoEncodeOptions, DracoMethod
+    from foxglove.remote_access import DracoEncodeOptions
 
     # Out-of-range values are rejected at construction with a ValueError: 0 is lossless
     # (pass point_cloud_compression=False instead), and 31 is the first value above the
     # reference Draco decoder's 30-bit cap.
     for bits in (0, 31):
         with pytest.raises(ValueError, match="quantization_bits"):
-            DracoEncodeOptions(method=DracoMethod.KdTree, quantization_bits=bits)
+            DracoEncodeOptions(quantization_bits=bits)
 
     # quantization_bits must fit in a u8.
     with pytest.raises(OverflowError):

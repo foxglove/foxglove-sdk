@@ -15,50 +15,8 @@ use crate::logging::init_logging;
 use crate::remote_common::{PyConnectionGraph, PyParameter, PyService, PyStatusLevel};
 use crate::sink_channel_filter::{PyChannelDescriptor, PySinkChannelFilter};
 
-/// Draco encoding method for point-cloud compression.
-///
-/// kd-tree is currently the only offered method: sequential encoding is withheld because
-/// the encoder emits sequential bitstreams that the reference Draco decoder rejects
-/// whenever positions are quantized (upstream draco-core conformance bug). The enum and
-/// the ``method`` argument are kept so that re-offering sequential later is
-/// backwards-compatible; a ``Sequential`` value will be added once the upstream encoder
-/// is fixed.
-#[pyclass(
-    from_py_object,
-    name = "DracoMethod",
-    module = "foxglove.remote_access",
-    eq,
-    eq_int
-)]
-#[derive(Clone, PartialEq)]
-pub enum PyDracoMethod {
-    /// kd-tree encoding: reorders points, and float32 extra fields are quantized with the
-    /// same number of bits as positions. This is the default.
-    KdTree,
-}
-
-#[pymethods]
-impl PyDracoMethod {
-    #[getter]
-    fn name(&self) -> &'static str {
-        match self {
-            Self::KdTree => "KdTree",
-        }
-    }
-
-    #[getter]
-    fn value(&self) -> i32 {
-        match self {
-            Self::KdTree => 0,
-        }
-    }
-}
-
 /// Options for Draco point-cloud encoding.
 ///
-/// :param method: The Draco encoding method. Currently kd-tree is the only choice; see
-///     :py:class:`DracoMethod`. Defaults to :py:attr:`DracoMethod.KdTree`.
-/// :type method: DracoMethod
 /// :param quantization_bits: Quantization bits for the position attribute; must be
 ///     between 1 and 30 inclusive, or a :py:exc:`ValueError` is raised. To disable
 ///     compression, pass ``False`` as ``point_cloud_compression`` rather than ``0``.
@@ -72,28 +30,23 @@ impl PyDracoMethod {
 #[derive(Clone)]
 pub struct PyDracoEncodeOptions {
     #[pyo3(get)]
-    pub method: PyDracoMethod,
-    #[pyo3(get)]
     pub quantization_bits: u8,
 }
 
 #[pymethods]
 impl PyDracoEncodeOptions {
     #[new]
-    #[pyo3(signature = (*, method=PyDracoMethod::KdTree, quantization_bits=12))]
-    fn new(method: PyDracoMethod, quantization_bits: u8) -> PyResult<Self> {
+    #[pyo3(signature = (*, quantization_bits=12))]
+    fn new(quantization_bits: u8) -> PyResult<Self> {
         // Validate here so the options are valid by construction, mirroring the core
         // `DracoEncodeOptions` invariant: whatever options a caller holds are valid.
-        // Both fields are read-only for the same reason.
+        // `quantization_bits` is read-only for the same reason.
         if quantization_bits == 0 || quantization_bits > foxglove::draco::MAX_QUANTIZATION_BITS {
             return Err(pyo3::exceptions::PyValueError::new_err(
                 invalid_bits_message(quantization_bits),
             ));
         }
-        Ok(Self {
-            method,
-            quantization_bits,
-        })
+        Ok(Self { quantization_bits })
     }
 }
 
@@ -111,12 +64,10 @@ impl TryFrom<PyDracoEncodeOptions> for foxglove::draco::DracoEncodeOptions {
     type Error = foxglove::FoxgloveError;
 
     fn try_from(value: PyDracoEncodeOptions) -> Result<Self, Self::Error> {
-        // `method` has a single variant (kd-tree), which is also the only method the SDK
-        // derives for quantized encoding, so only the quantization setting is forwarded.
         // `quantization_bits` is already validated at construction; the backstop here
         // guards any path that skips `__new__` (e.g. structural extraction) without
-        // leaking the core error's Rust API reference.
-        let PyDracoMethod::KdTree = value.method;
+        // leaking the core error's Rust API reference. The SDK derives the Draco method
+        // (kd-tree for quantized encoding) internally, so there is nothing else to forward.
         Self::with_quantization_bits(value.quantization_bits).map_err(|_| {
             foxglove::FoxgloveError::ConfigurationError(format!(
                 "point_cloud_compression: {}",
@@ -945,7 +896,6 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<PyReliability>()?;
     module.add_class::<PyQosProfile>()?;
     module.add_class::<PyDracoEncodeOptions>()?;
-    module.add_class::<PyDracoMethod>()?;
 
     let py = parent_module.py();
     py.import("sys")?
