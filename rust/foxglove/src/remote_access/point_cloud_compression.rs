@@ -50,10 +50,9 @@ where
 /// lossy (and the publisher may drop when behind), which would violate the Reliable
 /// contract.
 ///
-/// Because the options come from a per-channel callback, misconfiguration cannot be
-/// rejected at gateway startup; a channel whose options are invalid — or lossless
-/// (`quantization_bits` `0`), which provides no size reduction over the raw cloud — is
-/// delivered unmodified, with a warning.
+/// Options are valid by construction, but lossless options — meaningful for the direct
+/// encoding API — provide no size reduction over the raw cloud, so a channel whose
+/// policy returns them is delivered unmodified, with a warning.
 pub(super) fn resolve_point_cloud_compression(
     channel: &RawChannel,
     policy: Option<&dyn PointCloudCompression>,
@@ -82,18 +81,11 @@ pub(super) fn resolve_point_cloud_compression(
         },
         None => CompressPointCloudOptions::default(),
     };
-    if let Err(e) = options.validate() {
+    if options.draco_options().is_lossless() {
         tracing::warn!(
             topic = %channel.topic(),
-            "invalid point-cloud compression options ({e}); delivering unmodified"
-        );
-        return None;
-    }
-    if options.draco_options().quantization_bits == 0 {
-        tracing::warn!(
-            topic = %channel.topic(),
-            "point-cloud compression with quantization_bits 0 (lossless) provides no size \
-             reduction over the raw cloud; delivering unmodified"
+            "lossless point-cloud compression provides no size reduction over the raw \
+             cloud; delivering unmodified"
         );
         return None;
     }
@@ -103,7 +95,7 @@ pub(super) fn resolve_point_cloud_compression(
 #[cfg(test)]
 mod tests {
     use super::{PointCloudCompressionFn, resolve_point_cloud_compression};
-    use crate::draco::{CompressPointCloudOptions, DracoEncodeOptions, MAX_QUANTIZATION_BITS};
+    use crate::draco::{CompressPointCloudOptions, DracoEncodeOptions};
     use crate::remote_access::qos::Reliability;
     use crate::{ChannelBuilder, ChannelDescriptor, Context, Encode, RawChannel};
     use std::sync::Arc;
@@ -119,7 +111,9 @@ mod tests {
     }
 
     fn options_with_bits(quantization_bits: u8) -> CompressPointCloudOptions {
-        CompressPointCloudOptions::Draco(DracoEncodeOptions { quantization_bits })
+        CompressPointCloudOptions::Draco(
+            DracoEncodeOptions::with_quantization_bits(quantization_bits).unwrap(),
+        )
     }
 
     #[test]
@@ -169,25 +163,16 @@ mod tests {
     }
 
     #[test]
-    fn skips_compression_for_invalid_options() {
-        // An out-of-range quantization setting would otherwise only surface as a
-        // per-message encode failure at runtime; deliver the channel unmodified instead.
+    fn skips_compression_for_lossless_options() {
+        // Lossless Draco provides no size reduction, so on the transparent path it is
+        // pure overhead; deliver the raw cloud instead. (Out-of-range options are
+        // unrepresentable: DracoEncodeOptions validates at construction.)
         let cloud = make_channel("/cloud");
         let policy = PointCloudCompressionFn(|_: &ChannelDescriptor| {
-            Some(options_with_bits(MAX_QUANTIZATION_BITS + 1))
+            Some(CompressPointCloudOptions::Draco(
+                DracoEncodeOptions::lossless(),
+            ))
         });
-        assert_eq!(
-            resolve_point_cloud_compression(&cloud, Some(&policy), Reliability::Lossy),
-            None
-        );
-    }
-
-    #[test]
-    fn skips_compression_for_zero_quantization_bits() {
-        // Lossless Draco provides no size reduction, so on the transparent path it is
-        // pure overhead; deliver the raw cloud instead.
-        let cloud = make_channel("/cloud");
-        let policy = PointCloudCompressionFn(|_: &ChannelDescriptor| Some(options_with_bits(0)));
         assert_eq!(
             resolve_point_cloud_compression(&cloud, Some(&policy), Reliability::Lossy),
             None

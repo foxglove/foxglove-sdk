@@ -485,12 +485,11 @@ impl Gateway {
     ///
     /// If no policy is set, every compressible Lossy channel is compressed with
     /// [`CompressPointCloudOptions::default()`]. Note that the default settings are lossy:
-    /// kd-tree encoding with positions quantized to 12 bits.
-    /// [`DracoEncodeOptions::quantization_bits`](crate::draco::DracoEncodeOptions::quantization_bits)
-    /// must be between `1` and
-    /// [`MAX_QUANTIZATION_BITS`](crate::draco::MAX_QUANTIZATION_BITS) inclusive: a channel
-    /// whose options are outside that range — including `0` (lossless), which provides no
-    /// size reduction over the raw cloud — is delivered unmodified, with a warning.
+    /// kd-tree encoding with positions quantized to 12 bits. Options are valid by
+    /// construction; the one degenerate case is
+    /// [`DracoEncodeOptions::lossless()`](crate::draco::DracoEncodeOptions::lossless),
+    /// which provides no size reduction over the raw cloud — a channel whose policy
+    /// returns lossless options is delivered unmodified, with a warning.
     ///
     /// Draco cannot quantize float64 fields, so non-empty clouds containing one (other
     /// than the `x`/`y`/`z` position fields) fail to compress and are dropped, with a

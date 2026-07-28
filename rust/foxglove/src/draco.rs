@@ -9,11 +9,11 @@
 //! requires), with a missing axis padded with 0.0. Every other
 //! field becomes a single-component generic Draco attribute with its native numeric type:
 //! integer fields are always copied losslessly, and float32 fields are quantized with the
-//! same setting as positions (or copied losslessly when
-//! [`DracoEncodeOptions::quantization_bits`] is `0`). Draco cannot quantize float64
+//! same setting as positions (or copied losslessly with
+//! [`DracoEncodeOptions::lossless`]). Draco cannot quantize float64
 //! fields: a non-empty cloud containing one (other than `x`/`y`/`z`, which are narrowed
 //! into the float32 POSITION attribute) is rejected when quantization is requested;
-//! with `quantization_bits` `0`, float64 fields are copied losslessly.
+//! with lossless options, float64 fields are copied losslessly.
 //!
 //! The remote-access sink can also transcode `foxglove.PointCloud` channels transparently;
 //! see [`CompressPointCloudOptions`].
@@ -39,8 +39,8 @@ use crate::messages::{CompressedPointCloud, PointCloud};
 /// rejects whenever positions are quantized (`quantization_bits > 0`). Sequential encoding
 /// is used only as the lossless fallback (zero quantization bits or empty clouds), which
 /// the reference decoder accepts. Once the upstream encoder is fixed, a
-/// public `method` field can be added back to [`DracoEncodeOptions`] non-breakingly (the
-/// struct is `#[non_exhaustive]`).
+/// method setting can be added to [`DracoEncodeOptions`] non-breakingly (the struct has
+/// only private fields and validating constructors).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum DracoMethod {
     /// Sequential encoding: preserves point order and copies all extra fields losslessly.
@@ -63,26 +63,63 @@ impl DracoMethod {
     }
 }
 
-/// The maximum supported value for [`DracoEncodeOptions::quantization_bits`].
+/// The maximum supported value for [`DracoEncodeOptions::with_quantization_bits`].
 pub const MAX_QUANTIZATION_BITS: u8 = 31;
 
 /// Options for Draco point-cloud encoding.
 ///
-/// Construct with [`Default::default`] and adjust the public fields:
+/// Construct with [`Default::default`] (12-bit quantization),
+/// [`DracoEncodeOptions::with_quantization_bits`], or [`DracoEncodeOptions::lossless`].
+/// Invalid settings are unrepresentable: whatever options a caller holds are valid.
 ///
 /// ```
-/// let mut options = foxglove::draco::DracoEncodeOptions::default();
-/// options.quantization_bits = 10;
+/// let options = foxglove::draco::DracoEncodeOptions::with_quantization_bits(10)?;
+/// # Ok::<(), foxglove::draco::DracoEncodeError>(())
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[non_exhaustive]
 pub struct DracoEncodeOptions {
-    /// Quantization bits for the position attribute, at most [`MAX_QUANTIZATION_BITS`].
-    /// `0` encodes positions as lossless float32 (no size reduction over the raw cloud,
-    /// using sequential encoding internally); the remote access sink skips compression
-    /// for channels configured with `0` — return `None` from its compression policy
-    /// instead. Defaults to 12.
-    pub quantization_bits: u8,
+    /// Invariant: `0` (lossless) or `1..=MAX_QUANTIZATION_BITS`, enforced by the
+    /// constructors.
+    quantization_bits: u8,
+}
+
+impl DracoEncodeOptions {
+    /// Creates options that quantize positions to `bits` bits (lossy).
+    ///
+    /// `bits` must be between `1` and [`MAX_QUANTIZATION_BITS`] inclusive; anything else
+    /// is rejected with [`DracoEncodeError::InvalidQuantizationBits`]. For lossless
+    /// encoding use [`DracoEncodeOptions::lossless`] instead of `0`.
+    pub fn with_quantization_bits(bits: u8) -> Result<Self, DracoEncodeError> {
+        if bits == 0 || bits > MAX_QUANTIZATION_BITS {
+            return Err(DracoEncodeError::InvalidQuantizationBits { bits });
+        }
+        Ok(Self {
+            quantization_bits: bits,
+        })
+    }
+
+    /// Creates options that encode positions as lossless float32, using the
+    /// order-preserving sequential encoding internally.
+    ///
+    /// Lossless output provides no size reduction over the raw cloud, so it is only
+    /// useful with the direct [`compress_point_cloud`] API (e.g. for lossless archival);
+    /// the remote access sink skips compression for channels whose policy returns
+    /// lossless options — return `None` from the policy instead.
+    pub fn lossless() -> Self {
+        Self {
+            quantization_bits: 0,
+        }
+    }
+
+    /// Returns the configured quantization bits, or `0` for lossless encoding.
+    pub fn quantization_bits(&self) -> u8 {
+        self.quantization_bits
+    }
+
+    /// Returns true if these options encode losslessly.
+    pub fn is_lossless(&self) -> bool {
+        self.quantization_bits == 0
+    }
 }
 
 impl Default for DracoEncodeOptions {
@@ -117,25 +154,6 @@ impl CompressPointCloudOptions {
             CompressPointCloudOptions::Draco(options) => *options,
         }
     }
-
-    /// Validates the configuration, so misconfiguration surfaces at startup rather than
-    /// as a per-message encode failure.
-    #[cfg(feature = "remote-access")]
-    pub(crate) fn validate(&self) -> Result<(), DracoEncodeError> {
-        match self {
-            CompressPointCloudOptions::Draco(options) => validate_options(options),
-        }
-    }
-}
-
-/// Validates [`DracoEncodeOptions`].
-fn validate_options(options: &DracoEncodeOptions) -> Result<(), DracoEncodeError> {
-    if options.quantization_bits > MAX_QUANTIZATION_BITS {
-        return Err(DracoEncodeError::InvalidQuantizationBits {
-            bits: options.quantization_bits,
-        });
-    }
-    Ok(())
 }
 
 impl Default for CompressPointCloudOptions {
@@ -148,8 +166,11 @@ impl Default for CompressPointCloudOptions {
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
 pub enum DracoEncodeError {
-    /// The requested `quantization_bits` exceeds [`MAX_QUANTIZATION_BITS`].
-    #[error("quantization_bits ({bits}) exceeds the maximum of {MAX_QUANTIZATION_BITS}")]
+    /// The requested quantization bits are outside `1..=MAX_QUANTIZATION_BITS`.
+    #[error(
+        "quantization_bits ({bits}) must be between 1 and {MAX_QUANTIZATION_BITS}; use \
+         DracoEncodeOptions::lossless() for lossless encoding"
+    )]
     InvalidQuantizationBits {
         /// The requested quantization bits.
         bits: u8,
@@ -178,14 +199,14 @@ pub enum DracoEncodeError {
     },
     /// The point cloud has a float64 field, which Draco cannot quantize.
     ///
-    /// Emitted only when quantization is requested
-    /// ([`DracoEncodeOptions::quantization_bits`] `> 0`) for a non-empty cloud; with
-    /// quantization disabled, float64 fields are copied losslessly. The `x`/`y`/`z`
+    /// Emitted only when quantization is requested (the options are not
+    /// [lossless](DracoEncodeOptions::lossless)) for a non-empty cloud; with lossless
+    /// options, float64 fields are copied losslessly. The `x`/`y`/`z`
     /// position fields are exempt: they are narrowed into the float32 POSITION attribute
     /// and never become float64 attributes.
     #[error(
         "field '{name}' is float64, which Draco cannot quantize; use float32 or integer \
-         fields, or suppress compression for this channel"
+         fields, or exclude this channel from compression"
     )]
     UnquantizableField {
         /// The float64 field name.
@@ -251,15 +272,14 @@ fn read_as_f32(bytes: &[u8], off: usize, dtype: DataType) -> f32 {
 ///
 /// The cloud must contain at least two of the `x`, `y`, and `z` fields, which are combined
 /// into a 3-component float32 POSITION attribute; a missing axis is padded with 0.0.
-/// When [`DracoEncodeOptions::quantization_bits`] is non-zero,
-/// positions are quantized (lossy). Every other field becomes a generic Draco attribute
-/// with its native numeric type: integer fields are copied losslessly, and float32 fields
-/// are quantized with the same setting as positions (or copied losslessly when
-/// [`DracoEncodeOptions::quantization_bits`] is `0`).
+/// Unless the options are lossless, positions are quantized (lossy). Every other field
+/// becomes a generic Draco attribute with its native numeric type: integer fields are
+/// copied losslessly, and float32 fields are quantized with the same setting as positions
+/// (or copied losslessly with [`DracoEncodeOptions::lossless`]).
 ///
 /// Draco cannot quantize float64 fields: when quantization is requested, a non-empty
 /// cloud containing one (other than `x`/`y`/`z`) is rejected with
-/// [`DracoEncodeError::UnquantizableField`]. Set `quantization_bits` to `0` to copy
+/// [`DracoEncodeError::UnquantizableField`]. Use [`DracoEncodeOptions::lossless`] to copy
 /// float64 fields losslessly (no size reduction), or convert them to float32 or integer
 /// fields.
 ///
@@ -311,8 +331,6 @@ fn encode_draco(
         dtype: DataType,
         size: usize,
     }
-
-    validate_options(options)?;
 
     let stride = cloud.point_stride as usize;
     if stride == 0 {
@@ -782,9 +800,7 @@ mod tests {
 
         // Lossless, which uses the order-preserving sequential encoding internally, so
         // decoded values compare exactly.
-        let options = DracoEncodeOptions {
-            quantization_bits: 0,
-        };
+        let options = DracoEncodeOptions::lossless();
         let draco = encode_draco(&cloud, &options).unwrap();
         let decoded = decode_cloud(&draco);
 
@@ -854,9 +870,7 @@ mod tests {
     #[test]
     fn test_quantization_error_within_tolerance() {
         let (cloud, positions, _) = test_cloud();
-        let options = DracoEncodeOptions {
-            quantization_bits: 14,
-        };
+        let options = DracoEncodeOptions::with_quantization_bits(14).unwrap();
         let compressed = compress_point_cloud(&cloud, &options).unwrap();
         let mut decoded = decode_positions(&compressed.data);
         assert_eq!(decoded.len(), positions.len());
@@ -891,9 +905,7 @@ mod tests {
     #[test]
     fn test_lossless_positions_with_zero_quantization_bits() {
         let (cloud, positions, _) = test_cloud();
-        let options = DracoEncodeOptions {
-            quantization_bits: 0,
-        };
+        let options = DracoEncodeOptions::lossless();
         let compressed = compress_point_cloud(&cloud, &options).unwrap();
         let decoded = decode_positions(&compressed.data);
         assert_eq!(decoded, positions);
@@ -902,9 +914,7 @@ mod tests {
     #[test]
     fn test_kd_tree_roundtrip_point_count() {
         let (cloud, positions, _) = test_cloud();
-        let options = DracoEncodeOptions {
-            quantization_bits: 12,
-        };
+        let options = DracoEncodeOptions::with_quantization_bits(12).unwrap();
         let compressed = compress_point_cloud(&cloud, &options).unwrap();
         // kd-tree reorders points, so only the point count is directly comparable.
         let decoded = decode_positions(&compressed.data);
@@ -935,9 +945,7 @@ mod tests {
     #[test]
     fn test_lossless_uses_sequential_fallback() {
         let (cloud, positions, _) = test_cloud();
-        let options = DracoEncodeOptions {
-            quantization_bits: 0,
-        };
+        let options = DracoEncodeOptions::lossless();
         let compressed = compress_point_cloud(&cloud, &options).unwrap();
         // The exact, order-preserving round-trip proves the sequential fallback was used:
         // kd-tree requires quantization and reorders points.
@@ -962,9 +970,7 @@ mod tests {
         // The kd-tree encoder doesn't support float64 attributes, and the lossless
         // alternative is strictly larger than the raw cloud, so quantized encoding of
         // a float64 field is an error naming the field.
-        let options = DracoEncodeOptions {
-            quantization_bits: 12,
-        };
+        let options = DracoEncodeOptions::with_quantization_bits(12).unwrap();
         let err = compress_point_cloud(&cloud, &options).unwrap_err();
         assert!(matches!(
             err,
@@ -973,9 +979,7 @@ mod tests {
 
         // With quantization disabled, the same cloud encodes losslessly; the exact,
         // order-preserving round-trip proves the sequential path was used.
-        let options = DracoEncodeOptions {
-            quantization_bits: 0,
-        };
+        let options = DracoEncodeOptions::lossless();
         let compressed = compress_point_cloud(&cloud, &options).unwrap();
         assert_eq!(decode_positions(&compressed.data), positions);
     }
@@ -1008,9 +1012,7 @@ mod tests {
             data: Bytes::from(data),
         };
 
-        let options = DracoEncodeOptions {
-            quantization_bits: 12,
-        };
+        let options = DracoEncodeOptions::with_quantization_bits(12).unwrap();
         let compressed = compress_point_cloud(&cloud, &options).unwrap();
         assert_eq!(decode_positions(&compressed.data).len(), positions.len());
     }
@@ -1019,9 +1021,7 @@ mod tests {
     fn test_extra_field_values_roundtrip() {
         // Lossless encoding preserves point order, so extra field values compare exactly.
         let (cloud, _, intensities) = test_cloud();
-        let options = DracoEncodeOptions {
-            quantization_bits: 0,
-        };
+        let options = DracoEncodeOptions::lossless();
         let compressed = compress_point_cloud(&cloud, &options).unwrap();
 
         let mut decoded = DracoCloud::new();
@@ -1082,23 +1082,24 @@ mod tests {
     }
 
     #[test]
-    fn test_invalid_quantization_bits_error() {
+    fn test_quantization_bits_validated_at_construction() {
+        // The boundaries of the valid range are accepted and usable...
         let (cloud, _, _) = test_cloud();
-        // The maximum is accepted...
-        let options = DracoEncodeOptions {
-            quantization_bits: MAX_QUANTIZATION_BITS,
-        };
+        DracoEncodeOptions::with_quantization_bits(1).unwrap();
+        let options = DracoEncodeOptions::with_quantization_bits(MAX_QUANTIZATION_BITS).unwrap();
         compress_point_cloud(&cloud, &options).unwrap();
 
-        // ...and anything above it is rejected up front.
-        let options = DracoEncodeOptions {
-            quantization_bits: MAX_QUANTIZATION_BITS + 1,
-        };
-        let err = compress_point_cloud(&cloud, &options).unwrap_err();
-        assert!(matches!(
-            err,
-            DracoEncodeError::InvalidQuantizationBits { bits } if bits == MAX_QUANTIZATION_BITS + 1
-        ));
+        // ...and anything outside it is unrepresentable: rejected at construction, so
+        // encoding never sees invalid options. Lossless has its own constructor.
+        for bits in [0, MAX_QUANTIZATION_BITS + 1] {
+            let err = DracoEncodeOptions::with_quantization_bits(bits).unwrap_err();
+            assert!(matches!(
+                err,
+                DracoEncodeError::InvalidQuantizationBits { bits: b } if b == bits
+            ));
+        }
+        assert!(DracoEncodeOptions::lossless().is_lossless());
+        assert!(!DracoEncodeOptions::default().is_lossless());
     }
 
     #[test]
@@ -1137,9 +1138,7 @@ mod tests {
         let (mut cloud, _, _) = test_cloud();
         cloud.data = Bytes::new();
 
-        let options = DracoEncodeOptions {
-            quantization_bits: 12,
-        };
+        let options = DracoEncodeOptions::with_quantization_bits(12).unwrap();
         let compressed = compress_point_cloud(&cloud, &options).unwrap();
         assert!(!compressed.data.is_empty());
 
@@ -1158,9 +1157,7 @@ mod tests {
         cloud.fields.retain(|f| f.name != "z");
 
         // Lossless so decoded values compare exactly.
-        let options = DracoEncodeOptions {
-            quantization_bits: 0,
-        };
+        let options = DracoEncodeOptions::lossless();
         let draco = encode_draco(&cloud, &options).unwrap();
         let expected: Vec<[f32; 3]> = positions.iter().map(|&[x, y, _]| [x, y, 0.0]).collect();
         assert_eq!(decode_positions(&draco), expected);
