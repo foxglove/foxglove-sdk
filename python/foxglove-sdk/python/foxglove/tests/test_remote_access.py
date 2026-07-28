@@ -55,23 +55,6 @@ def test_start_gateway_accepts_point_cloud_compression_options() -> None:
         start_gateway(point_cloud_compression=False)
 
 
-def test_start_gateway_rejects_invalid_quantization_bits() -> None:
-    """
-    Out-of-range quantization bits (0 is lossless, above 30 is rejected by the reference
-    Draco decoder) fail at startup with a configuration error, before the missing token is
-    even checked. 31 is the first rejected value above the maximum.
-    """
-    from foxglove.remote_access import DracoEncodeOptions, DracoMethod
-
-    for bits in (0, 31):
-        with pytest.raises(RuntimeError, match="quantization_bits"):
-            start_gateway(
-                point_cloud_compression=DracoEncodeOptions(
-                    method=DracoMethod.KdTree, quantization_bits=bits
-                ),
-            )
-
-
 def test_draco_encode_options_defaults() -> None:
     from foxglove.remote_access import DracoEncodeOptions, DracoMethod
 
@@ -85,11 +68,18 @@ def test_draco_encode_options_defaults() -> None:
 
 
 @typing.no_type_check
-def test_draco_encode_options_rejects_non_u8_quantization_bits() -> None:
-    from foxglove.remote_access import DracoEncodeOptions
+def test_draco_encode_options_reject_invalid_quantization_bits() -> None:
+    from foxglove.remote_access import DracoEncodeOptions, DracoMethod
 
+    # Out-of-range values are rejected at construction with a ValueError: 0 is lossless
+    # (pass point_cloud_compression=False instead), and 31 is the first value above the
+    # reference Draco decoder's 30-bit cap.
+    for bits in (0, 31):
+        with pytest.raises(ValueError, match="quantization_bits"):
+            DracoEncodeOptions(method=DracoMethod.KdTree, quantization_bits=bits)
+
+    # quantization_bits must fit in a u8.
     with pytest.raises(OverflowError):
-        # quantization_bits must fit in a u8
         DracoEncodeOptions(quantization_bits=256)
 
 

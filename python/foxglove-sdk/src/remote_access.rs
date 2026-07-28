@@ -60,10 +60,8 @@ impl PyDracoMethod {
 ///     :py:class:`DracoMethod`. Defaults to :py:attr:`DracoMethod.KdTree`.
 /// :type method: DracoMethod
 /// :param quantization_bits: Quantization bits for the position attribute; must be
-///     between 1 and 30 inclusive. Values outside that range are rejected when starting
-///     the gateway: values above 30 are rejected by the reference Draco decoder, and
-///     ``0`` (lossless) provides no size reduction over the raw point cloud — pass
-///     ``False`` as ``point_cloud_compression`` to disable compression instead.
+///     between 1 and 30 inclusive, or a :py:exc:`ValueError` is raised. To disable
+///     compression, pass ``False`` as ``point_cloud_compression`` rather than ``0``.
 ///     Defaults to 12.
 /// :type quantization_bits: int
 #[pyclass(
@@ -73,9 +71,9 @@ impl PyDracoMethod {
 )]
 #[derive(Clone)]
 pub struct PyDracoEncodeOptions {
-    #[pyo3(get, set)]
+    #[pyo3(get)]
     pub method: PyDracoMethod,
-    #[pyo3(get, set)]
+    #[pyo3(get)]
     pub quantization_bits: u8,
 }
 
@@ -83,12 +81,30 @@ pub struct PyDracoEncodeOptions {
 impl PyDracoEncodeOptions {
     #[new]
     #[pyo3(signature = (*, method=PyDracoMethod::KdTree, quantization_bits=12))]
-    fn new(method: PyDracoMethod, quantization_bits: u8) -> Self {
-        Self {
+    fn new(method: PyDracoMethod, quantization_bits: u8) -> PyResult<Self> {
+        // Validate here so the options are valid by construction, mirroring the core
+        // `DracoEncodeOptions` invariant: whatever options a caller holds are valid.
+        // Both fields are read-only for the same reason.
+        if quantization_bits == 0 || quantization_bits > foxglove::draco::MAX_QUANTIZATION_BITS {
+            return Err(pyo3::exceptions::PyValueError::new_err(
+                invalid_bits_message(quantization_bits),
+            ));
+        }
+        Ok(Self {
             method,
             quantization_bits,
-        }
+        })
     }
+}
+
+/// Message for an out-of-range `quantization_bits`, phrased for Python callers (the core
+/// error text points at `DracoEncodeOptions::lossless()`, which does not exist here).
+fn invalid_bits_message(bits: u8) -> String {
+    format!(
+        "quantization_bits ({bits}) must be between 1 and {}; \
+         pass point_cloud_compression=False to disable compression",
+        foxglove::draco::MAX_QUANTIZATION_BITS
+    )
 }
 
 impl TryFrom<PyDracoEncodeOptions> for foxglove::draco::DracoEncodeOptions {
@@ -97,9 +113,15 @@ impl TryFrom<PyDracoEncodeOptions> for foxglove::draco::DracoEncodeOptions {
     fn try_from(value: PyDracoEncodeOptions) -> Result<Self, Self::Error> {
         // `method` has a single variant (kd-tree), which is also the only method the SDK
         // derives for quantized encoding, so only the quantization setting is forwarded.
+        // `quantization_bits` is already validated at construction; the backstop here
+        // guards any path that skips `__new__` (e.g. structural extraction) without
+        // leaking the core error's Rust API reference.
         let PyDracoMethod::KdTree = value.method;
-        Self::with_quantization_bits(value.quantization_bits).map_err(|e| {
-            foxglove::FoxgloveError::ConfigurationError(format!("point_cloud_compression: {e}"))
+        Self::with_quantization_bits(value.quantization_bits).map_err(|_| {
+            foxglove::FoxgloveError::ConfigurationError(format!(
+                "point_cloud_compression: {}",
+                invalid_bits_message(value.quantization_bits)
+            ))
         })
     }
 }
