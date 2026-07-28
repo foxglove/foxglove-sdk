@@ -56,12 +56,13 @@ def test_start_gateway_accepts_point_cloud_compression_options() -> None:
 
 def test_start_gateway_rejects_invalid_quantization_bits() -> None:
     """
-    Out-of-range quantization bits (0 is lossless, above 31 exceeds Draco's maximum) fail
-    at startup with a configuration error, before the missing token is even checked.
+    Out-of-range quantization bits (0 is lossless, above 30 is rejected by the reference
+    Draco decoder) fail at startup with a configuration error, before the missing token is
+    even checked. 31 is the first rejected value above the maximum.
     """
     from foxglove import DracoEncodeOptions, DracoMethod
 
-    for bits in (0, 32):
+    for bits in (0, 31):
         with pytest.raises(RuntimeError, match="quantization_bits"):
             start_gateway(
                 point_cloud_compression=DracoEncodeOptions(

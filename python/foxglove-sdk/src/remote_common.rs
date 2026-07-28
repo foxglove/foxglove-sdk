@@ -695,10 +695,11 @@ impl PyDracoMethod {
 ///     :py:class:`DracoMethod`. Defaults to :py:attr:`DracoMethod.KdTree`.
 /// :type method: DracoMethod
 /// :param quantization_bits: Quantization bits for the position attribute; must be
-///     between 1 and 31 inclusive. Values outside that range are rejected when starting
-///     the gateway: values above 31 exceed what Draco supports, and ``0`` (lossless)
-///     provides no size reduction over the raw point cloud — pass ``False`` as
-///     ``point_cloud_compression`` to disable compression instead. Defaults to 12.
+///     between 1 and 30 inclusive. Values outside that range are rejected when starting
+///     the gateway: values above 30 are rejected by the reference Draco decoder, and
+///     ``0`` (lossless) provides no size reduction over the raw point cloud — pass
+///     ``False`` as ``point_cloud_compression`` to disable compression instead.
+///     Defaults to 12.
 /// :type quantization_bits: int
 #[pyclass(from_py_object, name = "DracoEncodeOptions", module = "foxglove")]
 #[derive(Clone)]
