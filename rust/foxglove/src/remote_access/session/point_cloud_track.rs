@@ -11,7 +11,6 @@ use crate::ChannelId;
 use crate::draco::CompressPointCloudOptions;
 use crate::draco::transcode::transcode_point_cloud_message;
 use crate::protocol::v2::server::Status;
-use crate::throttler::Throttler;
 
 use super::RemoteAccessSession;
 
@@ -30,6 +29,78 @@ const TRANSCODE_RECOVERY_QUIET_PERIOD: Duration =
 /// recovery can remove it.
 fn compression_status_id(channel_id: ChannelId) -> String {
     format!("point-cloud-compression-{}", u64::from(channel_id))
+}
+
+/// The lifecycle of a channel's viewer-facing compression warning, with explicit
+/// timestamps so the timing rules are unit-testable without sleeping.
+///
+/// Warnings are throttled to [`TRANSCODE_WARN_INTERVAL`]; a live warning is cleared —
+/// with the throttle reset, so a fresh failure after genuine recovery reports
+/// immediately — only once recovery has been sustained for
+/// [`TRANSCODE_RECOVERY_QUIET_PERIOD`]. Clearing on the first success would strobe the
+/// status (and the log) at message rate on a mixed good/bad stream, while clearing
+/// without resetting the throttle would leave intermittent failures mostly invisible.
+struct WarningState {
+    /// Earliest instant the next throttled warning may be emitted; `None` emits
+    /// immediately.
+    next_warn_at: Option<Instant>,
+    /// True while a warning status is live on viewers.
+    active: bool,
+    /// When the most recent transcode failure happened, gating removal.
+    last_failure: Option<Instant>,
+}
+
+impl WarningState {
+    const fn new() -> Self {
+        Self {
+            next_warn_at: None,
+            active: false,
+            last_failure: None,
+        }
+    }
+
+    /// Acquires the shared warn throttle: returns true if a warning may be emitted at
+    /// `now`, starting the next throttle window. Shared between transcode errors and
+    /// task panics, so neither can flood the log.
+    fn try_warn(&mut self, now: Instant) -> bool {
+        if self.next_warn_at.is_some_and(|at| now < at) {
+            return false;
+        }
+        self.next_warn_at = Some(now + TRANSCODE_WARN_INTERVAL);
+        true
+    }
+
+    /// Records a transcode failure at `now`; returns true if a warning should be
+    /// published (throttled).
+    fn on_failure(&mut self, now: Instant) -> bool {
+        self.last_failure = Some(now);
+        self.try_warn(now)
+    }
+
+    /// Marks the warning status live on viewers, after it was actually published.
+    fn published(&mut self) {
+        self.active = true;
+    }
+
+    /// Records a successful transcode at `now`; returns true if the live warning should
+    /// be removed because recovery has been sustained for the quiet period.
+    fn on_success(&mut self, now: Instant) -> bool {
+        if !self.active
+            || self
+                .last_failure
+                .is_some_and(|at| now.duration_since(at) < TRANSCODE_RECOVERY_QUIET_PERIOD)
+        {
+            return false;
+        }
+        self.active = false;
+        self.next_warn_at = None;
+        true
+    }
+
+    /// True if a warning status is live on viewers.
+    fn active(&self) -> bool {
+        self.active
+    }
 }
 
 /// Transcodes `foxglove.PointCloud` messages to Draco-compressed
@@ -65,17 +136,7 @@ impl PointCloudPublisher {
         let (tx, rx) = flume::bounded::<(Bytes, u64)>(Self::CHANNEL_CAPACITY);
         let consumer_rx = rx.clone();
         runtime.spawn(async move {
-            // Throttles compression warnings so a stream of bad clouds doesn't flood the log.
-            let mut warn_throttler = Throttler::new(TRANSCODE_WARN_INTERVAL);
-            // True while a compression-failure status is live on viewers. The status is
-            // removed — and the throttler reset, so a fresh failure reports immediately —
-            // only once recovery has been sustained for TRANSCODE_RECOVERY_QUIET_PERIOD:
-            // removing on the first success would make a mixed good/bad stream strobe
-            // the status (and the log) at message rate, while removing without resetting
-            // the throttler would leave intermittent failures mostly invisible.
-            let mut warning_active = false;
-            // When the most recent transcode failure happened, gating status removal.
-            let mut last_failure: Option<Instant> = None;
+            let mut warning = WarningState::new();
             while let Ok((data, log_time)) = consumer_rx.recv_async().await {
                 let result = tokio::task::spawn_blocking(move || {
                     transcode_point_cloud_message(&data, &options)
@@ -88,19 +149,13 @@ impl PointCloudPublisher {
                         let Some(session) = session.upgrade() else {
                             break;
                         };
-                        if warning_active
-                            && last_failure
-                                .is_none_or(|at| at.elapsed() >= TRANSCODE_RECOVERY_QUIET_PERIOD)
-                        {
-                            warning_active = false;
-                            warn_throttler = Throttler::new(TRANSCODE_WARN_INTERVAL);
+                        if warning.on_success(Instant::now()) {
                             session.remove_status(vec![compression_status_id(channel_id)]);
                         }
                         session.deliver_transcoded_point_cloud(channel_id, &transcoded, log_time);
                     }
                     Ok(Err(e)) => {
-                        last_failure = Some(Instant::now());
-                        if warn_throttler.try_acquire() {
+                        if warning.on_failure(Instant::now()) {
                             let message =
                                 format!("point cloud compression error on topic {topic}: {e}");
                             warn!("{message}");
@@ -109,14 +164,12 @@ impl PointCloudPublisher {
                                     Status::warning(message)
                                         .with_id(compression_status_id(channel_id)),
                                 );
-                                warning_active = true;
+                                warning.published();
                             }
                         }
                     }
                     Err(e) => {
-                        // Throttled like transcode errors: a panic that recurs on every
-                        // message must not flood the log.
-                        if warn_throttler.try_acquire() {
+                        if warning.try_warn(Instant::now()) {
                             error!("point cloud compression task panicked: {e}");
                         }
                     }
@@ -130,7 +183,7 @@ impl PointCloudPublisher {
             // id then, and retracting would clear a warning it just published. The
             // status is orphaned — and retracted — only when no publisher is registered
             // for the channel.
-            if warning_active
+            if warning.active()
                 && let Some(session) = session.upgrade()
                 && session
                     .channel_registry
@@ -160,5 +213,119 @@ impl PointCloudPublisher {
                 warn!("point cloud publisher channel closed");
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Shorthand for `t0 + secs`, keeping the timelines below readable.
+    fn at(t0: Instant, secs: u64) -> Instant {
+        t0 + Duration::from_secs(secs)
+    }
+
+    /// A failure at `secs` that publishes; panics if the publish was throttled.
+    fn fail_and_publish(warning: &mut WarningState, t0: Instant, secs: u64) {
+        assert!(
+            warning.on_failure(at(t0, secs)),
+            "failure at t0+{secs}s should publish"
+        );
+        warning.published();
+    }
+
+    #[test]
+    fn first_failure_publishes_and_repeats_are_throttled() {
+        let t0 = Instant::now();
+        let mut warning = WarningState::new();
+
+        fail_and_publish(&mut warning, t0, 0);
+        // Repeats inside the throttle window are recorded but not re-published.
+        assert!(!warning.on_failure(at(t0, 1)));
+        assert!(!warning.on_failure(at(t0, 29)));
+        assert!(warning.active());
+        // The next window re-publishes (replacing the status under its stable id).
+        assert!(warning.on_failure(at(t0, 30)));
+    }
+
+    #[test]
+    fn mixed_stream_keeps_warning_up() {
+        // The first regression this state machine guards: a stream interleaving good
+        // and bad clouds must keep the warning up continuously — successes between
+        // failures neither remove the status nor let failures go unreported.
+        let t0 = Instant::now();
+        let mut warning = WarningState::new();
+
+        fail_and_publish(&mut warning, t0, 0);
+        for secs in [1, 10, 29] {
+            assert!(
+                !warning.on_success(at(t0, secs)),
+                "success at t0+{secs}s must not remove the warning"
+            );
+            assert!(warning.active());
+        }
+        assert!(warning.on_failure(at(t0, 31)), "still failing: re-publish");
+        assert!(warning.active());
+    }
+
+    #[test]
+    fn slow_failure_cadence_does_not_flap() {
+        // The second regression: with the quiet period equal to the warn interval, a
+        // topic failing at just over the interval flapped warning -> cleared -> warning
+        // forever. Any failure cadence up to the quiet period must keep the status up.
+        let t0 = Instant::now();
+        let mut warning = WarningState::new();
+
+        fail_and_publish(&mut warning, t0, 0);
+        // 10 Hz successes, a failure every ~31s: no success may clear the warning.
+        assert!(!warning.on_success(at(t0, 30)));
+        fail_and_publish(&mut warning, t0, 31);
+        assert!(!warning.on_success(at(t0, 61)));
+        fail_and_publish(&mut warning, t0, 62);
+        assert!(warning.active());
+    }
+
+    #[test]
+    fn sustained_recovery_clears_and_re_failure_reports_immediately() {
+        let t0 = Instant::now();
+        let mut warning = WarningState::new();
+
+        fail_and_publish(&mut warning, t0, 0);
+        // Sustained recovery: the first success past the quiet period clears.
+        assert!(!warning.on_success(at(t0, 59)));
+        assert!(warning.on_success(at(t0, 60)));
+        assert!(!warning.active());
+        // Only one removal per recovery.
+        assert!(!warning.on_success(at(t0, 61)));
+        // A fresh failure after genuine recovery reports immediately: the throttle was
+        // reset along with the removal.
+        assert!(warning.on_failure(at(t0, 62)));
+    }
+
+    #[test]
+    fn success_without_live_warning_removes_nothing() {
+        let t0 = Instant::now();
+        let mut warning = WarningState::new();
+        // No failure ever happened.
+        assert!(!warning.on_success(at(t0, 100)));
+
+        // A failure whose warning never made it to viewers (the session was already
+        // gone when the publish was attempted) leaves nothing to remove either.
+        assert!(warning.on_failure(at(t0, 200)));
+        assert!(!warning.on_success(at(t0, 300)));
+        assert!(!warning.active());
+    }
+
+    #[test]
+    fn panic_log_shares_the_throttle_window() {
+        // Panics share the warn throttle with transcode errors, so neither floods the
+        // log; a panic burst also delays the next status publish, and vice versa.
+        let t0 = Instant::now();
+        let mut warning = WarningState::new();
+
+        assert!(warning.try_warn(at(t0, 0)));
+        assert!(!warning.on_failure(at(t0, 10)), "inside the panic's window");
+        assert!(!warning.try_warn(at(t0, 20)));
+        assert!(warning.on_failure(at(t0, 30)));
     }
 }
