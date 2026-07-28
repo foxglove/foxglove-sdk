@@ -2815,15 +2815,43 @@ impl RemoteAccessSession {
     /// configuration (and the advertised `foxglove.CompressedPointCloud` schema) persists
     /// for the lifetime of the channel.
     ///
+    /// Any active compression warning is cleared too: unlike an oversized-drop status
+    /// (which tracks the channel's persistent data track), a compression warning is
+    /// produced by the publisher being torn down here. Keeping it would replay a warning
+    /// from a dead publisher generation to the next subscriber before the fresh publisher
+    /// has encoded anything — and leave a resolved failure showing until the sweeper's
+    /// quiet period elapses. If the cloud still can't be compressed, the fresh publisher
+    /// re-warns on its first failure (the throttle entry is gone too).
+    ///
+    /// Called on both explicit unsubscribe and participant disconnect, so it is the common
+    /// point tying the warning's lifetime to the publisher's.
+    ///
     /// Caller must hold `subscription_lock`.
     #[cfg(feature = "remote-access")]
     fn stop_point_cloud_publishers(&self, last_unsubscribed: &[ChannelId]) {
         if last_unsubscribed.is_empty() {
             return;
         }
-        let mut state = self.channel_registry.write();
-        for &channel_id in last_unsubscribed {
-            state.remove_point_cloud_publisher(&channel_id);
+        {
+            let mut state = self.channel_registry.write();
+            for &channel_id in last_unsubscribed {
+                state.remove_point_cloud_publisher(&channel_id);
+            }
+        }
+        // Drop each torn-down channel's warning, then retract it (broadcast reaches the
+        // last subscriber, who just left; other participants no-op). Collect under the
+        // lock and broadcast after releasing it.
+        let cleared: SmallVec<[ChannelId; 4]> = {
+            let mut warnings = self.active_compression_warnings.lock();
+            last_unsubscribed
+                .iter()
+                .copied()
+                .filter(|id| warnings.remove(id).is_some())
+                .collect()
+        };
+        if !cleared.is_empty() {
+            let remove = RemoveStatus::new(cleared.iter().map(|id| compression_status_id(*id)));
+            self.broadcast_control(encode_json_message(&remove));
         }
     }
 
