@@ -11,9 +11,10 @@
 //! fit the raw cloud under the cap and compare the two topics side by side instead. The
 //! startup log prints both sizes and their deliverability verdicts.
 //!
-//! `--quantization-bits` controls the Draco position quantization for `/cloud/compressed`,
-//! for eyeballing the quality/size trade-off: fewer bits shrink the message but show
-//! visible quantization stepping in the wave.
+//! `--quantization-bits` controls the Draco quantization for `/cloud/compressed`, for
+//! eyeballing the quality/size trade-off: fewer bits shrink the message but coarsen every
+//! float32 field. Under kd-tree encoding that includes `intensity`, not just positions, so
+//! the stepping is visible both in the wave and when coloring by `intensity`.
 //!
 //! Requires `FOXGLOVE_DEVICE_TOKEN` (and `FOXGLOVE_API_URL` for a local platform stack).
 //!
@@ -56,8 +57,9 @@ struct Args {
     #[arg(long, default_value_t = 10, value_parser = clap::value_parser!(u32).range(1..))]
     fps: u32,
 
-    /// Quantization bits for positions on /cloud/compressed, between 1 and 31. Fewer
-    /// bits produce smaller messages but coarser positions.
+    /// Quantization bits for /cloud/compressed, between 1 and 30. Fewer bits produce
+    /// smaller messages but coarser values. Under kd-tree encoding this applies to
+    /// every float32 field, `intensity` included — not just positions.
     #[arg(long, default_value_t = 12,
           value_parser = clap::value_parser!(u8).range(1..=MAX_QUANTIZATION_BITS as i64))]
     quantization_bits: u8,
