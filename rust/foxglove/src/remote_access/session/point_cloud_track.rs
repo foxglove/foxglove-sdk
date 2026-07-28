@@ -124,8 +124,20 @@ impl PointCloudPublisher {
             }
             // The publisher is dropped when the channel loses its last data subscriber
             // (or the session shuts down): retract a live warning so it doesn't sit in
-            // participants' problem lists with nothing left running to clear it.
-            if warning_active && let Some(session) = session.upgrade() {
+            // participants' problem lists with nothing left running to clear it. A
+            // resubscribe can create a successor publisher while this task drains its
+            // final in-flight encode, though; the successor owns the per-channel status
+            // id then, and retracting would clear a warning it just published. The
+            // status is orphaned — and retracted — only when no publisher is registered
+            // for the channel.
+            if warning_active
+                && let Some(session) = session.upgrade()
+                && session
+                    .channel_registry
+                    .read()
+                    .get_point_cloud_publisher(&channel_id)
+                    .is_none()
+            {
                 session.remove_status(vec![compression_status_id(channel_id)]);
             }
         });
