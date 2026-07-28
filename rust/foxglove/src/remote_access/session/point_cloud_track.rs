@@ -18,6 +18,13 @@ use super::RemoteAccessSession;
 /// Interval between throttled warnings for repeated point-cloud transcode failures.
 const TRANSCODE_WARN_INTERVAL: Duration = Duration::from_secs(30);
 
+/// Quiet period before clearing a channel's compression warning. Longer than the warn
+/// throttle so an intermittently-failing topic doesn't flap between warning and cleared:
+/// with the two equal, a topic failing at just over the warn interval would clear on a
+/// success and republish on the next failure, at the throttle cadence, forever.
+const TRANSCODE_RECOVERY_QUIET_PERIOD: Duration =
+    Duration::from_secs(2 * TRANSCODE_WARN_INTERVAL.as_secs());
+
 /// Stable per-channel id for the compression-failure warning, so a repeat replaces the
 /// previous status in the app's problem list instead of stacking a new entry, and
 /// recovery can remove it.
@@ -62,10 +69,10 @@ impl PointCloudPublisher {
             let mut warn_throttler = Throttler::new(TRANSCODE_WARN_INTERVAL);
             // True while a compression-failure status is live on viewers. The status is
             // removed — and the throttler reset, so a fresh failure reports immediately —
-            // only once recovery has been sustained for the quiet period below: removing
-            // on the first success would make a mixed good/bad stream strobe the status
-            // (and the log) at message rate, while removing without resetting the
-            // throttler would leave intermittent failures mostly invisible.
+            // only once recovery has been sustained for TRANSCODE_RECOVERY_QUIET_PERIOD:
+            // removing on the first success would make a mixed good/bad stream strobe
+            // the status (and the log) at message rate, while removing without resetting
+            // the throttler would leave intermittent failures mostly invisible.
             let mut warning_active = false;
             // When the most recent transcode failure happened, gating status removal.
             let mut last_failure: Option<Instant> = None;
@@ -82,7 +89,8 @@ impl PointCloudPublisher {
                             break;
                         };
                         if warning_active
-                            && last_failure.is_none_or(|at| at.elapsed() >= TRANSCODE_WARN_INTERVAL)
+                            && last_failure
+                                .is_none_or(|at| at.elapsed() >= TRANSCODE_RECOVERY_QUIET_PERIOD)
                         {
                             warning_active = false;
                             warn_throttler = Throttler::new(TRANSCODE_WARN_INTERVAL);
