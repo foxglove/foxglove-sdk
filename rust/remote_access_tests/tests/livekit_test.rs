@@ -3165,10 +3165,9 @@ async fn livekit_point_cloud_float64_rejected_warns() -> Result<()> {
         "the rejected float64 cloud must not be delivered"
     );
 
-    // Sustained recovery also removes the warning, but that is gated on a quiet period
-    // too long for this test. Publisher teardown must retract it as well: unsubscribing
-    // the last data subscriber drops the publisher, and the live warning is removed
-    // rather than lingering in the problem list with nothing left running to clear it.
+    // The session clears the warning once failures stop (a sweeper quiet period too long
+    // for this test) or when the subscriber stops watching the channel. Unsubscribing
+    // clears this viewer's copy of the warning immediately.
     viewer.send_unsubscribe(&[channel_id]).await?;
     let deadline = tokio::time::Instant::now() + EVENT_TIMEOUT;
     loop {
