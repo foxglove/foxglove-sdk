@@ -42,6 +42,20 @@ pub(super) struct UnsubscribeResult {
     pub(super) actually_unsubscribed_descriptors: SmallVec<[ChannelDescriptor; 4]>,
 }
 
+/// Compression state for a point-cloud channel: the Draco settings plus the channel's
+/// topic.
+///
+/// The topic is captured at advertise time so that publisher creation needs no second,
+/// fallible channel lookup: a silent miss there would deliver raw clouds on a channel
+/// advertised as `foxglove.CompressedPointCloud`.
+#[cfg(feature = "draco")]
+pub(super) struct PointCloudCompressionState {
+    /// The channel's topic, used to name the channel in viewer-facing warnings.
+    pub(super) topic: String,
+    /// The Draco encoding settings.
+    pub(super) options: crate::draco::CompressPointCloudOptions,
+}
+
 /// Channel registry and per-channel derived state for a remote access session.
 ///
 /// Holds advertised channels, their QoS, subscriptions (data + video), publisher and track
@@ -83,12 +97,12 @@ pub(super) struct ChannelRegistry {
     video_track_sids: HashMap<ChannelId, TrackSid>,
     /// Video metadata last advertised for each video channel.
     video_metadata: HashMap<ChannelId, VideoMetadata>,
-    /// Compression options for point-cloud channels, keyed by channel ID. Channels
+    /// Compression state for point-cloud channels, keyed by channel ID. Channels
     /// present here are advertised with the `foxglove.CompressedPointCloud` schema for
     /// the lifetime of the channel; a publisher exists in `point_cloud_publishers` only
     /// while the channel has data subscribers.
     #[cfg(feature = "draco")]
-    point_cloud_compression: HashMap<ChannelId, crate::draco::CompressPointCloudOptions>,
+    point_cloud_compression: HashMap<ChannelId, PointCloudCompressionState>,
     /// Active point-cloud transcoding publishers, keyed by channel ID. Channels present
     /// here have their messages diverted to the publisher's background transcoding task.
     /// Publishers are created when a compression-enabled channel gains its first data
@@ -389,7 +403,7 @@ impl ChannelRegistry {
         }
     }
 
-    /// Enables point-cloud compression for a channel with the given options.
+    /// Enables point-cloud compression for a channel with the given state.
     ///
     /// The channel is advertised with the `foxglove.CompressedPointCloud` schema; a
     /// transcoding publisher is created separately once the channel has data subscribers.
@@ -397,19 +411,19 @@ impl ChannelRegistry {
     pub fn insert_point_cloud_compression(
         &mut self,
         channel_id: ChannelId,
-        options: crate::draco::CompressPointCloudOptions,
+        state: PointCloudCompressionState,
     ) {
-        self.point_cloud_compression.insert(channel_id, options);
+        self.point_cloud_compression.insert(channel_id, state);
     }
 
-    /// Returns the compression options for a channel, if point-cloud compression is
+    /// Returns the compression state for a channel, if point-cloud compression is
     /// enabled for it.
     #[cfg(feature = "draco")]
     pub fn get_point_cloud_compression(
         &self,
         channel_id: &ChannelId,
-    ) -> Option<crate::draco::CompressPointCloudOptions> {
-        self.point_cloud_compression.get(channel_id).copied()
+    ) -> Option<&PointCloudCompressionState> {
+        self.point_cloud_compression.get(channel_id)
     }
 
     /// Inserts a point-cloud transcoding publisher for a channel.
@@ -1164,6 +1178,13 @@ mod tests {
             ))
         }
 
+        fn make_compression_state() -> PointCloudCompressionState {
+            PointCloudCompressionState {
+                topic: "/cloud".to_string(),
+                options: CompressPointCloudOptions::default(),
+            }
+        }
+
         #[tokio::test]
         async fn rewrite_replaces_schema_for_compression_enabled_channels() {
             let mut state = ChannelRegistry::new();
@@ -1171,10 +1192,7 @@ mod tests {
             let other_ch = make_channel("/other");
             state.insert_channel(&cloud_ch);
             state.insert_channel(&other_ch);
-            state.insert_point_cloud_compression(
-                cloud_ch.id(),
-                CompressPointCloudOptions::default(),
-            );
+            state.insert_point_cloud_compression(cloud_ch.id(), make_compression_state());
 
             let mut msg =
                 advertise::advertise_channels([&cloud_ch, &other_ch].into_iter()).into_owned();
@@ -1218,10 +1236,7 @@ mod tests {
             let mut state = ChannelRegistry::new();
             let cloud_ch = make_point_cloud_channel("/cloud");
             state.insert_channel(&cloud_ch);
-            state.insert_point_cloud_compression(
-                cloud_ch.id(),
-                CompressPointCloudOptions::default(),
-            );
+            state.insert_point_cloud_compression(cloud_ch.id(), make_compression_state());
             assert!(state.get_point_cloud_publisher(&cloud_ch.id()).is_none());
 
             let mut msg = advertise::advertise_channels(std::iter::once(&cloud_ch)).into_owned();
@@ -1234,10 +1249,7 @@ mod tests {
             let mut state = ChannelRegistry::new();
             let cloud_ch = make_point_cloud_channel("/cloud");
             state.insert_channel(&cloud_ch);
-            state.insert_point_cloud_compression(
-                cloud_ch.id(),
-                CompressPointCloudOptions::default(),
-            );
+            state.insert_point_cloud_compression(cloud_ch.id(), make_compression_state());
             assert!(state.get_point_cloud_compression(&cloud_ch.id()).is_some());
 
             state.insert_point_cloud_publisher(cloud_ch.id(), make_publisher(cloud_ch.id()));
@@ -1254,10 +1266,7 @@ mod tests {
             let mut state = ChannelRegistry::new();
             let cloud_ch = make_point_cloud_channel("/cloud");
             state.insert_channel(&cloud_ch);
-            state.insert_point_cloud_compression(
-                cloud_ch.id(),
-                CompressPointCloudOptions::default(),
-            );
+            state.insert_point_cloud_compression(cloud_ch.id(), make_compression_state());
             state.insert_point_cloud_publisher(cloud_ch.id(), make_publisher(cloud_ch.id()));
             assert!(state.get_point_cloud_publisher(&cloud_ch.id()).is_some());
 

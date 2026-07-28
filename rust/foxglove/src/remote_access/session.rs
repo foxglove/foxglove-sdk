@@ -470,7 +470,13 @@ impl Sink for RemoteAccessSession {
                         // is created once the channel gains its first data subscriber,
                         // so encoding never runs for output nobody receives. Reliable
                         // channels never reach this path (see resolve).
-                        state.insert_point_cloud_compression(ch.id(), options);
+                        state.insert_point_cloud_compression(
+                            ch.id(),
+                            super::channel_registry::PointCloudCompressionState {
+                                topic: ch.topic().to_string(),
+                                options,
+                            },
+                        );
                     }
                     state.insert_qos_profile(ch.id(), qos);
                     if qos.reliability != Reliability::Reliable {
@@ -2622,13 +2628,14 @@ impl RemoteAccessSession {
         }
         let mut state = self.channel_registry.write();
         for &channel_id in first_subscribed {
-            let Some(options) = state.get_point_cloud_compression(&channel_id) else {
+            // The compression state carries the topic, so no second (fallible) channel
+            // lookup is needed here.
+            let Some((topic, options)) = state
+                .get_point_cloud_compression(&channel_id)
+                .map(|compression| (compression.topic.clone(), compression.options))
+            else {
                 continue;
             };
-            let Some(channel) = state.get_channel(&channel_id) else {
-                continue;
-            };
-            let topic = channel.topic().to_string();
             state.insert_point_cloud_publisher(
                 channel_id,
                 Arc::new(PointCloudPublisher::new(
