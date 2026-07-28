@@ -722,14 +722,16 @@ impl PyDracoEncodeOptions {
 }
 
 #[cfg(feature = "remote-access")]
-impl From<PyDracoEncodeOptions> for foxglove::draco::DracoEncodeOptions {
-    fn from(value: PyDracoEncodeOptions) -> Self {
+impl TryFrom<PyDracoEncodeOptions> for foxglove::draco::DracoEncodeOptions {
+    type Error = foxglove::FoxgloveError;
+
+    fn try_from(value: PyDracoEncodeOptions) -> Result<Self, Self::Error> {
         // `method` has a single variant (kd-tree), which is also the only method the SDK
         // derives for quantized encoding, so only the quantization setting is forwarded.
         let PyDracoMethod::KdTree = value.method;
-        let mut draco = Self::default();
-        draco.quantization_bits = value.quantization_bits;
-        draco
+        Self::with_quantization_bits(value.quantization_bits).map_err(|e| {
+            foxglove::FoxgloveError::ConfigurationError(format!("point_cloud_compression: {e}"))
+        })
     }
 }
 
@@ -744,15 +746,19 @@ pub enum PyPointCloudCompression {
 
 #[cfg(feature = "remote-access")]
 impl PyPointCloudCompression {
-    /// Maps to the `compress_point_clouds` builder argument, where `None` disables
-    /// compression.
-    pub fn into_options(self) -> Option<foxglove::draco::CompressPointCloudOptions> {
-        match self {
+    /// Resolves the Python argument into the options a per-channel compression policy
+    /// applies, where `None` disables compression. Invalid Draco settings fail with a
+    /// configuration error, keeping misconfiguration a startup failure for Python
+    /// callers.
+    pub fn into_options(
+        self,
+    ) -> Result<Option<foxglove::draco::CompressPointCloudOptions>, foxglove::FoxgloveError> {
+        Ok(match self {
             Self::Draco(options) => Some(foxglove::draco::CompressPointCloudOptions::Draco(
-                options.into(),
+                options.try_into()?,
             )),
             Self::Enabled(true) => Some(foxglove::draco::CompressPointCloudOptions::default()),
             Self::Enabled(false) => None,
-        }
+        })
     }
 }

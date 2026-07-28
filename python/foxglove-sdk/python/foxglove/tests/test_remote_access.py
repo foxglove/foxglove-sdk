@@ -54,6 +54,22 @@ def test_start_gateway_accepts_point_cloud_compression_options() -> None:
         start_gateway(point_cloud_compression=False)
 
 
+def test_start_gateway_rejects_invalid_quantization_bits() -> None:
+    """
+    Out-of-range quantization bits (0 is lossless, above 31 exceeds Draco's maximum) fail
+    at startup with a configuration error, before the missing token is even checked.
+    """
+    from foxglove import DracoEncodeOptions, DracoMethod
+
+    for bits in (0, 32):
+        with pytest.raises(RuntimeError, match="quantization_bits"):
+            start_gateway(
+                point_cloud_compression=DracoEncodeOptions(
+                    method=DracoMethod.KdTree, quantization_bits=bits
+                ),
+            )
+
+
 def test_capability_enum() -> None:
     """
     Verify the Capability enum variants are accessible.

@@ -640,33 +640,49 @@ impl foxglove::remote_access::SuppressVideoTranscode for PySuppressVideoTranscod
     }
 }
 
-/// A point-cloud-compression opt-out predicate wrapping a Python callable.
+/// A per-channel point-cloud compression policy assembled from the Python arguments: the
+/// configured compression options combined with an optional opt-out callable.
 ///
 /// The callable should accept a `ChannelDescriptor` and return a `bool`; returning `True`
 /// delivers the channel unmodified rather than compressing its point clouds.
-pub struct PySuppressPointCloudCompression(pub Py<PyAny>);
+pub struct PyPointCloudCompressionPolicy {
+    /// The options applied to channels that are not opted out; `None` disables
+    /// compression for every channel.
+    options: Option<foxglove::draco::CompressPointCloudOptions>,
+    suppress: Option<Py<PyAny>>,
+}
 
-impl foxglove::remote_access::SuppressPointCloudCompression for PySuppressPointCloudCompression {
-    fn should_suppress(&self, channel: &foxglove::ChannelDescriptor) -> bool {
-        Python::attach(|py| {
-            let handler = self.0.clone_ref(py);
-            let descriptor = PyChannelDescriptor(channel.clone());
-            let result = handler
-                .bind(py)
-                .call((descriptor,), None)
-                .and_then(|f| f.extract::<bool>());
+impl foxglove::remote_access::PointCloudCompression for PyPointCloudCompressionPolicy {
+    fn compression(
+        &self,
+        channel: &foxglove::ChannelDescriptor,
+    ) -> Option<foxglove::draco::CompressPointCloudOptions> {
+        let options = self.options?;
+        if let Some(suppress) = &self.suppress {
+            let suppressed = Python::attach(|py| {
+                let handler = suppress.clone_ref(py);
+                let descriptor = PyChannelDescriptor(channel.clone());
+                let result = handler
+                    .bind(py)
+                    .call((descriptor,), None)
+                    .and_then(|f| f.extract::<bool>());
 
-            match result {
-                Ok(suppress) => suppress,
-                Err(err) => {
-                    tracing::error!(
-                        "Error in point-cloud-compression opt-out predicate: {}",
-                        err.to_string()
-                    );
-                    false
+                match result {
+                    Ok(suppress) => suppress,
+                    Err(err) => {
+                        tracing::error!(
+                            "Error in point-cloud-compression opt-out predicate: {}",
+                            err.to_string()
+                        );
+                        false
+                    }
                 }
+            });
+            if suppressed {
+                return None;
             }
-        })
+        }
+        Some(options)
     }
 }
 
@@ -760,15 +776,20 @@ pub fn start_gateway(
         gateway = gateway.video_encoder(video_encoder.into());
     }
 
-    // When unset, leave the SDK default in place (compression enabled).
-    if let Some(compression) = point_cloud_compression {
-        gateway = gateway.compress_point_clouds(compression.into_options());
-    }
-
-    if let Some(suppress_point_cloud_compression) = suppress_point_cloud_compression {
-        gateway = gateway.suppress_point_cloud_compression(Arc::new(
-            PySuppressPointCloudCompression(suppress_point_cloud_compression),
-        ));
+    // Point-cloud compression: the configured argument and the opt-out callable combine
+    // into a single per-channel policy. When neither is set, leave the SDK default in
+    // place (compression enabled). Invalid Draco settings fail here, keeping
+    // misconfiguration a startup error for Python callers.
+    let point_cloud_compression = point_cloud_compression
+        .map(PyPointCloudCompression::into_options)
+        .transpose()
+        .map_err(PyFoxgloveError::from)?;
+    if point_cloud_compression.is_some() || suppress_point_cloud_compression.is_some() {
+        gateway = gateway.point_cloud_compression(Arc::new(PyPointCloudCompressionPolicy {
+            options: point_cloud_compression
+                .unwrap_or(Some(foxglove::draco::CompressPointCloudOptions::default())),
+            suppress: suppress_point_cloud_compression,
+        }));
     }
 
     let handle = py
