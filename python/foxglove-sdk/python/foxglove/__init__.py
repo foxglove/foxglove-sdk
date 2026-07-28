@@ -326,6 +326,14 @@ try:
             lossy (kd-tree encoding with positions quantized to 12 bits). Channels classified
             as Reliable skip compression and deliver the raw point cloud on the control
             bytestream.
+
+            When compression is enabled (including the default), a cloud the encoder cannot
+            compress is **dropped**, not delivered uncompressed — a throttled warning is sent
+            to the device log and to viewers. The common causes are a ``float64`` field other
+            than ``x``/``y``/``z``, or fewer than two of ``x``/``y``/``z`` present. To keep such
+            a channel flowing, convert the offending field to ``float32`` or an integer type,
+            opt the channel out with ``suppress_point_cloud_compression``, or pass
+            ``point_cloud_compression=False`` to disable compression entirely.
         :param suppress_point_cloud_compression: A ``Callable`` that returns ``True`` to deliver
             a given channel unmodified rather than compressing its point clouds. If not set, all
             compressible Lossy point-cloud channels use the compression configured by
