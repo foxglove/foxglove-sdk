@@ -751,10 +751,22 @@ impl RemoteAccessSession {
     /// resubscribe can't fight over the channel's single status.
     #[cfg(feature = "remote-access")]
     pub(super) fn report_compression_failure(&self, channel_id: ChannelId, message: String) {
-        // Don't warn for a channel unadvertised out from under the transcoding task.
-        if !self.channel_registry.read().has_channel(&channel_id) {
+        // Resolve subscribers before touching the warning map. A report with no data
+        // subscribers means the publisher is being torn down — either the channel was
+        // unadvertised, or the last subscriber left while this failure was in flight in
+        // `spawn_blocking`. Recording it then would strand a warning for a channel with
+        // no publisher and no viewers until the sweeper's quiet period, replaying it to
+        // the next subscriber ahead of the fresh publisher's own verdict. A non-empty
+        // subscriber list also implies the channel is still advertised, so this subsumes
+        // the has-channel check.
+        let subscriber_sids = self
+            .channel_registry
+            .read()
+            .data_subscriber_sids(&channel_id);
+        if subscriber_sids.is_empty() {
             return;
         }
+
         let now = std::time::Instant::now();
         {
             let mut warnings = self.active_compression_warnings.lock();
@@ -775,13 +787,6 @@ impl RemoteAccessSession {
         }
 
         warn!("{message}");
-        let subscriber_sids = self
-            .channel_registry
-            .read()
-            .data_subscriber_sids(&channel_id);
-        if subscriber_sids.is_empty() {
-            return;
-        }
         let status = Status::warning(message).with_id(compression_status_id(channel_id));
         let encoded = encode_json_message(&status);
         for participant in self.participant_registry.resolve_sids(subscriber_sids) {
