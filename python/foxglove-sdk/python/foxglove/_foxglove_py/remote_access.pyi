@@ -18,8 +18,8 @@ class DracoEncodeOptions:
     Options for Draco point-cloud encoding.
     """
 
-    quantization_bits: int
-
+    @property
+    def quantization_bits(self) -> int: ...
     def __init__(
         self,
         *,
