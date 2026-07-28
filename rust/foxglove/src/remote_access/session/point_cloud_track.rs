@@ -70,13 +70,15 @@ impl PointCloudPublisher {
                             format!("point cloud compression error on topic {topic}: {e}"),
                         );
                     }
-                    Err(e) => {
-                        // A panic in the encode task is an internal bug, but from the
-                        // channel's perspective it is just another failure to compress;
-                        // route it through the same throttled, per-channel warning.
+                    Err(_) => {
+                        // A panic in the encode task is an internal bug; the panic itself
+                        // is already logged by the default panic hook. From the channel's
+                        // perspective it is just another failure to compress, so surface a
+                        // generic warning through the same throttled path rather than
+                        // leaking the raw panic text to viewers.
                         session.report_compression_failure(
                             channel_id,
-                            format!("point cloud compression task failed on topic {topic}: {e}"),
+                            format!("point cloud compression error on topic {topic}"),
                         );
                     }
                 }

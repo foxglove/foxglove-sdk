@@ -886,7 +886,11 @@ impl RemoteAccessSession {
             DROP_STATUS_QUIET_PERIOD,
             |status| status.last_report,
         );
-        let mut ids: Vec<String> = expired_drops.iter().map(|id| drop_status_id(*id)).collect();
+        // Start empty and extend so `ids` is always mutated, regardless of whether the
+        // `draco` block below is compiled in (`remote-access` implies `draco` today, but
+        // the module is written to tolerate `draco` being absent).
+        let mut ids: Vec<String> = Vec::new();
+        ids.extend(expired_drops.iter().map(|id| drop_status_id(*id)));
 
         #[cfg(feature = "draco")]
         {
