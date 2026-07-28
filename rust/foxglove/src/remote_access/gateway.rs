@@ -16,11 +16,9 @@ use crate::{
     sink_channel_filter::SinkChannelFilterFn,
 };
 
-use super::qos::{QosClassifier, QosClassifierFn, QosProfile};
 #[cfg(feature = "draco")]
-use super::suppress_point_cloud_compression::{
-    SuppressPointCloudCompression, SuppressPointCloudCompressionFn,
-};
+use super::point_cloud_compression::{PointCloudCompression, PointCloudCompressionFn};
+use super::qos::{QosClassifier, QosClassifierFn, QosProfile};
 use super::suppress_video_transcode::{SuppressVideoTranscode, SuppressVideoTranscodeFn};
 
 use super::connection::{ConnectionParams, ConnectionStatus, RemoteAccessConnection};
@@ -141,9 +139,7 @@ impl GatewayHandle {
             video_codec_override: None,
             video_encoder: VideoEncoderBackend::Auto,
             #[cfg(feature = "draco")]
-            point_cloud_compression: Some(crate::draco::CompressPointCloudOptions::default()),
-            #[cfg(feature = "draco")]
-            suppress_point_cloud_compression: None,
+            point_cloud_compression: None,
             context: std::sync::Weak::new(),
         };
         let services = Arc::new(parking_lot::RwLock::new(ServiceMap::default()));
@@ -264,9 +260,7 @@ pub struct Gateway {
     max_data_track_message_size: Option<usize>,
     video_encoder: VideoEncoderBackend,
     #[cfg(feature = "draco")]
-    point_cloud_compression: Option<crate::draco::CompressPointCloudOptions>,
-    #[cfg(feature = "draco")]
-    suppress_point_cloud_compression: Option<Arc<dyn SuppressPointCloudCompression>>,
+    point_cloud_compression: Option<Arc<dyn PointCloudCompression>>,
     context: std::sync::Weak<Context>,
 }
 
@@ -291,11 +285,10 @@ impl Default for Gateway {
             message_backlog_size: None,
             max_data_track_message_size: None,
             video_encoder: VideoEncoderBackend::Auto,
-            // Transparent point-cloud compression is opt-out: enabled by default.
+            // Transparent point-cloud compression is opt-out: with no policy set, every
+            // compressible Lossy channel is compressed with the default options.
             #[cfg(feature = "draco")]
-            point_cloud_compression: Some(crate::draco::CompressPointCloudOptions::default()),
-            #[cfg(feature = "draco")]
-            suppress_point_cloud_compression: None,
+            point_cloud_compression: None,
             context: Arc::downgrade(&Context::get_default()),
         }
     }
@@ -334,8 +327,8 @@ impl std::fmt::Debug for Gateway {
             .field("has_context", &(self.context.strong_count() > 0));
         #[cfg(feature = "draco")]
         dbg.field(
-            "has_suppress_point_cloud_compression",
-            &self.suppress_point_cloud_compression.is_some(),
+            "has_point_cloud_compression_policy",
+            &self.point_cloud_compression.is_some(),
         );
         dbg.finish()
     }
@@ -473,72 +466,60 @@ impl Gateway {
         self
     }
 
-    /// Configures transparent point-cloud compression for remote participants.
+    /// Configures per-channel point-cloud compression for remote participants.
     ///
-    /// When enabled, channels carrying `foxglove.PointCloud` messages are advertised with
-    /// the `foxglove.CompressedPointCloud` schema, and each logged point cloud is compressed
-    /// in a background task (off the logging hot path) before delivery. If compression falls
-    /// behind the log rate, the oldest queued message is dropped.
+    /// The policy is consulted once per compressible channel: it returns the compression
+    /// settings for that channel, or `None` to deliver it unmodified. See
+    /// [`PointCloudCompression`] for details, and [`Self::point_cloud_compression_fn`] to
+    /// pass a closure instead.
+    ///
+    /// A compressed channel is advertised with the `foxglove.CompressedPointCloud` schema,
+    /// and each logged point cloud is compressed in a background task (off the logging hot
+    /// path) before delivery. If compression falls behind the log rate, the oldest queued
+    /// message is dropped.
     ///
     /// Compression applies only to channels with Lossy QoS (the default). Channels classified
     /// as [`Reliability::Reliable`](crate::remote_access::Reliability::Reliable) skip
     /// compression automatically and deliver the raw point cloud on the control bytestream,
     /// preserving the Reliable contract (no silent drops).
     ///
-    /// Compression is enabled by default with [`CompressPointCloudOptions::default()`].
-    /// Note that the default settings are lossy: kd-tree encoding with positions quantized
-    /// to 12 bits.
+    /// If no policy is set, every compressible Lossy channel is compressed with
+    /// [`CompressPointCloudOptions::default()`]. Note that the default settings are lossy:
+    /// kd-tree encoding with positions quantized to 12 bits.
     /// [`DracoEncodeOptions::quantization_bits`](crate::draco::DracoEncodeOptions::quantization_bits)
     /// must be between `1` and
-    /// [`MAX_QUANTIZATION_BITS`](crate::draco::MAX_QUANTIZATION_BITS) inclusive;
-    /// [`Self::start`] rejects values outside that range. In particular `0` (lossless) is
-    /// rejected because lossless Draco encoding provides no size reduction over the raw
-    /// point cloud — pass `None` instead to deliver point clouds unmodified.
+    /// [`MAX_QUANTIZATION_BITS`](crate::draco::MAX_QUANTIZATION_BITS) inclusive: a channel
+    /// whose options are outside that range — including `0` (lossless), which provides no
+    /// size reduction over the raw cloud — is delivered unmodified, with a warning.
     ///
     /// Draco cannot quantize float64 fields, so non-empty clouds containing one (other
     /// than the `x`/`y`/`z` position fields) fail to compress and are dropped, with a
     /// throttled warning on the device and to viewers. Use float32 or integer fields,
-    /// or opt those channels out via [`Self::suppress_point_cloud_compression`].
-    ///
-    /// Pass `None` to disable compression: point clouds are delivered unmodified.
+    /// or return `None` for those channels.
     ///
     /// [`CompressPointCloudOptions::default()`]: crate::draco::CompressPointCloudOptions
     #[cfg(feature = "draco")]
     #[cfg_attr(docsrs, doc(cfg(feature = "draco")))]
-    pub fn compress_point_clouds(
-        mut self,
-        options: Option<crate::draco::CompressPointCloudOptions>,
-    ) -> Self {
-        self.point_cloud_compression = options;
+    pub fn point_cloud_compression(mut self, policy: Arc<dyn PointCloudCompression>) -> Self {
+        self.point_cloud_compression = Some(policy);
         self
     }
 
-    /// Opts selected channels out of point-cloud compression.
+    /// Sets a per-channel point-cloud compression function.
     ///
-    /// See [`SuppressPointCloudCompression`] for more information. If not set, all compressible
-    /// Lossy point-cloud channels use the compression configured by
-    /// [`Self::compress_point_clouds`]. Reliable channels skip compression automatically.
+    /// The function returns the compression settings for a channel, or `None` to deliver
+    /// it unmodified; return `None` unconditionally to disable point-cloud compression
+    /// entirely. See [`Self::point_cloud_compression`] for details.
     #[cfg(feature = "draco")]
     #[cfg_attr(docsrs, doc(cfg(feature = "draco")))]
-    pub fn suppress_point_cloud_compression(
+    pub fn point_cloud_compression_fn(
         mut self,
-        suppress: Arc<dyn SuppressPointCloudCompression>,
+        policy: impl Fn(&ChannelDescriptor) -> Option<crate::draco::CompressPointCloudOptions>
+        + Sync
+        + Send
+        + 'static,
     ) -> Self {
-        self.suppress_point_cloud_compression = Some(suppress);
-        self
-    }
-
-    /// Sets a point-cloud-compression opt-out function.
-    ///
-    /// See [`SuppressPointCloudCompression`] for more information.
-    #[cfg(feature = "draco")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "draco")))]
-    pub fn suppress_point_cloud_compression_fn(
-        mut self,
-        suppress: impl Fn(&ChannelDescriptor) -> bool + Sync + Send + 'static,
-    ) -> Self {
-        self.suppress_point_cloud_compression =
-            Some(Arc::new(SuppressPointCloudCompressionFn(suppress)));
+        self.point_cloud_compression = Some(Arc::new(PointCloudCompressionFn(policy)));
         self
     }
 
@@ -762,25 +743,6 @@ impl Gateway {
                  {MIN_DATA_TRACK_MESSAGE_SIZE} bytes (one data-channel packet)."
             )));
         }
-        #[cfg(feature = "draco")]
-        if let Some(options) = &self.point_cloud_compression {
-            if let Err(e) = options.validate() {
-                return Err(FoxgloveError::ConfigurationError(format!(
-                    "compress_point_clouds: {e}"
-                )));
-            }
-            // Lossless Draco encoding provides no size reduction over the raw point
-            // cloud, so on the transparent path it is all overhead: reject it rather
-            // than transcode for nothing.
-            if options.draco_options().quantization_bits == 0 {
-                return Err(FoxgloveError::ConfigurationError(
-                    "compress_point_clouds: quantization_bits is 0 (lossless), which \
-                     provides no size reduction; pass None to deliver raw point clouds \
-                     instead"
-                        .to_string(),
-                ));
-            }
-        }
         let runtime = self.runtime.unwrap_or_else(get_runtime_handle);
         let services = Arc::new(parking_lot::RwLock::new(ServiceMap::from_iter(
             self.services.into_values(),
@@ -806,8 +768,6 @@ impl Gateway {
             video_encoder,
             #[cfg(feature = "draco")]
             point_cloud_compression: self.point_cloud_compression,
-            #[cfg(feature = "draco")]
-            suppress_point_cloud_compression: self.suppress_point_cloud_compression,
             context: self.context,
         };
         let connection = RemoteAccessConnection::new(params, services);
@@ -866,22 +826,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "draco")]
-    fn point_cloud_quantization_bits_zero_rejected() {
-        use crate::draco::{CompressPointCloudOptions, DracoEncodeOptions};
-
-        // Lossless Draco provides no size reduction, so on the transparent path it is
-        // pure overhead; the configuration is rejected in favor of passing None.
-        let result = Gateway::new()
-            .device_token("test-token")
-            .compress_point_clouds(Some(CompressPointCloudOptions::Draco(DracoEncodeOptions {
-                quantization_bits: 0,
-            })))
-            .start();
-        assert!(matches!(result, Err(FoxgloveError::ConfigurationError(_))));
-    }
-
-    #[test]
     fn max_data_track_message_size_builder() {
         // Unset by default; the default value is applied downstream when building
         // SessionParams (see DEFAULT_MAX_DATA_TRACK_MESSAGE_SIZE).
@@ -892,22 +836,6 @@ mod tests {
                 .max_data_track_message_size,
             Some(64 * 1024)
         );
-    }
-
-    #[test]
-    #[cfg(feature = "draco")]
-    fn point_cloud_quantization_bits_above_maximum_rejected() {
-        use crate::draco::{CompressPointCloudOptions, DracoEncodeOptions, MAX_QUANTIZATION_BITS};
-
-        // An out-of-range quantization setting would otherwise only surface as a
-        // per-message encode failure at runtime; reject it at startup instead.
-        let result = Gateway::new()
-            .device_token("test-token")
-            .compress_point_clouds(Some(CompressPointCloudOptions::Draco(DracoEncodeOptions {
-                quantization_bits: MAX_QUANTIZATION_BITS + 1,
-            })))
-            .start();
-        assert!(matches!(result, Err(FoxgloveError::ConfigurationError(_))));
     }
 
     #[test]

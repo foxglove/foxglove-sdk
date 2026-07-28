@@ -23,8 +23,8 @@ use crate::protocol::v2::DecodeError;
 use crate::protocol::v2::parameter::Parameter;
 use crate::protocol::v2::server::ParameterValues;
 #[cfg(feature = "draco")]
-use crate::remote_access::suppress_point_cloud_compression::{
-    SuppressPointCloudCompression, resolve_point_cloud_compression,
+use crate::remote_access::point_cloud_compression::{
+    PointCloudCompression, resolve_point_cloud_compression,
 };
 use crate::remote_common::connection_graph::ConnectionGraph;
 use crate::remote_common::{
@@ -328,12 +328,11 @@ pub(super) struct RemoteAccessSession {
     /// [`VideoEncoderBackend::Auto`](super::gateway::VideoEncoderBackend::Auto) leaves the
     /// choice to libwebrtc.
     video_encoder: super::gateway::VideoEncoderBackend,
-    /// If set, `foxglove.PointCloud` channels are transcoded to
-    /// `foxglove.CompressedPointCloud` before delivery to participants.
+    /// The per-channel compression policy for transcoding `foxglove.PointCloud` channels
+    /// to `foxglove.CompressedPointCloud` before delivery to participants. `None` applies
+    /// the default: compress every compressible Lossy channel with the default options.
     #[cfg(feature = "draco")]
-    point_cloud_compression: Option<crate::draco::CompressPointCloudOptions>,
-    #[cfg(feature = "draco")]
-    suppress_point_cloud_compression: Option<Arc<dyn SuppressPointCloudCompression>>,
+    point_cloud_compression: Option<Arc<dyn PointCloudCompression>>,
 }
 
 impl Sink for RemoteAccessSession {
@@ -464,8 +463,7 @@ impl Sink for RemoteAccessSession {
                     #[cfg(feature = "draco")]
                     if let Some(options) = resolve_point_cloud_compression(
                         ch,
-                        self.point_cloud_compression,
-                        self.suppress_point_cloud_compression.as_deref(),
+                        self.point_cloud_compression.as_deref(),
                         qos.reliability,
                     ) {
                         // Only record the configuration here: the transcoding publisher
@@ -566,9 +564,7 @@ pub(super) struct SessionParams {
     pub(super) video_codec_override: Option<VideoCodec>,
     pub(super) video_encoder: super::gateway::VideoEncoderBackend,
     #[cfg(feature = "draco")]
-    pub(super) point_cloud_compression: Option<crate::draco::CompressPointCloudOptions>,
-    #[cfg(feature = "draco")]
-    pub(super) suppress_point_cloud_compression: Option<Arc<dyn SuppressPointCloudCompression>>,
+    pub(super) point_cloud_compression: Option<Arc<dyn PointCloudCompression>>,
 }
 
 impl RemoteAccessSession {
@@ -610,8 +606,6 @@ impl RemoteAccessSession {
             video_encoder: params.video_encoder,
             #[cfg(feature = "draco")]
             point_cloud_compression: params.point_cloud_compression,
-            #[cfg(feature = "draco")]
-            suppress_point_cloud_compression: params.suppress_point_cloud_compression,
         })
     }
 

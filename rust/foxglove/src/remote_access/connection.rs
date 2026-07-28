@@ -15,7 +15,7 @@ use tokio_util::sync::CancellationToken;
 use tracing::{error, info, warn};
 
 #[cfg(feature = "draco")]
-use crate::remote_access::suppress_point_cloud_compression::SuppressPointCloudCompression;
+use crate::remote_access::point_cloud_compression::PointCloudCompression;
 use crate::{
     Context, FoxgloveError, SinkChannelFilter, SinkId,
     api_client::{
@@ -107,9 +107,7 @@ pub(super) struct ConnectionParams {
     pub(super) video_codec_override: Option<VideoCodec>,
     pub(super) video_encoder: super::gateway::VideoEncoderBackend,
     #[cfg(feature = "draco")]
-    pub(super) point_cloud_compression: Option<crate::draco::CompressPointCloudOptions>,
-    #[cfg(feature = "draco")]
-    pub(super) suppress_point_cloud_compression: Option<Arc<dyn SuppressPointCloudCompression>>,
+    pub(super) point_cloud_compression: Option<Arc<dyn PointCloudCompression>>,
     pub(super) context: Weak<Context>,
 }
 
@@ -151,9 +149,7 @@ pub(super) struct RemoteAccessConnection {
     video_codec_override: Option<VideoCodec>,
     video_encoder: super::gateway::VideoEncoderBackend,
     #[cfg(feature = "draco")]
-    point_cloud_compression: Option<crate::draco::CompressPointCloudOptions>,
-    #[cfg(feature = "draco")]
-    suppress_point_cloud_compression: Option<Arc<dyn SuppressPointCloudCompression>>,
+    point_cloud_compression: Option<Arc<dyn PointCloudCompression>>,
     context: Weak<Context>,
     cancellation_token: CancellationToken,
     services: Arc<parking_lot::RwLock<ServiceMap>>,
@@ -190,8 +186,6 @@ impl RemoteAccessConnection {
             video_encoder: params.video_encoder,
             #[cfg(feature = "draco")]
             point_cloud_compression: params.point_cloud_compression,
-            #[cfg(feature = "draco")]
-            suppress_point_cloud_compression: params.suppress_point_cloud_compression,
             context: params.context,
             cancellation_token: CancellationToken::new(),
             services,
@@ -352,9 +346,7 @@ impl RemoteAccessConnection {
             video_codec_override: self.video_codec_override,
             video_encoder: self.video_encoder,
             #[cfg(feature = "draco")]
-            point_cloud_compression: self.point_cloud_compression,
-            #[cfg(feature = "draco")]
-            suppress_point_cloud_compression: self.suppress_point_cloud_compression.clone(),
+            point_cloud_compression: self.point_cloud_compression.clone(),
             services: self.services.clone(),
             connection_graph: self.connection_graph.clone(),
             remote_access_session_id: remote_access_session_id.map(str::to_string),

@@ -79,8 +79,9 @@ pub const MAX_QUANTIZATION_BITS: u8 = 31;
 pub struct DracoEncodeOptions {
     /// Quantization bits for the position attribute, at most [`MAX_QUANTIZATION_BITS`].
     /// `0` encodes positions as lossless float32 (no size reduction over the raw cloud,
-    /// using sequential encoding internally); the remote access sink rejects `0` at
-    /// startup — disable compression there instead. Defaults to 12.
+    /// using sequential encoding internally); the remote access sink skips compression
+    /// for channels configured with `0` — return `None` from its compression policy
+    /// instead. Defaults to 12.
     pub quantization_bits: u8,
 }
 
@@ -98,10 +99,10 @@ impl Default for DracoEncodeOptions {
 /// are compressed in a background task and delivered as `foxglove.CompressedPointCloud`;
 /// the channel is advertised with the `foxglove.CompressedPointCloud` schema.
 ///
-/// The remote access sink enables compression by default with the default options. Use
-/// `Gateway::compress_point_clouds` to customize the settings or pass `None` to disable
-/// compression, and `Gateway::suppress_point_cloud_compression` to opt individual channels
-/// out. Channels with Reliable QoS skip compression automatically.
+/// The remote access sink compresses eligible channels with the default options by
+/// default. Use `Gateway::point_cloud_compression_fn` to choose settings per channel, or
+/// return `None` to deliver a channel unmodified. Channels with Reliable QoS skip
+/// compression automatically.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum CompressPointCloudOptions {

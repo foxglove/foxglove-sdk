@@ -2901,7 +2901,7 @@ async fn livekit_point_cloud_compression_rewrites_advertised_schema() -> Result<
     Ok(())
 }
 
-/// Test that passing `None` to `compress_point_clouds` opts out of the default: the channel
+/// Test that a compression policy returning `None` opts out of the default: the channel
 /// is advertised with the raw `foxglove.PointCloud` schema.
 #[traced_test]
 #[ignore]

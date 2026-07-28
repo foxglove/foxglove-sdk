@@ -963,7 +963,7 @@ impl TestGateway {
             gateway = gateway.max_data_track_message_size(size);
         }
         if let Some(compression) = options.point_cloud_compression {
-            gateway = gateway.compress_point_clouds(compression);
+            gateway = gateway.point_cloud_compression_fn(move |_| compression);
         }
 
         let handle = gateway.start().context("start Gateway")?;

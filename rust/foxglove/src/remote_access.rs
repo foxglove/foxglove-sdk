@@ -21,14 +21,14 @@ mod gateway;
 mod listener;
 mod parameter_subscriptions;
 mod participant;
+#[cfg(feature = "draco")]
+mod point_cloud_compression;
 pub(super) mod protocol_version;
 mod qos;
 mod rtt_tracker;
 pub mod service;
 mod session;
 mod sse;
-#[cfg(feature = "draco")]
-mod suppress_point_cloud_compression;
 mod suppress_video_transcode;
 mod watch;
 mod watch_loop;
@@ -43,10 +43,10 @@ pub use client::Client;
 pub use connection::ConnectionStatus;
 pub use gateway::{Gateway, GatewayHandle, VideoEncoderBackend};
 pub use listener::Listener;
-pub use qos::{QosClassifier, QosProfile, QosProfileBuilder, Reliability};
 #[cfg(feature = "draco")]
 #[cfg_attr(docsrs, doc(cfg(feature = "draco")))]
-pub use suppress_point_cloud_compression::SuppressPointCloudCompression;
+pub use point_cloud_compression::PointCloudCompression;
+pub use qos::{QosClassifier, QosProfile, QosProfileBuilder, Reliability};
 pub use suppress_video_transcode::SuppressVideoTranscode;
 
 use reqwest::StatusCode;
