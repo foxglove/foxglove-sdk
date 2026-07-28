@@ -1159,6 +1159,7 @@ mod tests {
                 &tokio::runtime::Handle::current(),
                 std::sync::Weak::new(),
                 channel_id,
+                "/cloud".to_string(),
                 CompressPointCloudOptions::default(),
             ))
         }

@@ -3138,6 +3138,17 @@ async fn livekit_point_cloud_float64_rejected_warns() -> Result<()> {
         "unexpected status message: {}",
         status.message
     );
+    // The warning is viewer-facing: it names the topic (not an internal channel id) and
+    // carries a stable id, so repeats replace the previous status instead of stacking.
+    assert!(
+        status.message.contains("/cloud"),
+        "status must name the topic: {}",
+        status.message
+    );
+    let status_id = status
+        .id
+        .clone()
+        .expect("compression warning must carry a stable id");
 
     // The float64 cloud was dropped, not delivered: after logging a compressible cloud
     // (frame_id "lidar"), the first frame on the data track is that cloud.
@@ -3153,6 +3164,21 @@ async fn livekit_point_cloud_float64_rejected_warns() -> Result<()> {
         compressed.frame_id, "lidar",
         "the rejected float64 cloud must not be delivered"
     );
+
+    // The successful transcode removes the warning, so the resolved condition doesn't
+    // linger in the app's problem list.
+    let deadline = tokio::time::Instant::now() + EVENT_TIMEOUT;
+    loop {
+        let msg = tokio::time::timeout_at(deadline, viewer.frame_reader.next_server_message())
+            .await
+            .context("timeout waiting for the warning to be removed")?
+            .context("failed to read server message")?;
+        if let ServerMessage::RemoveStatus(remove) = msg
+            && remove.status_ids.contains(&status_id)
+        {
+            break;
+        }
+    }
     info!("float64 rejection warning validated");
 
     viewer.close().await?;

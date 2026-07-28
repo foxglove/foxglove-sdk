@@ -18,6 +18,13 @@ use super::RemoteAccessSession;
 /// Interval between throttled warnings for repeated point-cloud transcode failures.
 const TRANSCODE_WARN_INTERVAL: Duration = Duration::from_secs(30);
 
+/// Stable per-channel id for the compression-failure warning, so a repeat replaces the
+/// previous status in the app's problem list instead of stacking a new entry, and
+/// recovery can remove it.
+fn compression_status_id(channel_id: ChannelId) -> String {
+    format!("point-cloud-compression-{}", u64::from(channel_id))
+}
+
 /// Transcodes `foxglove.PointCloud` messages to Draco-compressed
 /// `foxglove.CompressedPointCloud` messages off the logging hot path, and delivers them to
 /// the session's subscribers over the regular data path.
@@ -38,10 +45,14 @@ impl PointCloudPublisher {
     const CHANNEL_CAPACITY: usize = 2;
 
     /// Creates a new publisher and spawns the background processing task.
+    ///
+    /// `topic` is the channel's topic, used to name the channel in viewer-facing
+    /// compression warnings.
     pub fn new(
         runtime: &Handle,
         session: Weak<RemoteAccessSession>,
         channel_id: ChannelId,
+        topic: String,
         options: CompressPointCloudOptions,
     ) -> Self {
         let (tx, rx) = flume::bounded::<(Bytes, u64)>(Self::CHANNEL_CAPACITY);
@@ -49,6 +60,10 @@ impl PointCloudPublisher {
         runtime.spawn(async move {
             // Throttles compression warnings so a stream of bad clouds doesn't flood the log.
             let mut warn_throttler = Throttler::new(TRANSCODE_WARN_INTERVAL);
+            // True while a compression-failure status is live on viewers; the status is
+            // removed on the next successful transcode, so a resolved condition doesn't
+            // linger in the app's problem list.
+            let mut warning_active = false;
             while let Ok((data, log_time)) = consumer_rx.recv_async().await {
                 let result = tokio::task::spawn_blocking(move || {
                     transcode_point_cloud_message(&data, &options)
@@ -61,16 +76,23 @@ impl PointCloudPublisher {
                         let Some(session) = session.upgrade() else {
                             break;
                         };
+                        if warning_active {
+                            warning_active = false;
+                            session.remove_status(vec![compression_status_id(channel_id)]);
+                        }
                         session.deliver_transcoded_point_cloud(channel_id, &transcoded, log_time);
                     }
                     Ok(Err(e)) => {
                         if warn_throttler.try_acquire() {
-                            let message = format!(
-                                "point cloud compression error on channel {channel_id:?}: {e}"
-                            );
+                            let message =
+                                format!("point cloud compression error on topic {topic}: {e}");
                             warn!("{message}");
                             if let Some(session) = session.upgrade() {
-                                session.publish_status(Status::warning(message));
+                                session.publish_status(
+                                    Status::warning(message)
+                                        .with_id(compression_status_id(channel_id)),
+                                );
+                                warning_active = true;
                             }
                         }
                     }

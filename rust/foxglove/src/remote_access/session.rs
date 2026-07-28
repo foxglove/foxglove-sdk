@@ -2625,12 +2625,17 @@ impl RemoteAccessSession {
             let Some(options) = state.get_point_cloud_compression(&channel_id) else {
                 continue;
             };
+            let Some(channel) = state.get_channel(&channel_id) else {
+                continue;
+            };
+            let topic = channel.topic().to_string();
             state.insert_point_cloud_publisher(
                 channel_id,
                 Arc::new(PointCloudPublisher::new(
                     &self.runtime,
                     self.weak_self.clone(),
                     channel_id,
+                    topic,
                     options,
                 )),
             );
