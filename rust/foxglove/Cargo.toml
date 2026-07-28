@@ -11,7 +11,6 @@ license.workspace = true
 default = ["aws-lc-rs", "derive", "lz4", "websocket", "zstd"]
 chrono = ["dep:chrono"]
 derive = ["dep:foxglove_derive"]
-draco = ["dep:draco-core"]
 sysinfo = ["dep:sysinfo", "dep:tokio", "tokio/rt-multi-thread", "tokio/time"]
 _remote-common = [
   "dep:base64",
@@ -26,7 +25,7 @@ websocket = ["_remote-common", "dep:tokio-tungstenite"]
 live_visualization = ["websocket"]
 remote-access = [
   "_remote-common",
-  "draco",
+  "dep:draco-core",
   "img2yuv",
   "dep:livekit",
   "dep:libwebrtc",
@@ -94,7 +93,6 @@ full = [
   "chrono",
   "data_provider",
   "derive",
-  "draco",
   "img2yuv",
   "live_visualization",
   "lz4",

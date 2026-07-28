@@ -21,7 +21,7 @@ mod gateway;
 mod listener;
 mod parameter_subscriptions;
 mod participant;
-#[cfg(feature = "draco")]
+#[cfg(feature = "remote-access")]
 mod point_cloud_compression;
 pub(super) mod protocol_version;
 mod qos;
@@ -43,8 +43,8 @@ pub use client::Client;
 pub use connection::ConnectionStatus;
 pub use gateway::{Gateway, GatewayHandle, VideoEncoderBackend};
 pub use listener::Listener;
-#[cfg(feature = "draco")]
-#[cfg_attr(docsrs, doc(cfg(feature = "draco")))]
+#[cfg(feature = "remote-access")]
+#[cfg_attr(docsrs, doc(cfg(feature = "remote-access")))]
 pub use point_cloud_compression::PointCloudCompression;
 pub use qos::{QosClassifier, QosProfile, QosProfileBuilder, Reliability};
 pub use suppress_video_transcode::SuppressVideoTranscode;

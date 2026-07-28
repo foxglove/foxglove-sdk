@@ -14,7 +14,7 @@ use tokio::{runtime::Handle, sync::OnceCell, sync::mpsc::UnboundedReceiver, task
 use tokio_util::sync::CancellationToken;
 use tracing::{error, info, warn};
 
-#[cfg(feature = "draco")]
+#[cfg(feature = "remote-access")]
 use crate::remote_access::point_cloud_compression::PointCloudCompression;
 use crate::{
     Context, FoxgloveError, SinkChannelFilter, SinkId,
@@ -106,7 +106,7 @@ pub(super) struct ConnectionParams {
     pub(super) max_data_track_message_size: Option<usize>,
     pub(super) video_codec_override: Option<VideoCodec>,
     pub(super) video_encoder: super::gateway::VideoEncoderBackend,
-    #[cfg(feature = "draco")]
+    #[cfg(feature = "remote-access")]
     pub(super) point_cloud_compression: Option<Arc<dyn PointCloudCompression>>,
     pub(super) context: Weak<Context>,
 }
@@ -148,7 +148,7 @@ pub(super) struct RemoteAccessConnection {
     max_data_track_message_size: Option<usize>,
     video_codec_override: Option<VideoCodec>,
     video_encoder: super::gateway::VideoEncoderBackend,
-    #[cfg(feature = "draco")]
+    #[cfg(feature = "remote-access")]
     point_cloud_compression: Option<Arc<dyn PointCloudCompression>>,
     context: Weak<Context>,
     cancellation_token: CancellationToken,
@@ -184,7 +184,7 @@ impl RemoteAccessConnection {
             max_data_track_message_size: params.max_data_track_message_size,
             video_codec_override: params.video_codec_override,
             video_encoder: params.video_encoder,
-            #[cfg(feature = "draco")]
+            #[cfg(feature = "remote-access")]
             point_cloud_compression: params.point_cloud_compression,
             context: params.context,
             cancellation_token: CancellationToken::new(),
@@ -345,7 +345,7 @@ impl RemoteAccessConnection {
                 .unwrap_or(DEFAULT_MAX_DATA_TRACK_MESSAGE_SIZE),
             video_codec_override: self.video_codec_override,
             video_encoder: self.video_encoder,
-            #[cfg(feature = "draco")]
+            #[cfg(feature = "remote-access")]
             point_cloud_compression: self.point_cloud_compression.clone(),
             services: self.services.clone(),
             connection_graph: self.connection_graph.clone(),

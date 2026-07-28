@@ -16,7 +16,7 @@ use crate::{
     sink_channel_filter::SinkChannelFilterFn,
 };
 
-#[cfg(feature = "draco")]
+#[cfg(feature = "remote-access")]
 use super::point_cloud_compression::{PointCloudCompression, PointCloudCompressionFn};
 use super::qos::{QosClassifier, QosClassifierFn, QosProfile};
 use super::suppress_video_transcode::{SuppressVideoTranscode, SuppressVideoTranscodeFn};
@@ -138,7 +138,7 @@ impl GatewayHandle {
             max_data_track_message_size: None,
             video_codec_override: None,
             video_encoder: VideoEncoderBackend::Auto,
-            #[cfg(feature = "draco")]
+            #[cfg(feature = "remote-access")]
             point_cloud_compression: None,
             context: std::sync::Weak::new(),
         };
@@ -259,7 +259,7 @@ pub struct Gateway {
     message_backlog_size: Option<usize>,
     max_data_track_message_size: Option<usize>,
     video_encoder: VideoEncoderBackend,
-    #[cfg(feature = "draco")]
+    #[cfg(feature = "remote-access")]
     point_cloud_compression: Option<Arc<dyn PointCloudCompression>>,
     context: std::sync::Weak<Context>,
 }
@@ -287,7 +287,7 @@ impl Default for Gateway {
             video_encoder: VideoEncoderBackend::Auto,
             // Transparent point-cloud compression is opt-out: with no policy set, every
             // compressible Lossy channel is compressed with the default options.
-            #[cfg(feature = "draco")]
+            #[cfg(feature = "remote-access")]
             point_cloud_compression: None,
             context: Arc::downgrade(&Context::get_default()),
         }
@@ -325,7 +325,7 @@ impl std::fmt::Debug for Gateway {
             )
             .field("video_encoder", &self.video_encoder)
             .field("has_context", &(self.context.strong_count() > 0));
-        #[cfg(feature = "draco")]
+        #[cfg(feature = "remote-access")]
         dbg.field(
             "has_point_cloud_compression_policy",
             &self.point_cloud_compression.is_some(),
@@ -497,8 +497,8 @@ impl Gateway {
     /// or return `None` for those channels.
     ///
     /// [`CompressPointCloudOptions::default()`]: crate::draco::CompressPointCloudOptions
-    #[cfg(feature = "draco")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "draco")))]
+    #[cfg(feature = "remote-access")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "remote-access")))]
     pub fn point_cloud_compression(mut self, policy: Arc<dyn PointCloudCompression>) -> Self {
         self.point_cloud_compression = Some(policy);
         self
@@ -509,8 +509,8 @@ impl Gateway {
     /// The function returns the compression settings for a channel, or `None` to deliver
     /// it unmodified; return `None` unconditionally to disable point-cloud compression
     /// entirely. See [`Self::point_cloud_compression`] for details.
-    #[cfg(feature = "draco")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "draco")))]
+    #[cfg(feature = "remote-access")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "remote-access")))]
     pub fn point_cloud_compression_fn(
         mut self,
         policy: impl Fn(&ChannelDescriptor) -> Option<crate::draco::CompressPointCloudOptions>
@@ -765,7 +765,7 @@ impl Gateway {
             max_data_track_message_size: self.max_data_track_message_size,
             video_codec_override,
             video_encoder,
-            #[cfg(feature = "draco")]
+            #[cfg(feature = "remote-access")]
             point_cloud_compression: self.point_cloud_compression,
             context: self.context,
         };

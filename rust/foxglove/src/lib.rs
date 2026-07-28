@@ -338,16 +338,14 @@
 //!   [`Timestamp`][crate::messages::Timestamp].
 //! - `derive`: enables the use of `#[derive(Encode)]` to derive the [`Encode`] trait for logging
 //!   custom structs. Enabled by default.
-//! - `draco`: enables [Draco](https://google.github.io/draco/) point-cloud compression: the
-//!   [`draco`][mod@crate::draco] module and transparent compression of `foxglove.PointCloud`
-//!   channels in the remote access sink. Enabled by the `remote-access` feature; with it
-//!   enabled, the remote access sink compresses point clouds by default, and its builder
-//!   can opt out.
 //! - `full`: the full set of supported features, with opinionated picks for mutually exclusive
 //!   choices.
 //! - `lz4`: enables support for the LZ4 compression algorithm for mcap files. Enabled by default.
 //! - `remote-access`: enables the remote access gateway for live visualization and teleop via
-//!   WebRTC. Requires a crypto backend; `aws-lc-rs` is enabled by default.
+//!   WebRTC. Requires a crypto backend; `aws-lc-rs` is enabled by default. Also enables
+//!   [Draco](https://google.github.io/draco/) point-cloud compression: the
+//!   [`draco`][mod@crate::draco] module and transparent compression of `foxglove.PointCloud`
+//!   channels in the sink, which is on by default and configurable via the gateway builder.
 //! - `require-cuda`: opts into a build-time check that `cuda.h` is present on targets where
 //!   webrtc-sys would build NVENC support. Requires `remote-access` to also be enabled.
 //!   See [NVENC hardware acceleration](#nvenc-hardware-acceleration).
@@ -457,8 +455,8 @@ pub use remote_data_loader_backend as data_provider;
 #[allow(unused)]
 mod img2yuv;
 
-#[cfg(feature = "draco")]
-#[cfg_attr(docsrs, doc(cfg(feature = "draco")))]
+#[cfg(feature = "remote-access")]
+#[cfg_attr(docsrs, doc(cfg(feature = "remote-access")))]
 pub mod draco;
 
 pub use app_url::AppUrl;
