@@ -271,8 +271,6 @@ FoxgloveResult<RemoteAccessGateway> RemoteAccessGateway::create(
   // Point-cloud compression
   c_options.point_cloud_compression.mode =
     static_cast<foxglove_point_cloud_compression_mode>(options.point_cloud_compression.mode);
-  c_options.point_cloud_compression.draco.method =
-    static_cast<foxglove_draco_method>(options.point_cloud_compression.draco.method);
   c_options.point_cloud_compression.draco.quantization_bits =
     options.point_cloud_compression.draco.quantization_bits;
 

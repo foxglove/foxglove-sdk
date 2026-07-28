@@ -92,30 +92,11 @@ impl From<FoxgloveServerCapability> for FoxgloveServerCapabilityBitFlags {
     }
 }
 
-/// Draco encoding method for point-cloud compression.
-///
-/// kd-tree is currently the only offered method: sequential encoding is withheld because
-/// draco-core emits sequential bitstreams that the reference Draco decoder rejects
-/// whenever positions are quantized (upstream conformance bug). The enum and the `method`
-/// field are kept so that re-offering sequential later is ABI-compatible; a `Sequential`
-/// variant will be added once the upstream encoder is fixed.
-#[cfg(feature = "remote-access")]
-#[repr(u8)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum FoxgloveDracoMethod {
-    /// kd-tree encoding: reorders points, and float32 extra fields are quantized with the
-    /// same number of bits as positions. This is the default (0).
-    KdTree = 0,
-}
-
 /// Options for Draco point-cloud encoding.
 #[cfg(feature = "remote-access")]
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct FoxgloveDracoEncodeOptions {
-    /// The Draco encoding method. Currently kd-tree is the only choice; see
-    /// `foxglove_draco_method`.
-    pub method: FoxgloveDracoMethod,
     /// Quantization bits for the position attribute; must be between 1 and 30 inclusive.
     /// Values outside that range cause `foxglove_gateway_start` to fail with
     /// `FOXGLOVE_ERROR_CONFIGURATION_ERROR`: values above 30 are rejected by the reference
@@ -129,9 +110,8 @@ impl TryFrom<FoxgloveDracoEncodeOptions> for foxglove::draco::DracoEncodeOptions
     type Error = foxglove::FoxgloveError;
 
     fn try_from(options: FoxgloveDracoEncodeOptions) -> Result<Self, Self::Error> {
-        // `method` has a single variant (kd-tree), which is also the only method the SDK
-        // derives for quantized encoding, so only the quantization setting is forwarded.
-        let FoxgloveDracoMethod::KdTree = options.method;
+        // The SDK derives the Draco method (kd-tree for quantized encoding) internally, so
+        // only the quantization setting is forwarded.
         Self::with_quantization_bits(options.quantization_bits).map_err(|e| {
             foxglove::FoxgloveError::ConfigurationError(format!("point_cloud_compression: {e}"))
         })
@@ -201,7 +181,7 @@ impl FoxglovePointCloudCompression {
 #[cfg(all(test, feature = "remote-access"))]
 mod point_cloud_compression_tests {
     use super::{
-        FoxgloveDracoEncodeOptions, FoxgloveDracoMethod, FoxglovePointCloudCompression,
+        FoxgloveDracoEncodeOptions, FoxglovePointCloudCompression,
         FoxglovePointCloudCompressionMode,
     };
     use foxglove::draco::{CompressPointCloudOptions, DracoEncodeOptions};
@@ -215,12 +195,6 @@ mod point_cloud_compression_tests {
             compression.mode,
             FoxglovePointCloudCompressionMode::Default
         ));
-        // The zero value of the method enum must be a valid variant (kd-tree), so a
-        // zero-initialized struct never holds an invalid discriminant.
-        assert!(matches!(
-            compression.draco.method,
-            FoxgloveDracoMethod::KdTree
-        ));
         assert_eq!(compression.to_policy_options().unwrap(), None);
     }
 
@@ -229,7 +203,6 @@ mod point_cloud_compression_tests {
         let compression = FoxglovePointCloudCompression {
             mode: FoxglovePointCloudCompressionMode::Disabled,
             draco: FoxgloveDracoEncodeOptions {
-                method: FoxgloveDracoMethod::KdTree,
                 quantization_bits: 12,
             },
         };
@@ -241,7 +214,6 @@ mod point_cloud_compression_tests {
         let compression = FoxglovePointCloudCompression {
             mode: FoxglovePointCloudCompressionMode::Draco,
             draco: FoxgloveDracoEncodeOptions {
-                method: FoxgloveDracoMethod::KdTree,
                 quantization_bits: 14,
             },
         };
@@ -261,7 +233,6 @@ mod point_cloud_compression_tests {
             let compression = FoxglovePointCloudCompression {
                 mode: FoxglovePointCloudCompressionMode::Draco,
                 draco: FoxgloveDracoEncodeOptions {
-                    method: FoxgloveDracoMethod::KdTree,
                     quantization_bits: bits,
                 },
             };

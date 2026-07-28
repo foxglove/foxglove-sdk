@@ -15,23 +15,8 @@ enum class PointCloudCompressionMode : uint8_t {
   Draco = 2,
 };
 
-/// @brief Draco encoding method for point-cloud compression.
-///
-/// kd-tree is currently the only offered method: sequential encoding is withheld because
-/// the encoder emits sequential bitstreams that the reference Draco decoder rejects
-/// whenever positions are quantized (upstream draco-core conformance bug). A `Sequential`
-/// value will be added once the upstream encoder is fixed.
-enum class DracoMethod : uint8_t {
-  /// kd-tree encoding: reorders points, and float32 extra fields are quantized with the
-  /// same number of bits as positions. This is the default (0).
-  KdTree = 0,
-};
-
 /// @brief Options for Draco point-cloud encoding.
 struct DracoEncodeOptions {
-  /// @brief The Draco encoding method. Currently kd-tree is the only choice; see
-  /// @ref DracoMethod.
-  DracoMethod method = DracoMethod::KdTree;
   /// @brief Quantization bits for the position attribute; must be between 1 and 30
   /// inclusive. Values outside that range cause @ref RemoteAccessGateway::create to fail
   /// with @ref FoxgloveError::ConfigurationError. Values above 30 are rejected by the
