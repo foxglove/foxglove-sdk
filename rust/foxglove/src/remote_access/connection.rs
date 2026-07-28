@@ -556,7 +556,7 @@ impl RemoteAccessConnection {
         let video_metadata_task = tokio::spawn(RemoteAccessSession::run_video_metadata_watcher(
             session.clone(),
         ));
-        let drop_status_task = tokio::spawn(RemoteAccessSession::run_drop_status_sweeper(
+        let warning_sweep_task = tokio::spawn(RemoteAccessSession::run_channel_warning_sweeper(
             session.clone(),
         ));
 
@@ -627,11 +627,11 @@ impl RemoteAccessConnection {
                 "video metadata watcher failed"
             );
         }
-        if let Err(e) = drop_status_task.await {
+        if let Err(e) = warning_sweep_task.await {
             error!(
                 remote_access_session_id,
                 error = %e,
-                "drop status sweeper failed"
+                "channel warning sweeper failed"
             );
         }
 

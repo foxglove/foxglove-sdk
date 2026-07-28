@@ -99,7 +99,7 @@ const DROP_STATUS_QUIET_PERIOD: Duration =
     Duration::from_secs(2 * data_track::OVERSIZED_WARN_INTERVAL.as_secs());
 
 /// How often the warning sweeper checks for expired channel warnings.
-const DROP_STATUS_SWEEP_INTERVAL: Duration = Duration::from_secs(15);
+const WARNING_SWEEP_INTERVAL: Duration = Duration::from_secs(15);
 
 /// Interval between throttled point-cloud compression warnings for one channel.
 #[cfg(feature = "remote-access")]
@@ -859,12 +859,14 @@ impl RemoteAccessSession {
         }
     }
 
-    /// Auto-clears viewer-facing oversized-drop statuses once a channel has had
-    /// no drop reports for [`DROP_STATUS_QUIET_PERIOD`].
+    /// Auto-clears viewer-facing channel warnings once a channel has been idle for the
+    /// warning's quiet period: oversized-drop statuses after [`DROP_STATUS_QUIET_PERIOD`]
+    /// without a drop, and (with `draco`) point-cloud compression warnings after
+    /// [`COMPRESSION_WARN_QUIET_PERIOD`] without a failure.
     ///
     /// Runs until the cancellation token fires.
-    pub(super) async fn run_drop_status_sweeper(session: Arc<Self>) {
-        let mut interval = tokio::time::interval(DROP_STATUS_SWEEP_INTERVAL);
+    pub(super) async fn run_channel_warning_sweeper(session: Arc<Self>) {
+        let mut interval = tokio::time::interval(WARNING_SWEEP_INTERVAL);
         interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
         loop {
             tokio::select! {
