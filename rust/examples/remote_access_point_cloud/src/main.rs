@@ -2,7 +2,7 @@
 //!
 //! Streams the same animated point cloud on two topics: `/cloud/compressed` uses the
 //! remote access sink's transparent Draco compression (on by default), while `/cloud/raw`
-//! opts out via `suppress_point_cloud_compression_fn` and is delivered unmodified.
+//! opts out via the `point_cloud_compression_fn` policy and is delivered unmodified.
 //!
 //! Lossy remote access messages larger than the data-track cap (100 KiB by default) are
 //! dropped before publishing. At the default `--points 25000`, the raw message (~400 KB)
@@ -186,19 +186,18 @@ async fn main() {
         args.fps
     );
 
-    let mut options = DracoEncodeOptions::default();
-    options.quantization_bits = args.quantization_bits;
+    let options = DracoEncodeOptions::with_quantization_bits(args.quantization_bits)
+        .expect("clap validates the range");
 
     // Report the deliverability verdicts up front, before connecting.
     report_sizes(&make_cloud(side, 0.0), &options);
 
-    // Compression applies to every compressible channel; the raw topic opts out so the
-    // two delivery paths can be compared. The handle is held for the life of the
-    // process; the connection runs until exit.
+    // The policy compresses every compressible channel with the configured options; the
+    // raw topic returns None so the two delivery paths can be compared. The handle is
+    // held for the life of the process; the connection runs until exit.
     let _gateway = Gateway::new()
-        .compress_point_clouds(Some(CompressPointCloudOptions::Draco(options)))
-        .suppress_point_cloud_compression_fn(|channel: &ChannelDescriptor| {
-            channel.topic() == "/cloud/raw"
+        .point_cloud_compression_fn(move |channel: &ChannelDescriptor| {
+            (channel.topic() != "/cloud/raw").then_some(CompressPointCloudOptions::Draco(options))
         })
         .start()
         .expect("failed to start gateway");
