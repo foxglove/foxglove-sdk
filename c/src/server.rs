@@ -111,9 +111,16 @@ impl TryFrom<FoxgloveDracoEncodeOptions> for foxglove::draco::DracoEncodeOptions
 
     fn try_from(options: FoxgloveDracoEncodeOptions) -> Result<Self, Self::Error> {
         // The SDK derives the Draco method (kd-tree for quantized encoding) internally, so
-        // only the quantization setting is forwarded.
-        Self::with_quantization_bits(options.quantization_bits).map_err(|e| {
-            foxglove::FoxgloveError::ConfigurationError(format!("point_cloud_compression: {e}"))
+        // only the quantization setting is forwarded. The message is written for C/C++
+        // callers rather than forwarding the core error, which points at the Rust-only
+        // `DracoEncodeOptions::lossless()` API.
+        Self::with_quantization_bits(options.quantization_bits).map_err(|_| {
+            foxglove::FoxgloveError::ConfigurationError(format!(
+                "point_cloud_compression: quantization_bits ({}) must be between 1 and {}; \
+                 use the Disabled compression mode to deliver point clouds uncompressed",
+                options.quantization_bits,
+                foxglove::draco::MAX_QUANTIZATION_BITS
+            ))
         })
     }
 }
@@ -236,10 +243,15 @@ mod point_cloud_compression_tests {
                     quantization_bits: bits,
                 },
             };
-            assert!(matches!(
-                compression.to_policy_options(),
-                Err(foxglove::FoxgloveError::ConfigurationError(_))
-            ));
+            let Err(foxglove::FoxgloveError::ConfigurationError(message)) =
+                compression.to_policy_options()
+            else {
+                panic!("expected a configuration error for {bits} bits");
+            };
+            // The message must be actionable for C/C++ callers and must not leak the
+            // Rust-only `DracoEncodeOptions::lossless()` API from the core error.
+            assert!(message.contains("quantization_bits"), "{message}");
+            assert!(!message.contains("lossless"), "{message}");
         }
     }
 }
