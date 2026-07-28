@@ -13,6 +13,33 @@ from foxglove import (
     StatusLevel,
 )
 
+class DracoMethod(Enum):
+    """
+    Draco encoding method for point-cloud compression.
+
+    kd-tree is currently the only offered method; a ``Sequential`` value will be added
+    once an upstream encoder conformance bug is fixed.
+    """
+
+    KdTree = ...
+    """kd-tree encoding: reorders points, and float32 extra fields are quantized with the
+    same number of bits as positions. This is the default."""
+
+class DracoEncodeOptions:
+    """
+    Options for Draco point-cloud encoding.
+    """
+
+    method: DracoMethod
+    quantization_bits: int
+
+    def __init__(
+        self,
+        *,
+        method: DracoMethod = DracoMethod.KdTree,
+        quantization_bits: int = 12,
+    ) -> None: ...
+
 class Reliability(Enum):
     """
     The reliability policy for a channel's data delivery.

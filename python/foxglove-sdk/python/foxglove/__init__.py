@@ -50,8 +50,6 @@ __all__ = [
 try:
     from ._foxglove_py import (  # noqa: F401
         ConnectionGraph,
-        DracoEncodeOptions,
-        DracoMethod,
         MessageSchema,
         Parameter,
         ParameterType,
@@ -93,8 +91,6 @@ try:
             "AnyParameterValue",
             "AssetHandler",
             "ConnectionGraph",
-            "DracoEncodeOptions",
-            "DracoMethod",
             "MessageSchema",
             "Parameter",
             "ParameterType",
@@ -259,6 +255,7 @@ except ImportError:
 try:
     from .remote_access import Capability as RemoteAccessCapability
     from .remote_access import (
+        DracoEncodeOptions,
         QosProfile,
         RemoteAccessGateway,
         RemoteAccessListener,
@@ -319,7 +316,8 @@ try:
         :param point_cloud_compression: Transparent point-cloud compression for remote
             participants. When enabled, ``foxglove.PointCloud`` channels are advertised as
             ``foxglove.CompressedPointCloud`` and each logged point cloud is compressed in a
-            background task before delivery. Pass a :py:class:`DracoEncodeOptions` to customize
+            background task before delivery. Pass a
+            :py:class:`~foxglove.remote_access.DracoEncodeOptions` to customize
             the settings, ``True`` to explicitly enable compression with default settings, or
             ``False`` to disable compression. The default of ``None`` defers to the SDK, which
             currently enables compression with default settings; note that the defaults are

@@ -18,6 +18,8 @@ from foxglove import (
 from ._foxglove_py.remote_access import (
     Capability,
     Client,
+    DracoEncodeOptions,
+    DracoMethod,
     QosProfile,
     Reliability,
     RemoteAccessConnectionStatus,
@@ -175,6 +177,8 @@ __all__ = [
     "Capability",
     "Client",
     "ConnectionGraph",
+    "DracoEncodeOptions",
+    "DracoMethod",
     "MessageSchema",
     "Parameter",
     "ParameterType",

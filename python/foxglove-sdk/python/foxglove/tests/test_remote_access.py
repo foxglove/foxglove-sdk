@@ -1,4 +1,5 @@
 import os
+import typing
 
 import pytest
 
@@ -40,7 +41,7 @@ def test_start_gateway_accepts_point_cloud_compression_options() -> None:
     The point-cloud compression kwargs are converted before the gateway starts, so the
     missing-token error proves they were accepted.
     """
-    from foxglove import DracoEncodeOptions, DracoMethod
+    from foxglove.remote_access import DracoEncodeOptions, DracoMethod
 
     with pytest.raises(RuntimeError, match="No device token provided"):
         start_gateway(
@@ -60,7 +61,7 @@ def test_start_gateway_rejects_invalid_quantization_bits() -> None:
     Draco decoder) fail at startup with a configuration error, before the missing token is
     even checked. 31 is the first rejected value above the maximum.
     """
-    from foxglove import DracoEncodeOptions, DracoMethod
+    from foxglove.remote_access import DracoEncodeOptions, DracoMethod
 
     for bits in (0, 31):
         with pytest.raises(RuntimeError, match="quantization_bits"):
@@ -69,6 +70,27 @@ def test_start_gateway_rejects_invalid_quantization_bits() -> None:
                     method=DracoMethod.KdTree, quantization_bits=bits
                 ),
             )
+
+
+def test_draco_encode_options_defaults() -> None:
+    from foxglove.remote_access import DracoEncodeOptions, DracoMethod
+
+    options = DracoEncodeOptions()
+    assert options.method == DracoMethod.KdTree
+    assert options.quantization_bits == 12
+
+    options = DracoEncodeOptions(method=DracoMethod.KdTree, quantization_bits=10)
+    assert options.method == DracoMethod.KdTree
+    assert options.quantization_bits == 10
+
+
+@typing.no_type_check
+def test_draco_encode_options_rejects_non_u8_quantization_bits() -> None:
+    from foxglove.remote_access import DracoEncodeOptions
+
+    with pytest.raises(OverflowError):
+        # quantization_bits must fit in a u8
+        DracoEncodeOptions(quantization_bits=256)
 
 
 def test_capability_enum() -> None:
