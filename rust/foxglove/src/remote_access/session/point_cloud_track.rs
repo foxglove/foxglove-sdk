@@ -1,7 +1,7 @@
 //! Background point-cloud transcoding for remote access sessions.
 
 use std::sync::Weak;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use bytes::Bytes;
 use tokio::runtime::Handle;
@@ -60,10 +60,15 @@ impl PointCloudPublisher {
         runtime.spawn(async move {
             // Throttles compression warnings so a stream of bad clouds doesn't flood the log.
             let mut warn_throttler = Throttler::new(TRANSCODE_WARN_INTERVAL);
-            // True while a compression-failure status is live on viewers; the status is
-            // removed on the next successful transcode, so a resolved condition doesn't
-            // linger in the app's problem list.
+            // True while a compression-failure status is live on viewers. The status is
+            // removed — and the throttler reset, so a fresh failure reports immediately —
+            // only once recovery has been sustained for the quiet period below: removing
+            // on the first success would make a mixed good/bad stream strobe the status
+            // (and the log) at message rate, while removing without resetting the
+            // throttler would leave intermittent failures mostly invisible.
             let mut warning_active = false;
+            // When the most recent transcode failure happened, gating status removal.
+            let mut last_failure: Option<Instant> = None;
             while let Ok((data, log_time)) = consumer_rx.recv_async().await {
                 let result = tokio::task::spawn_blocking(move || {
                     transcode_point_cloud_message(&data, &options)
@@ -76,13 +81,17 @@ impl PointCloudPublisher {
                         let Some(session) = session.upgrade() else {
                             break;
                         };
-                        if warning_active {
+                        if warning_active
+                            && last_failure.is_none_or(|at| at.elapsed() >= TRANSCODE_WARN_INTERVAL)
+                        {
                             warning_active = false;
+                            warn_throttler = Throttler::new(TRANSCODE_WARN_INTERVAL);
                             session.remove_status(vec![compression_status_id(channel_id)]);
                         }
                         session.deliver_transcoded_point_cloud(channel_id, &transcoded, log_time);
                     }
                     Ok(Err(e)) => {
+                        last_failure = Some(Instant::now());
                         if warn_throttler.try_acquire() {
                             let message =
                                 format!("point cloud compression error on topic {topic}: {e}");
@@ -104,6 +113,12 @@ impl PointCloudPublisher {
                         }
                     }
                 }
+            }
+            // The publisher is dropped when the channel loses its last data subscriber
+            // (or the session shuts down): retract a live warning so it doesn't sit in
+            // participants' problem lists with nothing left running to clear it.
+            if warning_active && let Some(session) = session.upgrade() {
+                session.remove_status(vec![compression_status_id(channel_id)]);
             }
         });
         Self { tx, rx }

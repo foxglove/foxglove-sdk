@@ -3165,8 +3165,11 @@ async fn livekit_point_cloud_float64_rejected_warns() -> Result<()> {
         "the rejected float64 cloud must not be delivered"
     );
 
-    // The successful transcode removes the warning, so the resolved condition doesn't
-    // linger in the app's problem list.
+    // Sustained recovery also removes the warning, but that is gated on a quiet period
+    // too long for this test. Publisher teardown must retract it as well: unsubscribing
+    // the last data subscriber drops the publisher, and the live warning is removed
+    // rather than lingering in the problem list with nothing left running to clear it.
+    viewer.send_unsubscribe(&[channel_id]).await?;
     let deadline = tokio::time::Instant::now() + EVENT_TIMEOUT;
     loop {
         let msg = tokio::time::timeout_at(deadline, viewer.frame_reader.next_server_message())
