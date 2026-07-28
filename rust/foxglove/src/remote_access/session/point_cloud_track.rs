@@ -74,11 +74,15 @@ impl PointCloudPublisher {
                         // A panic in the encode task is an internal bug; the panic itself
                         // is already logged by the default panic hook. From the channel's
                         // perspective it is just another failure to compress, so surface a
-                        // generic warning through the same throttled path rather than
-                        // leaking the raw panic text to viewers.
+                        // warning through the same throttled path rather than leaking the
+                        // raw panic text to viewers. Unlike the data-driven failures
+                        // above, this one is not actionable by the user, so mark it an
+                        // "internal error" so they don't go auditing their cloud's schema.
                         session.report_compression_failure(
                             channel_id,
-                            format!("point cloud compression error on topic {topic}"),
+                            format!(
+                                "point cloud compression error on topic {topic}: internal error"
+                            ),
                         );
                     }
                 }
