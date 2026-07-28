@@ -866,7 +866,7 @@ impl RemoteAccessSession {
 
     /// Auto-clears viewer-facing channel warnings once a channel has been idle for the
     /// warning's quiet period: oversized-drop statuses after [`DROP_STATUS_QUIET_PERIOD`]
-    /// without a drop, and (with `draco`) point-cloud compression warnings after
+    /// without a drop, and point-cloud compression warnings after
     /// [`COMPRESSION_WARN_QUIET_PERIOD`] without a failure.
     ///
     /// Runs until the cancellation token fires.
@@ -885,7 +885,7 @@ impl RemoteAccessSession {
     }
 
     /// Clears channel-warning entries idle for at least their quiet period: oversized-drop
-    /// statuses and (with `draco`) point-cloud compression warnings.
+    /// statuses and point-cloud compression warnings.
     fn sweep_expired_warnings(&self, now: std::time::Instant) {
         let expired_drops = drain_expired_warnings(
             &mut self.active_drop_statuses.lock(),
@@ -893,26 +893,19 @@ impl RemoteAccessSession {
             DROP_STATUS_QUIET_PERIOD,
             |status| status.last_report,
         );
-        // Start empty and extend so `ids` is always mutated, regardless of whether the
-        // `draco` block below is compiled in (`remote-access` implies `draco` today, but
-        // the module is written to tolerate `draco` being absent).
-        let mut ids: Vec<String> = Vec::new();
-        ids.extend(expired_drops.iter().map(|id| drop_status_id(*id)));
+        let mut ids: Vec<String> = expired_drops.iter().map(|id| drop_status_id(*id)).collect();
 
-        #[cfg(feature = "remote-access")]
-        {
-            let expired_compression = drain_expired_warnings(
-                &mut self.active_compression_warnings.lock(),
-                now,
-                COMPRESSION_WARN_QUIET_PERIOD,
-                |warning| warning.last_report,
-            );
-            ids.extend(
-                expired_compression
-                    .iter()
-                    .map(|id| compression_status_id(*id)),
-            );
-        }
+        let expired_compression = drain_expired_warnings(
+            &mut self.active_compression_warnings.lock(),
+            now,
+            COMPRESSION_WARN_QUIET_PERIOD,
+            |warning| warning.last_report,
+        );
+        ids.extend(
+            expired_compression
+                .iter()
+                .map(|id| compression_status_id(*id)),
+        );
 
         if ids.is_empty() {
             return;
