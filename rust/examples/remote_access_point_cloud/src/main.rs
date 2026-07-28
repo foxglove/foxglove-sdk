@@ -24,7 +24,7 @@
 //! `intensity` field for best effect. The oversized `/cloud/raw` drops surface as a
 //! warning in the app's problems list.
 
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use clap::Parser;
 use foxglove::draco::{CompressPointCloudOptions, DracoEncodeOptions, MAX_QUANTIZATION_BITS};
@@ -205,19 +205,18 @@ async fn main() {
         .expect("failed to start gateway");
 
     let mut ticker = tokio::time::interval(Duration::from_secs_f64(1.0 / f64::from(args.fps)));
-    let mut last_report = SystemTime::now();
-    let start = SystemTime::now();
+    // Elapsed-time measurements use Instant (monotonic); a wall-clock SystemTime step
+    // must not rewind the wave phase or stall the size report.
+    let mut last_report = Instant::now();
+    let start = Instant::now();
     loop {
         ticker.tick().await;
-        let t = SystemTime::now()
-            .duration_since(start)
-            .unwrap_or_default()
-            .as_secs_f64();
+        let t = start.elapsed().as_secs_f64();
 
         let cloud = make_cloud(side, t);
-        if last_report.elapsed().unwrap_or_default() >= SIZE_REPORT_INTERVAL {
+        if last_report.elapsed() >= SIZE_REPORT_INTERVAL {
             report_sizes(&cloud, &options);
-            last_report = SystemTime::now();
+            last_report = Instant::now();
         }
 
         TF_CHANNEL.log(&world_transform());
