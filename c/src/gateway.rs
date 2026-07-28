@@ -112,32 +112,32 @@ impl foxglove::remote_access::SuppressVideoTranscode for SuppressVideoTranscode 
     }
 }
 
-/// A point-cloud-compression opt-out predicate that wraps a C callback.
-#[derive(Clone)]
-struct SuppressPointCloudCompression {
-    callback_context: *const c_void,
-    callback: unsafe extern "C" fn(*const c_void, *const FoxgloveChannelDescriptor) -> bool,
+/// A per-channel point-cloud compression policy assembled from the C configuration: the
+/// configured compression options combined with the optional opt-out callback.
+struct PointCloudCompressionPolicy {
+    /// The options applied to channels that are not opted out; `None` disables
+    /// compression for every channel.
+    options: Option<foxglove::draco::CompressPointCloudOptions>,
+    suppress_context: *const c_void,
+    suppress: Option<unsafe extern "C" fn(*const c_void, *const FoxgloveChannelDescriptor) -> bool>,
 }
 
-impl SuppressPointCloudCompression {
-    fn new(
-        callback_context: *const c_void,
-        callback: unsafe extern "C" fn(*const c_void, *const FoxgloveChannelDescriptor) -> bool,
-    ) -> Self {
-        Self {
-            callback_context,
-            callback,
+unsafe impl Send for PointCloudCompressionPolicy {}
+unsafe impl Sync for PointCloudCompressionPolicy {}
+
+impl foxglove::remote_access::PointCloudCompression for PointCloudCompressionPolicy {
+    fn compression(
+        &self,
+        channel: &foxglove::ChannelDescriptor,
+    ) -> Option<foxglove::draco::CompressPointCloudOptions> {
+        let options = self.options?;
+        if let Some(callback) = self.suppress {
+            let c_channel_descriptor = FoxgloveChannelDescriptor(channel.clone());
+            if unsafe { callback(self.suppress_context, &raw const c_channel_descriptor) } {
+                return None;
+            }
         }
-    }
-}
-
-unsafe impl Send for SuppressPointCloudCompression {}
-unsafe impl Sync for SuppressPointCloudCompression {}
-
-impl foxglove::remote_access::SuppressPointCloudCompression for SuppressPointCloudCompression {
-    fn should_suppress(&self, channel: &foxglove::ChannelDescriptor) -> bool {
-        let c_channel_descriptor = FoxgloveChannelDescriptor(channel.clone());
-        unsafe { (self.callback)(self.callback_context, &raw const c_channel_descriptor) }
+        Some(options)
     }
 }
 
@@ -897,19 +897,18 @@ unsafe fn do_foxglove_gateway_start(
         )));
     }
 
-    // Point-cloud compression. Mode `Default` (0) means "unset" — leave it off so the SDK
-    // applies its default.
-    if let Some(compression) = options.point_cloud_compression.to_builder_options() {
-        gateway = gateway.compress_point_clouds(compression);
-    }
-
-    // Suppress point-cloud compression
-    if let Some(suppress_point_cloud_compression) = options.suppress_point_cloud_compression {
-        gateway =
-            gateway.suppress_point_cloud_compression(Arc::new(SuppressPointCloudCompression::new(
-                options.suppress_point_cloud_compression_context,
-                suppress_point_cloud_compression,
-            )));
+    // Point-cloud compression: the configured mode and the opt-out callback combine into
+    // a single per-channel policy. Mode `Default` (0) with no callback means "unset" —
+    // no policy is configured, and the SDK applies its default. Invalid Draco settings
+    // fail here, keeping misconfiguration a startup error for C callers.
+    let point_cloud_compression = options.point_cloud_compression.to_policy_options()?;
+    if point_cloud_compression.is_some() || options.suppress_point_cloud_compression.is_some() {
+        gateway = gateway.point_cloud_compression(Arc::new(PointCloudCompressionPolicy {
+            options: point_cloud_compression
+                .unwrap_or(Some(foxglove::draco::CompressPointCloudOptions::default())),
+            suppress_context: options.suppress_point_cloud_compression_context,
+            suppress: options.suppress_point_cloud_compression,
+        }));
     }
 
     // Fetch asset handler

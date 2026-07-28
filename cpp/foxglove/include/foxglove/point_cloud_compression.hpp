@@ -47,9 +47,9 @@ struct DracoEncodeOptions {
 /// is compressed in a background task (off the logging hot path) before delivery. If
 /// compression falls behind the log rate, the oldest queued message is dropped.
 /// Channels classified as Reliable skip compression and deliver the raw point cloud on
-/// the control bytestream. Clouds containing float64 fields cannot be quantized and are
-/// delivered losslessly (no size reduction); a throttled warning is emitted when this
-/// happens.
+/// the control bytestream. Draco cannot quantize float64 fields, so non-empty clouds
+/// containing one (other than the x/y/z position fields) fail to compress and are
+/// dropped, with a throttled warning.
 struct PointCloudCompression {
   /// @brief The compression mode.
   PointCloudCompressionMode mode = PointCloudCompressionMode::Default;

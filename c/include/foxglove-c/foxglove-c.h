@@ -2853,9 +2853,9 @@ typedef struct foxglove_draco_encode_options {
  * is compressed in a background task (off the logging hot path) before delivery. If
  * compression falls behind the log rate, the oldest queued message is dropped.
  * Channels classified as Reliable skip compression automatically and deliver the raw
- * point cloud on the control bytestream. Clouds containing float64 fields cannot be
- * quantized and are delivered losslessly (no size reduction); a throttled warning is
- * emitted when this happens.
+ * point cloud on the control bytestream. Draco cannot quantize float64 fields, so
+ * non-empty clouds containing one (other than the x/y/z position fields) fail to
+ * compress and are dropped, with a throttled warning.
  *
  * Zero-initialize this struct (mode 0) to use the SDK default. Note that when `mode` is
  * `FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DRACO`, `draco.quantization_bits` must be set
