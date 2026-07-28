@@ -53,9 +53,16 @@ impl PyDracoEncodeOptions {
 /// Message for an out-of-range `quantization_bits`, phrased for Python callers (the core
 /// error text points at `DracoEncodeOptions::lossless()`, which does not exist here).
 fn invalid_bits_message(bits: u8) -> String {
+    // Only 0 (lossless) has an actionable "turn it off" remediation; a value above the cap
+    // just needs a smaller number, not compression disabled.
+    let hint = if bits == 0 {
+        "; 0 (lossless) is not supported here — pass point_cloud_compression=False to \
+         disable compression"
+    } else {
+        ""
+    };
     format!(
-        "quantization_bits ({bits}) must be between 1 and {}; \
-         pass point_cloud_compression=False to disable compression",
+        "quantization_bits ({bits}) must be between 1 and {}{hint}",
         foxglove::draco::MAX_QUANTIZATION_BITS
     )
 }
@@ -65,14 +72,24 @@ impl TryFrom<PyDracoEncodeOptions> for foxglove::draco::DracoEncodeOptions {
 
     fn try_from(value: PyDracoEncodeOptions) -> Result<Self, Self::Error> {
         // `quantization_bits` is already validated at construction; the backstop here
-        // guards any path that skips `__new__` (e.g. structural extraction) without
-        // leaking the core error's Rust API reference. The SDK derives the Draco method
-        // (kd-tree for quantized encoding) internally, so there is nothing else to forward.
-        Self::with_quantization_bits(value.quantization_bits).map_err(|_| {
-            foxglove::FoxgloveError::ConfigurationError(format!(
-                "point_cloud_compression: {}",
-                invalid_bits_message(value.quantization_bits)
-            ))
+        // guards any path that skips `__new__` (e.g. structural extraction). The SDK
+        // derives the Draco method (kd-tree for quantized encoding) internally, so there
+        // is nothing else to forward.
+        Self::with_quantization_bits(value.quantization_bits).map_err(|e| match e {
+            // Write our own message for the bits-range error rather than forwarding the
+            // core one, which points at the Rust-only `DracoEncodeOptions::lossless()` API.
+            foxglove::draco::DracoEncodeError::InvalidQuantizationBits { .. } => {
+                foxglove::FoxgloveError::ConfigurationError(format!(
+                    "point_cloud_compression: {}",
+                    invalid_bits_message(value.quantization_bits)
+                ))
+            }
+            // `DracoEncodeError` is `#[non_exhaustive]`; forward any other variant verbatim
+            // rather than mislabeling it as a bits-range problem. None of the others
+            // reference the Rust-only lossless() API, so there is nothing to sanitize.
+            other => foxglove::FoxgloveError::ConfigurationError(format!(
+                "point_cloud_compression: {other}"
+            )),
         })
     }
 }

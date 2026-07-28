@@ -74,6 +74,14 @@ def test_draco_encode_options_reject_invalid_quantization_bits() -> None:
         with pytest.raises(ValueError, match="quantization_bits"):
             DracoEncodeOptions(quantization_bits=bits)
 
+    # The "disable compression" remediation only fits lossless (0); an out-of-range value
+    # above the cap wants a smaller number, so the hint must not appear there.
+    with pytest.raises(ValueError, match="point_cloud_compression=False"):
+        DracoEncodeOptions(quantization_bits=0)
+    with pytest.raises(ValueError) as excinfo:
+        DracoEncodeOptions(quantization_bits=31)
+    assert "point_cloud_compression=False" not in str(excinfo.value)
+
     # quantization_bits must fit in a u8.
     with pytest.raises(OverflowError):
         DracoEncodeOptions(quantization_bits=256)
