@@ -1155,7 +1155,8 @@ mod tests {
                 .unwrap()
         }
 
-        fn make_config() -> crate::remote_access::point_cloud_compression::PointCloudCompressionConfig {
+        fn make_config()
+        -> crate::remote_access::point_cloud_compression::PointCloudCompressionConfig {
             crate::remote_access::point_cloud_compression::PointCloudCompressionConfig {
                 input_schema: crate::remote_access::point_cloud_transcode::PointCloudInputSchema::FoxgloveProtobuf,
                 options: PointCloudCompression::default(),
