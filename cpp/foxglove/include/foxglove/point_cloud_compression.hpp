@@ -4,7 +4,7 @@
 
 namespace foxglove {
 
-/// @brief Transparent point-cloud compression mode for a sink.
+/// @brief Transparent point-cloud compression mode for a channel.
 enum class PointCloudCompressionMode : uint8_t {
   /// Use the SDK default: Draco compression with default settings (kd-tree encoding with
   /// positions quantized to 12 bits, which is lossy). This is the default (0).
@@ -18,14 +18,16 @@ enum class PointCloudCompressionMode : uint8_t {
 /// @brief Options for Draco point-cloud encoding.
 struct DracoEncodeOptions {
   /// @brief Quantization bits for the position attribute; must be between 1 and 30
-  /// inclusive. Values outside that range cause @ref RemoteAccessGateway::create to fail
-  /// with @ref FoxgloveError::ConfigurationError. Values above 30 are rejected by the
-  /// reference Draco decoder, and `0` (lossless) provides no size reduction over the raw
-  /// point cloud — use @ref PointCloudCompressionMode::Disabled instead.
+  /// inclusive. Values outside that range are invalid, and a channel whose compression
+  /// callback returns them is delivered unmodified, with a logged warning. Values above 30
+  /// are rejected by the reference Draco decoder, and `0` (lossless) provides no size
+  /// reduction over the raw point cloud — use @ref PointCloudCompressionMode::Disabled
+  /// instead.
   uint8_t quantization_bits = 12;
 };
 
-/// @brief Transparent point-cloud compression configuration for a sink.
+/// @brief Transparent point-cloud compression for a single channel, returned by the
+/// per-channel policy callback on the gateway options.
 ///
 /// When compression is enabled, channels carrying `foxglove.PointCloud` messages are
 /// advertised with the `foxglove.CompressedPointCloud` schema, and each logged point cloud
@@ -53,7 +55,7 @@ struct PointCloudCompression {
   /// @brief Compress with Draco using the given settings.
   ///
   /// Sets @ref mode and @ref draco together so they cannot get out of sync. For example:
-  /// `options.point_cloud_compression = PointCloudCompression::withDraco({8});`
+  /// `return PointCloudCompression::withDraco({8});`
   static PointCloudCompression withDraco(DracoEncodeOptions options) {
     return {PointCloudCompressionMode::Draco, options};
   }

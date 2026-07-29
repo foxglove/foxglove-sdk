@@ -112,20 +112,25 @@ bool forwardSuppressVideoTranscode(
   }
 }
 
-bool forwardSuppressPointCloudCompression(
+foxglove_point_cloud_compression forwardPointCloudCompression(
   const void* context, const foxglove_channel_descriptor* channel
 ) {
+  // Zero-initialized means mode `Default`: the SDK default compression, which is also the
+  // fallback when no policy can be consulted.
+  foxglove_point_cloud_compression c_compression = {};
   if (context == nullptr) {
-    return false;
+    return c_compression;
   }
   try {
-    const auto* predicate = static_cast<const SuppressPointCloudCompressionFn*>(context);
+    const auto* policy = static_cast<const PointCloudCompressionFn*>(context);
     auto cpp_channel = ChannelDescriptor(channel);
-    return (*predicate)(cpp_channel);
+    auto compression = (*policy)(cpp_channel);
+    c_compression.mode = static_cast<foxglove_point_cloud_compression_mode>(compression.mode);
+    c_compression.draco.quantization_bits = compression.draco.quantization_bits;
   } catch (const std::exception& exc) {
-    warn() << "Point-cloud-compression opt-out predicate failed: " << exc.what();
-    return false;
+    warn() << "Point-cloud compression policy failed: " << exc.what();
   }
+  return c_compression;
 }
 
 // Populates `c` with forward function pointers for every callback set on `cb`,
@@ -268,20 +273,13 @@ FoxgloveResult<RemoteAccessGateway> RemoteAccessGateway::create(
     c_options.suppress_video_transcode = &forwardSuppressVideoTranscode;
   }
 
-  // Point-cloud compression
-  c_options.point_cloud_compression.mode =
-    static_cast<foxglove_point_cloud_compression_mode>(options.point_cloud_compression.mode);
-  c_options.point_cloud_compression.draco.quantization_bits =
-    options.point_cloud_compression.draco.quantization_bits;
-
-  // Suppress point-cloud compression
-  std::unique_ptr<SuppressPointCloudCompressionFn> suppress_point_cloud_compression;
-  if (options.suppress_point_cloud_compression) {
-    suppress_point_cloud_compression = std::make_unique<SuppressPointCloudCompressionFn>(
-      std::move(options.suppress_point_cloud_compression)
-    );
-    c_options.suppress_point_cloud_compression_context = suppress_point_cloud_compression.get();
-    c_options.suppress_point_cloud_compression = &forwardSuppressPointCloudCompression;
+  // Point-cloud compression policy
+  std::unique_ptr<PointCloudCompressionFn> point_cloud_compression;
+  if (options.point_cloud_compression) {
+    point_cloud_compression =
+      std::make_unique<PointCloudCompressionFn>(std::move(options.point_cloud_compression));
+    c_options.point_cloud_compression_context = point_cloud_compression.get();
+    c_options.point_cloud_compression = &forwardPointCloudCompression;
   }
 
   // Fetch asset handler
@@ -333,7 +331,7 @@ FoxgloveResult<RemoteAccessGateway> RemoteAccessGateway::create(
     std::move(sink_channel_filter),
     std::move(qos_classifier),
     std::move(suppress_video_transcode),
-    std::move(suppress_point_cloud_compression),
+    std::move(point_cloud_compression),
     std::move(parameter_handler)
   );
 }
@@ -344,7 +342,7 @@ RemoteAccessGateway::RemoteAccessGateway(
   std::unique_ptr<SinkChannelFilterFn> sink_channel_filter,
   std::unique_ptr<QosClassifierFn> qos_classifier,
   std::unique_ptr<SuppressVideoTranscodeFn> suppress_video_transcode,
-  std::unique_ptr<SuppressPointCloudCompressionFn> suppress_point_cloud_compression,
+  std::unique_ptr<PointCloudCompressionFn> point_cloud_compression,
   std::unique_ptr<ParameterHandler> parameter_handler
 )
     : callbacks_(std::move(callbacks))
@@ -352,7 +350,7 @@ RemoteAccessGateway::RemoteAccessGateway(
     , sink_channel_filter_(std::move(sink_channel_filter))
     , qos_classifier_(std::move(qos_classifier))
     , suppress_video_transcode_(std::move(suppress_video_transcode))
-    , suppress_point_cloud_compression_(std::move(suppress_point_cloud_compression))
+    , point_cloud_compression_(std::move(point_cloud_compression))
     , parameter_handler_(std::move(parameter_handler))
     , impl_(gateway, foxglove_gateway_stop) {}
 

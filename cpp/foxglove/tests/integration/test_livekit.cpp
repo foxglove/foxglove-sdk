@@ -1358,15 +1358,14 @@ TEST_CASE("livekit: suppress_video_transcode opts channel out of video track", "
 }
 
 TEST_CASE(
-  "livekit: suppress_point_cloud_compression opts channel out of compression", "[integration]"
+  "livekit: point_cloud_compression policy selects compression per channel", "[integration]"
 ) {
   auto ctx = foxglove::Context::create();
 
-  // Two identical foxglove.PointCloud channels. The gateway opts /raw out by topic (advertised
-  // with its original schema), while /compressed is transcoded and re-advertised as
-  // foxglove.CompressedPointCloud — so the test verifies the callback's per-topic selectivity,
-  // not just that it fires. Compression is on by default, so the opt-out callback is the only
-  // option we set.
+  // Two identical foxglove.PointCloud channels. The policy disables compression for /raw by
+  // topic (advertised with its original schema), while /compressed gets custom Draco settings
+  // and is re-advertised as foxglove.CompressedPointCloud — so the test verifies the
+  // callback's per-topic selectivity, not just that it fires.
   auto raw_channel = foxglove::RawChannel::create(
     "/raw", "protobuf", foxglove::Schema{"foxglove.PointCloud", "protobuf", nullptr, 0}, ctx
   );
@@ -1377,8 +1376,11 @@ TEST_CASE(
   REQUIRE(compressed_channel.has_value());
 
   TestGatewayOptions opts;
-  opts.suppress_point_cloud_compression = [](const foxglove::ChannelDescriptor& ch) {
-    return std::string(ch.topic()) == "/raw";
+  opts.point_cloud_compression = [](const foxglove::ChannelDescriptor& ch) {
+    if (std::string(ch.topic()) == "/raw") {
+      return foxglove::PointCloudCompression::disabled();
+    }
+    return foxglove::PointCloudCompression::withDraco({8});
   };
   auto gw = TestGateway::start_with_options(ctx, std::move(opts));
 

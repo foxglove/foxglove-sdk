@@ -98,10 +98,11 @@ impl From<FoxgloveServerCapability> for FoxgloveServerCapabilityBitFlags {
 #[derive(Clone, Copy)]
 pub struct FoxgloveDracoEncodeOptions {
     /// Quantization bits for the position attribute; must be between 1 and 30 inclusive.
-    /// Values outside that range cause `foxglove_gateway_start` to fail with
-    /// `FOXGLOVE_ERROR_CONFIGURATION_ERROR`: values above 30 are rejected by the reference
-    /// Draco decoder, and `0` (lossless) provides no size reduction over the raw point
-    /// cloud — use `FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DISABLED` instead.
+    /// Values outside that range are invalid, and a channel whose compression callback
+    /// returns them is delivered unmodified, with a logged warning: values above 30 are
+    /// rejected by the reference Draco decoder, and `0` (lossless) provides no size
+    /// reduction over the raw point cloud — use
+    /// `FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DISABLED` instead.
     pub quantization_bits: u8,
 }
 
@@ -154,7 +155,8 @@ pub enum FoxglovePointCloudCompressionMode {
     Draco = 2,
 }
 
-/// Transparent point-cloud compression configuration for a sink.
+/// Transparent point-cloud compression for a single channel, returned by the per-channel
+/// `point_cloud_compression` callback on the gateway options.
 ///
 /// When compression is enabled, channels carrying `foxglove.PointCloud` messages are
 /// advertised with the `foxglove.CompressedPointCloud` schema, and each logged point cloud
@@ -167,7 +169,8 @@ pub enum FoxglovePointCloudCompressionMode {
 ///
 /// Zero-initialize this struct (mode 0) to use the SDK default. Note that when `mode` is
 /// `FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DRACO`, `draco.quantization_bits` must be set
-/// to a value between 1 and 30; a zero-initialized `draco` is rejected at startup.
+/// to a value between 1 and 30; a channel for which the callback returns an out-of-range
+/// value is delivered unmodified, with a logged warning.
 #[cfg(feature = "remote-access")]
 #[repr(C)]
 #[derive(Clone, Copy)]
@@ -181,23 +184,23 @@ pub struct FoxglovePointCloudCompression {
 
 #[cfg(feature = "remote-access")]
 impl FoxglovePointCloudCompression {
-    /// Resolves the C configuration into the options a per-channel compression policy
-    /// applies. The outer `None` means "leave the SDK default in place" (i.e. don't
-    /// configure a policy at all); `Some(None)` disables compression; `Some(Some(_))`
-    /// compresses with the given settings. Invalid Draco settings fail with a
-    /// configuration error, keeping misconfiguration a startup failure for C callers.
-    pub(crate) fn to_policy_options(
+    /// Resolves the C configuration into the options the per-channel compression policy
+    /// applies to one channel. `None` disables compression for the channel; `Some(_)`
+    /// compresses with the given settings, where mode `Default` maps to the SDK default
+    /// options. Invalid Draco settings fail with a configuration error, which the policy
+    /// wrapper reports and treats as "deliver unmodified".
+    pub(crate) fn to_compression_options(
         self,
-    ) -> Result<
-        Option<Option<foxglove::remote_access::CompressPointCloudOptions>>,
-        foxglove::FoxgloveError,
-    > {
+    ) -> Result<Option<foxglove::remote_access::CompressPointCloudOptions>, foxglove::FoxgloveError>
+    {
         Ok(match self.mode {
-            FoxglovePointCloudCompressionMode::Default => None,
-            FoxglovePointCloudCompressionMode::Disabled => Some(None),
-            FoxglovePointCloudCompressionMode::Draco => Some(Some(
+            FoxglovePointCloudCompressionMode::Default => {
+                Some(foxglove::remote_access::CompressPointCloudOptions::default())
+            }
+            FoxglovePointCloudCompressionMode::Disabled => None,
+            FoxglovePointCloudCompressionMode::Draco => Some(
                 foxglove::remote_access::CompressPointCloudOptions::Draco(self.draco.try_into()?),
-            )),
+            ),
         })
     }
 }
@@ -212,26 +215,29 @@ mod point_cloud_compression_tests {
     use foxglove::remote_access::CompressPointCloudOptions;
 
     #[test]
-    fn test_zero_initialized_struct_keeps_sdk_default() {
-        // The documented ABI contract: a zero-initialized struct (mode 0) means "leave
-        // the SDK default in place", i.e. the builder method is not called at all.
+    fn test_zero_initialized_struct_maps_to_sdk_default() {
+        // The documented ABI contract: a zero-initialized struct (mode 0) means "compress
+        // this channel with the SDK default settings".
         let compression: FoxglovePointCloudCompression = unsafe { std::mem::zeroed() };
         assert!(matches!(
             compression.mode,
             FoxglovePointCloudCompressionMode::Default
         ));
-        assert_eq!(compression.to_policy_options().unwrap(), None);
+        assert_eq!(
+            compression.to_compression_options().unwrap(),
+            Some(CompressPointCloudOptions::default())
+        );
     }
 
     #[test]
-    fn test_disabled_maps_to_explicit_opt_out() {
+    fn test_disabled_maps_to_opt_out() {
         let compression = FoxglovePointCloudCompression {
             mode: FoxglovePointCloudCompressionMode::Disabled,
             draco: FoxgloveDracoEncodeOptions {
                 quantization_bits: 12,
             },
         };
-        assert_eq!(compression.to_policy_options().unwrap(), Some(None));
+        assert_eq!(compression.to_compression_options().unwrap(), None);
     }
 
     #[test]
@@ -244,16 +250,17 @@ mod point_cloud_compression_tests {
         };
         let expected = DracoEncodeOptions::with_quantization_bits(14).unwrap();
         assert_eq!(
-            compression.to_policy_options().unwrap(),
-            Some(Some(CompressPointCloudOptions::Draco(expected)))
+            compression.to_compression_options().unwrap(),
+            Some(CompressPointCloudOptions::Draco(expected))
         );
     }
 
     #[test]
     fn test_invalid_quantization_bits_rejected() {
         // The documented ABI contract: out-of-range bits (0 is lossless, above 30 is
-        // rejected by the reference Draco decoder) fail gateway startup with a
-        // configuration error. 31 is the first rejected value above the maximum.
+        // rejected by the reference Draco decoder) are a configuration error, which the
+        // policy wrapper reports and treats as "deliver unmodified". 31 is the first
+        // rejected value above the maximum.
         for bits in [0, 31] {
             let compression = FoxglovePointCloudCompression {
                 mode: FoxglovePointCloudCompressionMode::Draco,
@@ -262,7 +269,7 @@ mod point_cloud_compression_tests {
                 },
             };
             let Err(foxglove::FoxgloveError::ConfigurationError(message)) =
-                compression.to_policy_options()
+                compression.to_compression_options()
             else {
                 panic!("expected a configuration error for {bits} bits");
             };

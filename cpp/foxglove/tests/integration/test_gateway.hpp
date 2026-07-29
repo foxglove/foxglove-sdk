@@ -26,7 +26,7 @@ struct TestGatewayOptions {
   foxglove::SinkChannelFilterFn channel_filter;
   foxglove::QosClassifierFn qos_classifier;
   foxglove::SuppressVideoTranscodeFn suppress_video_transcode;
-  foxglove::SuppressPointCloudCompressionFn suppress_point_cloud_compression;
+  foxglove::PointCloudCompressionFn point_cloud_compression;
   std::vector<std::string> supported_encodings = {"json"};
 };
 
@@ -75,7 +75,7 @@ public:
     gw_opts.sink_channel_filter = std::move(opts.channel_filter);
     gw_opts.qos_classifier = std::move(opts.qos_classifier);
     gw_opts.suppress_video_transcode = std::move(opts.suppress_video_transcode);
-    gw_opts.suppress_point_cloud_compression = std::move(opts.suppress_point_cloud_compression);
+    gw_opts.point_cloud_compression = std::move(opts.point_cloud_compression);
 
     auto result = foxglove::RemoteAccessGateway::create(std::move(gw_opts));
     if (!result.has_value()) {

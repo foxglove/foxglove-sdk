@@ -2798,10 +2798,11 @@ typedef struct foxglove_parameter_handler {
 typedef struct foxglove_draco_encode_options {
   /**
    * Quantization bits for the position attribute; must be between 1 and 30 inclusive.
-   * Values outside that range cause `foxglove_gateway_start` to fail with
-   * `FOXGLOVE_ERROR_CONFIGURATION_ERROR`: values above 30 are rejected by the reference
-   * Draco decoder, and `0` (lossless) provides no size reduction over the raw point
-   * cloud — use `FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DISABLED` instead.
+   * Values outside that range are invalid, and a channel whose compression callback
+   * returns them is delivered unmodified, with a logged warning: values above 30 are
+   * rejected by the reference Draco decoder, and `0` (lossless) provides no size
+   * reduction over the raw point cloud — use
+   * `FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DISABLED` instead.
    */
   uint8_t quantization_bits;
 } foxglove_draco_encode_options;
@@ -2809,7 +2810,8 @@ typedef struct foxglove_draco_encode_options {
 
 #if (!defined(__wasm__) && defined(FOXGLOVE_REMOTE_ACCESS))
 /**
- * Transparent point-cloud compression configuration for a sink.
+ * Transparent point-cloud compression for a single channel, returned by the per-channel
+ * `point_cloud_compression` callback on the gateway options.
  *
  * When compression is enabled, channels carrying `foxglove.PointCloud` messages are
  * advertised with the `foxglove.CompressedPointCloud` schema, and each logged point cloud
@@ -2822,7 +2824,8 @@ typedef struct foxglove_draco_encode_options {
  *
  * Zero-initialize this struct (mode 0) to use the SDK default. Note that when `mode` is
  * `FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DRACO`, `draco.quantization_bits` must be set
- * to a value between 1 and 30; a zero-initialized `draco` is rejected at startup.
+ * to a value between 1 and 30; a channel for which the callback returns an out-of-range
+ * value is delivered unmodified, with a logged warning.
  */
 typedef struct foxglove_point_cloud_compression {
   /**
@@ -2975,30 +2978,26 @@ typedef struct foxglove_gateway_options {
    */
   size_t max_data_track_message_size;
   /**
-   * Transparent point-cloud compression configuration.
-   *
-   * Zero-initialize (mode 0) to use the SDK default: Draco compression with default
-   * settings. Note that the default settings are lossy; see
-   * `foxglove_point_cloud_compression`.
+   * Context provided to the `point_cloud_compression` callback.
    */
-  struct foxglove_point_cloud_compression point_cloud_compression;
+  const void *point_cloud_compression_context;
   /**
-   * Context provided to the `suppress_point_cloud_compression` callback.
-   */
-  const void *suppress_point_cloud_compression_context;
-  /**
-   * Opts channels out of point-cloud compression, delivering them unmodified.
+   * Selects, per channel, the transparent point-cloud compression applied.
    *
-   * Return true to advertise the given channel with its original schema and deliver its
-   * messages unchanged, rather than transcoding them to `foxglove.CompressedPointCloud`.
-   * If not set, all compressible Lossy point-cloud channels use the compression
-   * configured by `point_cloud_compression`.
+   * Return mode `FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DEFAULT` (a zero-initialized
+   * struct) to compress the given channel with the SDK default settings (Draco kd-tree
+   * encoding with positions quantized to 12 bits, which is lossy),
+   * `FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DISABLED` to advertise it with its original
+   * schema and deliver its messages unchanged, or
+   * `FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DRACO` to compress with the settings in
+   * `draco`. If not set, all compressible Lossy point-cloud channels are compressed
+   * with the SDK default settings.
    *
    * This callback is only consulted for compressible channels with Lossy QoS; channels
    * classified as Reliable skip compression automatically and are delivered unmodified.
    */
-  bool (*suppress_point_cloud_compression)(const void *context,
-                                           const struct foxglove_channel_descriptor *channel);
+  struct foxglove_point_cloud_compression (*point_cloud_compression)(const void *context,
+                                                                     const struct foxglove_channel_descriptor *channel);
 } foxglove_gateway_options;
 #endif
 

@@ -112,64 +112,55 @@ impl foxglove::remote_access::SuppressVideoTranscode for SuppressVideoTranscode 
     }
 }
 
-/// A per-channel point-cloud compression policy assembled from the C configuration: the
-/// configured compression options combined with the optional opt-out callback.
-struct PointCloudCompressionPolicy {
-    /// The options applied to channels that are not opted out; `None` disables
-    /// compression for every channel.
-    options: Option<foxglove::remote_access::CompressPointCloudOptions>,
-    suppress_context: *const c_void,
-    suppress: Option<unsafe extern "C" fn(*const c_void, *const FoxgloveChannelDescriptor) -> bool>,
+/// A per-channel point-cloud compression policy that wraps a C callback.
+struct PointCloudCompressionCallback {
+    callback_context: *const c_void,
+    callback: unsafe extern "C" fn(
+        *const c_void,
+        *const FoxgloveChannelDescriptor,
+    ) -> crate::FoxglovePointCloudCompression,
 }
 
-unsafe impl Send for PointCloudCompressionPolicy {}
-unsafe impl Sync for PointCloudCompressionPolicy {}
+impl PointCloudCompressionCallback {
+    fn new(
+        callback_context: *const c_void,
+        callback: unsafe extern "C" fn(
+            *const c_void,
+            *const FoxgloveChannelDescriptor,
+        ) -> crate::FoxglovePointCloudCompression,
+    ) -> Self {
+        Self {
+            callback_context,
+            callback,
+        }
+    }
+}
 
-impl foxglove::remote_access::PointCloudCompression for PointCloudCompressionPolicy {
+unsafe impl Send for PointCloudCompressionCallback {}
+unsafe impl Sync for PointCloudCompressionCallback {}
+
+impl foxglove::remote_access::PointCloudCompression for PointCloudCompressionCallback {
     fn compression(
         &self,
         channel: &foxglove::ChannelDescriptor,
     ) -> Option<foxglove::remote_access::CompressPointCloudOptions> {
-        let options = self.options?;
-        if let Some(callback) = self.suppress {
-            let c_channel_descriptor = FoxgloveChannelDescriptor(channel.clone());
-            if unsafe { callback(self.suppress_context, &raw const c_channel_descriptor) } {
-                return None;
+        let c_channel_descriptor = FoxgloveChannelDescriptor(channel.clone());
+        let compression =
+            unsafe { (self.callback)(self.callback_context, &raw const c_channel_descriptor) };
+        match compression.to_compression_options() {
+            Ok(options) => options,
+            // The Rust policy trait makes invalid options unrepresentable, but a C callback
+            // can return them; the contract can no longer be enforced at startup, so report
+            // the error and deliver the channel unmodified.
+            Err(e) => {
+                tracing::warn!(
+                    topic = %channel.topic(),
+                    "invalid point-cloud compression options; delivering unmodified: {e}"
+                );
+                None
             }
         }
-        Some(options)
     }
-}
-
-/// Assembles the per-channel point-cloud compression policy from the resolved C options,
-/// or `None` when nothing is configured (mode `Default` with no opt-out callback) so the
-/// SDK's own default applies untouched.
-///
-/// `resolved` is the output of [`FoxglovePointCloudCompression::to_policy_options`]: `None`
-/// means mode `Default` (unset), `Some(None)` means `Disabled`, and `Some(Some(opts))`
-/// means `Draco` with those options.
-fn build_point_cloud_policy(
-    resolved: Option<Option<foxglove::remote_access::CompressPointCloudOptions>>,
-    suppress_context: *const c_void,
-    suppress: Option<unsafe extern "C" fn(*const c_void, *const FoxgloveChannelDescriptor) -> bool>,
-) -> Option<PointCloudCompressionPolicy> {
-    // Nothing configured (mode `Default`, no opt-out callback): install no policy at all and
-    // let the SDK apply its own default.
-    if resolved.is_none() && suppress.is_none() {
-        return None;
-    }
-    Some(PointCloudCompressionPolicy {
-        // When the mode is unset (`Default`) but an opt-out callback forces us to install a
-        // policy, reconstruct the SDK's no-policy default so a caller who sets only the
-        // callback gets the same compression as one who configures nothing. Mirrors the core
-        // fallback in `resolve_point_cloud_compression` (`None => CompressPointCloudOptions::default()`);
-        // the two stay in sync only while the core defines its no-policy fallback as `default()`.
-        options: resolved.unwrap_or(Some(
-            foxglove::remote_access::CompressPointCloudOptions::default(),
-        )),
-        suppress_context,
-        suppress,
-    })
 }
 
 /// The status of the remote access gateway connection.
@@ -760,30 +751,27 @@ pub struct FoxgloveGatewayOptions<'a> {
     /// (102400). Must be at least 1200.
     pub max_data_track_message_size: usize,
 
-    /// Transparent point-cloud compression configuration.
-    ///
-    /// Zero-initialize (mode 0) to use the SDK default: Draco compression with default
-    /// settings. Note that the default settings are lossy; see
-    /// `foxglove_point_cloud_compression`.
-    pub point_cloud_compression: crate::FoxglovePointCloudCompression,
+    /// Context provided to the `point_cloud_compression` callback.
+    pub point_cloud_compression_context: *const c_void,
 
-    /// Context provided to the `suppress_point_cloud_compression` callback.
-    pub suppress_point_cloud_compression_context: *const c_void,
-
-    /// Opts channels out of point-cloud compression, delivering them unmodified.
+    /// Selects, per channel, the transparent point-cloud compression applied.
     ///
-    /// Return true to advertise the given channel with its original schema and deliver its
-    /// messages unchanged, rather than transcoding them to `foxglove.CompressedPointCloud`.
-    /// If not set, all compressible Lossy point-cloud channels use the compression
-    /// configured by `point_cloud_compression`.
+    /// Return mode `FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DEFAULT` (a zero-initialized
+    /// struct) to compress the given channel with the SDK default settings (Draco kd-tree
+    /// encoding with positions quantized to 12 bits, which is lossy),
+    /// `FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DISABLED` to advertise it with its original
+    /// schema and deliver its messages unchanged, or
+    /// `FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DRACO` to compress with the settings in
+    /// `draco`. If not set, all compressible Lossy point-cloud channels are compressed
+    /// with the SDK default settings.
     ///
     /// This callback is only consulted for compressible channels with Lossy QoS; channels
     /// classified as Reliable skip compression automatically and are delivered unmodified.
-    pub suppress_point_cloud_compression: Option<
+    pub point_cloud_compression: Option<
         unsafe extern "C" fn(
             context: *const c_void,
             channel: *const FoxgloveChannelDescriptor,
-        ) -> bool,
+        ) -> crate::FoxglovePointCloudCompression,
     >,
     // New fields are appended last so that adding them preserves the memory offsets of all
     // pre-existing fields.
@@ -928,17 +916,12 @@ unsafe fn do_foxglove_gateway_start(
         )));
     }
 
-    // Point-cloud compression: the configured mode and the opt-out callback combine into
-    // a single per-channel policy. Mode `Default` (0) with no callback means "unset" —
-    // no policy is configured, and the SDK applies its default. Invalid Draco settings
-    // fail here, keeping misconfiguration a startup error for C callers.
-    let resolved = options.point_cloud_compression.to_policy_options()?;
-    if let Some(policy) = build_point_cloud_policy(
-        resolved,
-        options.suppress_point_cloud_compression_context,
-        options.suppress_point_cloud_compression,
-    ) {
-        gateway = gateway.point_cloud_compression(Arc::new(policy));
+    // Point-cloud compression policy
+    if let Some(point_cloud_compression) = options.point_cloud_compression {
+        gateway = gateway.point_cloud_compression(Arc::new(PointCloudCompressionCallback::new(
+            options.point_cloud_compression_context,
+            point_cloud_compression,
+        )));
     }
 
     // Fetch asset handler
@@ -1217,48 +1200,5 @@ pub extern "C" fn foxglove_gateway_publish_connection_graph(
     match handle.publish_connection_graph(graph.0.clone()) {
         Ok(_) => FoxgloveError::Ok,
         Err(e) => FoxgloveError::from(e),
-    }
-}
-
-#[cfg(test)]
-mod build_point_cloud_policy_tests {
-    use super::{FoxgloveChannelDescriptor, build_point_cloud_policy};
-    use foxglove::remote_access::CompressPointCloudOptions;
-    use std::ffi::c_void;
-
-    // A stand-in opt-out callback. Its body never runs in these tests: they assert on the
-    // assembled policy's `options`, not on `compression()` (which would need a
-    // `ChannelDescriptor`, and the core exposes no way to construct one here).
-    unsafe extern "C" fn never_called(
-        _ctx: *const c_void,
-        _channel: *const FoxgloveChannelDescriptor,
-    ) -> bool {
-        false
-    }
-
-    #[test]
-    fn unset_with_no_callback_installs_no_policy() {
-        // Mode `Default` and no opt-out callback: install nothing and defer to the SDK's own
-        // default rather than pinning it here.
-        assert!(build_point_cloud_policy(None, std::ptr::null(), None).is_none());
-    }
-
-    #[test]
-    fn default_mode_with_callback_uses_sdk_default() {
-        // Mode `Default` + an opt-out callback forces a policy; its options must be the SDK
-        // default so this caller gets the same compression as one who configures nothing.
-        let policy = build_point_cloud_policy(None, std::ptr::null(), Some(never_called))
-            .expect("a callback forces a policy to be installed");
-        assert_eq!(policy.options, Some(CompressPointCloudOptions::default()));
-    }
-
-    #[test]
-    fn disabled_mode_with_callback_disables_and_skips_callback() {
-        // Mode `Disabled` + a callback still installs a policy, but with `options: None`.
-        // `compression()` returns `None` at its leading `self.options?`, so the callback is
-        // never consulted — asserting `options == None` pins exactly that short-circuit.
-        let policy = build_point_cloud_policy(Some(None), std::ptr::null(), Some(never_called))
-            .expect("Disabled still installs a policy to carry the opt-out contract");
-        assert_eq!(policy.options, None);
     }
 }
