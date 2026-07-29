@@ -67,18 +67,17 @@ def test_draco_encode_options_defaults() -> None:
 def test_draco_encode_options_reject_invalid_quantization_bits() -> None:
     from foxglove.remote_access import DracoEncodeOptions
 
-    # Out-of-range values are rejected at construction with a ValueError: 0 is lossless
-    # (pass point_cloud_compression=False instead), and 31 is the first value above the
-    # reference Draco decoder's 30-bit cap.
-    for bits in (0, 31):
-        with pytest.raises(ValueError, match="quantization_bits"):
-            DracoEncodeOptions(quantization_bits=bits)
-
-    # The "disable compression" remediation only fits lossless (0); an out-of-range value
-    # above the cap wants a smaller number, so the hint must not appear there.
-    with pytest.raises(ValueError, match="point_cloud_compression=False"):
+    # Out-of-range values are rejected at construction with a ValueError naming the
+    # offending value. 0 is lossless, so its message carries the "disable compression"
+    # remediation; 31 is the first value above the reference Draco decoder's 30-bit cap,
+    # which just wants a smaller number, so the hint must not appear there.
+    with pytest.raises(
+        ValueError,
+        match=r"quantization_bits \(0\).*point_cloud_compression=False",
+    ):
         DracoEncodeOptions(quantization_bits=0)
-    with pytest.raises(ValueError) as excinfo:
+
+    with pytest.raises(ValueError, match=r"quantization_bits \(31\)") as excinfo:
         DracoEncodeOptions(quantization_bits=31)
     assert "point_cloud_compression=False" not in str(excinfo.value)
 
