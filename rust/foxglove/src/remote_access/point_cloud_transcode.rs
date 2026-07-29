@@ -7,10 +7,11 @@
 use bytes::Bytes;
 use prost::Message as _;
 
-use crate::draco::{CompressPointCloudOptions, DracoEncodeError, compress_point_cloud};
+use crate::draco::{DracoEncodeError, compress_point_cloud};
 use crate::messages::{PointCloud, descriptors};
 use crate::protocol::common::schema as protocol_schema;
 use crate::protocol::common::server::advertise;
+use crate::remote_access::CompressPointCloudOptions;
 use crate::{Decode, RawChannel};
 
 /// An error transcoding a logged `foxglove.PointCloud` message.
@@ -60,8 +61,9 @@ pub(crate) fn rewrite_advertisement(channel: &mut advertise::Channel<'_>) {
 #[cfg(test)]
 mod tests {
     use super::{TranscodeError, is_point_cloud_channel, transcode_point_cloud_message};
-    use crate::draco::{CompressPointCloudOptions, DracoEncodeError};
+    use crate::draco::DracoEncodeError;
     use crate::messages::{PackedElementField, PointCloud, packed_element_field::NumericType};
+    use crate::remote_access::CompressPointCloudOptions;
     use crate::{ChannelBuilder, Context, Encode, RawChannel, Schema};
     use std::sync::Arc;
 

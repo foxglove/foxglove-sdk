@@ -496,7 +496,7 @@ impl Gateway {
     /// throttled warning on the device and to viewers. Use float32 or integer fields,
     /// or return `None` for those channels.
     ///
-    /// [`CompressPointCloudOptions::default()`]: crate::draco::CompressPointCloudOptions
+    /// [`CompressPointCloudOptions::default()`]: crate::remote_access::CompressPointCloudOptions
     #[cfg(feature = "remote-access")]
     #[cfg_attr(docsrs, doc(cfg(feature = "remote-access")))]
     pub fn point_cloud_compression(mut self, policy: Arc<dyn PointCloudCompression>) -> Self {
@@ -513,7 +513,7 @@ impl Gateway {
     #[cfg_attr(docsrs, doc(cfg(feature = "remote-access")))]
     pub fn point_cloud_compression_fn(
         mut self,
-        policy: impl Fn(&ChannelDescriptor) -> Option<crate::draco::CompressPointCloudOptions>
+        policy: impl Fn(&ChannelDescriptor) -> Option<crate::remote_access::CompressPointCloudOptions>
         + Sync
         + Send
         + 'static,

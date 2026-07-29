@@ -130,32 +130,6 @@ impl Default for DracoEncodeOptions {
     }
 }
 
-/// Selects the compression algorithm and settings applied to a point cloud.
-///
-/// [`Draco`](Self::Draco) is currently the only algorithm; the enum is non-exhaustive so
-/// others can be added without a breaking change.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[non_exhaustive]
-pub enum CompressPointCloudOptions {
-    /// Compress with [Google Draco](https://google.github.io/draco/).
-    Draco(DracoEncodeOptions),
-}
-
-impl CompressPointCloudOptions {
-    #[cfg(feature = "remote-access")]
-    pub(crate) fn draco_options(&self) -> DracoEncodeOptions {
-        match self {
-            CompressPointCloudOptions::Draco(options) => *options,
-        }
-    }
-}
-
-impl Default for CompressPointCloudOptions {
-    fn default() -> Self {
-        Self::Draco(DracoEncodeOptions::default())
-    }
-}
-
 /// An error during Draco point-cloud encoding.
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]

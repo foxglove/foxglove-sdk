@@ -55,7 +55,7 @@ pub(super) struct PointCloudCompressionState {
     /// The channel's topic, used to name the channel in viewer-facing warnings.
     pub(super) topic: String,
     /// The Draco encoding settings.
-    pub(super) options: crate::draco::CompressPointCloudOptions,
+    pub(super) options: crate::remote_access::CompressPointCloudOptions,
 }
 
 /// Channel registry and per-channel derived state for a remote access session.
@@ -1156,7 +1156,7 @@ mod tests {
     mod point_cloud {
         use super::*;
         use crate::Encode;
-        use crate::draco::CompressPointCloudOptions;
+        use crate::remote_access::CompressPointCloudOptions;
         use crate::remote_access::session::PointCloudPublisher;
 
         fn make_point_cloud_channel(topic: &str) -> Arc<RawChannel> {

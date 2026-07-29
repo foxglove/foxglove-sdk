@@ -7,7 +7,7 @@ use tokio::runtime::Handle;
 use tracing::warn;
 
 use crate::ChannelId;
-use crate::draco::CompressPointCloudOptions;
+use crate::remote_access::CompressPointCloudOptions;
 use crate::remote_access::point_cloud_transcode::transcode_point_cloud_message;
 
 use super::RemoteAccessSession;

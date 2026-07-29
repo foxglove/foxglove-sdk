@@ -1,8 +1,33 @@
 //! The per-channel point-cloud compression policy for remote access.
 
-use crate::draco::CompressPointCloudOptions;
+use crate::draco::DracoEncodeOptions;
 use crate::remote_access::qos::Reliability;
 use crate::{ChannelDescriptor, RawChannel};
+
+/// Selects the compression algorithm and settings applied to a point cloud.
+///
+/// [`Draco`](Self::Draco) is currently the only algorithm; the enum is non-exhaustive so
+/// others can be added without a breaking change.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum CompressPointCloudOptions {
+    /// Compress with [Google Draco](https://google.github.io/draco/).
+    Draco(DracoEncodeOptions),
+}
+
+impl CompressPointCloudOptions {
+    pub(crate) fn draco_options(&self) -> DracoEncodeOptions {
+        match self {
+            CompressPointCloudOptions::Draco(options) => *options,
+        }
+    }
+}
+
+impl Default for CompressPointCloudOptions {
+    fn default() -> Self {
+        Self::Draco(DracoEncodeOptions::default())
+    }
+}
 
 /// Selects, per channel, the point-cloud compression applied over remote access.
 ///
@@ -94,8 +119,10 @@ pub(super) fn resolve_point_cloud_compression(
 
 #[cfg(test)]
 mod tests {
-    use super::{PointCloudCompressionFn, resolve_point_cloud_compression};
-    use crate::draco::{CompressPointCloudOptions, DracoEncodeOptions};
+    use super::{
+        CompressPointCloudOptions, PointCloudCompressionFn, resolve_point_cloud_compression,
+    };
+    use crate::draco::DracoEncodeOptions;
     use crate::remote_access::qos::Reliability;
     use crate::{ChannelBuilder, ChannelDescriptor, Context, Encode, RawChannel};
     use std::sync::Arc;

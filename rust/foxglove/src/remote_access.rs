@@ -47,7 +47,7 @@ pub use gateway::{Gateway, GatewayHandle, VideoEncoderBackend};
 pub use listener::Listener;
 #[cfg(feature = "remote-access")]
 #[cfg_attr(docsrs, doc(cfg(feature = "remote-access")))]
-pub use point_cloud_compression::PointCloudCompression;
+pub use point_cloud_compression::{CompressPointCloudOptions, PointCloudCompression};
 pub use qos::{QosClassifier, QosProfile, QosProfileBuilder, Reliability};
 pub use suppress_video_transcode::SuppressVideoTranscode;
 
