@@ -872,7 +872,7 @@ pub struct TestGatewayOptions {
     pub qos_classifier: Option<QosClassifierFn>,
     pub suppress_video_transcode: Option<SuppressVideoTranscodeFn>,
     pub max_data_track_message_size: Option<usize>,
-    pub point_cloud_compression: Option<Option<foxglove::draco::CompressPointCloudOptions>>,
+    pub point_cloud_compression: Option<Option<foxglove::remote_access::CompressPointCloudOptions>>,
 }
 
 /// A test gateway backed by a mock Foxglove API server and a LiveKit room.
