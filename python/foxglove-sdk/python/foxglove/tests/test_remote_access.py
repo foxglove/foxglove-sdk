@@ -1,5 +1,4 @@
 import os
-import typing
 
 import pytest
 
@@ -13,6 +12,7 @@ try:
     from foxglove import ConnectionGraph, start_gateway
     from foxglove.remote_access import (
         Capability,
+        DracoEncodeOptions,
         RemoteAccessConnectionStatus,
         RemoteAccessListener,
     )
@@ -41,8 +41,6 @@ def test_start_gateway_accepts_point_cloud_compression_options() -> None:
     The point-cloud compression kwargs are converted before the gateway starts, so the
     missing-token error proves they were accepted.
     """
-    from foxglove.remote_access import DracoEncodeOptions
-
     with pytest.raises(RuntimeError, match="No device token provided"):
         start_gateway(
             point_cloud_compression=DracoEncodeOptions(quantization_bits=10),
@@ -54,8 +52,6 @@ def test_start_gateway_accepts_point_cloud_compression_options() -> None:
 
 
 def test_draco_encode_options_defaults() -> None:
-    from foxglove.remote_access import DracoEncodeOptions
-
     options = DracoEncodeOptions()
     assert options.quantization_bits == 12
 
@@ -63,10 +59,7 @@ def test_draco_encode_options_defaults() -> None:
     assert options.quantization_bits == 10
 
 
-@typing.no_type_check
 def test_draco_encode_options_reject_invalid_quantization_bits() -> None:
-    from foxglove.remote_access import DracoEncodeOptions
-
     # Out-of-range values are rejected at construction with a ValueError naming the
     # offending value. 0 is lossless, so its message carries the "disable compression"
     # remediation; 31 is the first value above the reference Draco decoder's 30-bit cap,
