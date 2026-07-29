@@ -21,9 +21,7 @@ mod gateway;
 mod listener;
 mod parameter_subscriptions;
 mod participant;
-#[cfg(feature = "remote-access")]
 mod point_cloud_compression;
-#[cfg(feature = "remote-access")]
 mod point_cloud_transcode;
 pub(super) mod protocol_version;
 mod qos;
@@ -45,7 +43,6 @@ pub use client::Client;
 pub use connection::ConnectionStatus;
 pub use gateway::{Gateway, GatewayHandle, VideoEncoderBackend};
 pub use listener::Listener;
-#[cfg(feature = "remote-access")]
 #[cfg_attr(docsrs, doc(cfg(feature = "remote-access")))]
 pub use point_cloud_compression::{CompressPointCloudOptions, PointCloudCompression};
 pub use qos::{QosClassifier, QosProfile, QosProfileBuilder, Reliability};

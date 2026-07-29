@@ -9,7 +9,6 @@ use tracing::{debug, info};
 use crate::protocol::v2::server::advertise;
 
 use crate::remote_access::qos::{QosProfile, Reliability};
-#[cfg(feature = "remote-access")]
 use crate::remote_access::session::PointCloudPublisher;
 use crate::remote_access::session::{DataTrack, VideoInputSchema, VideoMetadata, VideoPublisher};
 use crate::{ChannelDescriptor, ChannelId, RawChannel};
@@ -50,7 +49,6 @@ pub(super) struct UnsubscribeResult {
 /// advertised as `foxglove.CompressedPointCloud`. The compression *warning* is owned by
 /// the session ([`RemoteAccessSession::report_compression_failure`]), keyed per channel,
 /// not stored here.
-#[cfg(feature = "remote-access")]
 pub(super) struct PointCloudCompressionState {
     /// The channel's topic, used to name the channel in viewer-facing warnings.
     pub(super) topic: String,
@@ -103,14 +101,12 @@ pub(super) struct ChannelRegistry {
     /// present here are advertised with the `foxglove.CompressedPointCloud` schema for
     /// the lifetime of the channel; a publisher exists in `point_cloud_publishers` only
     /// while the channel has data subscribers.
-    #[cfg(feature = "remote-access")]
     point_cloud_compression: HashMap<ChannelId, PointCloudCompressionState>,
     /// Active point-cloud transcoding publishers, keyed by channel ID. Channels present
     /// here have their messages diverted to the publisher's background transcoding task.
     /// Publishers are created when a compression-enabled channel gains its first data
     /// subscriber and dropped when it loses its last, so transcoding only runs while
     /// someone is receiving the output.
-    #[cfg(feature = "remote-access")]
     point_cloud_publishers: HashMap<ChannelId, Arc<PointCloudPublisher>>,
     /// Client-advertised channels, keyed by participant SID then client-assigned channel ID.
     client_channels: HashMap<ParticipantSid, HashMap<ChannelId, ChannelDescriptor>>,
@@ -128,9 +124,7 @@ impl ChannelRegistry {
             video_publishers: HashMap::new(),
             video_track_sids: HashMap::new(),
             video_metadata: HashMap::new(),
-            #[cfg(feature = "remote-access")]
             point_cloud_compression: HashMap::new(),
-            #[cfg(feature = "remote-access")]
             point_cloud_publishers: HashMap::new(),
             client_channels: HashMap::new(),
         }
@@ -296,9 +290,7 @@ impl ChannelRegistry {
         self.qos_profiles.remove(&channel_id);
         self.video_subscribers.remove(&channel_id);
         self.video_metadata.remove(&channel_id);
-        #[cfg(feature = "remote-access")]
         self.point_cloud_compression.remove(&channel_id);
-        #[cfg(feature = "remote-access")]
         self.point_cloud_publishers.remove(&channel_id);
         self.channels.remove(&channel_id).is_some()
     }
@@ -409,7 +401,6 @@ impl ChannelRegistry {
     ///
     /// The channel is advertised with the `foxglove.CompressedPointCloud` schema; a
     /// transcoding publisher is created separately once the channel has data subscribers.
-    #[cfg(feature = "remote-access")]
     pub fn insert_point_cloud_compression(
         &mut self,
         channel_id: ChannelId,
@@ -420,7 +411,6 @@ impl ChannelRegistry {
 
     /// Returns the compression state for a channel, if point-cloud compression is
     /// enabled for it.
-    #[cfg(feature = "remote-access")]
     pub fn get_point_cloud_compression(
         &self,
         channel_id: &ChannelId,
@@ -429,7 +419,6 @@ impl ChannelRegistry {
     }
 
     /// Inserts a point-cloud transcoding publisher for a channel.
-    #[cfg(feature = "remote-access")]
     pub fn insert_point_cloud_publisher(
         &mut self,
         channel_id: ChannelId,
@@ -442,13 +431,11 @@ impl ChannelRegistry {
     ///
     /// Dropping the publisher closes its queue and terminates the background
     /// transcoding task.
-    #[cfg(feature = "remote-access")]
     pub fn remove_point_cloud_publisher(&mut self, channel_id: &ChannelId) {
         self.point_cloud_publishers.remove(channel_id);
     }
 
     /// Returns the point-cloud transcoding publisher for a channel, if any.
-    #[cfg(feature = "remote-access")]
     pub fn get_point_cloud_publisher(
         &self,
         channel_id: &ChannelId,
@@ -457,7 +444,6 @@ impl ChannelRegistry {
     }
 
     /// Returns the advertised channel with the given ID, if any.
-    #[cfg(feature = "remote-access")]
     pub fn get_channel(&self, channel_id: &ChannelId) -> Option<Arc<RawChannel>> {
         self.channels.get(channel_id).cloned()
     }
@@ -467,7 +453,6 @@ impl ChannelRegistry {
     ///
     /// Keyed on the compression configuration rather than an active publisher, so the
     /// advertised schema is stable regardless of the current subscriber count.
-    #[cfg(feature = "remote-access")]
     pub fn rewrite_point_cloud_advertisements(&self, advertise: &mut advertise::Advertise<'_>) {
         for ch in &mut advertise.channels {
             if self
@@ -1152,7 +1137,6 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "remote-access")]
     mod point_cloud {
         use super::*;
         use crate::Encode;
