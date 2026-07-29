@@ -27,11 +27,12 @@
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use clap::Parser;
-use foxglove::draco::{CompressPointCloudOptions, DracoEncodeOptions, MAX_QUANTIZATION_BITS};
+use foxglove::draco::{DracoEncodeOptions, MAX_QUANTIZATION_BITS};
 use foxglove::messages::{
     FrameTransform, PackedElementField, PointCloud, Quaternion, Timestamp, Vector3,
     packed_element_field::NumericType,
 };
+use foxglove::remote_access::CompressPointCloudOptions;
 use foxglove::{ChannelDescriptor, Encode, LazyChannel, remote_access::Gateway};
 
 /// The default per-message size limit for lossy remote access data, in bytes. Messages
