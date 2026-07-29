@@ -67,30 +67,16 @@ fn invalid_bits_message(bits: u8) -> String {
     )
 }
 
-impl TryFrom<PyDracoEncodeOptions> for foxglove::draco::DracoEncodeOptions {
-    type Error = foxglove::FoxgloveError;
-
-    fn try_from(value: PyDracoEncodeOptions) -> Result<Self, Self::Error> {
-        // `quantization_bits` is already validated at construction; the backstop here
-        // guards any path that skips `__new__` (e.g. structural extraction). The SDK
-        // derives the Draco method (kd-tree for quantized encoding) internally, so there
-        // is nothing else to forward.
-        Self::with_quantization_bits(value.quantization_bits).map_err(|e| match e {
-            // Write our own message for the bits-range error rather than forwarding the
-            // core one, which points at the Rust-only `DracoEncodeOptions::lossless()` API.
-            foxglove::draco::DracoEncodeError::InvalidQuantizationBits { .. } => {
-                foxglove::FoxgloveError::ConfigurationError(format!(
-                    "point_cloud_compression: {}",
-                    invalid_bits_message(value.quantization_bits)
-                ))
-            }
-            // `DracoEncodeError` is `#[non_exhaustive]`; forward any other variant verbatim
-            // rather than mislabeling it as a bits-range problem. None of the others
-            // reference the Rust-only lossless() API, so there is nothing to sanitize.
-            other => foxglove::FoxgloveError::ConfigurationError(format!(
-                "point_cloud_compression: {other}"
-            )),
-        })
+impl From<PyDracoEncodeOptions> for foxglove::draco::DracoEncodeOptions {
+    fn from(value: PyDracoEncodeOptions) -> Self {
+        // Infallible: `quantization_bits` is validated in `__new__`, the field is read-only,
+        // the class is final (not subclassable), and pyo3's `from_py_object` extracts
+        // nominally (it clones a real instance rather than duck-typing fields), so the only
+        // way to obtain a `PyDracoEncodeOptions` is through the validating constructor. The
+        // SDK derives the Draco method (kd-tree for quantized encoding) internally, so only
+        // the quantization setting is forwarded.
+        Self::with_quantization_bits(value.quantization_bits)
+            .expect("quantization_bits is validated in PyDracoEncodeOptions::new")
     }
 }
 
@@ -104,19 +90,16 @@ pub enum PyPointCloudCompression {
 
 impl PyPointCloudCompression {
     /// Resolves the Python argument into the options a per-channel compression policy
-    /// applies, where `None` disables compression. Invalid Draco settings fail with a
-    /// configuration error, keeping misconfiguration a startup failure for Python
-    /// callers.
-    pub fn into_options(
-        self,
-    ) -> Result<Option<foxglove::draco::CompressPointCloudOptions>, foxglove::FoxgloveError> {
-        Ok(match self {
+    /// applies, where `None` disables compression. Infallible: `DracoEncodeOptions` is
+    /// validated at construction (see [`PyDracoEncodeOptions::new`]).
+    pub fn into_options(self) -> Option<foxglove::draco::CompressPointCloudOptions> {
+        match self {
             Self::Draco(options) => Some(foxglove::draco::CompressPointCloudOptions::Draco(
-                options.try_into()?,
+                options.into(),
             )),
             Self::Enabled(true) => Some(foxglove::draco::CompressPointCloudOptions::default()),
             Self::Enabled(false) => None,
-        })
+        }
     }
 }
 
@@ -881,12 +864,10 @@ pub fn start_gateway(
 
     // Point-cloud compression: the configured argument and the opt-out callable combine
     // into a single per-channel policy. When neither is set, leave the SDK default in
-    // place (compression enabled). Invalid Draco settings fail here, keeping
-    // misconfiguration a startup error for Python callers.
-    let point_cloud_compression = point_cloud_compression
-        .map(PyPointCloudCompression::into_options)
-        .transpose()
-        .map_err(PyFoxgloveError::from)?;
+    // place (compression enabled). `DracoEncodeOptions` is validated at construction, so
+    // no error can surface here.
+    let point_cloud_compression =
+        point_cloud_compression.map(PyPointCloudCompression::into_options);
     if point_cloud_compression.is_some() || suppress_point_cloud_compression.is_some() {
         gateway = gateway.point_cloud_compression(Arc::new(PyPointCloudCompressionPolicy {
             options: point_cloud_compression
