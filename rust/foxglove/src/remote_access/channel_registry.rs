@@ -474,7 +474,7 @@ impl ChannelRegistry {
                 .point_cloud_compression
                 .contains_key(&ChannelId::new(ch.id))
             {
-                crate::draco::transcode::rewrite_advertisement(ch);
+                crate::remote_access::point_cloud_transcode::rewrite_advertisement(ch);
             }
         }
     }

@@ -58,7 +58,7 @@ pub(super) fn resolve_point_cloud_compression(
     policy: Option<&dyn PointCloudCompression>,
     reliability: Reliability,
 ) -> Option<CompressPointCloudOptions> {
-    if !crate::draco::transcode::is_point_cloud_channel(channel) {
+    if !crate::remote_access::point_cloud_transcode::is_point_cloud_channel(channel) {
         return None;
     }
     if reliability == Reliability::Reliable {

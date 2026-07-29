@@ -23,6 +23,8 @@ mod parameter_subscriptions;
 mod participant;
 #[cfg(feature = "remote-access")]
 mod point_cloud_compression;
+#[cfg(feature = "remote-access")]
+mod point_cloud_transcode;
 pub(super) mod protocol_version;
 mod qos;
 mod rtt_tracker;
