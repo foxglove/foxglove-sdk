@@ -103,8 +103,9 @@ impl DracoEncodeOptions {
     /// Creates options that encode positions as lossless float32, using the
     /// order-preserving sequential encoding internally.
     ///
-    /// Lossless output provides no size reduction over the raw cloud, so it is only
-    /// useful with the direct [`compress_point_cloud`] API (e.g. for lossless archival).
+    /// Lossless output provides no size reduction over the raw cloud, so on the
+    /// remote-access path a channel configured with these options is delivered
+    /// unmodified rather than compressed.
     pub fn lossless() -> Self {
         Self {
             quantization_bits: 0,

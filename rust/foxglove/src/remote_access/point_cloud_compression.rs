@@ -75,9 +75,9 @@ where
 /// lossy (and the publisher may drop when behind), which would violate the Reliable
 /// contract.
 ///
-/// Options are valid by construction, but lossless options — meaningful for the direct
-/// encoding API — provide no size reduction over the raw cloud, so a channel whose
-/// policy returns them is delivered unmodified, with a warning.
+/// Options are valid by construction, but lossless options provide no size reduction over
+/// the raw cloud, so a channel whose policy returns them is delivered unmodified, with a
+/// warning.
 pub(super) fn resolve_point_cloud_compression(
     channel: &RawChannel,
     policy: Option<&dyn PointCloudCompression>,
