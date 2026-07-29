@@ -268,35 +268,10 @@ mod point_cloud_compression_tests {
             assert!(message.contains("quantization_bits"), "{message}");
             assert!(!message.contains("lossless()"), "{message}");
             assert!(!message.contains("DracoEncodeOptions"), "{message}");
+            // The "turn compression off" remediation only fits lossless (0); a value above
+            // the cap wants a smaller number, not compression disabled.
+            assert_eq!(message.contains("Disabled"), bits == 0, "{message}");
         }
-
-        // The "turn compression off" remediation only fits lossless (0); an out-of-range
-        // value above the cap wants a smaller number, so the hint must not appear there.
-        let disabled_hint = "Disabled";
-        let lossless = FoxglovePointCloudCompression {
-            mode: FoxglovePointCloudCompressionMode::Draco,
-            draco: FoxgloveDracoEncodeOptions {
-                quantization_bits: 0,
-            },
-        };
-        let too_high = FoxglovePointCloudCompression {
-            mode: FoxglovePointCloudCompressionMode::Draco,
-            draco: FoxgloveDracoEncodeOptions {
-                quantization_bits: 31,
-            },
-        };
-        let Err(foxglove::FoxgloveError::ConfigurationError(lossless_msg)) =
-            lossless.to_policy_options()
-        else {
-            panic!("expected a configuration error for 0 bits");
-        };
-        let Err(foxglove::FoxgloveError::ConfigurationError(too_high_msg)) =
-            too_high.to_policy_options()
-        else {
-            panic!("expected a configuration error for 31 bits");
-        };
-        assert!(lossless_msg.contains(disabled_hint), "{lossless_msg}");
-        assert!(!too_high_msg.contains(disabled_hint), "{too_high_msg}");
     }
 }
 
