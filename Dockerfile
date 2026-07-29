@@ -1,4 +1,8 @@
 # Local development image. See Makefile for usage.
+#
+# linux/amd64 only: doxygen and flatc are installed from x86_64 release
+# binaries (no arm64 builds at the pinned versions). The root Makefile
+# passes --platform=linux/amd64 so Apple Silicon hosts run under emulation.
 FROM ubuntu:22.04
 
 WORKDIR /app
