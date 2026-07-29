@@ -117,7 +117,7 @@ impl foxglove::remote_access::SuppressVideoTranscode for SuppressVideoTranscode 
 struct PointCloudCompressionPolicy {
     /// The options applied to channels that are not opted out; `None` disables
     /// compression for every channel.
-    options: Option<foxglove::draco::CompressPointCloudOptions>,
+    options: Option<foxglove::remote_access::CompressPointCloudOptions>,
     suppress_context: *const c_void,
     suppress: Option<unsafe extern "C" fn(*const c_void, *const FoxgloveChannelDescriptor) -> bool>,
 }
@@ -129,7 +129,7 @@ impl foxglove::remote_access::PointCloudCompression for PointCloudCompressionPol
     fn compression(
         &self,
         channel: &foxglove::ChannelDescriptor,
-    ) -> Option<foxglove::draco::CompressPointCloudOptions> {
+    ) -> Option<foxglove::remote_access::CompressPointCloudOptions> {
         let options = self.options?;
         if let Some(callback) = self.suppress {
             let c_channel_descriptor = FoxgloveChannelDescriptor(channel.clone());
@@ -149,7 +149,7 @@ impl foxglove::remote_access::PointCloudCompression for PointCloudCompressionPol
 /// means mode `Default` (unset), `Some(None)` means `Disabled`, and `Some(Some(opts))`
 /// means `Draco` with those options.
 fn build_point_cloud_policy(
-    resolved: Option<Option<foxglove::draco::CompressPointCloudOptions>>,
+    resolved: Option<Option<foxglove::remote_access::CompressPointCloudOptions>>,
     suppress_context: *const c_void,
     suppress: Option<unsafe extern "C" fn(*const c_void, *const FoxgloveChannelDescriptor) -> bool>,
 ) -> Option<PointCloudCompressionPolicy> {
@@ -164,7 +164,9 @@ fn build_point_cloud_policy(
         // callback gets the same compression as one who configures nothing. Mirrors the core
         // fallback in `resolve_point_cloud_compression` (`None => CompressPointCloudOptions::default()`);
         // the two stay in sync only while the core defines its no-policy fallback as `default()`.
-        options: resolved.unwrap_or(Some(foxglove::draco::CompressPointCloudOptions::default())),
+        options: resolved.unwrap_or(Some(
+            foxglove::remote_access::CompressPointCloudOptions::default(),
+        )),
         suppress_context,
         suppress,
     })
@@ -1221,7 +1223,7 @@ pub extern "C" fn foxglove_gateway_publish_connection_graph(
 #[cfg(test)]
 mod build_point_cloud_policy_tests {
     use super::{FoxgloveChannelDescriptor, build_point_cloud_policy};
-    use foxglove::draco::CompressPointCloudOptions;
+    use foxglove::remote_access::CompressPointCloudOptions;
     use std::ffi::c_void;
 
     // A stand-in opt-out callback. Its body never runs in these tests: they assert on the

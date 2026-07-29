@@ -188,13 +188,15 @@ impl FoxglovePointCloudCompression {
     /// configuration error, keeping misconfiguration a startup failure for C callers.
     pub(crate) fn to_policy_options(
         self,
-    ) -> Result<Option<Option<foxglove::draco::CompressPointCloudOptions>>, foxglove::FoxgloveError>
-    {
+    ) -> Result<
+        Option<Option<foxglove::remote_access::CompressPointCloudOptions>>,
+        foxglove::FoxgloveError,
+    > {
         Ok(match self.mode {
             FoxglovePointCloudCompressionMode::Default => None,
             FoxglovePointCloudCompressionMode::Disabled => Some(None),
             FoxglovePointCloudCompressionMode::Draco => Some(Some(
-                foxglove::draco::CompressPointCloudOptions::Draco(self.draco.try_into()?),
+                foxglove::remote_access::CompressPointCloudOptions::Draco(self.draco.try_into()?),
             )),
         })
     }
@@ -206,7 +208,8 @@ mod point_cloud_compression_tests {
         FoxgloveDracoEncodeOptions, FoxglovePointCloudCompression,
         FoxglovePointCloudCompressionMode,
     };
-    use foxglove::draco::{CompressPointCloudOptions, DracoEncodeOptions};
+    use foxglove::draco::DracoEncodeOptions;
+    use foxglove::remote_access::CompressPointCloudOptions;
 
     #[test]
     fn test_zero_initialized_struct_keeps_sdk_default() {
