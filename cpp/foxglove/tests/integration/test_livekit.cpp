@@ -1356,3 +1356,45 @@ TEST_CASE("livekit: suppress_video_transcode opts channel out of video track", "
 
   gw.stop();
 }
+
+TEST_CASE(
+  "livekit: suppress_point_cloud_compression opts channel out of compression", "[integration]"
+) {
+  auto ctx = foxglove::Context::create();
+
+  // Two identical foxglove.PointCloud channels. The gateway opts /raw out by topic (advertised
+  // with its original schema), while /compressed is transcoded and re-advertised as
+  // foxglove.CompressedPointCloud — so the test verifies the callback's per-topic selectivity,
+  // not just that it fires. Compression is on by default, so the opt-out callback is the only
+  // option we set.
+  auto raw_channel = foxglove::RawChannel::create(
+    "/raw", "protobuf", foxglove::Schema{"foxglove.PointCloud", "protobuf", nullptr, 0}, ctx
+  );
+  REQUIRE(raw_channel.has_value());
+  auto compressed_channel = foxglove::RawChannel::create(
+    "/compressed", "protobuf", foxglove::Schema{"foxglove.PointCloud", "protobuf", nullptr, 0}, ctx
+  );
+  REQUIRE(compressed_channel.has_value());
+
+  TestGatewayOptions opts;
+  opts.suppress_point_cloud_compression = [](const foxglove::ChannelDescriptor& ch) {
+    return std::string(ch.topic()) == "/raw";
+  };
+  auto gw = TestGateway::start_with_options(ctx, std::move(opts));
+
+  auto viewer = ViewerConnection::connect(gw.room_name, "viewer-1");
+  viewer.expect_server_info();
+
+  auto advertise = viewer.expect_advertise();
+  REQUIRE(advertise["channels"].size() == 2);
+  for (const auto& ch : advertise["channels"]) {
+    if (ch["id"].get<uint64_t>() == raw_channel->id()) {
+      CHECK(ch["schemaName"] == "foxglove.PointCloud");
+    } else {
+      CHECK(ch["id"].get<uint64_t>() == compressed_channel->id());
+      CHECK(ch["schemaName"] == "foxglove.CompressedPointCloud");
+    }
+  }
+
+  gw.stop();
+}
