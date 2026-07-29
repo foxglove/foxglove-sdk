@@ -14,9 +14,6 @@
 //! fields: a non-empty cloud containing one (other than `x`/`y`/`z`, which are narrowed
 //! into the float32 POSITION attribute) is rejected when quantization is requested;
 //! with lossless options, float64 fields are copied losslessly.
-//!
-//! The remote-access sink can also transcode `foxglove.PointCloud` channels transparently;
-//! see [`CompressPointCloudOptions`].
 
 use bytes::Bytes;
 
@@ -107,9 +104,7 @@ impl DracoEncodeOptions {
     /// order-preserving sequential encoding internally.
     ///
     /// Lossless output provides no size reduction over the raw cloud, so it is only
-    /// useful with the direct [`compress_point_cloud`] API (e.g. for lossless archival);
-    /// the remote access sink skips compression for channels whose policy returns
-    /// lossless options — return `None` from the policy instead.
+    /// useful with the direct [`compress_point_cloud`] API (e.g. for lossless archival).
     pub fn lossless() -> Self {
         Self {
             quantization_bits: 0,
@@ -135,16 +130,10 @@ impl Default for DracoEncodeOptions {
     }
 }
 
-/// Options for transparent point-cloud compression on a sink.
+/// Selects the compression algorithm and settings applied to a point cloud.
 ///
-/// When compression is enabled on a sink, messages logged on `foxglove.PointCloud` channels
-/// are compressed in a background task and delivered as `foxglove.CompressedPointCloud`;
-/// the channel is advertised with the `foxglove.CompressedPointCloud` schema.
-///
-/// The remote access sink compresses eligible channels with the default options by
-/// default. Use `Gateway::point_cloud_compression_fn` to choose settings per channel, or
-/// return `None` to deliver a channel unmodified. Channels with Reliable QoS skip
-/// compression automatically.
+/// [`Draco`](Self::Draco) is currently the only algorithm; the enum is non-exhaustive so
+/// others can be added without a breaking change.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum CompressPointCloudOptions {
