@@ -278,9 +278,8 @@ try:
         foxglove_api_url: str | None = None,
         foxglove_api_timeout: float | None = None,
         video_encoder: VideoEncoderBackend | None = None,
-        point_cloud_compression: DracoEncodeOptions | bool | None = None,
-        suppress_point_cloud_compression: (
-            Callable[[ChannelDescriptor], bool] | None
+        point_cloud_compression: (
+            Callable[[ChannelDescriptor], DracoEncodeOptions | bool | None] | None
         ) = None,
     ) -> RemoteAccessGateway:
         """
@@ -313,29 +312,27 @@ try:
             or set to :py:attr:`~foxglove.remote_access.VideoEncoderBackend.Auto`, the SDK chooses
             (honoring the ``FOXGLOVE_VIDEO_ENCODER`` environment variable). If the requested
             backend is unavailable, the SDK falls back to another compatible encoder.
-        :param point_cloud_compression: Transparent point-cloud compression for remote
-            participants. When enabled, ``foxglove.PointCloud`` channels are advertised as
+        :param point_cloud_compression: A per-channel policy for transparent point-cloud
+            compression. When a channel is compressed, it is advertised as
             ``foxglove.CompressedPointCloud`` and each logged point cloud is compressed in a
-            background task before delivery. Pass a
-            :py:class:`~foxglove.remote_access.DracoEncodeOptions` to customize
-            the settings, ``True`` to explicitly enable compression with default settings, or
-            ``False`` to disable compression. The default of ``None`` defers to the SDK, which
-            currently enables compression with default settings; note that the defaults are
-            lossy (kd-tree encoding with positions quantized to 12 bits). Channels classified
-            as Reliable skip compression and deliver the raw point cloud on the control
-            bytestream.
+            background task before delivery. The ``Callable`` is invoked for each compressible
+            Lossy ``foxglove.PointCloud`` channel; return a
+            :py:class:`~foxglove.remote_access.DracoEncodeOptions` to compress that channel
+            with those settings, ``True`` to compress with the default settings, or ``False``
+            (or ``None``) to deliver it unmodified. If the callable raises an exception, the
+            error is logged and the default settings are applied. The default of ``None`` (no
+            policy) defers to the SDK, which currently compresses every such channel with
+            default settings; note that the defaults are lossy (kd-tree encoding with
+            positions quantized to 12 bits). Channels classified as Reliable skip compression
+            and deliver the raw point cloud on the control bytestream; the policy is not
+            consulted for them.
 
-            When compression is enabled (including the default), a cloud the encoder cannot
-            compress is **dropped**, not delivered uncompressed — a throttled warning is sent
-            to the device log and to viewers. The common causes are a ``float64`` field other
-            than ``x``/``y``/``z``, or fewer than two of ``x``/``y``/``z`` present. To keep such
-            a channel flowing, convert the offending field to ``float32`` or an integer type,
-            opt the channel out with ``suppress_point_cloud_compression``, or pass
-            ``point_cloud_compression=False`` to disable compression entirely.
-        :param suppress_point_cloud_compression: A ``Callable`` that returns ``True`` to deliver
-            a given channel unmodified rather than compressing its point clouds. If not set, all
-            compressible Lossy point-cloud channels use the compression configured by
-            ``point_cloud_compression``.
+            When a channel is compressed, a cloud the encoder cannot compress is **dropped**,
+            not delivered uncompressed — a throttled warning is sent to the device log and to
+            viewers. The common causes are a ``float64`` field other than ``x``/``y``/``z``,
+            or fewer than two of ``x``/``y``/``z`` present. To keep such a channel flowing,
+            convert the offending field to ``float32`` or an integer type, or return ``False``
+            for that channel from ``point_cloud_compression``.
         """
         return _foxglove.start_gateway(
             name=name,
@@ -353,7 +350,6 @@ try:
             foxglove_api_timeout=foxglove_api_timeout,
             video_encoder=video_encoder,
             point_cloud_compression=point_cloud_compression,
-            suppress_point_cloud_compression=suppress_point_cloud_compression,
         )
 
     __all__ += ["start_gateway"]

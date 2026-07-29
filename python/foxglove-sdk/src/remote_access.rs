@@ -19,8 +19,8 @@ use crate::sink_channel_filter::{PyChannelDescriptor, PySinkChannelFilter};
 ///
 /// :param quantization_bits: Quantization bits for the position attribute; must be
 ///     between 1 and 30 inclusive, or a :py:exc:`ValueError` is raised. To disable
-///     compression, pass ``False`` as ``point_cloud_compression`` rather than ``0``.
-///     Defaults to 12.
+///     compression for a channel, return ``False`` from the ``point_cloud_compression``
+///     policy rather than passing ``0``. Defaults to 12.
 /// :type quantization_bits: int
 #[pyclass(
     from_py_object,
@@ -56,8 +56,8 @@ fn invalid_bits_message(bits: u8) -> String {
     // Only 0 (lossless) has an actionable "turn it off" remediation; a value above the cap
     // just needs a smaller number, not compression disabled.
     let hint = if bits == 0 {
-        "; 0 (lossless) is not supported here — pass point_cloud_compression=False to \
-         disable compression"
+        "; 0 (lossless) is not supported here — return False from the \
+         point_cloud_compression policy to deliver point clouds uncompressed"
     } else {
         ""
     };
@@ -80,8 +80,9 @@ impl From<PyDracoEncodeOptions> for foxglove::draco::DracoEncodeOptions {
     }
 }
 
-/// The `point_cloud_compression` argument to `start_gateway`: either `DracoEncodeOptions`
-/// for custom settings, or a bool to enable (with default settings) or disable compression.
+/// The value returned by the `point_cloud_compression` policy callable for one channel:
+/// either `DracoEncodeOptions` for custom settings, or a bool to compress with default
+/// settings (`True`) or deliver the channel unmodified (`False`).
 #[derive(FromPyObject)]
 pub enum PyPointCloudCompression {
     Draco(PyDracoEncodeOptions),
@@ -89,8 +90,8 @@ pub enum PyPointCloudCompression {
 }
 
 impl PyPointCloudCompression {
-    /// Resolves the Python argument into the options a per-channel compression policy
-    /// applies, where `None` disables compression. Infallible: `DracoEncodeOptions` is
+    /// Resolves the Python value into the options the compression policy applies to the
+    /// channel, where `None` disables compression. Infallible: `DracoEncodeOptions` is
     /// validated at construction (see [`PyDracoEncodeOptions::new`]).
     pub fn into_options(self) -> Option<foxglove::remote_access::CompressPointCloudOptions> {
         match self {
@@ -728,55 +729,45 @@ impl foxglove::remote_access::SuppressVideoTranscode for PySuppressVideoTranscod
     }
 }
 
-/// A per-channel point-cloud compression policy assembled from the Python arguments: the
-/// configured compression options combined with an optional opt-out callable.
+/// A per-channel point-cloud compression policy wrapping a Python callable.
 ///
-/// The callable should accept a `ChannelDescriptor` and return a `bool`; returning `True`
-/// delivers the channel unmodified rather than compressing its point clouds.
-pub struct PyPointCloudCompressionPolicy {
-    /// The options applied to channels that are not opted out; `None` disables
-    /// compression for every channel.
-    options: Option<foxglove::remote_access::CompressPointCloudOptions>,
-    suppress: Option<Py<PyAny>>,
-}
+/// The callable should accept a `ChannelDescriptor` and return `DracoEncodeOptions` to
+/// compress the channel with those settings, `True` to compress with the SDK default
+/// settings, or `False` (or `None`) to deliver the channel unmodified. If the callable
+/// raises or returns any other type, the error is logged and the SDK default compression
+/// is applied, matching the error fallback of the other per-channel callbacks.
+pub struct PyPointCloudCompressionPolicy(pub Py<PyAny>);
 
 impl foxglove::remote_access::PointCloudCompression for PyPointCloudCompressionPolicy {
     fn compression(
         &self,
         channel: &foxglove::ChannelDescriptor,
     ) -> Option<foxglove::remote_access::CompressPointCloudOptions> {
-        let options = self.options?;
-        if let Some(suppress) = &self.suppress {
-            let suppressed = Python::attach(|py| {
-                let handler = suppress.clone_ref(py);
-                let descriptor = PyChannelDescriptor(channel.clone());
-                let result = handler
-                    .bind(py)
-                    .call((descriptor,), None)
-                    .and_then(|f| f.extract::<bool>());
+        Python::attach(|py| {
+            let handler = self.0.clone_ref(py);
+            let descriptor = PyChannelDescriptor(channel.clone());
+            let result = handler
+                .bind(py)
+                .call((descriptor,), None)
+                .and_then(|f| f.extract::<Option<PyPointCloudCompression>>());
 
-                match result {
-                    Ok(suppress) => suppress,
-                    Err(err) => {
-                        tracing::error!(
-                            "Error in point-cloud-compression opt-out predicate: {}",
-                            err.to_string()
-                        );
-                        false
-                    }
+            match result {
+                Ok(compression) => compression.and_then(PyPointCloudCompression::into_options),
+                Err(err) => {
+                    tracing::error!(
+                        "Error in point-cloud compression policy: {}",
+                        err.to_string()
+                    );
+                    Some(foxglove::remote_access::CompressPointCloudOptions::default())
                 }
-            });
-            if suppressed {
-                return None;
             }
-        }
-        Some(options)
+        })
     }
 }
 
 /// Start a remote access gateway for live visualization and teleop in Foxglove.
 #[pyfunction]
-#[pyo3(signature = (*, name=None, device_token=None, capabilities=None, listener=None, supported_encodings=None, services=None, context=None, channel_filter=None, qos_classifier=None, suppress_video_transcode=None, message_backlog_size=None, foxglove_api_url=None, foxglove_api_timeout=None, video_encoder=None, point_cloud_compression=None, suppress_point_cloud_compression=None))]
+#[pyo3(signature = (*, name=None, device_token=None, capabilities=None, listener=None, supported_encodings=None, services=None, context=None, channel_filter=None, qos_classifier=None, suppress_video_transcode=None, message_backlog_size=None, foxglove_api_url=None, foxglove_api_timeout=None, video_encoder=None, point_cloud_compression=None))]
 #[allow(clippy::too_many_arguments)]
 pub fn start_gateway(
     py: Python<'_>,
@@ -794,8 +785,7 @@ pub fn start_gateway(
     foxglove_api_url: Option<String>,
     foxglove_api_timeout: Option<f64>,
     video_encoder: Option<PyVideoEncoderBackend>,
-    point_cloud_compression: Option<PyPointCloudCompression>,
-    suppress_point_cloud_compression: Option<Py<PyAny>>,
+    point_cloud_compression: Option<Py<PyAny>>,
 ) -> PyResult<PyRemoteAccessGateway> {
     init_logging(py, None);
 
@@ -864,19 +854,20 @@ pub fn start_gateway(
         gateway = gateway.video_encoder(video_encoder.into());
     }
 
-    // Point-cloud compression: the configured argument and the opt-out callable combine
-    // into a single per-channel policy. When neither is set, leave the SDK default in
-    // place (compression enabled). `DracoEncodeOptions` is validated at construction, so
-    // no error can surface here.
-    let point_cloud_compression =
-        point_cloud_compression.map(PyPointCloudCompression::into_options);
-    if point_cloud_compression.is_some() || suppress_point_cloud_compression.is_some() {
-        gateway = gateway.point_cloud_compression(Arc::new(PyPointCloudCompressionPolicy {
-            options: point_cloud_compression.unwrap_or(Some(
-                foxglove::remote_access::CompressPointCloudOptions::default(),
-            )),
-            suppress: suppress_point_cloud_compression,
-        }));
+    // Point-cloud compression policy. Reject non-callables at startup: earlier revisions
+    // accepted `DracoEncodeOptions | bool` here, and a caller still passing e.g. `False`
+    // would otherwise get the exact opposite of what they asked for (the per-channel
+    // error fallback is the SDK default compression).
+    if let Some(point_cloud_compression) = point_cloud_compression {
+        if !point_cloud_compression.bind(py).is_callable() {
+            return Err(pyo3::exceptions::PyTypeError::new_err(
+                "point_cloud_compression must be a callable invoked per channel; to \
+                 disable compression, return False from it (e.g. lambda channel: False)",
+            ));
+        }
+        gateway = gateway.point_cloud_compression(Arc::new(PyPointCloudCompressionPolicy(
+            point_cloud_compression,
+        )));
     }
 
     let handle = py

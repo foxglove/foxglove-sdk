@@ -382,8 +382,9 @@ def start_gateway(
     foxglove_api_url: str | None = None,
     foxglove_api_timeout: float | None = None,
     video_encoder: VideoEncoderBackend | None = None,
-    point_cloud_compression: DracoEncodeOptions | bool | None = None,
-    suppress_point_cloud_compression: Callable[[ChannelDescriptor], bool] | None = None,
+    point_cloud_compression: (
+        Callable[[ChannelDescriptor], DracoEncodeOptions | bool | None] | None
+    ) = None,
 ) -> RemoteAccessGateway:
     """
     Start a remote access gateway for live visualization and teleop in Foxglove.
