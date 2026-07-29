@@ -92,12 +92,14 @@ impl PyPointCloudCompression {
     /// Resolves the Python argument into the options a per-channel compression policy
     /// applies, where `None` disables compression. Infallible: `DracoEncodeOptions` is
     /// validated at construction (see [`PyDracoEncodeOptions::new`]).
-    pub fn into_options(self) -> Option<foxglove::draco::CompressPointCloudOptions> {
+    pub fn into_options(self) -> Option<foxglove::remote_access::CompressPointCloudOptions> {
         match self {
-            Self::Draco(options) => Some(foxglove::draco::CompressPointCloudOptions::Draco(
-                options.into(),
-            )),
-            Self::Enabled(true) => Some(foxglove::draco::CompressPointCloudOptions::default()),
+            Self::Draco(options) => Some(
+                foxglove::remote_access::CompressPointCloudOptions::Draco(options.into()),
+            ),
+            Self::Enabled(true) => {
+                Some(foxglove::remote_access::CompressPointCloudOptions::default())
+            }
             Self::Enabled(false) => None,
         }
     }
@@ -734,7 +736,7 @@ impl foxglove::remote_access::SuppressVideoTranscode for PySuppressVideoTranscod
 pub struct PyPointCloudCompressionPolicy {
     /// The options applied to channels that are not opted out; `None` disables
     /// compression for every channel.
-    options: Option<foxglove::draco::CompressPointCloudOptions>,
+    options: Option<foxglove::remote_access::CompressPointCloudOptions>,
     suppress: Option<Py<PyAny>>,
 }
 
@@ -742,7 +744,7 @@ impl foxglove::remote_access::PointCloudCompression for PyPointCloudCompressionP
     fn compression(
         &self,
         channel: &foxglove::ChannelDescriptor,
-    ) -> Option<foxglove::draco::CompressPointCloudOptions> {
+    ) -> Option<foxglove::remote_access::CompressPointCloudOptions> {
         let options = self.options?;
         if let Some(suppress) = &self.suppress {
             let suppressed = Python::attach(|py| {
@@ -870,8 +872,9 @@ pub fn start_gateway(
         point_cloud_compression.map(PyPointCloudCompression::into_options);
     if point_cloud_compression.is_some() || suppress_point_cloud_compression.is_some() {
         gateway = gateway.point_cloud_compression(Arc::new(PyPointCloudCompressionPolicy {
-            options: point_cloud_compression
-                .unwrap_or(Some(foxglove::draco::CompressPointCloudOptions::default())),
+            options: point_cloud_compression.unwrap_or(Some(
+                foxglove::remote_access::CompressPointCloudOptions::default(),
+            )),
             suppress: suppress_point_cloud_compression,
         }));
     }
