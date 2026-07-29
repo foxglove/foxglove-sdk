@@ -60,6 +60,61 @@ docs-python:
 clean-docs-python:
 	rm -rf python/foxglove-sdk/python/docs/_build
 
+.PHONY: generate-python-schemas-flatbuffer
+generate-python-schemas-flatbuffer:
+	find python/foxglove-schemas-flatbuffer/foxglove_schemas_flatbuffer ! -name '__init__.py' -type f -exec rm -f {} +
+	cd python/foxglove-schemas-flatbuffer && uv run flatc \
+		--require-explicit-ids \
+		--python \
+		-o foxglove_schemas_flatbuffer \
+		../../schemas/flatbuffer/*.fbs
+	cd python/foxglove-schemas-flatbuffer && uv run flatc \
+		-b \
+		--schema \
+		-o foxglove_schemas_flatbuffer \
+		../../schemas/flatbuffer/*.fbs
+	rm python/foxglove-schemas-flatbuffer/foxglove_schemas_flatbuffer/foxglove/__init__.py
+	mv python/foxglove-schemas-flatbuffer/foxglove_schemas_flatbuffer/foxglove/* \
+		python/foxglove-schemas-flatbuffer/foxglove_schemas_flatbuffer
+	rmdir python/foxglove-schemas-flatbuffer/foxglove_schemas_flatbuffer/foxglove
+	sed -E -i 's/from foxglove\./from \./g' \
+		python/foxglove-schemas-flatbuffer/foxglove_schemas_flatbuffer/*.py
+
+.PHONY: generate-python-schemas-protobuf
+generate-python-schemas-protobuf:
+	rm -rf python/foxglove-schemas-protobuf/foxglove_schemas_protobuf/*_pb2*
+	cd python/foxglove-schemas-protobuf && uv run protoc \
+		--python_out=foxglove_schemas_protobuf \
+		--mypy_out=foxglove_schemas_protobuf \
+		--proto_path ../../schemas/proto \
+		../../schemas/proto/foxglove/*.proto
+	mv python/foxglove-schemas-protobuf/foxglove_schemas_protobuf/foxglove/* \
+		python/foxglove-schemas-protobuf/foxglove_schemas_protobuf
+	rmdir python/foxglove-schemas-protobuf/foxglove_schemas_protobuf/foxglove
+	sed -E -i 's/from foxglove import/from . import/g' \
+		python/foxglove-schemas-protobuf/foxglove_schemas_protobuf/*_pb2.py
+	sed -E -i 's/import foxglove\.(.+)$$/from . import \1 as foxglove_\1/g' \
+		python/foxglove-schemas-protobuf/foxglove_schemas_protobuf/*_pb2.pyi
+	sed -E -i 's/foxglove\./foxglove_/g' \
+		python/foxglove-schemas-protobuf/foxglove_schemas_protobuf/*_pb2.pyi
+
+.PHONY: generate-python-schemas
+generate-python-schemas: generate-python-schemas-flatbuffer generate-python-schemas-protobuf
+
+.PHONY: build-python-schemas
+build-python-schemas: generate-python-schemas
+	uv --directory python/foxglove-schemas-flatbuffer build
+	uv --directory python/foxglove-schemas-protobuf build
+
+.PHONY: test-python-schemas
+test-python-schemas:
+	uv --directory python/foxglove-schemas-flatbuffer run pytest
+	uv --directory python/foxglove-schemas-protobuf run pytest
+
+.PHONY: clean-python-schemas
+clean-python-schemas:
+	git clean -Xdfq -- python/foxglove-schemas-flatbuffer python/foxglove-schemas-protobuf
+
 .PHONY: lint-rust
 lint-rust:
 	cargo fmt --all --check

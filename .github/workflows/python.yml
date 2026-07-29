@@ -144,7 +144,7 @@ jobs:
       - uses: arduino/setup-protoc@v3
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-          version: "29.3"
+          version: "29.6"
 
       - name: Install Flatbuffer compiler
         run: |
@@ -156,11 +156,9 @@ jobs:
 
       - uses: astral-sh/setup-uv@v7
 
-      - run: make build
-        working-directory: python
+      - run: make -f Container.mk build-python-schemas
 
-      - run: make test
-        working-directory: python
+      - run: make -f Container.mk test-python-schemas
 
       - name: Publish foxglove-schemas-flatbuffer
         if: startsWith(github.ref, 'refs/tags/python/foxglove-schemas-flatbuffer/v')
