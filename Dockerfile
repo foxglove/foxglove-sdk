@@ -1,4 +1,8 @@
 # Local development image. See Makefile for usage.
+#
+# linux/amd64 only: doxygen and flatc are installed from x86_64 release
+# binaries (no arm64 builds at the pinned versions). The root Makefile
+# passes --platform=linux/amd64 so Apple Silicon hosts run under emulation.
 FROM ubuntu:22.04
 
 WORKDIR /app
@@ -28,13 +32,23 @@ RUN curl -fsSL https://github.com/doxygen/doxygen/releases/download/Release_$(ec
     && cp /tmp/doxygen-${DOXYGEN_VERSION}/bin/doxygen /usr/local/bin/ \
     && rm -rf /tmp/doxygen.tar.gz /tmp/doxygen-${DOXYGEN_VERSION}
 
-# protoc — pin to match CI (arduino/setup-protoc version in .github/workflows/ci.yml)
+# protoc — pin to match CI (arduino/setup-protoc version in .github/workflows/{ci,python}.yml)
 ARG PROTOC_VERSION=29.6
 RUN ARCH=$(uname -m | sed 's/aarch64/aarch_64/') \
     && curl -fsSL https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-${ARCH}.zip \
         -o /tmp/protoc.zip \
     && unzip /tmp/protoc.zip -d /usr/local \
     && rm /tmp/protoc.zip
+
+# flatc — pin to match CI (Install Flatbuffer compiler steps in .github/workflows/{ci,python}.yml)
+ARG FLATC_VERSION=23.1.21
+ARG FLATC_SHA1=359dbbf56153cc1b022170a228adfde4199f67dc
+RUN curl -fsSL https://github.com/google/flatbuffers/releases/download/v${FLATC_VERSION}/Linux.flatc.binary.clang++-12.zip \
+        -o /tmp/flatc.zip \
+    && echo "${FLATC_SHA1}  /tmp/flatc.zip" | sha1sum -c \
+    && unzip /tmp/flatc.zip -d /tmp \
+    && mv /tmp/flatc /usr/local/bin/flatc \
+    && rm /tmp/flatc.zip
 
 # clang
 RUN curl https://apt.llvm.org/llvm.sh -fsS -o llvm.sh \

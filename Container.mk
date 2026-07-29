@@ -60,6 +60,30 @@ docs-python:
 clean-docs-python:
 	rm -rf python/foxglove-sdk/python/docs/_build
 
+.PHONY: generate-python-schemas-flatbuffer
+generate-python-schemas-flatbuffer:
+	make -C python generate-flatbuffer
+
+.PHONY: generate-python-schemas-protobuf
+generate-python-schemas-protobuf:
+	make -C python generate-protobuf
+
+.PHONY: generate-python-schemas
+generate-python-schemas:
+	make -C python generate
+
+.PHONY: build-python-schemas
+build-python-schemas:
+	make -C python build
+
+.PHONY: test-python-schemas
+test-python-schemas:
+	make -C python test
+
+.PHONY: clean-python-schemas
+clean-python-schemas:
+	make -C python clean
+
 .PHONY: lint-rust
 lint-rust:
 	cargo fmt --all --check
