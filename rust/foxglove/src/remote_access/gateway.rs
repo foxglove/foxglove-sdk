@@ -496,6 +496,10 @@ impl Gateway {
     /// the Draco quantizer rejects non-finite input, which would otherwise fail the
     /// whole cloud.
     ///
+    /// Fields named `rgb` or `rgba` declared float32 — PCL's packed-color convention —
+    /// are reinterpreted as uint32 before encoding: quantizing the packed bits as a
+    /// float would destroy the colors, while integer attributes are copied losslessly.
+    ///
     /// [`CompressPointCloudOptions::default()`]: crate::remote_access::CompressPointCloudOptions
     #[cfg_attr(docsrs, doc(cfg(feature = "remote-access")))]
     pub fn point_cloud_compression(mut self, policy: Arc<dyn PointCloudCompression>) -> Self {

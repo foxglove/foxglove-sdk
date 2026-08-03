@@ -39,9 +39,38 @@ pub(crate) fn transcode_point_cloud_message(
     options: &CompressPointCloudOptions,
 ) -> Result<Bytes, TranscodeError> {
     let mut cloud = <PointCloud as Decode>::decode(msg)?;
+    reinterpret_packed_color_fields(&mut cloud);
     drop_non_finite_points(&mut cloud);
     let compressed = compress_point_cloud(&cloud, &options.draco_options())?;
     Ok(Bytes::from(compressed.encode_to_vec()))
+}
+
+/// Retypes packed-color fields declared float32 to uint32 so they survive quantization.
+///
+/// PCL's `PointXYZRGB` convention declares the `rgb`/`rgba` field float32 while packing
+/// `(a << 24) | (r << 16) | (g << 8) | b` into the bits — integer data masquerading as
+/// denormal floats. The kd-tree encoder quantizes every float32 attribute, and quantizing
+/// a range of denormals collapses nearly every color in the cloud to a single wrong
+/// value; integer attributes are copied losslessly instead, so flipping the declared type
+/// preserves the packed bits exactly. Only the declared type changes — both types are
+/// four bytes, so offsets, stride, and data are untouched — and the uint32 declaration is
+/// itself a common `PointCloud2` convention: the app already force-reads `rgb`/`rgba`
+/// color fields as uint32 whatever the declared type.
+///
+/// Name-matching is a heuristic, like the encoder's `x`/`y`/`z` handling: a field named
+/// `rgb` carrying a genuine continuous float would be retyped needlessly (still lossless,
+/// merely un-quantized), which is strictly safer than the certain mangling of packed
+/// colors today.
+fn reinterpret_packed_color_fields(cloud: &mut PointCloud) {
+    use crate::messages::packed_element_field::NumericType;
+
+    for field in &mut cloud.fields {
+        if matches!(field.name.as_str(), "rgb" | "rgba")
+            && field.r#type == NumericType::Float32 as i32
+        {
+            field.r#type = NumericType::Uint32 as i32;
+        }
+    }
 }
 
 /// Removes points whose position contains a non-finite (NaN or infinite) coordinate.
@@ -292,6 +321,108 @@ mod tests {
             f64::from_le_bytes(cloud.data[0..8].try_into().unwrap()),
             1.0
         );
+    }
+
+    #[test]
+    fn test_reinterprets_packed_color_fields() {
+        let field = |name: &str, offset: u32, t: NumericType| PackedElementField {
+            name: name.to_string(),
+            offset,
+            r#type: t as i32,
+        };
+        let mut cloud = xyz_cloud(&[[1.0, 2.0, 3.0]]);
+        cloud.point_stride = 32;
+        cloud.fields.extend([
+            field("rgb", 12, NumericType::Float32),
+            field("rgba", 16, NumericType::Float32),
+            // Untouched: a continuous float, and color fields already integer-typed.
+            field("intensity", 20, NumericType::Float32),
+            field("rgb", 24, NumericType::Uint32),
+            field("rgba", 28, NumericType::Uint8),
+        ]);
+
+        super::reinterpret_packed_color_fields(&mut cloud);
+
+        let types: Vec<i32> = cloud.fields.iter().map(|f| f.r#type).collect();
+        assert_eq!(
+            types,
+            [
+                NumericType::Float32 as i32, // x
+                NumericType::Float32 as i32, // y
+                NumericType::Float32 as i32, // z
+                NumericType::Uint32 as i32,  // rgb: retyped
+                NumericType::Uint32 as i32,  // rgba: retyped
+                NumericType::Float32 as i32, // intensity: not a color field
+                NumericType::Uint32 as i32,  // rgb: already uint32
+                NumericType::Uint8 as i32,   // rgba: not float32
+            ]
+        );
+    }
+
+    #[test]
+    fn test_packed_rgb_survives_compression_bit_exact() {
+        use crate::Decode;
+        use draco_core::decoder_buffer::DecoderBuffer;
+        use draco_core::geometry_attribute::GeometryAttributeType;
+        use draco_core::point_cloud::PointCloud as DracoCloud;
+        use draco_core::point_cloud_decoder::PointCloudDecoder;
+
+        // PCL PointXYZRGB: rgb declared float32, carrying (r << 16) | (g << 8) | b in the
+        // bits. Quantized as a float attribute (a range of denormals), nearly every color
+        // collapses to a single wrong value; retyped to uint32 the packed bits must
+        // round-trip exactly.
+        let colors: [u32; 4] = [0x00c8_9664, 0x000a_141e, 0x00ff_0080, 0x0000_ffff];
+        let mut data = Vec::new();
+        for (i, &color) in colors.iter().enumerate() {
+            for c in [i as f32, i as f32 * 2.0, 0.5] {
+                data.extend_from_slice(&c.to_le_bytes());
+            }
+            data.extend_from_slice(&f32::from_bits(color).to_le_bytes());
+        }
+        let field = |name: &str, offset: u32| PackedElementField {
+            name: name.to_string(),
+            offset,
+            r#type: NumericType::Float32 as i32,
+        };
+        let cloud = PointCloud {
+            timestamp: None,
+            frame_id: "t".to_string(),
+            pose: None,
+            point_stride: 16,
+            fields: vec![
+                field("x", 0),
+                field("y", 4),
+                field("z", 8),
+                field("rgb", 12),
+            ],
+            data: data.into(),
+        };
+        let mut buf = Vec::new();
+        cloud.encode(&mut buf).unwrap();
+
+        let transcoded =
+            transcode_point_cloud_message(&buf, &CompressPointCloudOptions::default()).unwrap();
+        let compressed =
+            <crate::messages::CompressedPointCloud as Decode>::decode(transcoded.as_ref()).unwrap();
+
+        let mut decoded = DracoCloud::new();
+        let mut dbuf = DecoderBuffer::new(&compressed.data);
+        PointCloudDecoder::new()
+            .decode(&mut dbuf, &mut decoded)
+            .unwrap();
+        // POSITION is attribute 0; rgb is the generic attribute with unique id 1.
+        let attr = decoded.attribute_by_unique_id(1).unwrap();
+        assert_eq!(attr.attribute_type(), GeometryAttributeType::Generic);
+        let stride = attr.byte_stride() as usize;
+        let bytes = attr.buffer().data();
+        let mut roundtripped: Vec<u32> = (0..decoded.num_points())
+            .map(|p| u32::from_le_bytes(bytes[p * stride..p * stride + 4].try_into().unwrap()))
+            .collect();
+        // kd-tree encoding reorders points, so compare as sets.
+        roundtripped.sort_unstable();
+        let mut expected = colors.to_vec();
+        expected.sort_unstable();
+        assert_eq!(roundtripped, expected);
     }
 
     #[test]
