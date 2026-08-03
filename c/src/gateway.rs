@@ -117,46 +117,12 @@ impl foxglove::remote_access::SuppressVideoTranscode for SuppressVideoTranscode 
 #[derive(Clone, Copy)]
 pub struct FoxgloveDracoEncodeOptions {
     /// Quantization bits for the position attribute; must be between 1 and 30 inclusive.
-    /// Values outside that range are invalid, and a channel whose compression callback
-    /// returns them is delivered unmodified, with a logged warning: values above 30 are
-    /// rejected by the reference Draco decoder, and `0` (lossless) provides no size
-    /// reduction over the raw point cloud — use
-    /// `FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DISABLED` instead.
+    /// Out-of-range values are repaired toward the caller's intent, with a logged warning
+    /// naming the channel: values above 30 (which the reference Draco decoder rejects)
+    /// are clamped to 30, and `0` (lossless) provides no size reduction over the raw
+    /// point cloud, so the channel is delivered unmodified — use
+    /// `FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DISABLED` to do that without the warning.
     pub quantization_bits: u8,
-}
-
-impl TryFrom<FoxgloveDracoEncodeOptions> for foxglove::draco::DracoEncodeOptions {
-    type Error = foxglove::FoxgloveError;
-
-    fn try_from(options: FoxgloveDracoEncodeOptions) -> Result<Self, Self::Error> {
-        // The SDK derives the Draco method (kd-tree for quantized encoding) internally, so
-        // only the quantization setting is forwarded.
-        Self::with_quantization_bits(options.quantization_bits).map_err(|e| match e {
-            // Write our own message for the bits-range error rather than forwarding the
-            // core one, which points at the Rust-only `DracoEncodeOptions::lossless()` API.
-            foxglove::draco::DracoEncodeError::InvalidQuantizationBits { .. } => {
-                // Only 0 (lossless) has an actionable "turn it off" remediation; a value
-                // above the cap just needs a smaller number, not compression disabled.
-                let hint = if options.quantization_bits == 0 {
-                    "; 0 (lossless) is not supported here — use the Disabled compression \
-                     mode to deliver point clouds uncompressed"
-                } else {
-                    ""
-                };
-                foxglove::FoxgloveError::ConfigurationError(format!(
-                    "point_cloud_compression: quantization_bits ({}) must be between 1 and {}{hint}",
-                    options.quantization_bits,
-                    foxglove::draco::MAX_QUANTIZATION_BITS
-                ))
-            }
-            // `DracoEncodeError` is `#[non_exhaustive]`; forward any other variant verbatim
-            // rather than mislabeling it as a bits-range problem. None of the others
-            // reference the Rust-only lossless() API, so there is nothing to sanitize.
-            other => {
-                foxglove::FoxgloveError::ConfigurationError(format!("point_cloud_compression: {other}"))
-            }
-        })
-    }
 }
 
 /// Transparent point-cloud compression mode for a sink.
@@ -185,9 +151,9 @@ pub enum FoxglovePointCloudCompressionMode {
 /// compress and are dropped, with a throttled warning.
 ///
 /// Zero-initialize this struct (mode 0) to use the SDK default. Note that when `mode` is
-/// `FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DRACO`, `draco.quantization_bits` must be set
-/// to a value between 1 and 30; a channel for which the callback returns an out-of-range
-/// value is delivered unmodified, with a logged warning.
+/// `FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DRACO`, `draco.quantization_bits` should be set
+/// to a value between 1 and 30; out-of-range values are repaired, with a logged warning
+/// (see `foxglove_draco_encode_options`).
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct FoxglovePointCloudCompression {
@@ -200,23 +166,49 @@ pub struct FoxglovePointCloudCompression {
 
 impl FoxglovePointCloudCompression {
     /// Resolves the C configuration into the options the per-channel compression policy
-    /// applies to one channel. `None` disables compression for the channel; `Some(_)`
-    /// compresses with the given settings, where mode `Default` maps to the SDK default
-    /// options. Invalid Draco settings fail with a configuration error, which the policy
-    /// wrapper reports and treats as "deliver unmodified".
+    /// applies to one channel: `None` disables compression, and mode `Default` maps to
+    /// the SDK default options.
+    ///
+    /// The mapping is total: a C callback can return out-of-range Draco settings that the
+    /// Rust policy trait makes unrepresentable, so they are repaired (`0` delivers the
+    /// channel unmodified, values above the cap clamp to it), with a warning naming
+    /// `topic`.
     pub(crate) fn to_compression_options(
         self,
-    ) -> Result<Option<foxglove::remote_access::CompressPointCloudOptions>, foxglove::FoxgloveError>
-    {
-        Ok(match self.mode {
+        topic: &str,
+    ) -> Option<foxglove::remote_access::CompressPointCloudOptions> {
+        const MAX_BITS: u8 = foxglove::draco::MAX_QUANTIZATION_BITS;
+        match self.mode {
             FoxglovePointCloudCompressionMode::Default => {
                 Some(foxglove::remote_access::CompressPointCloudOptions::default())
             }
             FoxglovePointCloudCompressionMode::Disabled => None,
-            FoxglovePointCloudCompressionMode::Draco => Some(
-                foxglove::remote_access::CompressPointCloudOptions::Draco(self.draco.try_into()?),
-            ),
-        })
+            FoxglovePointCloudCompressionMode::Draco => {
+                let bits = self.draco.quantization_bits;
+                if bits == 0 {
+                    tracing::warn!(
+                        topic,
+                        "point_cloud_compression: quantization_bits 0 requests lossless \
+                         encoding, which provides no size reduction; delivering the point \
+                         cloud unmodified (use the Disabled mode to opt out explicitly)"
+                    );
+                    return None;
+                }
+                if bits > MAX_BITS {
+                    tracing::warn!(
+                        topic,
+                        "point_cloud_compression: quantization_bits ({bits}) exceeds the \
+                         maximum of {MAX_BITS}; clamping"
+                    );
+                }
+                let options =
+                    foxglove::draco::DracoEncodeOptions::with_quantization_bits(bits.min(MAX_BITS))
+                        .expect("clamped quantization_bits are in range");
+                Some(foxglove::remote_access::CompressPointCloudOptions::Draco(
+                    options,
+                ))
+            }
+        }
     }
 }
 
@@ -255,19 +247,7 @@ impl foxglove::remote_access::PointCloudCompression for PointCloudCompressionCal
         let c_channel_descriptor = FoxgloveChannelDescriptor(channel.clone());
         let compression =
             unsafe { (self.callback)(self.callback_context, &raw const c_channel_descriptor) };
-        match compression.to_compression_options() {
-            Ok(options) => options,
-            // The Rust policy trait makes invalid options unrepresentable, but a C callback
-            // can return them; the contract can no longer be enforced at startup, so report
-            // the error and deliver the channel unmodified.
-            Err(e) => {
-                tracing::warn!(
-                    topic = %channel.topic(),
-                    "invalid point-cloud compression options; delivering unmodified: {e}"
-                );
-                None
-            }
-        }
+        compression.to_compression_options(channel.topic())
     }
 }
 
@@ -1330,7 +1310,7 @@ mod point_cloud_compression_tests {
             FoxglovePointCloudCompressionMode::Default
         ));
         assert_eq!(
-            compression.to_compression_options().unwrap(),
+            compression.to_compression_options("/cloud"),
             Some(CompressPointCloudOptions::default())
         );
     }
@@ -1343,7 +1323,7 @@ mod point_cloud_compression_tests {
                 quantization_bits: 12,
             },
         };
-        assert_eq!(compression.to_compression_options().unwrap(), None);
+        assert_eq!(compression.to_compression_options("/cloud"), None);
     }
 
     #[test]
@@ -1356,37 +1336,30 @@ mod point_cloud_compression_tests {
         };
         let expected = DracoEncodeOptions::with_quantization_bits(14).unwrap();
         assert_eq!(
-            compression.to_compression_options().unwrap(),
+            compression.to_compression_options("/cloud"),
             Some(CompressPointCloudOptions::Draco(expected))
         );
     }
 
     #[test]
-    fn test_invalid_quantization_bits_rejected() {
-        // The documented ABI contract: out-of-range bits (0 is lossless, above 30 is
-        // rejected by the reference Draco decoder) are a configuration error, which the
-        // policy wrapper reports and treats as "deliver unmodified". 31 is the first
-        // rejected value above the maximum.
-        for bits in [0, 31] {
-            let compression = FoxglovePointCloudCompression {
-                mode: FoxglovePointCloudCompressionMode::Draco,
-                draco: FoxgloveDracoEncodeOptions {
-                    quantization_bits: bits,
-                },
-            };
-            let Err(foxglove::FoxgloveError::ConfigurationError(message)) =
-                compression.to_compression_options()
-            else {
-                panic!("expected a configuration error for {bits} bits");
-            };
-            // The message must be actionable for C/C++ callers and must never leak the
-            // Rust-only `DracoEncodeOptions::lossless()` API from the core error.
-            assert!(message.contains("quantization_bits"), "{message}");
-            assert!(!message.contains("lossless()"), "{message}");
-            assert!(!message.contains("DracoEncodeOptions"), "{message}");
-            // The "turn compression off" remediation only fits lossless (0); a value above
-            // the cap wants a smaller number, not compression disabled.
-            assert_eq!(message.contains("Disabled"), bits == 0, "{message}");
+    fn test_out_of_range_quantization_bits_repaired() {
+        // The documented ABI contract: out-of-range bits are repaired rather than failing
+        // the channel — 0 delivers it unmodified, values above the cap clamp to it.
+        let draco = |quantization_bits| FoxglovePointCloudCompression {
+            mode: FoxglovePointCloudCompressionMode::Draco,
+            draco: FoxgloveDracoEncodeOptions { quantization_bits },
+        };
+
+        assert_eq!(draco(0).to_compression_options("/cloud"), None);
+
+        let clamped =
+            DracoEncodeOptions::with_quantization_bits(foxglove::draco::MAX_QUANTIZATION_BITS)
+                .unwrap();
+        for bits in [31, u8::MAX] {
+            assert_eq!(
+                draco(bits).to_compression_options("/cloud"),
+                Some(CompressPointCloudOptions::Draco(clamped))
+            );
         }
     }
 }

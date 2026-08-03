@@ -18,11 +18,11 @@ enum class PointCloudCompressionMode : uint8_t {
 /// @brief Options for Draco point-cloud encoding.
 struct DracoEncodeOptions {
   /// @brief Quantization bits for the position attribute; must be between 1 and 30
-  /// inclusive. Values outside that range are invalid, and a channel whose compression
-  /// callback returns them is delivered unmodified, with a logged warning. Values above 30
-  /// are rejected by the reference Draco decoder, and `0` (lossless) provides no size
-  /// reduction over the raw point cloud — use @ref PointCloudCompressionMode::Disabled
-  /// instead.
+  /// inclusive. Out-of-range values are repaired, with a logged warning naming the
+  /// channel: values above 30 (which the reference Draco decoder rejects) are clamped to
+  /// 30, and `0` (lossless) provides no size reduction over the raw point cloud, so the
+  /// channel is delivered unmodified — use @ref PointCloudCompressionMode::Disabled to do
+  /// that without the warning.
   uint8_t quantization_bits = 12;
 };
 

@@ -2798,11 +2798,11 @@ typedef struct foxglove_parameter_handler {
 typedef struct foxglove_draco_encode_options {
   /**
    * Quantization bits for the position attribute; must be between 1 and 30 inclusive.
-   * Values outside that range are invalid, and a channel whose compression callback
-   * returns them is delivered unmodified, with a logged warning: values above 30 are
-   * rejected by the reference Draco decoder, and `0` (lossless) provides no size
-   * reduction over the raw point cloud — use
-   * `FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DISABLED` instead.
+   * Out-of-range values are repaired toward the caller's intent, with a logged warning
+   * naming the channel: values above 30 (which the reference Draco decoder rejects)
+   * are clamped to 30, and `0` (lossless) provides no size reduction over the raw
+   * point cloud, so the channel is delivered unmodified — use
+   * `FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DISABLED` to do that without the warning.
    */
   uint8_t quantization_bits;
 } foxglove_draco_encode_options;
@@ -2823,9 +2823,9 @@ typedef struct foxglove_draco_encode_options {
  * compress and are dropped, with a throttled warning.
  *
  * Zero-initialize this struct (mode 0) to use the SDK default. Note that when `mode` is
- * `FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DRACO`, `draco.quantization_bits` must be set
- * to a value between 1 and 30; a channel for which the callback returns an out-of-range
- * value is delivered unmodified, with a logged warning.
+ * `FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DRACO`, `draco.quantization_bits` should be set
+ * to a value between 1 and 30; out-of-range values are repaired, with a logged warning
+ * (see `foxglove_draco_encode_options`).
  */
 typedef struct foxglove_point_cloud_compression {
   /**
