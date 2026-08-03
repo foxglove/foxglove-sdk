@@ -1,6 +1,8 @@
 //! ROS 2 `sensor_msgs/msg/PointCloud2` decoder for point-cloud compression.
-
-use std::borrow::Cow;
+//!
+//! The message structs own their data: the `cdr` crate deserializes through `io::Read` and
+//! never borrows from the input buffer, so borrowed fields would carry a lifetime without
+//! ever avoiding a copy.
 
 use serde::{Deserialize, Serialize};
 
@@ -93,21 +95,21 @@ impl TryFrom<Ros2Time> for Timestamp {
 
 /// A ROS 2 `std_msgs/msg/Header` message.
 #[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
-struct Ros2Header<'a> {
+struct Ros2Header {
     stamp: Ros2Time,
-    frame_id: Cow<'a, str>,
+    frame_id: String,
 }
 
 /// A ROS 2 `sensor_msgs/msg/PointField` message.
 #[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
-struct Ros2PointField<'a> {
-    name: Cow<'a, str>,
+struct Ros2PointField {
+    name: String,
     offset: u32,
     datatype: u8,
     count: u32,
 }
 
-impl Ros2PointField<'_> {
+impl Ros2PointField {
     /// Maps the `sensor_msgs/msg/PointField` datatype constant to a
     /// `foxglove.PackedElementField` numeric type.
     ///
@@ -126,7 +128,7 @@ impl Ros2PointField<'_> {
             8 => NumericType::Float64,
             datatype => {
                 return Err(Ros2PointCloudError::UnknownDatatype {
-                    name: self.name.to_string(),
+                    name: self.name.clone(),
                     datatype,
                 });
             }
@@ -136,29 +138,29 @@ impl Ros2PointField<'_> {
 
 /// A ROS 2 `sensor_msgs/msg/PointCloud2` message.
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
-pub(crate) struct Ros2PointCloud2<'a> {
-    header: Ros2Header<'a>,
+pub(crate) struct Ros2PointCloud2 {
+    header: Ros2Header,
     height: u32,
     width: u32,
-    fields: Vec<Ros2PointField<'a>>,
+    fields: Vec<Ros2PointField>,
     is_bigendian: bool,
     point_step: u32,
     row_step: u32,
-    data: Cow<'a, [u8]>,
+    data: Vec<u8>,
     is_dense: bool,
 }
 
-impl<'a> Ros2PointCloud2<'a> {
+impl Ros2PointCloud2 {
     /// Decodes a ROS 2 point cloud.
-    pub(crate) fn decode(data: &'a [u8]) -> Result<Self, Ros2PointCloudError> {
+    pub(crate) fn decode(data: &[u8]) -> Result<Self, Ros2PointCloudError> {
         Ok(cdr::deserialize::<Self>(data)?)
     }
 }
 
-impl TryFrom<Ros2PointCloud2<'_>> for PointCloud {
+impl TryFrom<Ros2PointCloud2> for PointCloud {
     type Error = Ros2PointCloudError;
 
-    fn try_from(cloud: Ros2PointCloud2<'_>) -> Result<Self, Self::Error> {
+    fn try_from(cloud: Ros2PointCloud2) -> Result<Self, Self::Error> {
         if cloud.is_bigendian {
             return Err(Ros2PointCloudError::BigEndian);
         }
@@ -167,12 +169,12 @@ impl TryFrom<Ros2PointCloud2<'_>> for PointCloud {
         for field in &cloud.fields {
             if field.count != 1 {
                 return Err(Ros2PointCloudError::UnsupportedFieldCount {
-                    name: field.name.to_string(),
+                    name: field.name.clone(),
                     count: field.count,
                 });
             }
             fields.push(PackedElementField {
-                name: field.name.to_string(),
+                name: field.name.clone(),
                 offset: field.offset,
                 r#type: field.numeric_type()? as i32,
             });
@@ -233,14 +235,14 @@ impl TryFrom<Ros2PointCloud2<'_>> for PointCloud {
                     expected,
                 });
             }
-            let mut data = cloud.data.into_owned();
+            let mut data = cloud.data;
             data.truncate(expected);
             data
         };
 
         Ok(PointCloud {
             timestamp: Some(cloud.header.stamp.try_into()?),
-            frame_id: cloud.header.frame_id.into_owned(),
+            frame_id: cloud.header.frame_id,
             // `PointCloud2` has no pose; the identity pose positions the cloud at the
             // origin of `frame_id`, matching ROS semantics.
             pose: None,
@@ -257,7 +259,7 @@ mod tests {
     use cdr::{CdrLe, Infinite};
     use packed_element_field::NumericType;
 
-    fn xyz_fields() -> Vec<Ros2PointField<'static>> {
+    fn xyz_fields() -> Vec<Ros2PointField> {
         [("x", 0), ("y", 4), ("z", 8)]
             .into_iter()
             .map(|(name, offset)| Ros2PointField {
@@ -279,7 +281,7 @@ mod tests {
         data
     }
 
-    fn make_cloud(points: &[[f32; 3]]) -> Ros2PointCloud2<'static> {
+    fn make_cloud(points: &[[f32; 3]]) -> Ros2PointCloud2 {
         Ros2PointCloud2 {
             header: Ros2Header {
                 stamp: Ros2Time {
@@ -294,36 +296,14 @@ mod tests {
             is_bigendian: false,
             point_step: 12,
             row_step: 12 * points.len() as u32,
-            data: cloud_data(points).into(),
+            data: cloud_data(points),
             is_dense: true,
         }
     }
 
-    fn roundtrip(cloud: &Ros2PointCloud2) -> Ros2PointCloud2<'static> {
+    fn roundtrip(cloud: &Ros2PointCloud2) -> Ros2PointCloud2 {
         let encoded = cdr::serialize::<_, _, CdrLe>(cloud, Infinite).unwrap();
-        let decoded = Ros2PointCloud2::decode(&encoded).unwrap();
-        // Detach borrowed data from the encoded buffer.
-        Ros2PointCloud2 {
-            header: Ros2Header {
-                stamp: Ros2Time {
-                    sec: decoded.header.stamp.sec,
-                    nanosec: decoded.header.stamp.nanosec,
-                },
-                frame_id: decoded.header.frame_id.into_owned().into(),
-            },
-            fields: decoded
-                .fields
-                .into_iter()
-                .map(|f| Ros2PointField {
-                    name: f.name.into_owned().into(),
-                    offset: f.offset,
-                    datatype: f.datatype,
-                    count: f.count,
-                })
-                .collect(),
-            data: decoded.data.into_owned().into(),
-            ..decoded
-        }
+        Ros2PointCloud2::decode(&encoded).unwrap()
     }
 
     #[test]
@@ -423,7 +403,7 @@ mod tests {
         cloud.height = 2;
         cloud.width = 2;
         cloud.row_step = padded_row_step;
-        cloud.data = data.into();
+        cloud.data = data;
 
         let converted = PointCloud::try_from(cloud).unwrap();
         let mut expected = row.clone();
@@ -442,7 +422,7 @@ mod tests {
 
         let mut cloud = make_cloud(&points);
         cloud.row_step = 12 * 2 + 8;
-        cloud.data = data.into();
+        cloud.data = data;
 
         let converted = PointCloud::try_from(cloud).unwrap();
         assert_eq!(converted.data, cloud_data(&points));
@@ -466,7 +446,7 @@ mod tests {
         // the declared dimensions rather than delivering phantom points.
         let points = [[1.0f32, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]];
         let mut cloud = make_cloud(&points[..2]);
-        cloud.data = cloud_data(&points).into();
+        cloud.data = cloud_data(&points);
 
         let converted = PointCloud::try_from(cloud).unwrap();
         assert_eq!(converted.data, cloud_data(&points[..2]));
@@ -476,7 +456,7 @@ mod tests {
     fn test_rejects_data_shorter_than_declared_dimensions() {
         let points = [[1.0f32, 2.0, 3.0], [4.0, 5.0, 6.0]];
         let mut cloud = make_cloud(&points);
-        cloud.data = cloud_data(&points[..1]).into();
+        cloud.data = cloud_data(&points[..1]);
 
         assert!(matches!(
             PointCloud::try_from(cloud),
