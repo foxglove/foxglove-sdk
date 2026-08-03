@@ -30,6 +30,13 @@
 
 #if defined(FOXGLOVE_REMOTE_ACCESS)
 /**
+ * The maximum supported value for `foxglove_draco_encode_options.quantization_bits`.
+ */
+#define FOXGLOVE_DRACO_MAX_QUANTIZATION_BITS 30
+#endif
+
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
  * Allow clients to advertise channels to send data messages to the server.
  */
 #define FOXGLOVE_GATEWAY_CAPABILITY_CLIENT_PUBLISH (1 << 0)
@@ -2797,11 +2804,12 @@ typedef struct foxglove_parameter_handler {
  */
 typedef struct foxglove_draco_encode_options {
   /**
-   * Quantization bits for the position attribute; must be between 1 and 30 inclusive.
-   * Out-of-range values are repaired toward the caller's intent, with a logged warning
-   * naming the channel: values above 30 (which the reference Draco decoder rejects)
-   * are clamped to 30, and `0` (lossless) provides no size reduction over the raw
-   * point cloud, so the channel is delivered unmodified — use
+   * Quantization bits for the position attribute; must be between 1 and
+   * `FOXGLOVE_DRACO_MAX_QUANTIZATION_BITS` (30) inclusive. Out-of-range values are
+   * repaired toward the caller's intent, with a logged warning naming the channel:
+   * values above the maximum (which the reference Draco decoder rejects) are clamped
+   * to it, and `0` (lossless) provides no size reduction over the raw point cloud, so
+   * the channel is delivered unmodified — use
    * `FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DISABLED` to do that without the warning.
    */
   uint8_t quantization_bits;

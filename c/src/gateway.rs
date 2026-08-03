@@ -112,15 +112,23 @@ impl foxglove::remote_access::SuppressVideoTranscode for SuppressVideoTranscode 
     }
 }
 
+/// The maximum supported value for `foxglove_draco_encode_options.quantization_bits`.
+pub const FOXGLOVE_DRACO_MAX_QUANTIZATION_BITS: u8 = 30;
+// cbindgen exports the literal above verbatim; fail the build if it drifts from the
+// core's cap.
+const _: () =
+    assert!(FOXGLOVE_DRACO_MAX_QUANTIZATION_BITS == foxglove::draco::MAX_QUANTIZATION_BITS);
+
 /// Options for Draco point-cloud encoding.
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct FoxgloveDracoEncodeOptions {
-    /// Quantization bits for the position attribute; must be between 1 and 30 inclusive.
-    /// Out-of-range values are repaired toward the caller's intent, with a logged warning
-    /// naming the channel: values above 30 (which the reference Draco decoder rejects)
-    /// are clamped to 30, and `0` (lossless) provides no size reduction over the raw
-    /// point cloud, so the channel is delivered unmodified — use
+    /// Quantization bits for the position attribute; must be between 1 and
+    /// `FOXGLOVE_DRACO_MAX_QUANTIZATION_BITS` (30) inclusive. Out-of-range values are
+    /// repaired toward the caller's intent, with a logged warning naming the channel:
+    /// values above the maximum (which the reference Draco decoder rejects) are clamped
+    /// to it, and `0` (lossless) provides no size reduction over the raw point cloud, so
+    /// the channel is delivered unmodified — use
     /// `FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DISABLED` to do that without the warning.
     pub quantization_bits: u8,
 }
@@ -177,7 +185,7 @@ impl FoxglovePointCloudCompression {
         self,
         topic: &str,
     ) -> Option<foxglove::remote_access::CompressPointCloudOptions> {
-        const MAX_BITS: u8 = foxglove::draco::MAX_QUANTIZATION_BITS;
+        const MAX_BITS: u8 = FOXGLOVE_DRACO_MAX_QUANTIZATION_BITS;
         match self.mode {
             FoxglovePointCloudCompressionMode::Default => {
                 Some(foxglove::remote_access::CompressPointCloudOptions::default())

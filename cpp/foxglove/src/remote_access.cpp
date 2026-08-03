@@ -15,6 +15,15 @@
 #include "callback_forwarders.hpp"
 
 namespace foxglove {
+
+// The C++ header is self-contained (it does not include foxglove-c.h), so it carries its
+// own literal; this is the one place both headers are visible, chaining the C++ constant
+// to the C one (which the C crate asserts against the core's cap at build time).
+static_assert(
+  DracoEncodeOptions::kMaxQuantizationBits == FOXGLOVE_DRACO_MAX_QUANTIZATION_BITS,
+  "kMaxQuantizationBits must match the C constant"
+);
+
 namespace {
 
 void forwardOnConnectionStatusChanged(const void* context, foxglove_connection_status status) {
