@@ -491,6 +491,11 @@ impl Gateway {
     /// throttled warning on the device and to viewers. Use float32 or integer fields,
     /// or return `None` for those channels.
     ///
+    /// Points whose position contains a non-finite (NaN or infinite) coordinate are
+    /// removed before encoding: publishers commonly pad invalid returns with NaN, and
+    /// the Draco quantizer rejects non-finite input, which would otherwise fail the
+    /// whole cloud.
+    ///
     /// [`CompressPointCloudOptions::default()`]: crate::remote_access::CompressPointCloudOptions
     #[cfg_attr(docsrs, doc(cfg(feature = "remote-access")))]
     pub fn point_cloud_compression(mut self, policy: Arc<dyn PointCloudCompression>) -> Self {
