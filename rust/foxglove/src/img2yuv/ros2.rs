@@ -2,20 +2,20 @@
 
 use std::borrow::Cow;
 
-use crate::messages::Timestamp;
 use serde::{Deserialize, Serialize};
 
 use super::{
     CompressedImage, Compression, Endian, Image, ImageMessage, RawImage, RawImageEncoding,
     UnknownCompressionError, UnknownEncodingError,
 };
+use crate::ros2::{NegativeTimestampError, Ros2Header};
 
 /// An error that occurs while decoding a ROS 2 message.
 #[derive(Debug, thiserror::Error)]
 pub enum Ros2DecodeError {
-    /// The ROS 2 header timestamp is negative.
-    #[error("ros2 header timestamp is negative")]
-    NegativeTimestamp,
+    /// The ROS 2 header timestamp is invalid.
+    #[error(transparent)]
+    Timestamp(#[from] NegativeTimestampError),
     /// Failed to parse CDR message.
     #[error(transparent)]
     Cdr(#[from] cdr::Error),
@@ -27,36 +27,10 @@ pub enum Ros2DecodeError {
     UnknownCompression(#[from] UnknownCompressionError),
 }
 
-/// A ROS 2 `builtin_interfaces/msg/Time` message.
-#[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
-struct Ros2Time {
-    sec: i32,
-    nanosec: u32,
-}
-impl TryFrom<Ros2Time> for Timestamp {
-    type Error = Ros2DecodeError;
-
-    fn try_from(value: Ros2Time) -> Result<Self, Self::Error> {
-        if value.sec < 0 {
-            return Err(Ros2DecodeError::NegativeTimestamp);
-        }
-        // `sec` is bounded by `i32::MAX`, so the nanosecond carry cannot overflow the u32 seconds
-        // field, and `new` cannot panic here.
-        Ok(Timestamp::new(value.sec as u32, value.nanosec))
-    }
-}
-
-/// A ROS 2 `std_msgs/msg/Header` message.
-#[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
-struct Ros2Header<'a> {
-    stamp: Ros2Time,
-    frame_id: Cow<'a, str>,
-}
-
 /// A ROS 2 `sensor_msgs/msg/Image` message.
 #[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
 pub struct Ros2Image<'a> {
-    header: Ros2Header<'a>,
+    header: Ros2Header,
     height: u32,
     width: u32,
     encoding: Cow<'a, str>,
@@ -82,7 +56,7 @@ impl<'a> TryFrom<Ros2Image<'a>> for ImageMessage<'a> {
         let encoding = RawImageEncoding::parse_endian(&image.encoding, endian)?;
         Ok(Self {
             timestamp: Some(image.header.stamp.try_into()?),
-            frame_id: image.header.frame_id.into(),
+            frame_id: image.header.frame_id,
             image: Image::Raw(RawImage {
                 encoding,
                 width: image.width,
@@ -97,7 +71,7 @@ impl<'a> TryFrom<Ros2Image<'a>> for ImageMessage<'a> {
 /// A ROS 2 `sensor_msgs/msg/CompressedImage` message.
 #[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
 pub struct Ros2CompressedImage<'a> {
-    header: Ros2Header<'a>,
+    header: Ros2Header,
     format: Cow<'a, str>,
     data: Cow<'a, [u8]>,
 }
@@ -114,7 +88,7 @@ impl<'a> TryFrom<Ros2CompressedImage<'a>> for ImageMessage<'a> {
         let compression = Compression::try_from_ros_format(&image.format)?;
         Ok(ImageMessage {
             timestamp: Some(image.header.stamp.try_into()?),
-            frame_id: image.header.frame_id.into(),
+            frame_id: image.header.frame_id,
             image: Image::Compressed(CompressedImage {
                 compression,
                 data: image.data,
@@ -129,9 +103,9 @@ mod tests {
 
     use super::*;
 
-    fn make_header() -> Ros2Header<'static> {
+    fn make_header() -> Ros2Header {
         Ros2Header {
-            stamp: Ros2Time {
+            stamp: crate::ros2::Ros2Time {
                 sec: 100,
                 nanosec: 200,
             },
@@ -165,15 +139,5 @@ mod tests {
         let encoded = cdr::serialize::<_, _, CdrLe>(&image, Infinite).unwrap();
         let decoded: Ros2CompressedImage = cdr::deserialize(&encoded).unwrap();
         assert_eq!(image, decoded);
-    }
-
-    #[test]
-    fn test_negative_timestamp_is_rejected() {
-        let err = Timestamp::try_from(Ros2Time {
-            sec: -1,
-            nanosec: 0,
-        })
-        .unwrap_err();
-        assert!(matches!(err, Ros2DecodeError::NegativeTimestamp));
     }
 }

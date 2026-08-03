@@ -6,14 +6,15 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::messages::{PackedElementField, PointCloud, Timestamp, packed_element_field};
+use crate::messages::{PackedElementField, PointCloud, packed_element_field};
+use crate::ros2::{NegativeTimestampError, Ros2Header};
 
 /// An error that occurs while decoding a ROS 2 point cloud message.
 #[derive(Debug, thiserror::Error)]
 pub(crate) enum Ros2PointCloudError {
-    /// The ROS 2 header timestamp is negative.
-    #[error("ros2 header timestamp is negative")]
-    NegativeTimestamp,
+    /// The ROS 2 header timestamp is invalid.
+    #[error(transparent)]
+    Timestamp(#[from] NegativeTimestampError),
     /// Failed to parse CDR message.
     #[error(transparent)]
     Cdr(#[from] cdr::Error),
@@ -84,33 +85,6 @@ pub(crate) enum Ros2PointCloudError {
         /// The actual data length.
         len: usize,
     },
-}
-
-/// A ROS 2 `builtin_interfaces/msg/Time` message.
-#[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
-struct Ros2Time {
-    sec: i32,
-    nanosec: u32,
-}
-
-impl TryFrom<Ros2Time> for Timestamp {
-    type Error = Ros2PointCloudError;
-
-    fn try_from(value: Ros2Time) -> Result<Self, Self::Error> {
-        if value.sec < 0 {
-            return Err(Ros2PointCloudError::NegativeTimestamp);
-        }
-        // `sec` is bounded by `i32::MAX`, so the nanosecond carry cannot overflow the u32
-        // seconds field, and `new` cannot panic here.
-        Ok(Timestamp::new(value.sec as u32, value.nanosec))
-    }
-}
-
-/// A ROS 2 `std_msgs/msg/Header` message.
-#[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
-struct Ros2Header {
-    stamp: Ros2Time,
-    frame_id: String,
 }
 
 /// A ROS 2 `sensor_msgs/msg/PointField` message.
@@ -288,6 +262,8 @@ impl TryFrom<Ros2PointCloud2> for PointCloud {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::messages::Timestamp;
+    use crate::ros2::Ros2Time;
     use cdr::{CdrLe, Infinite};
     use packed_element_field::NumericType;
 
@@ -415,7 +391,7 @@ mod tests {
         cloud.header.stamp.sec = -1;
         assert!(matches!(
             PointCloud::try_from(cloud),
-            Err(Ros2PointCloudError::NegativeTimestamp)
+            Err(Ros2PointCloudError::Timestamp(_))
         ));
     }
 

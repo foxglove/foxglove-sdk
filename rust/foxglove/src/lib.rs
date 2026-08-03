@@ -457,6 +457,11 @@ pub use remote_data_loader_backend as data_provider;
 #[allow(unused)]
 mod img2yuv;
 
+// `remote-access` implies `img2yuv-core` today, but the point-cloud decoder must keep
+// these types even if the video pipeline is ever carved out of remote access.
+#[cfg(any(feature = "img2yuv-core", feature = "remote-access"))]
+mod ros2;
+
 #[cfg(feature = "remote-access")]
 pub mod draco;
 
