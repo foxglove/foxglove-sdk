@@ -147,6 +147,11 @@ pub(crate) struct Ros2PointCloud2 {
     point_step: u32,
     row_step: u32,
     data: Vec<u8>,
+    /// Advisory: `false` means the cloud may contain invalid (typically NaN-padded)
+    /// points, the norm for organized clouds from RGBD cameras and rotating lidars.
+    /// Deliberately not consulted — publishers set it unreliably in both directions, so
+    /// the transcode layer instead drops non-finite positions from every cloud before
+    /// encoding (see `drop_non_finite_points`).
     is_dense: bool,
 }
 

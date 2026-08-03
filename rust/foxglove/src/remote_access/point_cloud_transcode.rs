@@ -446,53 +446,52 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_transcodes_cdr_point_cloud2_to_compressed_point_cloud() {
-        use crate::Decode;
-        use crate::remote_access::PointCloudCompression;
+    // A ROS 2 `sensor_msgs/msg/PointCloud2`, CDR-encoded like a ROS 2 publisher would.
+    #[derive(serde::Serialize)]
+    struct Time {
+        sec: i32,
+        nanosec: u32,
+    }
+    #[derive(serde::Serialize)]
+    struct Header {
+        stamp: Time,
+        frame_id: String,
+    }
+    #[derive(serde::Serialize)]
+    struct PointField {
+        name: String,
+        offset: u32,
+        datatype: u8,
+        count: u32,
+    }
+    #[derive(serde::Serialize)]
+    struct PointCloud2 {
+        header: Header,
+        height: u32,
+        width: u32,
+        fields: Vec<PointField>,
+        is_bigendian: bool,
+        point_step: u32,
+        row_step: u32,
+        data: Vec<u8>,
+        is_dense: bool,
+    }
 
-        // A one-point float32 xyz cloud, CDR-encoded like a ROS 2 publisher would.
-        #[derive(serde::Serialize)]
-        struct Time {
-            sec: i32,
-            nanosec: u32,
-        }
-        #[derive(serde::Serialize)]
-        struct Header {
-            stamp: Time,
-            frame_id: String,
-        }
-        #[derive(serde::Serialize)]
-        struct PointField {
-            name: String,
-            offset: u32,
-            datatype: u8,
-            count: u32,
-        }
-        #[derive(serde::Serialize)]
-        struct PointCloud2 {
-            header: Header,
-            height: u32,
-            width: u32,
-            fields: Vec<PointField>,
-            is_bigendian: bool,
-            point_step: u32,
-            row_step: u32,
-            data: Vec<u8>,
-            is_dense: bool,
-        }
-
+    /// CDR-encodes a float32 xyz PointCloud2 with `width` points per row.
+    fn cdr_cloud(points: &[[f32; 3]], width: u32, is_dense: bool) -> Vec<u8> {
         let mut data = Vec::new();
-        for c in [1.0f32, 2.0, 3.0] {
-            data.extend_from_slice(&c.to_le_bytes());
+        for point in points {
+            for c in point {
+                data.extend_from_slice(&c.to_le_bytes());
+            }
         }
         let cloud = PointCloud2 {
             header: Header {
                 stamp: Time { sec: 1, nanosec: 2 },
                 frame_id: "lidar".into(),
             },
-            height: 1,
-            width: 1,
+            height: points.len() as u32 / width,
+            width,
             fields: ["x", "y", "z"]
                 .into_iter()
                 .enumerate()
@@ -505,13 +504,19 @@ mod tests {
                 .collect(),
             is_bigendian: false,
             point_step: 12,
-            row_step: 12,
+            row_step: 12 * width,
             data,
-            is_dense: true,
+            is_dense,
         };
-        let encoded = cdr::serialize::<_, _, cdr::CdrLe>(&cloud, cdr::Infinite).unwrap();
+        cdr::serialize::<_, _, cdr::CdrLe>(&cloud, cdr::Infinite).unwrap()
+    }
 
-        let transcoded = super::transcode_point_cloud_message(
+    #[test]
+    fn test_transcodes_cdr_point_cloud2_to_compressed_point_cloud() {
+        use crate::Decode;
+
+        let encoded = cdr_cloud(&[[1.0, 2.0, 3.0]], 1, true);
+        let transcoded = transcode_point_cloud_message(
             &encoded,
             PointCloudInputSchema::Ros2PointCloud2,
             &PointCloudCompression::default(),
@@ -521,6 +526,36 @@ mod tests {
             <crate::messages::CompressedPointCloud as Decode>::decode(transcoded.as_ref()).unwrap();
         assert_eq!(compressed.format, "draco");
         assert_eq!(compressed.frame_id, "lidar");
+        assert!(!compressed.data.is_empty());
+    }
+
+    #[test]
+    fn test_transcodes_nan_padded_point_cloud2() {
+        use crate::Decode;
+
+        // An organized (2x2) cloud padding invalid returns with NaN and declaring
+        // `is_dense: false` — the norm for RGBD cameras and rotating lidars. The
+        // non-finite filter drops the padding points, so the cloud compresses instead of
+        // failing on the quantizer's NaN rejection.
+        let encoded = cdr_cloud(
+            &[
+                [1.0, 2.0, 3.0],
+                [f32::NAN, f32::NAN, f32::NAN],
+                [f32::NAN, f32::NAN, f32::NAN],
+                [4.0, 5.0, 6.0],
+            ],
+            2,
+            false,
+        );
+        let transcoded = transcode_point_cloud_message(
+            &encoded,
+            PointCloudInputSchema::Ros2PointCloud2,
+            &PointCloudCompression::default(),
+        )
+        .unwrap();
+        let compressed =
+            <crate::messages::CompressedPointCloud as Decode>::decode(transcoded.as_ref()).unwrap();
+        assert_eq!(compressed.format, "draco");
         assert!(!compressed.data.is_empty());
     }
 
