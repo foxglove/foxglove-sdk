@@ -506,7 +506,7 @@ typedef uint8_t foxglove_video_encoder_backend;
 #endif // __cplusplus
 #endif
 
-#if (!defined(__wasm__) && defined(FOXGLOVE_REMOTE_ACCESS))
+#if defined(FOXGLOVE_REMOTE_ACCESS)
 /**
  * Transparent point-cloud compression mode for a sink.
  */
@@ -515,20 +515,20 @@ enum foxglove_point_cloud_compression_mode
   : uint8_t
 #endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
  {
-#if !defined(__wasm__)
+#if defined(FOXGLOVE_REMOTE_ACCESS)
   /**
    * Use the SDK default: Draco compression with default settings (kd-tree encoding with
    * positions quantized to 12 bits, which is lossy). This is the default (0).
    */
   FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DEFAULT = 0,
 #endif
-#if !defined(__wasm__)
+#if defined(FOXGLOVE_REMOTE_ACCESS)
   /**
    * Disable transparent point-cloud compression: point clouds are delivered unmodified.
    */
   FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DISABLED = 1,
 #endif
-#if !defined(__wasm__)
+#if defined(FOXGLOVE_REMOTE_ACCESS)
   /**
    * Draco compression with the settings in `draco`.
    */
@@ -2791,7 +2791,7 @@ typedef struct foxglove_parameter_handler {
 } foxglove_parameter_handler;
 #endif
 
-#if (!defined(__wasm__) && defined(FOXGLOVE_REMOTE_ACCESS))
+#if defined(FOXGLOVE_REMOTE_ACCESS)
 /**
  * Options for Draco point-cloud encoding.
  */
@@ -2808,7 +2808,7 @@ typedef struct foxglove_draco_encode_options {
 } foxglove_draco_encode_options;
 #endif
 
-#if (!defined(__wasm__) && defined(FOXGLOVE_REMOTE_ACCESS))
+#if defined(FOXGLOVE_REMOTE_ACCESS)
 /**
  * Transparent point-cloud compression for a single channel, returned by the per-channel
  * `point_cloud_compression` callback on the gateway options.
