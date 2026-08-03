@@ -72,9 +72,7 @@ impl From<PyDracoEncodeOptions> for foxglove::draco::DracoEncodeOptions {
         // Infallible: `quantization_bits` is validated in `__new__`, the field is read-only,
         // the class is final (not subclassable), and pyo3's `from_py_object` extracts
         // nominally (it clones a real instance rather than duck-typing fields), so the only
-        // way to obtain a `PyDracoEncodeOptions` is through the validating constructor. The
-        // SDK derives the Draco method (kd-tree for quantized encoding) internally, so only
-        // the quantization setting is forwarded.
+        // way to obtain a `PyDracoEncodeOptions` is through the validating constructor.
         Self::with_quantization_bits(value.quantization_bits)
             .expect("quantization_bits is validated in PyDracoEncodeOptions::new")
     }
