@@ -328,6 +328,28 @@ void declareParameters(rclcpp::Node* node) {
   pointCloudCompressionTopicDenylistDescription.read_only = true;
   node->declare_parameter(PARAM_POINT_CLOUD_COMPRESSION_TOPIC_DENYLIST, std::vector<std::string>(),
                           pointCloudCompressionTopicDenylistDescription);
+
+  auto pointCloudCompressionQuantizationBitsDescription =
+    rcl_interfaces::msg::ParameterDescriptor{};
+  pointCloudCompressionQuantizationBitsDescription.name =
+    PARAM_POINT_CLOUD_COMPRESSION_QUANTIZATION_BITS;
+  pointCloudCompressionQuantizationBitsDescription.type =
+    rcl_interfaces::msg::ParameterType::PARAMETER_INTEGER;
+  pointCloudCompressionQuantizationBitsDescription.description =
+    "Quantization bits for point cloud positions when they are transparently Draco-compressed "
+    "over remote access. Fewer bits compress smaller but quantize coarser; the default of 12 "
+    "matches the SDK default. Use 'point_cloud_compression_topic_denylist' to opt topics out of "
+    "compression entirely.";
+  pointCloudCompressionQuantizationBitsDescription.read_only = true;
+  pointCloudCompressionQuantizationBitsDescription.integer_range.resize(1);
+  pointCloudCompressionQuantizationBitsDescription.integer_range[0].from_value = 1;
+  // Matches foxglove::DracoEncodeOptions::kMaxQuantizationBits; the reference Draco decoder
+  // rejects larger values.
+  pointCloudCompressionQuantizationBitsDescription.integer_range[0].to_value = 30;
+  pointCloudCompressionQuantizationBitsDescription.integer_range[0].step = 1;
+  node->declare_parameter(PARAM_POINT_CLOUD_COMPRESSION_QUANTIZATION_BITS,
+                          DEFAULT_POINT_CLOUD_COMPRESSION_QUANTIZATION_BITS,
+                          pointCloudCompressionQuantizationBitsDescription);
 }
 
 std::vector<std::regex> parseRegexStrings(rclcpp::Node* node,

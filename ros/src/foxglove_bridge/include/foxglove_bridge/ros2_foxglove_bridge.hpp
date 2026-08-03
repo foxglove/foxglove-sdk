@@ -137,6 +137,8 @@ private:
 #ifdef FOXGLOVE_REMOTE_ACCESS
   std::vector<std::regex> _videoTranscodeTopicDenyPatterns;
   std::vector<std::regex> _pointCloudCompressionTopicDenyPatterns;
+  uint8_t _pointCloudCompressionQuantizationBits =
+    DEFAULT_POINT_CLOUD_COMPRESSION_QUANTIZATION_BITS;
 #endif
   std::shared_ptr<ParameterInterface> _paramInterface;
   rclcpp::CallbackGroup::SharedPtr _subscriptionCallbackGroup;

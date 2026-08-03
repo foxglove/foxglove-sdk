@@ -42,6 +42,8 @@ constexpr char PARAM_MAX_DATA_TRACK_MESSAGE_SIZE[] = "max_data_track_message_siz
 constexpr char PARAM_VIDEO_TRANSCODE_TOPIC_DENYLIST[] = "video_transcode_topic_denylist";
 constexpr char PARAM_POINT_CLOUD_COMPRESSION_TOPIC_DENYLIST[] =
   "point_cloud_compression_topic_denylist";
+constexpr char PARAM_POINT_CLOUD_COMPRESSION_QUANTIZATION_BITS[] =
+  "point_cloud_compression_quantization_bits";
 
 constexpr int64_t DEFAULT_PORT = 8765;
 constexpr char DEFAULT_ADDRESS[] = "0.0.0.0";
@@ -53,6 +55,8 @@ constexpr int64_t DEFAULT_SYSINFO_REFRESH_INTERVAL_MS = 500;
 constexpr int64_t DEFAULT_MESSAGE_BACKLOG_SIZE = 1024;
 constexpr int64_t DEFAULT_MAX_DATA_TRACK_MESSAGE_SIZE = 102400;
 constexpr char DEFAULT_VIDEO_TRANSCODE_TOPIC_DENYLIST[] = ".*/compressedDepth";
+// Matches the SDK's default Draco setting.
+constexpr int64_t DEFAULT_POINT_CLOUD_COMPRESSION_QUANTIZATION_BITS = 12;
 
 void declareParameters(rclcpp::Node* node);
 
