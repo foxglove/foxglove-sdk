@@ -2821,8 +2821,10 @@ typedef struct foxglove_draco_encode_options {
  * Transparent point-cloud compression for a single channel, returned by the per-channel
  * `point_cloud_compression` callback on the gateway options.
  *
- * When compression is enabled, channels carrying `foxglove.PointCloud` messages are
- * advertised with the `foxglove.CompressedPointCloud` schema, and each logged point cloud
+ * When compression is enabled, channels carrying a supported point-cloud schema —
+ * currently protobuf-encoded `foxglove.PointCloud` or CDR-encoded
+ * `sensor_msgs/msg/PointCloud2` — are advertised with the protobuf-encoded
+ * `foxglove.CompressedPointCloud` schema, and each logged point cloud
  * is compressed in a background task (off the logging hot path) before delivery. If
  * compression falls behind the log rate, the oldest queued message is dropped.
  * Channels classified as Reliable skip compression automatically and deliver the raw
