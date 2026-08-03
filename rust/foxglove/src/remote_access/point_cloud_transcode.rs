@@ -1078,14 +1078,36 @@ mod tests {
         .unwrap();
     }
 
-    #[test]
-    fn test_packed_rgb_survives_compression_bit_exact() {
+    /// Draco-decodes a transcoded `CompressedPointCloud` message and returns the packed
+    /// color values from the generic attribute (unique id 1; POSITION is 0), sorted
+    /// because kd-tree encoding reorders points.
+    fn decode_packed_colors(transcoded: &[u8]) -> Vec<u32> {
         use crate::Decode;
         use draco_core::decoder_buffer::DecoderBuffer;
         use draco_core::geometry_attribute::GeometryAttributeType;
         use draco_core::point_cloud::PointCloud as DracoCloud;
         use draco_core::point_cloud_decoder::PointCloudDecoder;
 
+        let compressed =
+            <crate::messages::CompressedPointCloud as Decode>::decode(transcoded).unwrap();
+        let mut decoded = DracoCloud::new();
+        let mut dbuf = DecoderBuffer::new(&compressed.data);
+        PointCloudDecoder::new()
+            .decode(&mut dbuf, &mut decoded)
+            .unwrap();
+        let attr = decoded.attribute_by_unique_id(1).unwrap();
+        assert_eq!(attr.attribute_type(), GeometryAttributeType::Generic);
+        let stride = attr.byte_stride() as usize;
+        let bytes = attr.buffer().data();
+        let mut colors: Vec<u32> = (0..decoded.num_points())
+            .map(|p| u32::from_le_bytes(bytes[p * stride..p * stride + 4].try_into().unwrap()))
+            .collect();
+        colors.sort_unstable();
+        colors
+    }
+
+    #[test]
+    fn test_packed_rgb_survives_compression_bit_exact() {
         // PCL PointXYZRGB: rgb declared float32, carrying (r << 16) | (g << 8) | b in the
         // bits. Quantized as a float attribute (a range of denormals), nearly every color
         // collapses to a single wrong value; retyped to uint32 the packed bits must
@@ -1125,27 +1147,60 @@ mod tests {
             &PointCloudCompression::default(),
         )
         .unwrap();
-        let compressed =
-            <crate::messages::CompressedPointCloud as Decode>::decode(transcoded.as_ref()).unwrap();
-
-        let mut decoded = DracoCloud::new();
-        let mut dbuf = DecoderBuffer::new(&compressed.data);
-        PointCloudDecoder::new()
-            .decode(&mut dbuf, &mut decoded)
-            .unwrap();
-        // POSITION is attribute 0; rgb is the generic attribute with unique id 1.
-        let attr = decoded.attribute_by_unique_id(1).unwrap();
-        assert_eq!(attr.attribute_type(), GeometryAttributeType::Generic);
-        let stride = attr.byte_stride() as usize;
-        let bytes = attr.buffer().data();
-        let mut roundtripped: Vec<u32> = (0..decoded.num_points())
-            .map(|p| u32::from_le_bytes(bytes[p * stride..p * stride + 4].try_into().unwrap()))
-            .collect();
-        // kd-tree encoding reorders points, so compare as sets.
-        roundtripped.sort_unstable();
         let mut expected = colors.to_vec();
         expected.sort_unstable();
-        assert_eq!(roundtripped, expected);
+        assert_eq!(decode_packed_colors(&transcoded), expected);
+    }
+
+    #[test]
+    fn test_transcodes_packed_rgb_point_cloud2_bit_exact() {
+        // PCL PointXYZRGB over ROS 2: the rgb field declared FLOAT32 (datatype 7) while
+        // carrying packed (r << 16) | (g << 8) | b bits. The packed-color retype runs on
+        // the converted cloud, so the colors must survive compression bit-exactly for
+        // this input too.
+        let colors: [u32; 4] = [0x00c8_9664, 0x000a_141e, 0x00ff_0080, 0x0000_ffff];
+        let mut data = Vec::new();
+        for (i, &color) in colors.iter().enumerate() {
+            for c in [i as f32, i as f32 * 2.0, 0.5] {
+                data.extend_from_slice(&c.to_le_bytes());
+            }
+            data.extend_from_slice(&color.to_le_bytes());
+        }
+        let fields = ["x", "y", "z", "rgb"]
+            .into_iter()
+            .enumerate()
+            .map(|(i, name)| PointField {
+                name: name.into(),
+                offset: 4 * i as u32,
+                datatype: 7, // FLOAT32, including rgb: the PCL packed-color declaration
+                count: 1,
+            })
+            .collect();
+        let cloud = PointCloud2 {
+            header: Header {
+                stamp: Time { sec: 1, nanosec: 2 },
+                frame_id: "lidar".into(),
+            },
+            height: 1,
+            width: colors.len() as u32,
+            fields,
+            is_bigendian: false,
+            point_step: 16,
+            row_step: 16 * colors.len() as u32,
+            data,
+            is_dense: true,
+        };
+        let encoded = cdr::serialize::<_, _, cdr::CdrLe>(&cloud, cdr::Infinite).unwrap();
+
+        let transcoded = transcode_point_cloud_message(
+            &encoded,
+            PointCloudInputSchema::Ros2PointCloud2,
+            &PointCloudCompression::default(),
+        )
+        .unwrap();
+        let mut expected = colors.to_vec();
+        expected.sort_unstable();
+        assert_eq!(decode_packed_colors(&transcoded), expected);
     }
 
     #[test]
