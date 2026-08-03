@@ -43,7 +43,6 @@ pub use client::Client;
 pub use connection::ConnectionStatus;
 pub use gateway::{Gateway, GatewayHandle, VideoEncoderBackend};
 pub use listener::Listener;
-#[cfg_attr(docsrs, doc(cfg(feature = "remote-access")))]
 pub use point_cloud_compression::{CompressPointCloudOptions, PointCloudCompression};
 pub use qos::{QosClassifier, QosProfile, QosProfileBuilder, Reliability};
 pub use suppress_video_transcode::SuppressVideoTranscode;

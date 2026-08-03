@@ -457,7 +457,6 @@ pub use remote_data_loader_backend as data_provider;
 mod img2yuv;
 
 #[cfg(feature = "remote-access")]
-#[cfg_attr(docsrs, doc(cfg(feature = "remote-access")))]
 pub mod draco;
 
 pub use app_url::AppUrl;
