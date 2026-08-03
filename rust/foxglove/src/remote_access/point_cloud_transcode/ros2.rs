@@ -71,6 +71,19 @@ pub(crate) enum Ros2PointCloudError {
         /// The declared row stride in bytes.
         row_step: u32,
     },
+    /// The cloud declares zero points but carries point data.
+    #[error(
+        "cloud declares zero points (width {width}, height {height}) but carries {len} bytes \
+         of data"
+    )]
+    ZeroDimensions {
+        /// The declared number of points per row.
+        width: u32,
+        /// The declared number of rows.
+        height: u32,
+        /// The actual data length.
+        len: usize,
+    },
 }
 
 /// A ROS 2 `builtin_interfaces/msg/Time` message.
@@ -182,6 +195,20 @@ impl TryFrom<Ros2PointCloud2> for PointCloud {
                 name: field.name.clone(),
                 offset: field.offset,
                 r#type: field.numeric_type()? as i32,
+            });
+        }
+
+        // A cloud that declares zero points (width or height 0) while carrying data is
+        // contradictory, and trimming to the declared count would discard the entire
+        // payload: silent data loss, while the same topic looks fine locally (the app
+        // counts points by data length, not the declared dimensions). Reject it so the
+        // publisher's misdeclaration surfaces as a channel warning instead. Zero
+        // dimensions with an empty payload remain a legitimate empty cloud.
+        if (cloud.width == 0 || cloud.height == 0) && !cloud.data.is_empty() {
+            return Err(Ros2PointCloudError::ZeroDimensions {
+                width: cloud.width,
+                height: cloud.height,
+                len: cloud.data.len(),
             });
         }
 
@@ -455,6 +482,40 @@ mod tests {
 
         let converted = PointCloud::try_from(cloud).unwrap();
         assert_eq!(converted.data, cloud_data(&points[..2]));
+    }
+
+    #[test]
+    fn test_rejects_zero_dimensions_with_data() {
+        // A cloud declaring zero points while carrying a payload would otherwise be
+        // trimmed (or repacked) to nothing and delivered as an empty cloud — silent data
+        // loss over remote access, while the same topic renders fine locally (the app
+        // counts points by data length). All three shapes reach different branches, so
+        // pin each: zero height (trim branch), zero width (trim branch), and zero width
+        // with height > 1 (repack branch).
+        let points = [[1.0f32, 2.0, 3.0], [4.0, 5.0, 6.0]];
+        for (width, height) in [(2, 0), (0, 1), (0, 2)] {
+            let mut cloud = make_cloud(&points);
+            cloud.width = width;
+            cloud.height = height;
+            assert!(
+                matches!(
+                    PointCloud::try_from(cloud),
+                    Err(Ros2PointCloudError::ZeroDimensions { len: 24, .. })
+                ),
+                "width {width}, height {height}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_accepts_zero_dimensions_with_empty_data() {
+        // "Nothing detected this frame": zero declared points with an empty payload is a
+        // legitimate empty cloud and must round-trip rather than error.
+        let mut cloud = make_cloud(&[]);
+        cloud.width = 0;
+        cloud.height = 0;
+        let converted = PointCloud::try_from(cloud).unwrap();
+        assert!(converted.data.is_empty());
     }
 
     #[test]
