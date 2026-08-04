@@ -6,13 +6,13 @@ export type RobotDescription = {
   /** URL pointing to the robot description file. One of `url` or `data` should be non-empty. Relative resources referenced by the description, such as meshes, are resolved against this URL. */
   url: string;
 
-  /** Embedded robot description. One of `url` or `data` should be non-empty. Because an embedded description has no location to resolve against, any resources it references, such as meshes, must use absolute URLs. */
-  data: Uint8Array;
-
   /**
    * Robot description format.
    * 
    * Supported values: `urdf` ([Unified Robot Description Format](https://wiki.ros.org/urdf/XML)).
    */
   format: string;
+
+  /** Embedded robot description. One of `url` or `data` should be non-empty. Because an embedded description has no location to resolve against, any resources it references, such as meshes, must use absolute URLs. */
+  data: Uint8Array;
 };

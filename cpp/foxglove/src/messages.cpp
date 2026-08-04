@@ -2240,9 +2240,9 @@ void robotDescriptionToC(
   foxglove_robot_description& dest, const RobotDescription& src, [[maybe_unused]] Arena& arena
 ) {
   dest.url = {src.url.data(), src.url.size()};
+  dest.format = {src.format.data(), src.format.size()};
   dest.data = reinterpret_cast<const unsigned char*>(src.data.data());
   dest.data_len = src.data.size();
-  dest.format = {src.format.data(), src.format.size()};
 }
 
 void sceneEntityToC(

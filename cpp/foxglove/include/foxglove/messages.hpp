@@ -2165,15 +2165,15 @@ struct RobotDescription {
   /// URL.
   std::string url;
 
-  /// @brief Embedded robot description. One of `url` or `data` should be non-empty. Because an
-  /// embedded description has no location to resolve against, any resources it references, such as
-  /// meshes, must use absolute URLs.
-  std::vector<std::byte> data;
-
   /// @brief Robot description format.
   ///
   /// Supported values: `urdf` ([Unified Robot Description Format](https://wiki.ros.org/urdf/XML)).
   std::string format;
+
+  /// @brief Embedded robot description. One of `url` or `data` should be non-empty. Because an
+  /// embedded description has no location to resolve against, any resources it references, such as
+  /// meshes, must use absolute URLs.
+  std::vector<std::byte> data;
 
   /// @brief Encoded the RobotDescription as protobuf to the provided buffer.
   ///

@@ -3221,19 +3221,6 @@ URL pointing to the robot description file. One of `url` or `data` should be non
 </td>
 </tr>
 <tr>
-<td><code>data</code></td>
-<td>
-
-bytes
-
-</td>
-<td>
-
-Embedded robot description. One of `url` or `data` should be non-empty. Because an embedded description has no location to resolve against, any resources it references, such as meshes, must use absolute URLs.
-
-</td>
-</tr>
-<tr>
 <td><code>format</code></td>
 <td>
 
@@ -3245,6 +3232,19 @@ string
 Robot description format.
 
 Supported values: `urdf` ([Unified Robot Description Format](https://wiki.ros.org/urdf/XML)).
+
+</td>
+</tr>
+<tr>
+<td><code>data</code></td>
+<td>
+
+bytes
+
+</td>
+<td>
+
+Embedded robot description. One of `url` or `data` should be non-empty. Because an embedded description has no location to resolve against, any resources it references, such as meshes, must use absolute URLs.
 
 </td>
 </tr>

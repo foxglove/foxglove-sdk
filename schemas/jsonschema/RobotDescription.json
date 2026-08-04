@@ -8,19 +8,19 @@
       "type": "string",
       "description": "URL pointing to the robot description file. One of `url` or `data` should be non-empty. Relative resources referenced by the description, such as meshes, are resolved against this URL."
     },
+    "format": {
+      "type": "string",
+      "description": "Robot description format.\n\nSupported values: `urdf` ([Unified Robot Description Format](https://wiki.ros.org/urdf/XML))."
+    },
     "data": {
       "type": "string",
       "contentEncoding": "base64",
       "description": "Embedded robot description. One of `url` or `data` should be non-empty. Because an embedded description has no location to resolve against, any resources it references, such as meshes, must use absolute URLs."
-    },
-    "format": {
-      "type": "string",
-      "description": "Robot description format.\n\nSupported values: `urdf` ([Unified Robot Description Format](https://wiki.ros.org/urdf/XML))."
     }
   },
   "required": [
     "url",
-    "data",
-    "format"
+    "format",
+    "data"
   ]
 }

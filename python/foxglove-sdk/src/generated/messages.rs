@@ -3337,10 +3337,10 @@ impl From<RawImage> for foxglove::messages::RawImage {
 /// A robot description used to visualize an articulated 3D model. The description defines its own coordinate frames; the pose of each link is determined by the transform tree or by `foxglove.JointStates` messages.
 ///
 /// :param url: URL pointing to the robot description file. One of `url` or `data` should be non-empty. Relative resources referenced by the description, such as meshes, are resolved against this URL.
-/// :param data: Embedded robot description. One of `url` or `data` should be non-empty. Because an embedded description has no location to resolve against, any resources it references, such as meshes, must use absolute URLs.
 /// :param format: Robot description format.
 ///     
 ///     Supported values: `urdf` (`Unified Robot Description Format <https://wiki.ros.org/urdf/XML>`__).
+/// :param data: Embedded robot description. One of `url` or `data` should be non-empty. Because an embedded description has no location to resolve against, any resources it references, such as meshes, must use absolute URLs.
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/robot-description
 #[pyclass(from_py_object, module = "foxglove.messages")]
@@ -3349,20 +3349,20 @@ pub(crate) struct RobotDescription(pub(crate) foxglove::messages::RobotDescripti
 #[pymethods]
 impl RobotDescription {
     #[new]
-    #[pyo3(signature = (*, url="", data=None, format="") )]
-    fn new(url: &str, data: Option<Bound<'_, PyBytes>>, format: &str) -> Self {
+    #[pyo3(signature = (*, url="", format="", data=None) )]
+    fn new(url: &str, format: &str, data: Option<Bound<'_, PyBytes>>) -> Self {
         Self(foxglove::messages::RobotDescription {
             url: url.to_string(),
+            format: format.to_string(),
             data: data
                 .map(|x| Bytes::copy_from_slice(x.as_bytes()))
                 .unwrap_or_default(),
-            format: format.to_string(),
         })
     }
     fn __repr__(&self) -> String {
         format!(
-            "RobotDescription(url={:?}, data={:?}, format={:?})",
-            self.0.url, self.0.data, self.0.format,
+            "RobotDescription(url={:?}, format={:?}, data={:?})",
+            self.0.url, self.0.format, self.0.data,
         )
     }
     /// Returns the RobotDescription schema.
