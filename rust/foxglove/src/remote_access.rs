@@ -27,7 +27,7 @@
 //! To tune the settings per channel or deliver point clouds unmodified, set a policy with
 //! [`Gateway::point_cloud_compression`] / [`Gateway::point_cloud_compression_fn`] — returning
 //! `None` for a channel delivers it untouched. See [`Gateway::point_cloud_compression`] for
-//! details, including the exact list of dropped fields, and [`PointCloudCompression`] for the
+//! details, including the exact list of dropped fields, and [`PointCloudCompressionPolicy`] for the
 //! policy trait.
 
 mod capability;
@@ -60,7 +60,7 @@ pub use client::Client;
 pub use connection::ConnectionStatus;
 pub use gateway::{Gateway, GatewayHandle, VideoEncoderBackend};
 pub use listener::Listener;
-pub use point_cloud_compression::{CompressPointCloudOptions, PointCloudCompression};
+pub use point_cloud_compression::{PointCloudCompression, PointCloudCompressionPolicy};
 pub use qos::{QosClassifier, QosProfile, QosProfileBuilder, Reliability};
 pub use suppress_video_transcode::SuppressVideoTranscode;
 

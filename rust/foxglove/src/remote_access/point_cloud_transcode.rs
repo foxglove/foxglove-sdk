@@ -11,7 +11,7 @@ use crate::draco::{DracoEncodeError, compress_point_cloud};
 use crate::messages::{PointCloud, descriptors};
 use crate::protocol::common::schema as protocol_schema;
 use crate::protocol::common::server::advertise;
-use crate::remote_access::CompressPointCloudOptions;
+use crate::remote_access::PointCloudCompression;
 use crate::{Decode, RawChannel};
 
 /// An error transcoding a logged `foxglove.PointCloud` message.
@@ -36,7 +36,7 @@ pub(crate) fn is_point_cloud_channel(channel: &RawChannel) -> bool {
 /// `foxglove.CompressedPointCloud` message.
 pub(crate) fn transcode_point_cloud_message(
     msg: &[u8],
-    options: &CompressPointCloudOptions,
+    options: &PointCloudCompression,
 ) -> Result<Bytes, TranscodeError> {
     let mut cloud = <PointCloud as Decode>::decode(msg)?;
     // Dropping fields first shrinks the data every later pass and the encoder touch.
@@ -365,7 +365,7 @@ mod tests {
         transcode_point_cloud_message,
     };
     use crate::messages::{PackedElementField, PointCloud, packed_element_field::NumericType};
-    use crate::remote_access::CompressPointCloudOptions;
+    use crate::remote_access::PointCloudCompression;
     use crate::{ChannelBuilder, Context, Encode, RawChannel, Schema};
     use std::sync::Arc;
 
@@ -451,7 +451,7 @@ mod tests {
         // occur, and the kd-tree encoder cannot quantize them; narrowing lets them
         // through. Previously these were rejected with UnquantizableField, making the
         // channel undeliverable.
-        let options = CompressPointCloudOptions::default();
+        let options = PointCloudCompression::default();
 
         let mut buf = Vec::new();
         stamped_cloud(8).encode(&mut buf).unwrap();
@@ -622,7 +622,7 @@ mod tests {
 
         let mut buf = Vec::new();
         make(&[1.0, f32::NAN, 3.0]).encode(&mut buf).unwrap();
-        transcode_point_cloud_message(&buf, &CompressPointCloudOptions::default()).unwrap();
+        transcode_point_cloud_message(&buf, &PointCloudCompression::default()).unwrap();
 
         // A float64 stamp that overflows float32 narrows to infinity; its point drops
         // and the rest of the cloud transcodes.
@@ -633,7 +633,7 @@ mod tests {
         cloud.data = data.into();
         let mut buf = Vec::new();
         cloud.encode(&mut buf).unwrap();
-        transcode_point_cloud_message(&buf, &CompressPointCloudOptions::default()).unwrap();
+        transcode_point_cloud_message(&buf, &PointCloudCompression::default()).unwrap();
     }
 
     #[test]
@@ -677,7 +677,7 @@ mod tests {
         cloud.encode(&mut buf).unwrap();
 
         let transcoded =
-            transcode_point_cloud_message(&buf, &CompressPointCloudOptions::default()).unwrap();
+            transcode_point_cloud_message(&buf, &PointCloudCompression::default()).unwrap();
         let compressed =
             <crate::messages::CompressedPointCloud as Decode>::decode(transcoded.as_ref()).unwrap();
         let mut decoded = DracoCloud::new();
@@ -881,7 +881,7 @@ mod tests {
         };
         let mut buf = Vec::new();
         cloud.encode(&mut buf).unwrap();
-        transcode_point_cloud_message(&buf, &CompressPointCloudOptions::default()).unwrap();
+        transcode_point_cloud_message(&buf, &PointCloudCompression::default()).unwrap();
     }
 
     #[test]
@@ -926,7 +926,7 @@ mod tests {
         cloud.encode(&mut buf).unwrap();
 
         let transcoded =
-            transcode_point_cloud_message(&buf, &CompressPointCloudOptions::default()).unwrap();
+            transcode_point_cloud_message(&buf, &PointCloudCompression::default()).unwrap();
         let compressed =
             <crate::messages::CompressedPointCloud as Decode>::decode(transcoded.as_ref()).unwrap();
 
@@ -955,7 +955,7 @@ mod tests {
         // End to end: a NaN-padded cloud compresses (delivering the finite points)
         // instead of erroring, and an all-non-finite cloud folds to the empty-cloud
         // lossless path rather than failing.
-        let options = CompressPointCloudOptions::default();
+        let options = PointCloudCompression::default();
 
         let cloud = xyz_cloud(&[[1.0, 2.0, 3.0], [f32::NAN, f32::NAN, f32::NAN]]);
         let mut buf = Vec::new();

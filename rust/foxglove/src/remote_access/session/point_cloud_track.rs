@@ -7,7 +7,7 @@ use tokio::runtime::Handle;
 use tracing::warn;
 
 use crate::ChannelId;
-use crate::remote_access::CompressPointCloudOptions;
+use crate::remote_access::PointCloudCompression;
 use crate::remote_access::point_cloud_transcode::transcode_point_cloud_message;
 
 use super::RemoteAccessSession;
@@ -42,7 +42,7 @@ impl PointCloudPublisher {
         session: Weak<RemoteAccessSession>,
         channel_id: ChannelId,
         topic: String,
-        options: CompressPointCloudOptions,
+        options: PointCloudCompression,
     ) -> Self {
         let (tx, rx) = flume::bounded::<(Bytes, u64)>(Self::CHANNEL_CAPACITY);
         let consumer_rx = rx.clone();

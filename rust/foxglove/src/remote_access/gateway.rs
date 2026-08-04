@@ -16,7 +16,7 @@ use crate::{
     sink_channel_filter::SinkChannelFilterFn,
 };
 
-use super::point_cloud_compression::{PointCloudCompression, PointCloudCompressionFn};
+use super::point_cloud_compression::{PointCloudCompressionPolicy, PointCloudCompressionPolicyFn};
 use super::qos::{QosClassifier, QosClassifierFn, QosProfile};
 use super::suppress_video_transcode::{SuppressVideoTranscode, SuppressVideoTranscodeFn};
 
@@ -257,7 +257,7 @@ pub struct Gateway {
     message_backlog_size: Option<usize>,
     max_data_track_message_size: Option<usize>,
     video_encoder: VideoEncoderBackend,
-    point_cloud_compression: Option<Arc<dyn PointCloudCompression>>,
+    point_cloud_compression: Option<Arc<dyn PointCloudCompressionPolicy>>,
     context: std::sync::Weak<Context>,
 }
 
@@ -465,7 +465,7 @@ impl Gateway {
     ///
     /// The policy is consulted once per compressible channel: it returns the compression
     /// settings for that channel, or `None` to deliver it unmodified. See
-    /// [`PointCloudCompression`] for details, and [`Self::point_cloud_compression_fn`] to
+    /// [`PointCloudCompressionPolicy`] for details, and [`Self::point_cloud_compression_fn`] to
     /// pass a closure instead.
     ///
     /// A compressed channel is advertised with the `foxglove.CompressedPointCloud` schema,
@@ -479,7 +479,7 @@ impl Gateway {
     /// preserving the Reliable contract (no silent drops).
     ///
     /// If no policy is set, every compressible Lossy channel is compressed with
-    /// [`CompressPointCloudOptions::default()`]. Note that the default settings are lossy:
+    /// [`PointCloudCompression::default()`]. Note that the default settings are lossy:
     /// kd-tree encoding with positions quantized to 12 bits. Options are valid by
     /// construction; the one degenerate case is
     /// [`DracoEncodeOptions::lossless()`](crate::draco::DracoEncodeOptions::lossless),
@@ -515,9 +515,9 @@ impl Gateway {
     ///   commonly pad invalid returns with NaN, and the quantizer rejects non-finite
     ///   input, which would otherwise fail the whole cloud.
     ///
-    /// [`CompressPointCloudOptions::default()`]: crate::remote_access::CompressPointCloudOptions
+    /// [`PointCloudCompression::default()`]: crate::remote_access::PointCloudCompression
     #[cfg_attr(docsrs, doc(cfg(feature = "remote-access")))]
-    pub fn point_cloud_compression(mut self, policy: Arc<dyn PointCloudCompression>) -> Self {
+    pub fn point_cloud_compression(mut self, policy: Arc<dyn PointCloudCompressionPolicy>) -> Self {
         self.point_cloud_compression = Some(policy);
         self
     }
@@ -530,12 +530,12 @@ impl Gateway {
     #[cfg_attr(docsrs, doc(cfg(feature = "remote-access")))]
     pub fn point_cloud_compression_fn(
         mut self,
-        policy: impl Fn(&ChannelDescriptor) -> Option<crate::remote_access::CompressPointCloudOptions>
+        policy: impl Fn(&ChannelDescriptor) -> Option<crate::remote_access::PointCloudCompression>
         + Sync
         + Send
         + 'static,
     ) -> Self {
-        self.point_cloud_compression = Some(Arc::new(PointCloudCompressionFn(policy)));
+        self.point_cloud_compression = Some(Arc::new(PointCloudCompressionPolicyFn(policy)));
         self
     }
 

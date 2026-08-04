@@ -10,20 +10,20 @@ use crate::{ChannelDescriptor, RawChannel};
 /// others can be added without a breaking change.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]
-pub enum CompressPointCloudOptions {
+pub enum PointCloudCompression {
     /// Compress with [Google Draco](https://google.github.io/draco/).
     Draco(DracoEncodeOptions),
 }
 
-impl CompressPointCloudOptions {
+impl PointCloudCompression {
     pub(crate) fn draco_options(&self) -> DracoEncodeOptions {
         match self {
-            CompressPointCloudOptions::Draco(options) => *options,
+            PointCloudCompression::Draco(options) => *options,
         }
     }
 }
 
-impl Default for CompressPointCloudOptions {
+impl Default for PointCloudCompression {
     fn default() -> Self {
         Self::Draco(DracoEncodeOptions::default())
     }
@@ -38,7 +38,7 @@ impl Default for CompressPointCloudOptions {
 /// compression entirely.
 ///
 /// When no policy is configured, every compressible Lossy channel is compressed with
-/// [`CompressPointCloudOptions::default()`].
+/// [`PointCloudCompression::default()`].
 ///
 /// Channels classified as [`Reliability::Reliable`] are always delivered unmodified on the
 /// control stream (compression is skipped automatically), so this callback is not consulted
@@ -49,21 +49,21 @@ impl Default for CompressPointCloudOptions {
 ///
 /// [`Gateway::point_cloud_compression`]: crate::remote_access::Gateway::point_cloud_compression
 /// [`Gateway::point_cloud_compression_fn`]: crate::remote_access::Gateway::point_cloud_compression_fn
-pub trait PointCloudCompression: Sync + Send {
+pub trait PointCloudCompressionPolicy: Sync + Send {
     /// Returns the compression settings for the channel, or `None` to deliver it without
     /// point-cloud compression.
-    fn compression(&self, channel: &ChannelDescriptor) -> Option<CompressPointCloudOptions>;
+    fn compression(&self, channel: &ChannelDescriptor) -> Option<PointCloudCompression>;
 }
 
-pub(super) struct PointCloudCompressionFn<F>(pub(super) F)
+pub(super) struct PointCloudCompressionPolicyFn<F>(pub(super) F)
 where
-    F: Fn(&ChannelDescriptor) -> Option<CompressPointCloudOptions> + Sync + Send;
+    F: Fn(&ChannelDescriptor) -> Option<PointCloudCompression> + Sync + Send;
 
-impl<F> PointCloudCompression for PointCloudCompressionFn<F>
+impl<F> PointCloudCompressionPolicy for PointCloudCompressionPolicyFn<F>
 where
-    F: Fn(&ChannelDescriptor) -> Option<CompressPointCloudOptions> + Sync + Send,
+    F: Fn(&ChannelDescriptor) -> Option<PointCloudCompression> + Sync + Send,
 {
-    fn compression(&self, channel: &ChannelDescriptor) -> Option<CompressPointCloudOptions> {
+    fn compression(&self, channel: &ChannelDescriptor) -> Option<PointCloudCompression> {
         self.0(channel)
     }
 }
@@ -80,9 +80,9 @@ where
 /// warning.
 pub(super) fn resolve_point_cloud_compression(
     channel: &RawChannel,
-    policy: Option<&dyn PointCloudCompression>,
+    policy: Option<&dyn PointCloudCompressionPolicy>,
     reliability: Reliability,
-) -> Option<CompressPointCloudOptions> {
+) -> Option<PointCloudCompression> {
     if !crate::remote_access::point_cloud_transcode::is_point_cloud_channel(channel) {
         return None;
     }
@@ -104,7 +104,7 @@ pub(super) fn resolve_point_cloud_compression(
                 return None;
             }
         },
-        None => CompressPointCloudOptions::default(),
+        None => PointCloudCompression::default(),
     };
     if options.draco_options().is_lossless() {
         tracing::warn!(
@@ -120,7 +120,7 @@ pub(super) fn resolve_point_cloud_compression(
 #[cfg(test)]
 mod tests {
     use super::{
-        CompressPointCloudOptions, PointCloudCompressionFn, resolve_point_cloud_compression,
+        PointCloudCompression, PointCloudCompressionPolicyFn, resolve_point_cloud_compression,
     };
     use crate::draco::DracoEncodeOptions;
     use crate::remote_access::qos::Reliability;
@@ -137,8 +137,8 @@ mod tests {
             .unwrap()
     }
 
-    fn options_with_bits(quantization_bits: u8) -> CompressPointCloudOptions {
-        CompressPointCloudOptions::Draco(
+    fn options_with_bits(quantization_bits: u8) -> PointCloudCompression {
+        PointCloudCompression::Draco(
             DracoEncodeOptions::with_quantization_bits(quantization_bits).unwrap(),
         )
     }
@@ -148,7 +148,7 @@ mod tests {
         let cloud = make_channel("/cloud");
         assert_eq!(
             resolve_point_cloud_compression(&cloud, None, Reliability::Lossy),
-            Some(CompressPointCloudOptions::default())
+            Some(PointCloudCompression::default())
         );
     }
 
@@ -157,8 +157,8 @@ mod tests {
         let cloud = make_channel("/cloud");
 
         // The policy opts this channel out.
-        let opt_out = PointCloudCompressionFn(|ch: &ChannelDescriptor| {
-            (ch.topic() != "/cloud").then(CompressPointCloudOptions::default)
+        let opt_out = PointCloudCompressionPolicyFn(|ch: &ChannelDescriptor| {
+            (ch.topic() != "/cloud").then(PointCloudCompression::default)
         });
         assert_eq!(
             resolve_point_cloud_compression(&cloud, Some(&opt_out), Reliability::Lossy),
@@ -166,7 +166,7 @@ mod tests {
         );
 
         // The policy selects per-channel options.
-        let tuned = PointCloudCompressionFn(|ch: &ChannelDescriptor| {
+        let tuned = PointCloudCompressionPolicyFn(|ch: &ChannelDescriptor| {
             (ch.topic() == "/cloud").then(|| options_with_bits(10))
         });
         assert_eq!(
@@ -178,8 +178,8 @@ mod tests {
     #[test]
     fn skips_compression_when_qos_is_reliable() {
         let cloud = make_channel("/cloud");
-        let policy = PointCloudCompressionFn(
-            |_: &ChannelDescriptor| -> Option<CompressPointCloudOptions> {
+        let policy = PointCloudCompressionPolicyFn(
+            |_: &ChannelDescriptor| -> Option<PointCloudCompression> {
                 panic!("unexpected callback")
             },
         );
@@ -195,10 +195,8 @@ mod tests {
         // pure overhead; deliver the raw cloud instead. (Out-of-range options are
         // unrepresentable: DracoEncodeOptions validates at construction.)
         let cloud = make_channel("/cloud");
-        let policy = PointCloudCompressionFn(|_: &ChannelDescriptor| {
-            Some(CompressPointCloudOptions::Draco(
-                DracoEncodeOptions::lossless(),
-            ))
+        let policy = PointCloudCompressionPolicyFn(|_: &ChannelDescriptor| {
+            Some(PointCloudCompression::Draco(DracoEncodeOptions::lossless()))
         });
         assert_eq!(
             resolve_point_cloud_compression(&cloud, Some(&policy), Reliability::Lossy),

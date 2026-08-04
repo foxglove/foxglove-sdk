@@ -23,7 +23,7 @@ use crate::protocol::v2::DecodeError;
 use crate::protocol::v2::parameter::Parameter;
 use crate::protocol::v2::server::ParameterValues;
 use crate::remote_access::point_cloud_compression::{
-    PointCloudCompression, resolve_point_cloud_compression,
+    PointCloudCompressionPolicy, resolve_point_cloud_compression,
 };
 use crate::remote_common::connection_graph::ConnectionGraph;
 use crate::remote_common::{
@@ -358,7 +358,7 @@ pub(super) struct RemoteAccessSession {
     /// The per-channel compression policy for transcoding `foxglove.PointCloud` channels
     /// to `foxglove.CompressedPointCloud` before delivery to participants. `None` applies
     /// the default: compress every compressible Lossy channel with the default options.
-    point_cloud_compression: Option<Arc<dyn PointCloudCompression>>,
+    point_cloud_compression: Option<Arc<dyn PointCloudCompressionPolicy>>,
 }
 
 impl Sink for RemoteAccessSession {
@@ -604,7 +604,7 @@ pub(super) struct SessionParams {
     pub(super) device_wait_for_viewer: Option<Duration>,
     pub(super) video_codec_override: Option<VideoCodec>,
     pub(super) video_encoder: super::gateway::VideoEncoderBackend,
-    pub(super) point_cloud_compression: Option<Arc<dyn PointCloudCompression>>,
+    pub(super) point_cloud_compression: Option<Arc<dyn PointCloudCompressionPolicy>>,
 }
 
 impl RemoteAccessSession {

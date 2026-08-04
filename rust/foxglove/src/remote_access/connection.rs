@@ -14,7 +14,7 @@ use tokio::{runtime::Handle, sync::OnceCell, sync::mpsc::UnboundedReceiver, task
 use tokio_util::sync::CancellationToken;
 use tracing::{error, info, warn};
 
-use crate::remote_access::point_cloud_compression::PointCloudCompression;
+use crate::remote_access::point_cloud_compression::PointCloudCompressionPolicy;
 use crate::{
     Context, FoxgloveError, SinkChannelFilter, SinkId,
     api_client::{
@@ -105,7 +105,7 @@ pub(super) struct ConnectionParams {
     pub(super) max_data_track_message_size: Option<usize>,
     pub(super) video_codec_override: Option<VideoCodec>,
     pub(super) video_encoder: super::gateway::VideoEncoderBackend,
-    pub(super) point_cloud_compression: Option<Arc<dyn PointCloudCompression>>,
+    pub(super) point_cloud_compression: Option<Arc<dyn PointCloudCompressionPolicy>>,
     pub(super) context: Weak<Context>,
 }
 
@@ -146,7 +146,7 @@ pub(super) struct RemoteAccessConnection {
     max_data_track_message_size: Option<usize>,
     video_codec_override: Option<VideoCodec>,
     video_encoder: super::gateway::VideoEncoderBackend,
-    point_cloud_compression: Option<Arc<dyn PointCloudCompression>>,
+    point_cloud_compression: Option<Arc<dyn PointCloudCompressionPolicy>>,
     context: Weak<Context>,
     cancellation_token: CancellationToken,
     services: Arc<parking_lot::RwLock<ServiceMap>>,
