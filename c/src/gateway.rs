@@ -190,11 +190,11 @@ impl FoxglovePointCloudCompression {
     pub(crate) fn to_compression_options(
         self,
         topic: &str,
-    ) -> Option<foxglove::remote_access::CompressPointCloudOptions> {
+    ) -> Option<foxglove::remote_access::PointCloudCompression> {
         const MAX_BITS: u8 = FOXGLOVE_DRACO_MAX_QUANTIZATION_BITS;
         match self.mode {
             FoxglovePointCloudCompressionMode::Default => {
-                Some(foxglove::remote_access::CompressPointCloudOptions::default())
+                Some(foxglove::remote_access::PointCloudCompression::default())
             }
             FoxglovePointCloudCompressionMode::Disabled => None,
             FoxglovePointCloudCompressionMode::Draco => {
@@ -218,7 +218,7 @@ impl FoxglovePointCloudCompression {
                 let options =
                     foxglove::draco::DracoEncodeOptions::with_quantization_bits(bits.min(MAX_BITS))
                         .expect("clamped quantization_bits are in range");
-                Some(foxglove::remote_access::CompressPointCloudOptions::Draco(
+                Some(foxglove::remote_access::PointCloudCompression::Draco(
                     options,
                 ))
             }
@@ -253,11 +253,11 @@ impl PointCloudCompressionCallback {
 unsafe impl Send for PointCloudCompressionCallback {}
 unsafe impl Sync for PointCloudCompressionCallback {}
 
-impl foxglove::remote_access::PointCloudCompression for PointCloudCompressionCallback {
+impl foxglove::remote_access::PointCloudCompressionPolicy for PointCloudCompressionCallback {
     fn compression(
         &self,
         channel: &foxglove::ChannelDescriptor,
-    ) -> Option<foxglove::remote_access::CompressPointCloudOptions> {
+    ) -> Option<foxglove::remote_access::PointCloudCompression> {
         let c_channel_descriptor = FoxgloveChannelDescriptor(channel.clone());
         let compression =
             unsafe { (self.callback)(self.callback_context, &raw const c_channel_descriptor) };
@@ -1312,7 +1312,7 @@ mod point_cloud_compression_tests {
         FoxglovePointCloudCompressionMode,
     };
     use foxglove::draco::DracoEncodeOptions;
-    use foxglove::remote_access::CompressPointCloudOptions;
+    use foxglove::remote_access::PointCloudCompression;
 
     #[test]
     fn test_zero_initialized_struct_maps_to_sdk_default() {
@@ -1325,7 +1325,7 @@ mod point_cloud_compression_tests {
         ));
         assert_eq!(
             compression.to_compression_options("/cloud"),
-            Some(CompressPointCloudOptions::default())
+            Some(PointCloudCompression::default())
         );
     }
 
@@ -1351,7 +1351,7 @@ mod point_cloud_compression_tests {
         let expected = DracoEncodeOptions::with_quantization_bits(14).unwrap();
         assert_eq!(
             compression.to_compression_options("/cloud"),
-            Some(CompressPointCloudOptions::Draco(expected))
+            Some(PointCloudCompression::Draco(expected))
         );
     }
 
@@ -1372,7 +1372,7 @@ mod point_cloud_compression_tests {
         for bits in [31, u8::MAX] {
             assert_eq!(
                 draco(bits).to_compression_options("/cloud"),
-                Some(CompressPointCloudOptions::Draco(clamped))
+                Some(PointCloudCompression::Draco(clamped))
             );
         }
     }
