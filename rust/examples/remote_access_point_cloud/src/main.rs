@@ -32,7 +32,7 @@ use foxglove::messages::{
     FrameTransform, PackedElementField, PointCloud, Quaternion, Timestamp, Vector3,
     packed_element_field::NumericType,
 };
-use foxglove::remote_access::CompressPointCloudOptions;
+use foxglove::remote_access::PointCloudCompression;
 use foxglove::{ChannelDescriptor, Encode, LazyChannel, remote_access::Gateway};
 
 /// The default per-message size limit for lossy remote access data, in bytes. Messages
@@ -200,7 +200,7 @@ async fn main() {
     // held for the life of the process; the connection runs until exit.
     let _gateway = Gateway::new()
         .point_cloud_compression_fn(move |channel: &ChannelDescriptor| {
-            (channel.topic() != "/cloud/raw").then_some(CompressPointCloudOptions::Draco(options))
+            (channel.topic() != "/cloud/raw").then_some(PointCloudCompression::Draco(options))
         })
         .start()
         .expect("failed to start gateway");
