@@ -327,12 +327,17 @@ try:
             and deliver the raw point cloud on the control bytestream; the policy is not
             consulted for them.
 
-            When a channel is compressed, a cloud the encoder cannot compress is **dropped**,
-            not delivered uncompressed — a throttled warning is sent to the device log and to
-            viewers. The common causes are a ``float64`` field other than ``x``/``y``/``z``,
-            or fewer than two of ``x``/``y``/``z`` present. To keep such a channel flowing,
-            convert the offending field to ``float32`` or an integer type, or return ``False``
-            for that channel from ``point_cloud_compression``.
+            Compressed clouds are conditioned before encoding: per-point fields that carry
+            no value on a remote viewer (timestamps, ranges and angles derivable from the
+            positions, and per-point indices, matched by exact (name, type) tuple) are
+            dropped; packed ``rgb``/``rgba`` color fields declared ``float32`` are
+            reinterpreted as ``uint32``; ``float64`` fields are narrowed to ``float32``
+            (about seven significant digits); and points containing a non-finite value in
+            any float field are removed. A cloud the encoder still cannot compress (for
+            example, fewer than two of ``x``/``y``/``z`` present) is **dropped**, not
+            delivered uncompressed — a throttled warning is sent to the device log and to
+            viewers. To deliver clouds untouched, return ``False`` for that channel from
+            ``point_cloud_compression``.
         """
         return _foxglove.start_gateway(
             name=name,
