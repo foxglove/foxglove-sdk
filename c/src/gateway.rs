@@ -154,9 +154,15 @@ pub enum FoxglovePointCloudCompressionMode {
 /// is compressed in a background task (off the logging hot path) before delivery. If
 /// compression falls behind the log rate, the oldest queued message is dropped.
 /// Channels classified as Reliable skip compression automatically and deliver the raw
-/// point cloud on the control bytestream. Draco cannot quantize float64 fields, so
-/// non-empty clouds containing one (other than the x/y/z position fields) fail to
-/// compress and are dropped, with a throttled warning.
+/// point cloud on the control bytestream.
+///
+/// Compressed clouds are conditioned before encoding: per-point fields that carry no
+/// value on a remote viewer (timestamps, ranges and angles derivable from the positions,
+/// and per-point indices, matched by exact (name, type) tuple) are dropped; packed
+/// rgb/rgba color fields declared float32 are reinterpreted as uint32; float64 fields
+/// are narrowed to float32 (about seven significant digits); and points containing a
+/// non-finite value in any float field are removed. To deliver clouds untouched, return
+/// `FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DISABLED` for the channel.
 ///
 /// Zero-initialize this struct (mode 0) to use the SDK default. Note that when `mode` is
 /// `FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DRACO`, `draco.quantization_bits` should be set
