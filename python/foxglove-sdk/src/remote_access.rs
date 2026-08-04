@@ -91,14 +91,12 @@ impl PyPointCloudCompression {
     /// Resolves the Python value into the options the compression policy applies to the
     /// channel, where `None` disables compression. Infallible: `DracoEncodeOptions` is
     /// validated at construction (see [`PyDracoEncodeOptions::new`]).
-    pub fn into_options(self) -> Option<foxglove::remote_access::CompressPointCloudOptions> {
+    pub fn into_options(self) -> Option<foxglove::remote_access::PointCloudCompression> {
         match self {
-            Self::Draco(options) => Some(
-                foxglove::remote_access::CompressPointCloudOptions::Draco(options.into()),
-            ),
-            Self::Enabled(true) => {
-                Some(foxglove::remote_access::CompressPointCloudOptions::default())
-            }
+            Self::Draco(options) => Some(foxglove::remote_access::PointCloudCompression::Draco(
+                options.into(),
+            )),
+            Self::Enabled(true) => Some(foxglove::remote_access::PointCloudCompression::default()),
             Self::Enabled(false) => None,
         }
     }
@@ -736,11 +734,11 @@ impl foxglove::remote_access::SuppressVideoTranscode for PySuppressVideoTranscod
 /// is applied, matching the error fallback of the other per-channel callbacks.
 pub struct PyPointCloudCompressionPolicy(pub Py<PyAny>);
 
-impl foxglove::remote_access::PointCloudCompression for PyPointCloudCompressionPolicy {
+impl foxglove::remote_access::PointCloudCompressionPolicy for PyPointCloudCompressionPolicy {
     fn compression(
         &self,
         channel: &foxglove::ChannelDescriptor,
-    ) -> Option<foxglove::remote_access::CompressPointCloudOptions> {
+    ) -> Option<foxglove::remote_access::PointCloudCompression> {
         Python::attach(|py| {
             let handler = self.0.clone_ref(py);
             let descriptor = PyChannelDescriptor(channel.clone());
@@ -756,7 +754,7 @@ impl foxglove::remote_access::PointCloudCompression for PyPointCloudCompressionP
                         "Error in point-cloud compression policy: {}",
                         err.to_string()
                     );
-                    Some(foxglove::remote_access::CompressPointCloudOptions::default())
+                    Some(foxglove::remote_access::PointCloudCompression::default())
                 }
             }
         })
