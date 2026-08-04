@@ -39,10 +39,125 @@ pub(crate) fn transcode_point_cloud_message(
     options: &CompressPointCloudOptions,
 ) -> Result<Bytes, TranscodeError> {
     let mut cloud = <PointCloud as Decode>::decode(msg)?;
+    // Dropping fields first shrinks the data every later pass and the encoder touch.
+    // After that, order matters: colors must be retyped before the non-finite filter
+    // runs, because packed rgba values with a nonzero alpha have `0xff------` bit
+    // patterns — NaN/infinity encodings when read as floats — and retyping to uint32
+    // exempts them. Narrowing runs before the filter so a float64 value that overflows
+    // f32 becomes non-finite and its point is dropped, rather than failing the whole
+    // cloud.
+    drop_irrelevant_fields(&mut cloud);
     reinterpret_packed_color_fields(&mut cloud);
+    narrow_float64_fields(&mut cloud);
     drop_non_finite_points(&mut cloud);
     let compressed = compress_point_cloud(&cloud, &options.draco_options())?;
     Ok(Bytes::from(compressed.encode_to_vec()))
+}
+
+/// Drops per-point fields that carry no value on a compressed remote-access connection,
+/// matched by exact (name, type) tuple against `DROPPED` below. The list and the
+/// rationale are documented on
+/// [`Gateway::point_cloud_compression`](super::Gateway::point_cloud_compression).
+///
+/// Tuples match exactly, never fuzzily: `scan_idx` (dropped) and `scan_id` (kept) are
+/// distinct uint16 fields in the same vendor struct, and event-camera clouds use time
+/// as a literal coordinate under tuples that only exact matching avoids.
+///
+/// Retained fields are repacked contiguously in declaration order, which also sheds
+/// any padding bytes. Clouds this pass cannot read (zero or misaligned stride, fields
+/// past the stride, unknown field types) are left for the encoder to report precisely.
+fn drop_irrelevant_fields(cloud: &mut PointCloud) {
+    use crate::messages::PackedElementField;
+    use crate::messages::packed_element_field::NumericType;
+
+    const DROPPED: &[(&str, NumericType)] = &[
+        // Per-point time
+        ("t", NumericType::Uint32),
+        ("time", NumericType::Float32),
+        ("ts", NumericType::Float32),
+        ("time_stamp", NumericType::Uint32),
+        ("timestamp", NumericType::Float64),
+        ("timestamp_s", NumericType::Int32),
+        ("timestamp_us", NumericType::Int32),
+        ("lidar_sec", NumericType::Uint32),
+        ("lidar_nsec", NumericType::Uint32),
+        // Range and angles, derivable from the positions
+        ("range", NumericType::Uint32),
+        ("range", NumericType::Float32),
+        ("distance", NumericType::Float32),
+        ("azimuth", NumericType::Float32),
+        ("elevation", NumericType::Float32),
+        // Per-point indices
+        ("point_id", NumericType::Uint32),
+        ("scan_idx", NumericType::Uint16),
+    ];
+    let dropped = |f: &PackedElementField| {
+        DROPPED
+            .iter()
+            .any(|&(name, ty)| f.name == name && f.r#type == ty as i32)
+    };
+
+    if !cloud.fields.iter().any(&dropped) {
+        return;
+    }
+    let stride = cloud.point_stride as usize;
+    if stride == 0 || !cloud.data.len().is_multiple_of(stride) {
+        return;
+    }
+
+    // Plan the repack: each retained field's source range and new offset. Bail out
+    // (leaving the cloud untouched) on any field the pass can't size or read.
+    let mut sources: Vec<(usize, usize)> = Vec::with_capacity(cloud.fields.len());
+    let mut fields = Vec::with_capacity(cloud.fields.len());
+    let mut new_stride = 0usize;
+    for field in &cloud.fields {
+        if dropped(field) {
+            continue;
+        }
+        let Some(size) = field_size(field.r#type) else {
+            return;
+        };
+        let offset = field.offset as usize;
+        if offset + size > stride {
+            return;
+        }
+        sources.push((offset, size));
+        fields.push(PackedElementField {
+            offset: new_stride as u32,
+            ..field.clone()
+        });
+        new_stride += size;
+    }
+    if fields.is_empty() {
+        return;
+    }
+
+    let mut data = Vec::with_capacity(cloud.data.len() / stride * new_stride);
+    for point in cloud.data.chunks_exact(stride) {
+        for &(offset, size) in &sources {
+            data.extend_from_slice(&point[offset..offset + size]);
+        }
+    }
+    tracing::debug!(
+        fields = cloud.fields.len() - fields.len(),
+        "dropped irrelevant per-point fields before compression"
+    );
+    cloud.fields = fields;
+    cloud.point_stride = new_stride as u32;
+    cloud.data = data.into();
+}
+
+/// The size in bytes of a `PackedElementField` numeric type, or `None` if unknown.
+fn field_size(numeric_type: i32) -> Option<usize> {
+    use crate::messages::packed_element_field::NumericType;
+
+    match NumericType::try_from(numeric_type).ok()? {
+        NumericType::Uint8 | NumericType::Int8 => Some(1),
+        NumericType::Uint16 | NumericType::Int16 => Some(2),
+        NumericType::Uint32 | NumericType::Int32 | NumericType::Float32 => Some(4),
+        NumericType::Float64 => Some(8),
+        NumericType::Unknown => None,
+    }
 }
 
 /// Retypes packed-color fields declared float32 to uint32 so they survive quantization.
@@ -73,18 +188,104 @@ fn reinterpret_packed_color_fields(cloud: &mut PointCloud) {
     }
 }
 
-/// Removes points whose position contains a non-finite (NaN or infinite) coordinate.
+/// Narrows float64 fields to float32 so the cloud can be quantized.
+///
+/// The kd-tree encoder cannot quantize float64 attributes, and clouds carrying one not
+/// on the drop list (doubles from PCL pipelines, vendor fields under nonstandard names)
+/// still occur — without this pass they cannot be delivered at all: compression fails,
+/// and delivered raw they exceed the data-track message limit. Compression is lossy by
+/// design, and positions were already narrowed to float32 by the encoder, so narrowing
+/// the remaining float64 fields is in keeping: values retain float32's ~7 significant
+/// digits, and a value whose magnitude overflows float32 becomes non-finite, dropping
+/// that point in [`drop_non_finite_points`] (which runs after).
+///
+/// Narrowing halves each float64 field, so the buffer is repacked: every field is
+/// assigned a new offset in declaration order and the stride becomes the sum of the field
+/// sizes (which also drops any inter-field padding). Layout problems (zero or misaligned
+/// stride, fields past the stride, unknown field types) are left for the encoder, which
+/// reports them precisely; this pass only rewrites clouds it can read.
+fn narrow_float64_fields(cloud: &mut PointCloud) {
+    use crate::messages::packed_element_field::NumericType;
+
+    let stride = cloud.point_stride as usize;
+    if stride == 0 || !cloud.data.len().is_multiple_of(stride) {
+        return;
+    }
+    struct Field {
+        offset: usize,
+        size: usize,
+        is_f64: bool,
+    }
+    let mut fields = Vec::with_capacity(cloud.fields.len());
+    for f in &cloud.fields {
+        let Some(size) = field_size(f.r#type) else {
+            return;
+        };
+        let offset = f.offset as usize;
+        if offset + size > stride {
+            return;
+        }
+        fields.push(Field {
+            offset,
+            size,
+            is_f64: f.r#type == NumericType::Float64 as i32,
+        });
+    }
+    if !fields.iter().any(|f| f.is_f64) {
+        return;
+    }
+
+    // Assign each field a new slot in declaration order. Aliased fields (two fields over
+    // the same bytes) become independent copies, which preserves every field's values.
+    let mut new_stride = 0;
+    let new_offsets: Vec<usize> = fields
+        .iter()
+        .map(|f| {
+            let offset = new_stride;
+            new_stride += if f.is_f64 { 4 } else { f.size };
+            offset
+        })
+        .collect();
+
+    let num_points = cloud.data.len() / stride;
+    let mut data = vec![0u8; num_points * new_stride];
+    for p in 0..num_points {
+        let src = &cloud.data[p * stride..(p + 1) * stride];
+        let dst = &mut data[p * new_stride..(p + 1) * new_stride];
+        for (f, &new_offset) in fields.iter().zip(&new_offsets) {
+            if f.is_f64 {
+                let v = f64::from_le_bytes(src[f.offset..f.offset + 8].try_into().unwrap());
+                dst[new_offset..new_offset + 4].copy_from_slice(&(v as f32).to_le_bytes());
+            } else {
+                dst[new_offset..new_offset + f.size]
+                    .copy_from_slice(&src[f.offset..f.offset + f.size]);
+            }
+        }
+    }
+
+    for (f, (field, &new_offset)) in fields.iter().zip(cloud.fields.iter_mut().zip(&new_offsets)) {
+        field.offset = new_offset as u32;
+        if f.is_f64 {
+            field.r#type = NumericType::Float32 as i32;
+        }
+    }
+    cloud.point_stride = new_stride as u32;
+    cloud.data = data.into();
+}
+
+/// Removes points containing a non-finite (NaN or infinite) value in any float field.
 ///
 /// Publishers commonly pad invalid returns with NaN — RGBD cameras and rotating lidars
-/// mark non-returns this way — but the Draco quantizer derives its range from the
-/// position min/max and errors on any non-finite coordinate, which would fail (and drop)
-/// the whole cloud. Dropping just the invalid points delivers the valid ones instead; a
-/// non-finite position is unrenderable, so nothing a viewer uses is lost. Coordinates are
-/// judged after the same f64-to-f32 narrowing the encoder applies, so a float64
-/// coordinate that only overflows f32 is dropped too.
+/// mark non-returns this way — but the Draco quantizer derives each attribute's range
+/// from its min/max and errors on any non-finite value, which would fail (and drop) the
+/// whole cloud. Every float32 field is quantized under kd-tree encoding, so this applies
+/// to positions and attributes (intensity, per-point stamps, ...) alike; dropping just
+/// the poisoned points delivers the valid ones instead. Values are judged after the same
+/// f64-to-f32 narrowing the encoder applies, so a float64 value that only overflows f32
+/// is dropped too.
 ///
-/// Layout problems (zero or misaligned stride, coordinates past the stride) are left for
-/// the encoder, which reports them precisely; this pass only filters clouds it can read.
+/// Layout problems (zero or misaligned stride, fields past the stride) are left for the
+/// encoder, which reports them precisely; this pass only filters clouds it can read.
 fn drop_non_finite_points(cloud: &mut PointCloud) {
     use crate::messages::packed_element_field::NumericType;
 
@@ -92,12 +293,12 @@ fn drop_non_finite_points(cloud: &mut PointCloud) {
     if stride == 0 || !cloud.data.len().is_multiple_of(stride) {
         return;
     }
-    // Only float32/float64 x/y/z coordinates can be non-finite; integer coordinates (and
-    // non-position fields, which Draco carries verbatim) never poison the quantizer.
-    let coords: Vec<(usize, bool)> = cloud
+    // Only float32/float64 fields can be non-finite; integer fields never poison the
+    // quantizer. Packed rgb/rgba color fields were already retyped to uint32, so their
+    // bit patterns (NaN encodings whenever alpha is nonzero) are exempt.
+    let floats: Vec<(usize, bool)> = cloud
         .fields
         .iter()
-        .filter(|f| matches!(f.name.as_str(), "x" | "y" | "z"))
         .filter_map(|f| {
             let offset = f.offset as usize;
             if f.r#type == NumericType::Float32 as i32 && offset + 4 <= stride {
@@ -109,12 +310,12 @@ fn drop_non_finite_points(cloud: &mut PointCloud) {
             }
         })
         .collect();
-    if coords.is_empty() {
+    if floats.is_empty() {
         return;
     }
 
     let finite = |point: &[u8]| {
-        coords.iter().all(|&(offset, is_f64)| {
+        floats.iter().all(|&(offset, is_f64)| {
             let v = if is_f64 {
                 f64::from_le_bytes(point[offset..offset + 8].try_into().unwrap()) as f32
             } else {
@@ -137,7 +338,7 @@ fn drop_non_finite_points(cloud: &mut PointCloud) {
     }
     tracing::debug!(
         dropped = (cloud.data.len() - data.len()) / stride,
-        "dropped points with non-finite positions before compression"
+        "dropped points with non-finite values before compression"
     );
     cloud.data = data.into();
 }
@@ -160,10 +361,9 @@ pub(crate) fn rewrite_advertisement(channel: &mut advertise::Channel<'_>) {
 #[cfg(test)]
 mod tests {
     use super::{
-        TranscodeError, drop_non_finite_points, is_point_cloud_channel,
+        drop_non_finite_points, is_point_cloud_channel, narrow_float64_fields,
         transcode_point_cloud_message,
     };
-    use crate::draco::DracoEncodeError;
     use crate::messages::{PackedElementField, PointCloud, packed_element_field::NumericType};
     use crate::remote_access::CompressPointCloudOptions;
     use crate::{ChannelBuilder, Context, Encode, RawChannel, Schema};
@@ -186,62 +386,81 @@ mod tests {
         assert!(is_point_cloud_channel(&ch));
     }
 
-    #[test]
-    fn test_transcode_rejects_float64_fields() {
+    /// A cloud with float32 xyz positions plus a float64 `stamp` field.
+    fn stamped_cloud(points: usize) -> PointCloud {
         let field = |name: &str, offset: u32, t: NumericType| PackedElementField {
             name: name.to_string(),
             offset,
             r#type: t as i32,
         };
-        let make = |with_f64: bool, points: usize| {
-            let stride = if with_f64 { 20 } else { 16 };
-            let mut fields = vec![
+        let mut data = Vec::new();
+        for i in 0..points {
+            for v in [i as f32, i as f32 * 2.0, 0.5] {
+                data.extend_from_slice(&v.to_le_bytes());
+            }
+            data.extend_from_slice(&(i as f64).to_le_bytes());
+        }
+        PointCloud {
+            timestamp: None,
+            frame_id: "t".to_string(),
+            pose: None,
+            point_stride: 20,
+            fields: vec![
                 field("x", 0, NumericType::Float32),
                 field("y", 4, NumericType::Float32),
                 field("z", 8, NumericType::Float32),
-            ];
-            if with_f64 {
-                fields.push(field("stamp", 12, NumericType::Float64));
-            } else {
-                fields.push(field("intensity", 12, NumericType::Float32));
-            }
-            let mut data = Vec::new();
-            for i in 0..points {
-                for v in [i as f32, i as f32 * 2.0, 0.5] {
-                    data.extend_from_slice(&v.to_le_bytes());
-                }
-                if with_f64 {
-                    data.extend_from_slice(&(i as f64).to_le_bytes());
-                } else {
-                    data.extend_from_slice(&1.0f32.to_le_bytes());
-                }
-            }
-            let cloud = PointCloud {
-                timestamp: None,
-                frame_id: "t".to_string(),
-                pose: None,
-                point_stride: stride,
-                fields,
-                data: data.into(),
-            };
-            let mut buf = Vec::new();
-            cloud.encode(&mut buf).unwrap();
-            buf
-        };
+                field("stamp", 12, NumericType::Float64),
+            ],
+            data: data.into(),
+        }
+    }
+
+    #[test]
+    fn test_narrows_float64_fields() {
+        // Layout rewrite: the stamp field shrinks from 8 to 4 bytes, so every field gets
+        // a new offset and the stride shrinks; the stamp values are narrowed, the rest
+        // copied verbatim, and the field type flips to float32.
+        let mut cloud = stamped_cloud(3);
+        narrow_float64_fields(&mut cloud);
+
+        assert_eq!(cloud.point_stride, 16);
+        assert_eq!(cloud.fields.len(), 4);
+        assert_eq!(cloud.fields[3].name, "stamp");
+        assert_eq!(cloud.fields[3].offset, 12);
+        assert_eq!(cloud.fields[3].r#type, NumericType::Float32 as i32);
+        assert_eq!(cloud.data.len(), 3 * 16);
+        for i in 0..3 {
+            let base = i * 16;
+            let x = f32::from_le_bytes(cloud.data[base..base + 4].try_into().unwrap());
+            let stamp = f32::from_le_bytes(cloud.data[base + 12..base + 16].try_into().unwrap());
+            assert_eq!(x, i as f32);
+            assert_eq!(stamp, i as f32);
+        }
+
+        // A cloud with no float64 fields passes through untouched.
+        let mut cloud = xyz_cloud(&[[1.0, 2.0, 3.0]]);
+        let before = cloud.data.clone();
+        narrow_float64_fields(&mut cloud);
+        assert_eq!(cloud.point_stride, 12);
+        assert_eq!(cloud.data, before);
+    }
+
+    #[test]
+    fn test_transcodes_float64_fields() {
+        // Clouds with float64 fields not on the drop list (like this `stamp`) still
+        // occur, and the kd-tree encoder cannot quantize them; narrowing lets them
+        // through. Previously these were rejected with UnquantizableField, making the
+        // channel undeliverable.
         let options = CompressPointCloudOptions::default();
 
-        // A float64 field with quantization configured is rejected, naming the field.
-        let err = transcode_point_cloud_message(&make(true, 8), &options).unwrap_err();
-        assert!(matches!(
-            err,
-            TranscodeError::Encode(DracoEncodeError::UnquantizableField { ref name }) if name == "stamp"
-        ));
-
-        // No float64 field: transcodes fine.
-        transcode_point_cloud_message(&make(false, 8), &options).unwrap();
+        let mut buf = Vec::new();
+        stamped_cloud(8).encode(&mut buf).unwrap();
+        transcode_point_cloud_message(&buf, &options).unwrap();
 
         // Empty clouds fold to lossless regardless of fields and must round-trip.
-        transcode_point_cloud_message(&make(true, 0), &options).unwrap();
+        let mut buf = Vec::new();
+        stamped_cloud(0).encode(&mut buf).unwrap();
+        transcode_point_cloud_message(&buf, &options).unwrap();
     }
 
     /// A float32 xyz cloud from raw points.
@@ -357,6 +576,312 @@ mod tests {
                 NumericType::Uint8 as i32,   // rgba: not float32
             ]
         );
+    }
+
+    #[test]
+    fn test_drops_points_with_non_finite_attributes() {
+        // A non-finite value in any quantized float attribute — not just positions —
+        // fails the whole encode, so the filter must drop the poisoned point. This also
+        // covers narrowing overflow: a finite float64 too large for float32 becomes
+        // infinity, and end to end the cloud must still transcode.
+        let field = |name: &str, offset: u32, t: NumericType| PackedElementField {
+            name: name.to_string(),
+            offset,
+            r#type: t as i32,
+        };
+        let make = |intensities: &[f32]| {
+            let mut data = Vec::new();
+            for (i, &intensity) in intensities.iter().enumerate() {
+                for v in [i as f32, i as f32 * 2.0, 0.5] {
+                    data.extend_from_slice(&v.to_le_bytes());
+                }
+                data.extend_from_slice(&intensity.to_le_bytes());
+            }
+            PointCloud {
+                timestamp: None,
+                frame_id: "t".to_string(),
+                pose: None,
+                point_stride: 16,
+                fields: vec![
+                    field("x", 0, NumericType::Float32),
+                    field("y", 4, NumericType::Float32),
+                    field("z", 8, NumericType::Float32),
+                    field("intensity", 12, NumericType::Float32),
+                ],
+                data: data.into(),
+            }
+        };
+
+        let original = make(&[1.0, f32::NAN, 3.0]);
+        let mut cloud = original.clone();
+        drop_non_finite_points(&mut cloud);
+        // The first and third points survive with their original bytes.
+        let mut expected = original.data[..16].to_vec();
+        expected.extend_from_slice(&original.data[32..]);
+        assert_eq!(cloud.data, expected);
+
+        let mut buf = Vec::new();
+        make(&[1.0, f32::NAN, 3.0]).encode(&mut buf).unwrap();
+        transcode_point_cloud_message(&buf, &CompressPointCloudOptions::default()).unwrap();
+
+        // A float64 stamp that overflows float32 narrows to infinity; its point drops
+        // and the rest of the cloud transcodes.
+        let mut cloud = stamped_cloud(3);
+        let stamp_offset = 20 + 12; // second point's stamp
+        let mut data = cloud.data.to_vec();
+        data[stamp_offset..stamp_offset + 8].copy_from_slice(&1e300f64.to_le_bytes());
+        cloud.data = data.into();
+        let mut buf = Vec::new();
+        cloud.encode(&mut buf).unwrap();
+        transcode_point_cloud_message(&buf, &CompressPointCloudOptions::default()).unwrap();
+    }
+
+    #[test]
+    fn test_packed_rgba_with_alpha_survives_the_finite_filter() {
+        // Packed rgba values with nonzero alpha have 0xff------ bit patterns — NaN
+        // encodings when read as floats. The color retype must run before the
+        // non-finite filter, or every opaque colored point would be dropped; pin the
+        // ordering by counting the points that survive compression.
+        use crate::Decode;
+        use draco_core::decoder_buffer::DecoderBuffer;
+        use draco_core::point_cloud::PointCloud as DracoCloud;
+        use draco_core::point_cloud_decoder::PointCloudDecoder;
+
+        let field = |name: &str, offset: u32, t: NumericType| PackedElementField {
+            name: name.to_string(),
+            offset,
+            r#type: t as i32,
+        };
+        let colors: [u32; 3] = [0xff00_0000, 0xffc8_9664, 0xff0a_141e];
+        let mut data = Vec::new();
+        for (i, &color) in colors.iter().enumerate() {
+            for v in [i as f32, i as f32 * 2.0, 0.5] {
+                data.extend_from_slice(&v.to_le_bytes());
+            }
+            data.extend_from_slice(&color.to_le_bytes());
+        }
+        let cloud = PointCloud {
+            timestamp: None,
+            frame_id: "t".to_string(),
+            pose: None,
+            point_stride: 16,
+            fields: vec![
+                field("x", 0, NumericType::Float32),
+                field("y", 4, NumericType::Float32),
+                field("z", 8, NumericType::Float32),
+                field("rgba", 12, NumericType::Float32),
+            ],
+            data: data.into(),
+        };
+        let mut buf = Vec::new();
+        cloud.encode(&mut buf).unwrap();
+
+        let transcoded =
+            transcode_point_cloud_message(&buf, &CompressPointCloudOptions::default()).unwrap();
+        let compressed =
+            <crate::messages::CompressedPointCloud as Decode>::decode(transcoded.as_ref()).unwrap();
+        let mut decoded = DracoCloud::new();
+        let mut dbuf = DecoderBuffer::new(&compressed.data);
+        PointCloudDecoder::new()
+            .decode(&mut dbuf, &mut decoded)
+            .unwrap();
+        assert_eq!(decoded.num_points(), colors.len());
+    }
+
+    #[test]
+    fn test_drops_irrelevant_fields() {
+        let field = |name: &str, offset: u32, t: NumericType| PackedElementField {
+            name: name.to_string(),
+            offset,
+            r#type: t as i32,
+        };
+        // An Ouster-style point: xyz + intensity + t + reflectivity + ring + range,
+        // with 4 bytes of trailing padding (stride 32, fields end at 28).
+        let mut data = Vec::new();
+        for i in 0..3u32 {
+            for c in [i as f32, i as f32 * 2.0, 0.5f32, 100.0 + i as f32] {
+                data.extend_from_slice(&c.to_le_bytes());
+            }
+            data.extend_from_slice(&(1_000_000 * i).to_le_bytes()); // t
+            data.extend_from_slice(&(200 + i as u16).to_le_bytes()); // reflectivity
+            data.extend_from_slice(&(i as u16).to_le_bytes()); // ring
+            data.extend_from_slice(&(5000 + i).to_le_bytes()); // range
+            data.extend_from_slice(&[0xaa, 0xbb, 0xcc, 0xdd]); // padding
+        }
+        let mut cloud = PointCloud {
+            timestamp: None,
+            frame_id: "t".to_string(),
+            pose: None,
+            point_stride: 32,
+            fields: vec![
+                field("x", 0, NumericType::Float32),
+                field("y", 4, NumericType::Float32),
+                field("z", 8, NumericType::Float32),
+                field("intensity", 12, NumericType::Float32),
+                field("t", 16, NumericType::Uint32),
+                field("reflectivity", 20, NumericType::Uint16),
+                field("ring", 22, NumericType::Uint16),
+                field("range", 24, NumericType::Uint32),
+            ],
+            data: data.into(),
+        };
+
+        super::drop_irrelevant_fields(&mut cloud);
+
+        // `t` and `range` are gone; the survivors are repacked contiguously (padding
+        // shed too) with recomputed offsets.
+        let named: Vec<(&str, u32)> = cloud
+            .fields
+            .iter()
+            .map(|f| (f.name.as_str(), f.offset))
+            .collect();
+        assert_eq!(
+            named,
+            [
+                ("x", 0),
+                ("y", 4),
+                ("z", 8),
+                ("intensity", 12),
+                ("reflectivity", 16),
+                ("ring", 18),
+            ]
+        );
+        assert_eq!(cloud.point_stride, 20);
+        let mut expected = Vec::new();
+        for i in 0..3u32 {
+            for c in [i as f32, i as f32 * 2.0, 0.5f32, 100.0 + i as f32] {
+                expected.extend_from_slice(&c.to_le_bytes());
+            }
+            expected.extend_from_slice(&(200 + i as u16).to_le_bytes());
+            expected.extend_from_slice(&(i as u16).to_le_bytes());
+        }
+        assert_eq!(cloud.data, expected);
+    }
+
+    #[test]
+    fn test_drop_matches_exact_tuples_only() {
+        let field = |name: &str, offset: u32, t: NumericType| PackedElementField {
+            name: name.to_string(),
+            offset,
+            r#type: t as i32,
+        };
+        // scan_id and scan_idx are distinct uint16 fields in the same vendor struct
+        // (Seyond): the index is dropped, the beam id is colorby-able and kept. A
+        // right-name-wrong-type field (`t` as float32) is kept too — event-camera
+        // clouds use time as a literal coordinate under such tuples.
+        let mut cloud = PointCloud {
+            timestamp: None,
+            frame_id: "t".to_string(),
+            pose: None,
+            point_stride: 12,
+            fields: vec![
+                field("t", 0, NumericType::Float32),
+                field("scan_id", 4, NumericType::Uint16),
+                field("scan_idx", 6, NumericType::Uint16),
+                field("timestamp", 8, NumericType::Float32),
+            ],
+            data: vec![0u8; 24].into(),
+        };
+        super::drop_irrelevant_fields(&mut cloud);
+        let names: Vec<&str> = cloud.fields.iter().map(|f| f.name.as_str()).collect();
+        assert_eq!(names, ["t", "scan_id", "timestamp"]);
+        assert_eq!(cloud.point_stride, 10);
+
+        // No droppable field at all: the cloud passes through untouched.
+        let mut cloud = xyz_cloud(&[[1.0, 2.0, 3.0]]);
+        let before = cloud.clone();
+        super::drop_irrelevant_fields(&mut cloud);
+        assert_eq!(cloud, before);
+    }
+
+    #[test]
+    fn test_drop_leaves_unreadable_clouds_for_the_encoder() {
+        let field = |name: &str, offset: u32, t: NumericType| PackedElementField {
+            name: name.to_string(),
+            offset,
+            r#type: t as i32,
+        };
+        // A retained field of unknown type can't be sized for the repack.
+        let mut cloud = PointCloud {
+            timestamp: None,
+            frame_id: "t".to_string(),
+            pose: None,
+            point_stride: 8,
+            fields: vec![
+                field("mystery", 0, NumericType::Unknown),
+                field("t", 4, NumericType::Uint32),
+            ],
+            data: vec![0u8; 16].into(),
+        };
+        let before = cloud.clone();
+        super::drop_irrelevant_fields(&mut cloud);
+        assert_eq!(cloud, before);
+
+        // A retained field extending past the stride is a layout error the encoder
+        // reports.
+        let mut cloud = PointCloud {
+            timestamp: None,
+            frame_id: "t".to_string(),
+            pose: None,
+            point_stride: 8,
+            fields: vec![
+                field("t", 0, NumericType::Uint32),
+                field("x", 6, NumericType::Float32),
+            ],
+            data: vec![0u8; 16].into(),
+        };
+        let before = cloud.clone();
+        super::drop_irrelevant_fields(&mut cloud);
+        assert_eq!(cloud, before);
+
+        // Dropping would leave no fields at all; the encoder's missing-position error
+        // is clearer than an empty repack.
+        let mut cloud = PointCloud {
+            timestamp: None,
+            frame_id: "t".to_string(),
+            pose: None,
+            point_stride: 4,
+            fields: vec![field("range", 0, NumericType::Uint32)],
+            data: vec![0u8; 8].into(),
+        };
+        let before = cloud.clone();
+        super::drop_irrelevant_fields(&mut cloud);
+        assert_eq!(cloud, before);
+    }
+
+    #[test]
+    fn test_transcodes_float64_timestamp_cloud() {
+        // (timestamp, float64) — the Hesai/Livox/RoboSense convention — is on the drop
+        // list, so a cloud that would otherwise be rejected for its float64 field
+        // compresses fine once the field is dropped.
+        let field = |name: &str, offset: u32, t: NumericType| PackedElementField {
+            name: name.to_string(),
+            offset,
+            r#type: t as i32,
+        };
+        let mut data = Vec::new();
+        for i in 0..8u32 {
+            for c in [i as f32, i as f32 * 2.0, 0.5f32] {
+                data.extend_from_slice(&c.to_le_bytes());
+            }
+            data.extend_from_slice(&(1.7e9 + i as f64 * 1e-4).to_le_bytes());
+        }
+        let cloud = PointCloud {
+            timestamp: None,
+            frame_id: "t".to_string(),
+            pose: None,
+            point_stride: 20,
+            fields: vec![
+                field("x", 0, NumericType::Float32),
+                field("y", 4, NumericType::Float32),
+                field("z", 8, NumericType::Float32),
+                field("timestamp", 12, NumericType::Float64),
+            ],
+            data: data.into(),
+        };
+        let mut buf = Vec::new();
+        cloud.encode(&mut buf).unwrap();
+        transcode_point_cloud_message(&buf, &CompressPointCloudOptions::default()).unwrap();
     }
 
     #[test]

@@ -486,19 +486,34 @@ impl Gateway {
     /// which provides no size reduction over the raw cloud — a channel whose policy
     /// returns lossless options is delivered unmodified, with a warning.
     ///
-    /// Draco cannot quantize float64 fields, so non-empty clouds containing one (other
-    /// than the `x`/`y`/`z` position fields) fail to compress and are dropped, with a
-    /// throttled warning on the device and to viewers. Use float32 or integer fields,
-    /// or return `None` for those channels.
+    /// Per-point fields that carry no value on a remote viewer are dropped before
+    /// encoding, matched by exact `(name, type)` tuple:
     ///
-    /// Points whose position contains a non-finite (NaN or infinite) coordinate are
-    /// removed before encoding: publishers commonly pad invalid returns with NaN, and
-    /// the Draco quantizer rejects non-finite input, which would otherwise fail the
-    /// whole cloud.
+    /// - Time: (`t`, uint32), (`time`, float32), (`ts`, float32),
+    ///   (`time_stamp`, uint32), (`timestamp`, float64), (`timestamp_s`, int32),
+    ///   (`timestamp_us`, int32), (`lidar_sec`, uint32), (`lidar_nsec`, uint32)
+    /// - Range/angles, recomputable from the positions: (`range`, uint32),
+    ///   (`range`, float32), (`distance`, float32), (`azimuth`, float32),
+    ///   (`elevation`, float32)
+    /// - Indices: (`point_id`, uint32), (`scan_idx`, uint16)
     ///
-    /// Fields named `rgb` or `rgba` declared float32 — PCL's packed-color convention —
-    /// are reinterpreted as uint32 before encoding: quantizing the packed bits as a
-    /// float would destroy the colors, while integer attributes are copied losslessly.
+    /// Near-unique-per-point values are what inflate kd-tree output (a lone uint32
+    /// timestamp measured at +224%), remote viewers do not deskew, and rendering and
+    /// color-by need none of these fields. Return `None` for a channel that must
+    /// deliver them.
+    ///
+    /// The remaining fields are further conditioned before encoding:
+    ///
+    /// - Fields named `rgb` or `rgba` declared float32 — PCL's packed-color convention —
+    ///   are reinterpreted as uint32: quantizing the packed bits as a float would
+    ///   destroy the colors, while integer attributes are copied losslessly.
+    /// - Float64 fields are narrowed to float32 (the kd-tree encoder cannot quantize
+    ///   them, and positions are narrowed regardless), keeping about seven significant
+    ///   digits.
+    /// - Points containing a non-finite (NaN or infinite) value in any float field —
+    ///   including a float64 value that overflows float32 — are removed: publishers
+    ///   commonly pad invalid returns with NaN, and the quantizer rejects non-finite
+    ///   input, which would otherwise fail the whole cloud.
     ///
     /// [`CompressPointCloudOptions::default()`]: crate::remote_access::CompressPointCloudOptions
     #[cfg_attr(docsrs, doc(cfg(feature = "remote-access")))]

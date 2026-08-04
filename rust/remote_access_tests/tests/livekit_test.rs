@@ -2855,6 +2855,41 @@ fn encoded_point_cloud() -> Vec<u8> {
     buf
 }
 
+/// An encoded `foxglove.PointCloud` (frame_id "f64-cloud") with float32 xyz positions
+/// plus a float64 `stamp` field.
+fn encoded_float64_point_cloud() -> Vec<u8> {
+    use foxglove::messages::{PackedElementField, PointCloud, packed_element_field::NumericType};
+
+    let field = |name: &str, offset: u32, t: NumericType| PackedElementField {
+        name: name.to_string(),
+        offset,
+        r#type: t as i32,
+    };
+    let mut data = Vec::new();
+    for i in 0..16 {
+        for v in [i as f32, i as f32 * 2.0, 1.5f32] {
+            data.extend_from_slice(&v.to_le_bytes());
+        }
+        data.extend_from_slice(&(i as f64 * 0.001).to_le_bytes());
+    }
+    let cloud = PointCloud {
+        timestamp: None,
+        frame_id: "f64-cloud".to_string(),
+        pose: None,
+        point_stride: 20,
+        fields: vec![
+            field("x", 0, NumericType::Float32),
+            field("y", 4, NumericType::Float32),
+            field("z", 8, NumericType::Float32),
+            field("stamp", 12, NumericType::Float64),
+        ],
+        data: data.into(),
+    };
+    let mut buf = Vec::new();
+    Encode::encode(&cloud, &mut buf).expect("encode PointCloud");
+    buf
+}
+
 /// Test that point-cloud compression is enabled by default: a `foxglove.PointCloud` channel
 /// is advertised with the `foxglove.CompressedPointCloud` schema, while other channels are
 /// unchanged.
@@ -2989,6 +3024,23 @@ async fn livekit_point_cloud_compression_transcodes_messages() -> Result<()> {
     assert_ne!(msg.data.as_ref(), encoded.as_slice());
     info!("draco-compressed point cloud delivered");
 
+    // A cloud with a float64 field is narrowed to float32 and delivered, not rejected:
+    // the kd-tree encoder cannot quantize float64, so the conditioning pass converts it
+    // before encoding.
+    cloud_channel.log(&encoded_float64_point_cloud());
+    let msg = viewer
+        .expect_new_data_track_and_message_data(channel_id)
+        .await?;
+    let compressed =
+        <foxglove::messages::CompressedPointCloud as foxglove::Decode>::decode(msg.data.as_ref())
+            .context("decode narrowed CompressedPointCloud")?;
+    assert_eq!(compressed.format, "draco");
+    assert_eq!(
+        compressed.frame_id, "f64-cloud",
+        "the float64 cloud must be narrowed and delivered"
+    );
+    info!("float64 cloud narrowed and delivered");
+
     viewer.close().await?;
     gw.stop().await?;
     Ok(())
@@ -3058,14 +3110,18 @@ async fn livekit_reliable_point_cloud_skips_compression() -> Result<()> {
     Ok(())
 }
 
-/// Test that a float64 field in a compressed point cloud fails transcoding: the message
-/// is dropped and a throttled warning naming the field is surfaced to viewers, while
+/// Test that a point cloud the encoder cannot compress fails transcoding: the message
+/// is dropped and a throttled warning naming the topic is surfaced to viewers, while
 /// subsequent compressible clouds on the channel still flow.
+///
+/// Uses a cloud with only an `x` field: the conditioning passes leave it untouched, and
+/// the encoder rejects it with `MissingPositionFields`. (float64 fields no longer reach
+/// this path — they are narrowed to float32 by the conditioning passes.)
 #[traced_test]
 #[ignore]
 #[tokio::test]
 #[serial(livekit)]
-async fn livekit_point_cloud_float64_rejected_warns() -> Result<()> {
+async fn livekit_point_cloud_uncompressible_warns() -> Result<()> {
     use foxglove::messages::{PackedElementField, PointCloud, packed_element_field::NumericType};
 
     let ctx = foxglove::Context::new();
@@ -3076,8 +3132,8 @@ async fn livekit_point_cloud_float64_rejected_warns() -> Result<()> {
         .build_raw()
         .context("create point cloud channel")?;
 
-    // Compression is on by default with quantization; Draco cannot quantize a float64
-    // field, so the message is rejected rather than delivered.
+    // Compression is on by default; a cloud with fewer than two of x/y/z cannot be
+    // encoded, so the message is rejected rather than delivered.
     let gw = TestGateway::start(&ctx).await?;
     let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
 
@@ -3089,36 +3145,27 @@ async fn livekit_point_cloud_float64_rejected_warns() -> Result<()> {
         .await?;
     viewer.ensure_device_data_track(channel_id).await?;
 
-    let field = |name: &str, offset: u32, t: NumericType| PackedElementField {
-        name: name.to_string(),
-        offset,
-        r#type: t as i32,
-    };
     let mut data = Vec::new();
     for i in 0..16 {
-        for v in [i as f32, i as f32 * 2.0, 1.5f32] {
-            data.extend_from_slice(&v.to_le_bytes());
-        }
-        data.extend_from_slice(&(i as f64 * 0.001).to_le_bytes());
+        data.extend_from_slice(&(i as f32).to_le_bytes());
     }
     let cloud = PointCloud {
         timestamp: None,
-        frame_id: "f64-cloud".to_string(),
+        frame_id: "x-only-cloud".to_string(),
         pose: None,
-        point_stride: 20,
-        fields: vec![
-            field("x", 0, NumericType::Float32),
-            field("y", 4, NumericType::Float32),
-            field("z", 8, NumericType::Float32),
-            field("stamp", 12, NumericType::Float64),
-        ],
+        point_stride: 4,
+        fields: vec![PackedElementField {
+            name: "x".to_string(),
+            offset: 0,
+            r#type: NumericType::Float32 as i32,
+        }],
         data: data.into(),
     };
     let mut encoded = Vec::new();
     Encode::encode(&cloud, &mut encoded).context("encode PointCloud")?;
     cloud_channel.log(&encoded);
 
-    // A warning status arrives on the control stream naming the offending field.
+    // A warning status arrives on the control stream naming the failure.
     let deadline = tokio::time::Instant::now() + EVENT_TIMEOUT;
     let status = loop {
         let msg = tokio::time::timeout_at(deadline, viewer.frame_reader.next_server_message())
@@ -3134,7 +3181,7 @@ async fn livekit_point_cloud_float64_rejected_warns() -> Result<()> {
         foxglove::protocol::v2::server::status::Level::Warning
     );
     assert!(
-        status.message.contains("float64") && status.message.contains("stamp"),
+        status.message.contains("position"),
         "unexpected status message: {}",
         status.message
     );
@@ -3150,8 +3197,8 @@ async fn livekit_point_cloud_float64_rejected_warns() -> Result<()> {
         .clone()
         .expect("compression warning must carry a stable id");
 
-    // The float64 cloud was dropped, not delivered: after logging a compressible cloud
-    // (frame_id "lidar"), the first frame on the data track is that cloud.
+    // The uncompressible cloud was dropped, not delivered: after logging a compressible
+    // cloud (frame_id "lidar"), the first frame on the data track is that cloud.
     cloud_channel.log(&encoded_point_cloud());
     let msg = viewer
         .expect_new_data_track_and_message_data(channel_id)
@@ -3162,7 +3209,7 @@ async fn livekit_point_cloud_float64_rejected_warns() -> Result<()> {
     assert_eq!(compressed.format, "draco");
     assert_eq!(
         compressed.frame_id, "lidar",
-        "the rejected float64 cloud must not be delivered"
+        "the uncompressible cloud must not be delivered"
     );
 
     // The session clears the warning once failures stop (a sweeper quiet period too long
@@ -3181,7 +3228,7 @@ async fn livekit_point_cloud_float64_rejected_warns() -> Result<()> {
             break;
         }
     }
-    info!("float64 rejection warning validated");
+    info!("uncompressible cloud warning validated");
 
     viewer.close().await?;
     gw.stop().await?;
