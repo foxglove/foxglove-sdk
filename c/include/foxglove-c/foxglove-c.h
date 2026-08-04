@@ -2213,16 +2213,16 @@ typedef struct foxglove_robot_description {
    */
   struct foxglove_string url;
   /**
+   * Embedded robot description. One of `url` or `data` should be non-empty. Because an embedded description has no location to resolve against, any resources it references, such as meshes, must use absolute URLs.
+   */
+  const unsigned char *data;
+  size_t data_len;
+  /**
    * Robot description format.
    *
    * Supported values: `urdf` ([Unified Robot Description Format](https://wiki.ros.org/urdf/XML)).
    */
   struct foxglove_string format;
-  /**
-   * Embedded robot description. One of `url` or `data` should be non-empty. Because an embedded description has no location to resolve against, any resources it references, such as meshes, must use absolute URLs.
-   */
-  const unsigned char *data;
-  size_t data_len;
 } foxglove_robot_description;
 
 #if !defined(__wasm__)

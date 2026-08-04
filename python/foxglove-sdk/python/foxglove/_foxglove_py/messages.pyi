@@ -913,7 +913,7 @@ class RobotDescription:
     """
 
     def __new__(
-        cls, *, url: str = "", format: str = "", data: bytes = b""
+        cls, *, url: str = "", data: bytes = b"", format: str = ""
     ) -> "RobotDescription": ...
     @staticmethod
     def get_schema() -> Schema:

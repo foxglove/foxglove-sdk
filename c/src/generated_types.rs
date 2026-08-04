@@ -7590,14 +7590,14 @@ pub struct RobotDescription {
     /// URL pointing to the robot description file. One of `url` or `data` should be non-empty. Relative resources referenced by the description, such as meshes, are resolved against this URL.
     pub url: FoxgloveString,
 
+    /// Embedded robot description. One of `url` or `data` should be non-empty. Because an embedded description has no location to resolve against, any resources it references, such as meshes, must use absolute URLs.
+    pub data: *const c_uchar,
+    pub data_len: usize,
+
     /// Robot description format.
     ///
     /// Supported values: `urdf` ([Unified Robot Description Format](https://wiki.ros.org/urdf/XML)).
     pub format: FoxgloveString,
-
-    /// Embedded robot description. One of `url` or `data` should be non-empty. Because an embedded description has no location to resolve against, any resources it references, such as meshes, must use absolute URLs.
-    pub data: *const c_uchar,
-    pub data_len: usize,
 }
 
 #[cfg(not(target_family = "wasm"))]
@@ -7642,8 +7642,8 @@ impl BorrowToNative for RobotDescription {
 
         Ok(ManuallyDrop::new(foxglove::messages::RobotDescription {
             url: ManuallyDrop::into_inner(url),
-            format: ManuallyDrop::into_inner(format),
             data: ManuallyDrop::into_inner(unsafe { bytes_from_raw(self.data, self.data_len) }),
+            format: ManuallyDrop::into_inner(format),
         }))
     }
 }

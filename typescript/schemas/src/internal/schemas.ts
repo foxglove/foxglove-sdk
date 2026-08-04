@@ -1233,16 +1233,16 @@ const RobotDescription: FoxgloveMessageSchema = {
         "URL pointing to the robot description file. One of `url` or `data` should be non-empty. Relative resources referenced by the description, such as meshes, are resolved against this URL.",
     },
     {
-      name: "format",
-      type: { type: "primitive", name: "string" },
-      description:
-        "Robot description format.\n\nSupported values: `urdf` ([Unified Robot Description Format](https://wiki.ros.org/urdf/XML)).",
-    },
-    {
       name: "data",
       type: { type: "primitive", name: "bytes" },
       description:
         "Embedded robot description. One of `url` or `data` should be non-empty. Because an embedded description has no location to resolve against, any resources it references, such as meshes, must use absolute URLs.",
+    },
+    {
+      name: "format",
+      type: { type: "primitive", name: "string" },
+      description:
+        "Robot description format.\n\nSupported values: `urdf` ([Unified Robot Description Format](https://wiki.ros.org/urdf/XML)).",
     },
   ],
 };
