@@ -12,6 +12,23 @@
 //! advertised without a video track and its messages are delivered on the data plane unchanged.
 //! This is needed for image channels whose pixels must not pass through lossy video — compressed
 //! depth maps are the motivating case. See [`SuppressVideoTranscode`] for details.
+//!
+//! # Point-cloud compression and the opt-out
+//!
+//! Point-cloud channels (`foxglove.PointCloud` with protobuf encoding) are transparently
+//! compressed with [Draco](https://google.github.io/draco/) by default: the channel is
+//! advertised with the `foxglove.CompressedPointCloud` schema and each point cloud is
+//! compressed before delivery. The default settings are lossy —
+//! kd-tree encoding with positions quantized to 12 bits — and per-point fields that carry no
+//! value on a remote viewer (timestamps, ranges and angles derivable from the positions, and
+//! per-point indices) are dropped. Compression applies only to Lossy channels; Reliable
+//! channels deliver the raw point cloud on the control bytestream.
+//!
+//! To tune the settings per channel or deliver point clouds unmodified, set a policy with
+//! [`Gateway::point_cloud_compression`] / [`Gateway::point_cloud_compression_fn`] — returning
+//! `None` for a channel delivers it untouched. See [`Gateway::point_cloud_compression`] for
+//! details, including the exact list of dropped fields, and [`PointCloudCompression`] for the
+//! policy trait.
 
 mod capability;
 mod channel_registry;
