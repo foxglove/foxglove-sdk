@@ -15,6 +15,93 @@ use crate::logging::init_logging;
 use crate::remote_common::{PyConnectionGraph, PyParameter, PyService, PyStatusLevel};
 use crate::sink_channel_filter::{PyChannelDescriptor, PySinkChannelFilter};
 
+/// Options for Draco point-cloud encoding.
+///
+/// :param quantization_bits: Quantization bits for the position attribute; must be
+///     between 1 and 30 inclusive, or a :py:exc:`ValueError` is raised. To disable
+///     compression for a channel, return ``False`` from the ``point_cloud_compression``
+///     policy rather than passing ``0``. Defaults to 12.
+/// :type quantization_bits: int
+#[pyclass(
+    from_py_object,
+    name = "DracoEncodeOptions",
+    module = "foxglove.remote_access"
+)]
+#[derive(Clone)]
+pub struct PyDracoEncodeOptions {
+    #[pyo3(get)]
+    pub quantization_bits: u8,
+}
+
+#[pymethods]
+impl PyDracoEncodeOptions {
+    #[new]
+    #[pyo3(signature = (*, quantization_bits=12))]
+    fn new(quantization_bits: u8) -> PyResult<Self> {
+        // Validate here so the options are valid by construction, mirroring the core
+        // `DracoEncodeOptions` invariant: whatever options a caller holds are valid.
+        // `quantization_bits` is read-only for the same reason.
+        if quantization_bits == 0 || quantization_bits > foxglove::draco::MAX_QUANTIZATION_BITS {
+            return Err(pyo3::exceptions::PyValueError::new_err(
+                invalid_bits_message(quantization_bits),
+            ));
+        }
+        Ok(Self { quantization_bits })
+    }
+}
+
+/// Message for an out-of-range `quantization_bits`, phrased for Python callers (the core
+/// error text points at `DracoEncodeOptions::lossless()`, which does not exist here).
+fn invalid_bits_message(bits: u8) -> String {
+    // Only 0 (lossless) has an actionable "turn it off" remediation; a value above the cap
+    // just needs a smaller number, not compression disabled.
+    let hint = if bits == 0 {
+        "; 0 (lossless) is not supported here — return False from the \
+         point_cloud_compression policy to deliver point clouds uncompressed"
+    } else {
+        ""
+    };
+    format!(
+        "quantization_bits ({bits}) must be between 1 and {}{hint}",
+        foxglove::draco::MAX_QUANTIZATION_BITS
+    )
+}
+
+impl From<PyDracoEncodeOptions> for foxglove::draco::DracoEncodeOptions {
+    fn from(value: PyDracoEncodeOptions) -> Self {
+        // Infallible: `quantization_bits` is validated in `__new__`, the field is read-only,
+        // the class is final (not subclassable), and pyo3's `from_py_object` extracts
+        // nominally (it clones a real instance rather than duck-typing fields), so the only
+        // way to obtain a `PyDracoEncodeOptions` is through the validating constructor.
+        Self::with_quantization_bits(value.quantization_bits)
+            .expect("quantization_bits is validated in PyDracoEncodeOptions::new")
+    }
+}
+
+/// The value returned by the `point_cloud_compression` policy callable for one channel:
+/// either `DracoEncodeOptions` for custom settings, or a bool to compress with default
+/// settings (`True`) or deliver the channel unmodified (`False`).
+#[derive(FromPyObject)]
+pub enum PyPointCloudCompression {
+    Draco(PyDracoEncodeOptions),
+    Enabled(bool),
+}
+
+impl PyPointCloudCompression {
+    /// Resolves the Python value into the options the compression policy applies to the
+    /// channel, where `None` disables compression. Infallible: `DracoEncodeOptions` is
+    /// validated at construction (see [`PyDracoEncodeOptions::new`]).
+    pub fn into_options(self) -> Option<foxglove::remote_access::PointCloudCompression> {
+        match self {
+            Self::Draco(options) => Some(foxglove::remote_access::PointCloudCompression::Draco(
+                options.into(),
+            )),
+            Self::Enabled(true) => Some(foxglove::remote_access::PointCloudCompression::default()),
+            Self::Enabled(false) => None,
+        }
+    }
+}
+
 /// A client connected to a running remote access gateway.
 #[pyclass(name = "Client", module = "foxglove.remote_access")]
 pub struct PyRemoteAccessClient {
@@ -638,9 +725,45 @@ impl foxglove::remote_access::SuppressVideoTranscode for PySuppressVideoTranscod
     }
 }
 
+/// A per-channel point-cloud compression policy wrapping a Python callable.
+///
+/// The callable should accept a `ChannelDescriptor` and return `DracoEncodeOptions` to
+/// compress the channel with those settings, `True` to compress with the SDK default
+/// settings, or `False` (or `None`) to deliver the channel unmodified. If the callable
+/// raises or returns any other type, the error is logged and the SDK default compression
+/// is applied, matching the error fallback of the other per-channel callbacks.
+pub struct PyPointCloudCompressionPolicy(pub Py<PyAny>);
+
+impl foxglove::remote_access::PointCloudCompressionPolicy for PyPointCloudCompressionPolicy {
+    fn compression(
+        &self,
+        channel: &foxglove::ChannelDescriptor,
+    ) -> Option<foxglove::remote_access::PointCloudCompression> {
+        Python::attach(|py| {
+            let handler = self.0.clone_ref(py);
+            let descriptor = PyChannelDescriptor(channel.clone());
+            let result = handler
+                .bind(py)
+                .call((descriptor,), None)
+                .and_then(|f| f.extract::<Option<PyPointCloudCompression>>());
+
+            match result {
+                Ok(compression) => compression.and_then(PyPointCloudCompression::into_options),
+                Err(err) => {
+                    tracing::error!(
+                        "Error in point-cloud compression policy: {}",
+                        err.to_string()
+                    );
+                    Some(foxglove::remote_access::PointCloudCompression::default())
+                }
+            }
+        })
+    }
+}
+
 /// Start a remote access gateway for live visualization and teleop in Foxglove.
 #[pyfunction]
-#[pyo3(signature = (*, name=None, device_token=None, capabilities=None, listener=None, supported_encodings=None, services=None, context=None, channel_filter=None, qos_classifier=None, suppress_video_transcode=None, message_backlog_size=None, foxglove_api_url=None, foxglove_api_timeout=None, video_encoder=None))]
+#[pyo3(signature = (*, name=None, device_token=None, capabilities=None, listener=None, supported_encodings=None, services=None, context=None, channel_filter=None, qos_classifier=None, suppress_video_transcode=None, message_backlog_size=None, foxglove_api_url=None, foxglove_api_timeout=None, video_encoder=None, point_cloud_compression=None))]
 #[allow(clippy::too_many_arguments)]
 pub fn start_gateway(
     py: Python<'_>,
@@ -658,6 +781,7 @@ pub fn start_gateway(
     foxglove_api_url: Option<String>,
     foxglove_api_timeout: Option<f64>,
     video_encoder: Option<PyVideoEncoderBackend>,
+    point_cloud_compression: Option<Py<PyAny>>,
 ) -> PyResult<PyRemoteAccessGateway> {
     init_logging(py, None);
 
@@ -726,6 +850,22 @@ pub fn start_gateway(
         gateway = gateway.video_encoder(video_encoder.into());
     }
 
+    // Point-cloud compression policy. Reject non-callables at startup: earlier revisions
+    // accepted `DracoEncodeOptions | bool` here, and a caller still passing e.g. `False`
+    // would otherwise get the exact opposite of what they asked for (the per-channel
+    // error fallback is the SDK default compression).
+    if let Some(point_cloud_compression) = point_cloud_compression {
+        if !point_cloud_compression.bind(py).is_callable() {
+            return Err(pyo3::exceptions::PyTypeError::new_err(
+                "point_cloud_compression must be a callable invoked per channel; to \
+                 disable compression, return False from it (e.g. lambda channel: False)",
+            ));
+        }
+        gateway = gateway.point_cloud_compression(Arc::new(PyPointCloudCompressionPolicy(
+            point_cloud_compression,
+        )));
+    }
+
     let handle = py
         .detach(|| gateway.start())
         .map_err(PyFoxgloveError::from)?;
@@ -743,6 +883,7 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<PyConnectionStatus>()?;
     module.add_class::<PyReliability>()?;
     module.add_class::<PyQosProfile>()?;
+    module.add_class::<PyDracoEncodeOptions>()?;
 
     let py = parent_module.py();
     py.import("sys")?

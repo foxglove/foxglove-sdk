@@ -12,6 +12,7 @@ try:
     from foxglove import ConnectionGraph, start_gateway
     from foxglove.remote_access import (
         Capability,
+        DracoEncodeOptions,
         RemoteAccessConnectionStatus,
         RemoteAccessListener,
     )
@@ -33,6 +34,62 @@ def test_start_gateway_requires_device_token() -> None:
     """
     with pytest.raises(RuntimeError, match="No device token provided"):
         start_gateway()
+
+
+def test_start_gateway_accepts_point_cloud_compression_policy() -> None:
+    """
+    The point-cloud compression policy is validated before the gateway starts, so the
+    missing-token error proves it was accepted.
+    """
+    with pytest.raises(RuntimeError, match="No device token provided"):
+        start_gateway(
+            point_cloud_compression=lambda _channel: DracoEncodeOptions(
+                quantization_bits=10
+            ),
+        )
+
+    with pytest.raises(RuntimeError, match="No device token provided"):
+        start_gateway(point_cloud_compression=lambda _channel: False)
+
+
+def test_start_gateway_rejects_non_callable_point_cloud_compression() -> None:
+    """
+    Earlier revisions accepted ``DracoEncodeOptions | bool`` directly; those values must
+    now be rejected at startup with a pointer at the per-channel callable, since e.g.
+    ``False`` would otherwise fall back to default compression — the opposite of what the
+    caller asked for.
+    """
+    for value in (False, True, DracoEncodeOptions()):
+        with pytest.raises(TypeError, match="must be a callable"):
+            start_gateway(point_cloud_compression=value)  # type: ignore[arg-type]
+
+
+def test_draco_encode_options_defaults() -> None:
+    options = DracoEncodeOptions()
+    assert options.quantization_bits == 12
+
+    options = DracoEncodeOptions(quantization_bits=10)
+    assert options.quantization_bits == 10
+
+
+def test_draco_encode_options_reject_invalid_quantization_bits() -> None:
+    # Out-of-range values are rejected at construction with a ValueError naming the
+    # offending value. 0 is lossless, so its message carries the "disable compression"
+    # remediation; 31 is the first value above the reference Draco decoder's 30-bit cap,
+    # which just wants a smaller number, so the hint must not appear there.
+    with pytest.raises(
+        ValueError,
+        match=r"quantization_bits \(0\).*return False",
+    ):
+        DracoEncodeOptions(quantization_bits=0)
+
+    with pytest.raises(ValueError, match=r"quantization_bits \(31\)") as excinfo:
+        DracoEncodeOptions(quantization_bits=31)
+    assert "return False" not in str(excinfo.value)
+
+    # quantization_bits must fit in a u8.
+    with pytest.raises(OverflowError):
+        DracoEncodeOptions(quantization_bits=256)
 
 
 def test_capability_enum() -> None:

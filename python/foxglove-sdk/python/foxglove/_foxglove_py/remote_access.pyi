@@ -13,6 +13,19 @@ from foxglove import (
     StatusLevel,
 )
 
+class DracoEncodeOptions:
+    """
+    Options for Draco point-cloud encoding.
+    """
+
+    @property
+    def quantization_bits(self) -> int: ...
+    def __init__(
+        self,
+        *,
+        quantization_bits: int = 12,
+    ) -> None: ...
+
 class Reliability(Enum):
     """
     The reliability policy for a channel's data delivery.

@@ -255,6 +255,7 @@ except ImportError:
 try:
     from .remote_access import Capability as RemoteAccessCapability
     from .remote_access import (
+        DracoEncodeOptions,
         QosProfile,
         RemoteAccessGateway,
         RemoteAccessListener,
@@ -277,6 +278,9 @@ try:
         foxglove_api_url: str | None = None,
         foxglove_api_timeout: float | None = None,
         video_encoder: VideoEncoderBackend | None = None,
+        point_cloud_compression: (
+            Callable[[ChannelDescriptor], DracoEncodeOptions | bool | None] | None
+        ) = None,
     ) -> RemoteAccessGateway:
         """
         Start a remote access gateway for live visualization and teleop in Foxglove.
@@ -308,6 +312,32 @@ try:
             or set to :py:attr:`~foxglove.remote_access.VideoEncoderBackend.Auto`, the SDK chooses
             (honoring the ``FOXGLOVE_VIDEO_ENCODER`` environment variable). If the requested
             backend is unavailable, the SDK falls back to another compatible encoder.
+        :param point_cloud_compression: A per-channel policy for transparent point-cloud
+            compression. When a channel is compressed, it is advertised as
+            ``foxglove.CompressedPointCloud`` and each logged point cloud is compressed in a
+            background task before delivery. The ``Callable`` is invoked for each compressible
+            Lossy ``foxglove.PointCloud`` channel; return a
+            :py:class:`~foxglove.remote_access.DracoEncodeOptions` to compress that channel
+            with those settings, ``True`` to compress with the default settings, or ``False``
+            (or ``None``) to deliver it unmodified. If the callable raises an exception, the
+            error is logged and the default settings are applied. The default of ``None`` (no
+            policy) defers to the SDK, which currently compresses every such channel with
+            default settings; note that the defaults are lossy (kd-tree encoding with
+            positions quantized to 12 bits). Channels classified as Reliable skip compression
+            and deliver the raw point cloud on the control bytestream; the policy is not
+            consulted for them.
+
+            Compressed clouds are conditioned before encoding: per-point fields that carry
+            no value on a remote viewer (timestamps, ranges and angles derivable from the
+            positions, and per-point indices, matched by exact (name, type) tuple) are
+            dropped; packed ``rgb``/``rgba`` color fields declared ``float32`` are
+            reinterpreted as ``uint32``; ``float64`` fields are narrowed to ``float32``
+            (about seven significant digits); and points containing a non-finite value in
+            any float field are removed. A cloud the encoder still cannot compress (for
+            example, fewer than two of ``x``/``y``/``z`` present) is **dropped**, not
+            delivered uncompressed — a throttled warning is sent to the device log and to
+            viewers. To deliver clouds untouched, return ``False`` for that channel from
+            ``point_cloud_compression``.
         """
         return _foxglove.start_gateway(
             name=name,
@@ -324,6 +354,7 @@ try:
             foxglove_api_url=foxglove_api_url,
             foxglove_api_timeout=foxglove_api_timeout,
             video_encoder=video_encoder,
+            point_cloud_compression=point_cloud_compression,
         )
 
     __all__ += ["start_gateway"]
