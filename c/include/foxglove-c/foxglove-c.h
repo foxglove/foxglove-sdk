@@ -30,6 +30,13 @@
 
 #if defined(FOXGLOVE_REMOTE_ACCESS)
 /**
+ * The maximum supported value for `foxglove_draco_encode_options.quantization_bits`.
+ */
+#define FOXGLOVE_DRACO_MAX_QUANTIZATION_BITS 30
+#endif
+
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
  * Allow clients to advertise channels to send data messages to the server.
  */
 #define FOXGLOVE_GATEWAY_CAPABILITY_CLIENT_PUBLISH (1 << 0)
@@ -502,6 +509,44 @@ enum foxglove_video_encoder_backend
 typedef enum foxglove_video_encoder_backend foxglove_video_encoder_backend;
 #else
 typedef uint8_t foxglove_video_encoder_backend;
+#endif // __STDC_VERSION__ >= 202311L
+#endif // __cplusplus
+#endif
+
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
+ * Transparent point-cloud compression mode for a sink.
+ */
+enum foxglove_point_cloud_compression_mode
+#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+  : uint8_t
+#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+ {
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+  /**
+   * Use the SDK default: Draco compression with default settings (kd-tree encoding with
+   * positions quantized to 12 bits, which is lossy). This is the default (0).
+   */
+  FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DEFAULT = 0,
+#endif
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+  /**
+   * Disable transparent point-cloud compression: point clouds are delivered unmodified.
+   */
+  FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DISABLED = 1,
+#endif
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+  /**
+   * Draco compression with the settings in `draco`.
+   */
+  FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DRACO = 2,
+#endif
+};
+#ifndef __cplusplus
+#if __STDC_VERSION__ >= 202311L
+typedef enum foxglove_point_cloud_compression_mode foxglove_point_cloud_compression_mode;
+#else
+typedef uint8_t foxglove_point_cloud_compression_mode;
 #endif // __STDC_VERSION__ >= 202311L
 #endif // __cplusplus
 #endif
@@ -2755,6 +2800,62 @@ typedef struct foxglove_parameter_handler {
 
 #if defined(FOXGLOVE_REMOTE_ACCESS)
 /**
+ * Options for Draco point-cloud encoding.
+ */
+typedef struct foxglove_draco_encode_options {
+  /**
+   * Quantization bits for the position attribute; must be between 1 and
+   * `FOXGLOVE_DRACO_MAX_QUANTIZATION_BITS` (30) inclusive. Out-of-range values are
+   * repaired toward the caller's intent, with a logged warning naming the channel:
+   * values above the maximum (which the reference Draco decoder rejects) are clamped
+   * to it, and `0` (lossless) provides no size reduction over the raw point cloud, so
+   * the channel is delivered unmodified — use
+   * `FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DISABLED` to do that without the warning.
+   */
+  uint8_t quantization_bits;
+} foxglove_draco_encode_options;
+#endif
+
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
+ * Transparent point-cloud compression for a single channel, returned by the per-channel
+ * `point_cloud_compression` callback on the gateway options.
+ *
+ * When compression is enabled, channels carrying `foxglove.PointCloud` messages are
+ * advertised with the `foxglove.CompressedPointCloud` schema, and each logged point cloud
+ * is compressed in a background task (off the logging hot path) before delivery. If
+ * compression falls behind the log rate, the oldest queued message is dropped.
+ * Channels classified as Reliable skip compression automatically and deliver the raw
+ * point cloud on the control bytestream.
+ *
+ * Compressed clouds are conditioned before encoding: per-point fields that carry no
+ * value on a remote viewer (timestamps, ranges and angles derivable from the positions,
+ * and per-point indices, matched by exact (name, type) tuple) are dropped; packed
+ * rgb/rgba color fields declared float32 are reinterpreted as uint32; float64 fields
+ * are narrowed to float32 (about seven significant digits); and points containing a
+ * non-finite value in any float field are removed. To deliver clouds untouched, return
+ * `FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DISABLED` for the channel.
+ *
+ * Zero-initialize this struct (mode 0) to use the SDK default. Note that when `mode` is
+ * `FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DRACO`, `draco.quantization_bits` should be set
+ * to a value between 1 and 30; out-of-range values are repaired, with a logged warning
+ * (see `foxglove_draco_encode_options`).
+ */
+typedef struct foxglove_point_cloud_compression {
+  /**
+   * The compression mode.
+   */
+  foxglove_point_cloud_compression_mode mode;
+  /**
+   * Draco encoding settings. Only used when `mode` is
+   * `FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DRACO`.
+   */
+  struct foxglove_draco_encode_options draco;
+} foxglove_point_cloud_compression;
+#endif
+
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
  * Options for creating a remote access gateway.
  *
  * # Safety
@@ -2890,6 +2991,27 @@ typedef struct foxglove_gateway_options {
    * (102400). Must be at least 1200.
    */
   size_t max_data_track_message_size;
+  /**
+   * Context provided to the `point_cloud_compression` callback.
+   */
+  const void *point_cloud_compression_context;
+  /**
+   * Selects, per channel, the transparent point-cloud compression applied.
+   *
+   * Return mode `FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DEFAULT` (a zero-initialized
+   * struct) to compress the given channel with the SDK default settings (Draco kd-tree
+   * encoding with positions quantized to 12 bits, which is lossy),
+   * `FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DISABLED` to advertise it with its original
+   * schema and deliver its messages unchanged, or
+   * `FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DRACO` to compress with the settings in
+   * `draco`. If not set, all compressible Lossy point-cloud channels are compressed
+   * with the SDK default settings.
+   *
+   * This callback is only consulted for compressible channels with Lossy QoS; channels
+   * classified as Reliable skip compression automatically and are delivered unmodified.
+   */
+  struct foxglove_point_cloud_compression (*point_cloud_compression)(const void *context,
+                                                                     const struct foxglove_channel_descriptor *channel);
 } foxglove_gateway_options;
 #endif
 

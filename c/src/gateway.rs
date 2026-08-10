@@ -112,6 +112,159 @@ impl foxglove::remote_access::SuppressVideoTranscode for SuppressVideoTranscode 
     }
 }
 
+/// The maximum supported value for `foxglove_draco_encode_options.quantization_bits`.
+pub const FOXGLOVE_DRACO_MAX_QUANTIZATION_BITS: u8 = 30;
+// cbindgen exports the literal above verbatim; fail the build if it drifts from the
+// core's cap.
+const _: () =
+    assert!(FOXGLOVE_DRACO_MAX_QUANTIZATION_BITS == foxglove::draco::MAX_QUANTIZATION_BITS);
+
+/// Options for Draco point-cloud encoding.
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct FoxgloveDracoEncodeOptions {
+    /// Quantization bits for the position attribute; must be between 1 and
+    /// `FOXGLOVE_DRACO_MAX_QUANTIZATION_BITS` (30) inclusive. Out-of-range values are
+    /// repaired toward the caller's intent, with a logged warning naming the channel:
+    /// values above the maximum (which the reference Draco decoder rejects) are clamped
+    /// to it, and `0` (lossless) provides no size reduction over the raw point cloud, so
+    /// the channel is delivered unmodified — use
+    /// `FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DISABLED` to do that without the warning.
+    pub quantization_bits: u8,
+}
+
+/// Transparent point-cloud compression mode for a sink.
+#[repr(u8)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FoxglovePointCloudCompressionMode {
+    /// Use the SDK default: Draco compression with default settings (kd-tree encoding with
+    /// positions quantized to 12 bits, which is lossy). This is the default (0).
+    Default = 0,
+    /// Disable transparent point-cloud compression: point clouds are delivered unmodified.
+    Disabled = 1,
+    /// Draco compression with the settings in `draco`.
+    Draco = 2,
+}
+
+/// Transparent point-cloud compression for a single channel, returned by the per-channel
+/// `point_cloud_compression` callback on the gateway options.
+///
+/// When compression is enabled, channels carrying `foxglove.PointCloud` messages are
+/// advertised with the `foxglove.CompressedPointCloud` schema, and each logged point cloud
+/// is compressed in a background task (off the logging hot path) before delivery. If
+/// compression falls behind the log rate, the oldest queued message is dropped.
+/// Channels classified as Reliable skip compression automatically and deliver the raw
+/// point cloud on the control bytestream.
+///
+/// Compressed clouds are conditioned before encoding: per-point fields that carry no
+/// value on a remote viewer (timestamps, ranges and angles derivable from the positions,
+/// and per-point indices, matched by exact (name, type) tuple) are dropped; packed
+/// rgb/rgba color fields declared float32 are reinterpreted as uint32; float64 fields
+/// are narrowed to float32 (about seven significant digits); and points containing a
+/// non-finite value in any float field are removed. To deliver clouds untouched, return
+/// `FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DISABLED` for the channel.
+///
+/// Zero-initialize this struct (mode 0) to use the SDK default. Note that when `mode` is
+/// `FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DRACO`, `draco.quantization_bits` should be set
+/// to a value between 1 and 30; out-of-range values are repaired, with a logged warning
+/// (see `foxglove_draco_encode_options`).
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct FoxglovePointCloudCompression {
+    /// The compression mode.
+    pub mode: FoxglovePointCloudCompressionMode,
+    /// Draco encoding settings. Only used when `mode` is
+    /// `FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DRACO`.
+    pub draco: FoxgloveDracoEncodeOptions,
+}
+
+impl FoxglovePointCloudCompression {
+    /// Resolves the C configuration into the options the per-channel compression policy
+    /// applies to one channel: `None` disables compression, and mode `Default` maps to
+    /// the SDK default options.
+    ///
+    /// The mapping is total: a C callback can return out-of-range Draco settings that the
+    /// Rust policy trait makes unrepresentable, so they are repaired (`0` delivers the
+    /// channel unmodified, values above the cap clamp to it), with a warning naming
+    /// `topic`.
+    pub(crate) fn to_compression_options(
+        self,
+        topic: &str,
+    ) -> Option<foxglove::remote_access::PointCloudCompression> {
+        const MAX_BITS: u8 = FOXGLOVE_DRACO_MAX_QUANTIZATION_BITS;
+        match self.mode {
+            FoxglovePointCloudCompressionMode::Default => {
+                Some(foxglove::remote_access::PointCloudCompression::default())
+            }
+            FoxglovePointCloudCompressionMode::Disabled => None,
+            FoxglovePointCloudCompressionMode::Draco => {
+                let bits = self.draco.quantization_bits;
+                if bits == 0 {
+                    tracing::warn!(
+                        topic,
+                        "point_cloud_compression: quantization_bits 0 requests lossless \
+                         encoding, which provides no size reduction; delivering the point \
+                         cloud unmodified (use the Disabled mode to opt out explicitly)"
+                    );
+                    return None;
+                }
+                if bits > MAX_BITS {
+                    tracing::warn!(
+                        topic,
+                        "point_cloud_compression: quantization_bits ({bits}) exceeds the \
+                         maximum of {MAX_BITS}; clamping"
+                    );
+                }
+                let options =
+                    foxglove::draco::DracoEncodeOptions::with_quantization_bits(bits.min(MAX_BITS))
+                        .expect("clamped quantization_bits are in range");
+                Some(foxglove::remote_access::PointCloudCompression::Draco(
+                    options,
+                ))
+            }
+        }
+    }
+}
+
+/// A per-channel point-cloud compression policy that wraps a C callback.
+struct PointCloudCompressionCallback {
+    callback_context: *const c_void,
+    callback: unsafe extern "C" fn(
+        *const c_void,
+        *const FoxgloveChannelDescriptor,
+    ) -> FoxglovePointCloudCompression,
+}
+
+impl PointCloudCompressionCallback {
+    fn new(
+        callback_context: *const c_void,
+        callback: unsafe extern "C" fn(
+            *const c_void,
+            *const FoxgloveChannelDescriptor,
+        ) -> FoxglovePointCloudCompression,
+    ) -> Self {
+        Self {
+            callback_context,
+            callback,
+        }
+    }
+}
+
+unsafe impl Send for PointCloudCompressionCallback {}
+unsafe impl Sync for PointCloudCompressionCallback {}
+
+impl foxglove::remote_access::PointCloudCompressionPolicy for PointCloudCompressionCallback {
+    fn compression(
+        &self,
+        channel: &foxglove::ChannelDescriptor,
+    ) -> Option<foxglove::remote_access::PointCloudCompression> {
+        let c_channel_descriptor = FoxgloveChannelDescriptor(channel.clone());
+        let compression =
+            unsafe { (self.callback)(self.callback_context, &raw const c_channel_descriptor) };
+        compression.to_compression_options(channel.topic())
+    }
+}
+
 /// The status of the remote access gateway connection.
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -699,6 +852,29 @@ pub struct FoxgloveGatewayOptions<'a> {
     /// Maximum lossy data-track message size in bytes. A value of 0 means use the default
     /// (102400). Must be at least 1200.
     pub max_data_track_message_size: usize,
+
+    /// Context provided to the `point_cloud_compression` callback.
+    pub point_cloud_compression_context: *const c_void,
+
+    /// Selects, per channel, the transparent point-cloud compression applied.
+    ///
+    /// Return mode `FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DEFAULT` (a zero-initialized
+    /// struct) to compress the given channel with the SDK default settings (Draco kd-tree
+    /// encoding with positions quantized to 12 bits, which is lossy),
+    /// `FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DISABLED` to advertise it with its original
+    /// schema and deliver its messages unchanged, or
+    /// `FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DRACO` to compress with the settings in
+    /// `draco`. If not set, all compressible Lossy point-cloud channels are compressed
+    /// with the SDK default settings.
+    ///
+    /// This callback is only consulted for compressible channels with Lossy QoS; channels
+    /// classified as Reliable skip compression automatically and are delivered unmodified.
+    pub point_cloud_compression: Option<
+        unsafe extern "C" fn(
+            context: *const c_void,
+            channel: *const FoxgloveChannelDescriptor,
+        ) -> FoxglovePointCloudCompression,
+    >,
     // New fields are appended last so that adding them preserves the memory offsets of all
     // pre-existing fields.
 }
@@ -839,6 +1015,14 @@ unsafe fn do_foxglove_gateway_start(
         gateway = gateway.suppress_video_transcode(Arc::new(SuppressVideoTranscode::new(
             options.suppress_video_transcode_context,
             suppress_video_transcode,
+        )));
+    }
+
+    // Point-cloud compression policy
+    if let Some(point_cloud_compression) = options.point_cloud_compression {
+        gateway = gateway.point_cloud_compression(Arc::new(PointCloudCompressionCallback::new(
+            options.point_cloud_compression_context,
+            point_cloud_compression,
         )));
     }
 
@@ -1118,5 +1302,78 @@ pub extern "C" fn foxglove_gateway_publish_connection_graph(
     match handle.publish_connection_graph(graph.0.clone()) {
         Ok(_) => FoxgloveError::Ok,
         Err(e) => FoxgloveError::from(e),
+    }
+}
+
+#[cfg(test)]
+mod point_cloud_compression_tests {
+    use super::{
+        FoxgloveDracoEncodeOptions, FoxglovePointCloudCompression,
+        FoxglovePointCloudCompressionMode,
+    };
+    use foxglove::draco::DracoEncodeOptions;
+    use foxglove::remote_access::PointCloudCompression;
+
+    #[test]
+    fn test_zero_initialized_struct_maps_to_sdk_default() {
+        // The documented ABI contract: a zero-initialized struct (mode 0) means "compress
+        // this channel with the SDK default settings".
+        let compression: FoxglovePointCloudCompression = unsafe { std::mem::zeroed() };
+        assert!(matches!(
+            compression.mode,
+            FoxglovePointCloudCompressionMode::Default
+        ));
+        assert_eq!(
+            compression.to_compression_options("/cloud"),
+            Some(PointCloudCompression::default())
+        );
+    }
+
+    #[test]
+    fn test_disabled_maps_to_opt_out() {
+        let compression = FoxglovePointCloudCompression {
+            mode: FoxglovePointCloudCompressionMode::Disabled,
+            draco: FoxgloveDracoEncodeOptions {
+                quantization_bits: 12,
+            },
+        };
+        assert_eq!(compression.to_compression_options("/cloud"), None);
+    }
+
+    #[test]
+    fn test_draco_maps_quantization_bits() {
+        let compression = FoxglovePointCloudCompression {
+            mode: FoxglovePointCloudCompressionMode::Draco,
+            draco: FoxgloveDracoEncodeOptions {
+                quantization_bits: 14,
+            },
+        };
+        let expected = DracoEncodeOptions::with_quantization_bits(14).unwrap();
+        assert_eq!(
+            compression.to_compression_options("/cloud"),
+            Some(PointCloudCompression::Draco(expected))
+        );
+    }
+
+    #[test]
+    fn test_out_of_range_quantization_bits_repaired() {
+        // The documented ABI contract: out-of-range bits are repaired rather than failing
+        // the channel — 0 delivers it unmodified, values above the cap clamp to it.
+        let draco = |quantization_bits| FoxglovePointCloudCompression {
+            mode: FoxglovePointCloudCompressionMode::Draco,
+            draco: FoxgloveDracoEncodeOptions { quantization_bits },
+        };
+
+        assert_eq!(draco(0).to_compression_options("/cloud"), None);
+
+        let clamped =
+            DracoEncodeOptions::with_quantization_bits(foxglove::draco::MAX_QUANTIZATION_BITS)
+                .unwrap();
+        for bits in [31, u8::MAX] {
+            assert_eq!(
+                draco(bits).to_compression_options("/cloud"),
+                Some(PointCloudCompression::Draco(clamped))
+            );
+        }
     }
 }

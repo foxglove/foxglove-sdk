@@ -201,6 +201,8 @@ pub struct FoxgloveServerOptions<'a> {
     /// When provided, both `get` and `set` on the handler are required; otherwise
     /// `foxglove_server_start` returns `FOXGLOVE_ERROR_VALUE_ERROR`.
     pub parameter_handler: Option<&'a FoxgloveParameterHandler>,
+    // New fields are appended last so that adding them preserves the memory offsets of all
+    // pre-existing fields.
 }
 
 #[repr(C)]

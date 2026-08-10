@@ -1356,3 +1356,47 @@ TEST_CASE("livekit: suppress_video_transcode opts channel out of video track", "
 
   gw.stop();
 }
+
+TEST_CASE(
+  "livekit: point_cloud_compression policy selects compression per channel", "[integration]"
+) {
+  auto ctx = foxglove::Context::create();
+
+  // Two identical foxglove.PointCloud channels. The policy disables compression for /raw by
+  // topic (advertised with its original schema), while /compressed gets custom Draco settings
+  // and is re-advertised as foxglove.CompressedPointCloud — so the test verifies the
+  // callback's per-topic selectivity, not just that it fires.
+  auto raw_channel = foxglove::RawChannel::create(
+    "/raw", "protobuf", foxglove::Schema{"foxglove.PointCloud", "protobuf", nullptr, 0}, ctx
+  );
+  REQUIRE(raw_channel.has_value());
+  auto compressed_channel = foxglove::RawChannel::create(
+    "/compressed", "protobuf", foxglove::Schema{"foxglove.PointCloud", "protobuf", nullptr, 0}, ctx
+  );
+  REQUIRE(compressed_channel.has_value());
+
+  TestGatewayOptions opts;
+  opts.point_cloud_compression = [](const foxglove::ChannelDescriptor& ch) {
+    if (std::string(ch.topic()) == "/raw") {
+      return foxglove::PointCloudCompression::disabled();
+    }
+    return foxglove::PointCloudCompression::withDraco({8});
+  };
+  auto gw = TestGateway::start_with_options(ctx, std::move(opts));
+
+  auto viewer = ViewerConnection::connect(gw.room_name, "viewer-1");
+  viewer.expect_server_info();
+
+  auto advertise = viewer.expect_advertise();
+  REQUIRE(advertise["channels"].size() == 2);
+  for (const auto& ch : advertise["channels"]) {
+    if (ch["id"].get<uint64_t>() == raw_channel->id()) {
+      CHECK(ch["schemaName"] == "foxglove.PointCloud");
+    } else {
+      CHECK(ch["id"].get<uint64_t>() == compressed_channel->id());
+      CHECK(ch["schemaName"] == "foxglove.CompressedPointCloud");
+    }
+  }
+
+  gw.stop();
+}

@@ -15,6 +15,15 @@
 #include "callback_forwarders.hpp"
 
 namespace foxglove {
+
+// The C++ header is self-contained (it does not include foxglove-c.h), so it carries its
+// own literal; this is the one place both headers are visible, chaining the C++ constant
+// to the C one (which the C crate asserts against the core's cap at build time).
+static_assert(
+  DracoEncodeOptions::kMaxQuantizationBits == FOXGLOVE_DRACO_MAX_QUANTIZATION_BITS,
+  "kMaxQuantizationBits must match the C constant"
+);
+
 namespace {
 
 void forwardOnConnectionStatusChanged(const void* context, foxglove_connection_status status) {
@@ -110,6 +119,27 @@ bool forwardSuppressVideoTranscode(
     warn() << "Video-transcode opt-out predicate failed: " << exc.what();
     return false;
   }
+}
+
+foxglove_point_cloud_compression forwardPointCloudCompression(
+  const void* context, const foxglove_channel_descriptor* channel
+) {
+  // Zero-initialized means mode `Default`: the SDK default compression, which is also the
+  // fallback when no policy can be consulted.
+  foxglove_point_cloud_compression c_compression = {};
+  if (context == nullptr) {
+    return c_compression;
+  }
+  try {
+    const auto* policy = static_cast<const PointCloudCompressionFn*>(context);
+    auto cpp_channel = ChannelDescriptor(channel);
+    auto compression = (*policy)(cpp_channel);
+    c_compression.mode = static_cast<foxglove_point_cloud_compression_mode>(compression.mode);
+    c_compression.draco.quantization_bits = compression.draco.quantization_bits;
+  } catch (const std::exception& exc) {
+    warn() << "Point-cloud compression policy failed: " << exc.what();
+  }
+  return c_compression;
 }
 
 // Populates `c` with forward function pointers for every callback set on `cb`,
@@ -252,6 +282,15 @@ FoxgloveResult<RemoteAccessGateway> RemoteAccessGateway::create(
     c_options.suppress_video_transcode = &forwardSuppressVideoTranscode;
   }
 
+  // Point-cloud compression policy
+  std::unique_ptr<PointCloudCompressionFn> point_cloud_compression;
+  if (options.point_cloud_compression) {
+    point_cloud_compression =
+      std::make_unique<PointCloudCompressionFn>(std::move(options.point_cloud_compression));
+    c_options.point_cloud_compression_context = point_cloud_compression.get();
+    c_options.point_cloud_compression = &forwardPointCloudCompression;
+  }
+
   // Fetch asset handler
   internal::wireFetchAsset(c_options, std::move(options.fetch_asset), fetch_asset);
 
@@ -301,6 +340,7 @@ FoxgloveResult<RemoteAccessGateway> RemoteAccessGateway::create(
     std::move(sink_channel_filter),
     std::move(qos_classifier),
     std::move(suppress_video_transcode),
+    std::move(point_cloud_compression),
     std::move(parameter_handler)
   );
 }
@@ -311,6 +351,7 @@ RemoteAccessGateway::RemoteAccessGateway(
   std::unique_ptr<SinkChannelFilterFn> sink_channel_filter,
   std::unique_ptr<QosClassifierFn> qos_classifier,
   std::unique_ptr<SuppressVideoTranscodeFn> suppress_video_transcode,
+  std::unique_ptr<PointCloudCompressionFn> point_cloud_compression,
   std::unique_ptr<ParameterHandler> parameter_handler
 )
     : callbacks_(std::move(callbacks))
@@ -318,6 +359,7 @@ RemoteAccessGateway::RemoteAccessGateway(
     , sink_channel_filter_(std::move(sink_channel_filter))
     , qos_classifier_(std::move(qos_classifier))
     , suppress_video_transcode_(std::move(suppress_video_transcode))
+    , point_cloud_compression_(std::move(point_cloud_compression))
     , parameter_handler_(std::move(parameter_handler))
     , impl_(gateway, foxglove_gateway_stop) {}
 

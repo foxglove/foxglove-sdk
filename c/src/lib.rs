@@ -45,6 +45,14 @@ mod system_info;
 #[cfg(not(target_family = "wasm"))]
 pub use server::*;
 
+// The compression types live in the feature-gated `gateway` module, but stay exported at
+// the crate root (like the `server::*` types) since C constructs them across the FFI
+// boundary; without a public path, their variants trip the dead-code lint.
+#[cfg(feature = "remote-access")]
+pub use gateway::{
+    FoxgloveDracoEncodeOptions, FoxglovePointCloudCompression, FoxglovePointCloudCompressionMode,
+};
+
 #[cfg(not(target_family = "wasm"))]
 pub use channel::*;
 

@@ -7,6 +7,7 @@
 #include <foxglove/fetch_asset.hpp>
 #include <foxglove/parameter.hpp>
 #include <foxglove/parameter_handler.hpp>
+#include <foxglove/point_cloud_compression.hpp>
 #include <foxglove/service.hpp>
 
 #include <chrono>
@@ -199,6 +200,17 @@ using QosClassifierFn = std::function<QosProfile(const ChannelDescriptor&)>;
 /// maps, whose pixel values encode depth and would be corrupted by lossy video transcoding.
 using SuppressVideoTranscodeFn = std::function<bool(const ChannelDescriptor&)>;
 
+/// @brief A callable that selects, per channel, the transparent point-cloud compression
+/// applied over remote access.
+///
+/// Accepts any callable with signature `PointCloudCompression(const ChannelDescriptor&)`.
+/// Return a default-constructed @ref PointCloudCompression to compress the channel with the
+/// SDK default settings, @ref PointCloudCompression::disabled() to advertise it with its
+/// original schema and deliver its messages unchanged, or
+/// @ref PointCloudCompression::withDraco() to customize the Draco settings. If the callable
+/// throws, the SDK default compression is applied to that channel.
+using PointCloudCompressionFn = std::function<PointCloudCompression(const ChannelDescriptor&)>;
+
 /// @brief Preferred backend for encoding published video tracks.
 ///
 /// This preference applies to every video track the gateway publishes. If the requested
@@ -296,6 +308,16 @@ struct RemoteAccessGatewayOptions {
   ///
   /// By default, the limit is 102400 bytes (100 KiB).
   std::optional<size_t> max_data_track_message_size = std::nullopt;
+  /// @brief A per-channel point-cloud compression policy callback.
+  ///
+  /// If set, this callback is invoked for each compressible Lossy `foxglove.PointCloud`
+  /// channel to select the compression applied to it; see @ref PointCloudCompressionFn.
+  /// If not set, all compressible Lossy point-cloud channels are compressed with the SDK
+  /// default settings. Note that the default settings are lossy: Draco kd-tree encoding
+  /// with positions quantized to 12 bits. Channels classified as Reliable skip compression
+  /// and deliver the raw point cloud on the control bytestream; the callback is not
+  /// consulted for them.
+  PointCloudCompressionFn point_cloud_compression;
   // New fields are appended last so that adding them preserves the layout of pre-existing fields.
 };
 
@@ -375,6 +397,7 @@ private:
     std::unique_ptr<SinkChannelFilterFn> sink_channel_filter,
     std::unique_ptr<QosClassifierFn> qos_classifier,
     std::unique_ptr<SuppressVideoTranscodeFn> suppress_video_transcode,
+    std::unique_ptr<PointCloudCompressionFn> point_cloud_compression,
     std::unique_ptr<ParameterHandler> parameter_handler
   );
 
@@ -383,6 +406,7 @@ private:
   std::unique_ptr<SinkChannelFilterFn> sink_channel_filter_;
   std::unique_ptr<QosClassifierFn> qos_classifier_;
   std::unique_ptr<SuppressVideoTranscodeFn> suppress_video_transcode_;
+  std::unique_ptr<PointCloudCompressionFn> point_cloud_compression_;
   std::unique_ptr<ParameterHandler> parameter_handler_;
   std::unique_ptr<foxglove_gateway, foxglove_error (*)(foxglove_gateway*)> impl_;
 };
