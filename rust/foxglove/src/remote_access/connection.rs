@@ -14,6 +14,7 @@ use tokio::{runtime::Handle, sync::OnceCell, sync::mpsc::UnboundedReceiver, task
 use tokio_util::sync::CancellationToken;
 use tracing::{error, info, warn};
 
+use crate::remote_access::point_cloud_compression::PointCloudCompressionPolicy;
 use crate::{
     Context, FoxgloveError, SinkChannelFilter, SinkId,
     api_client::{
@@ -104,6 +105,7 @@ pub(super) struct ConnectionParams {
     pub(super) max_data_track_message_size: Option<usize>,
     pub(super) video_codec_override: Option<VideoCodec>,
     pub(super) video_encoder: super::gateway::VideoEncoderBackend,
+    pub(super) point_cloud_compression: Option<Arc<dyn PointCloudCompressionPolicy>>,
     pub(super) context: Weak<Context>,
 }
 
@@ -144,6 +146,7 @@ pub(super) struct RemoteAccessConnection {
     max_data_track_message_size: Option<usize>,
     video_codec_override: Option<VideoCodec>,
     video_encoder: super::gateway::VideoEncoderBackend,
+    point_cloud_compression: Option<Arc<dyn PointCloudCompressionPolicy>>,
     context: Weak<Context>,
     cancellation_token: CancellationToken,
     services: Arc<parking_lot::RwLock<ServiceMap>>,
@@ -178,6 +181,7 @@ impl RemoteAccessConnection {
             max_data_track_message_size: params.max_data_track_message_size,
             video_codec_override: params.video_codec_override,
             video_encoder: params.video_encoder,
+            point_cloud_compression: params.point_cloud_compression,
             context: params.context,
             cancellation_token: CancellationToken::new(),
             services,
@@ -337,6 +341,7 @@ impl RemoteAccessConnection {
                 .unwrap_or(DEFAULT_MAX_DATA_TRACK_MESSAGE_SIZE),
             video_codec_override: self.video_codec_override,
             video_encoder: self.video_encoder,
+            point_cloud_compression: self.point_cloud_compression.clone(),
             services: self.services.clone(),
             connection_graph: self.connection_graph.clone(),
             remote_access_session_id: remote_access_session_id.map(str::to_string),
@@ -546,7 +551,7 @@ impl RemoteAccessConnection {
         let video_metadata_task = tokio::spawn(RemoteAccessSession::run_video_metadata_watcher(
             session.clone(),
         ));
-        let drop_status_task = tokio::spawn(RemoteAccessSession::run_drop_status_sweeper(
+        let warning_sweep_task = tokio::spawn(RemoteAccessSession::run_channel_warning_sweeper(
             session.clone(),
         ));
 
@@ -617,11 +622,11 @@ impl RemoteAccessConnection {
                 "video metadata watcher failed"
             );
         }
-        if let Err(e) = drop_status_task.await {
+        if let Err(e) = warning_sweep_task.await {
             error!(
                 remote_access_session_id,
                 error = %e,
-                "drop status sweeper failed"
+                "channel warning sweeper failed"
             );
         }
 

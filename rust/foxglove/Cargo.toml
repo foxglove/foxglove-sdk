@@ -25,6 +25,7 @@ websocket = ["_remote-common", "dep:tokio-tungstenite"]
 live_visualization = ["websocket"]
 remote-access = [
   "_remote-common",
+  "dep:draco-core",
   "img2yuv",
   "dep:livekit",
   "dep:libwebrtc",
@@ -116,6 +117,7 @@ bimap = "0.6.3"
 bytes.workspace = true
 chrono = { workspace = true, optional = true }
 delegate = "0.13.2"
+draco-core = { version = "1.0", optional = true }
 flume = { version = "0.12", optional = true }
 indexmap = "2"
 foxglove_derive = { version = "0.26.0", path = "../foxglove_derive", optional = true }

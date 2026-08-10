@@ -2826,6 +2826,415 @@ async fn livekit_qos_classifier_per_channel() -> Result<()> {
     Ok(())
 }
 
+/// Builds an encoded `foxglove.PointCloud` with float32 x/y/z fields.
+fn encoded_point_cloud() -> Vec<u8> {
+    use foxglove::messages::{PackedElementField, PointCloud, packed_element_field::NumericType};
+
+    let field = |name: &str, offset: u32| PackedElementField {
+        name: name.to_string(),
+        offset,
+        r#type: NumericType::Float32 as i32,
+    };
+    let positions: [[f32; 3]; 2] = [[1.0, 2.0, 3.0], [-4.0, 5.5, -6.25]];
+    let mut data = Vec::new();
+    for pos in &positions {
+        for c in pos {
+            data.extend_from_slice(&c.to_le_bytes());
+        }
+    }
+    let cloud = PointCloud {
+        timestamp: None,
+        frame_id: "lidar".to_string(),
+        pose: None,
+        point_stride: 12,
+        fields: vec![field("x", 0), field("y", 4), field("z", 8)],
+        data: data.into(),
+    };
+    let mut buf = Vec::new();
+    Encode::encode(&cloud, &mut buf).expect("encode PointCloud");
+    buf
+}
+
+/// An encoded `foxglove.PointCloud` (frame_id "f64-cloud") with float32 xyz positions
+/// plus a float64 `stamp` field.
+fn encoded_float64_point_cloud() -> Vec<u8> {
+    use foxglove::messages::{PackedElementField, PointCloud, packed_element_field::NumericType};
+
+    let field = |name: &str, offset: u32, t: NumericType| PackedElementField {
+        name: name.to_string(),
+        offset,
+        r#type: t as i32,
+    };
+    let mut data = Vec::new();
+    for i in 0..16 {
+        for v in [i as f32, i as f32 * 2.0, 1.5f32] {
+            data.extend_from_slice(&v.to_le_bytes());
+        }
+        data.extend_from_slice(&(i as f64 * 0.001).to_le_bytes());
+    }
+    let cloud = PointCloud {
+        timestamp: None,
+        frame_id: "f64-cloud".to_string(),
+        pose: None,
+        point_stride: 20,
+        fields: vec![
+            field("x", 0, NumericType::Float32),
+            field("y", 4, NumericType::Float32),
+            field("z", 8, NumericType::Float32),
+            field("stamp", 12, NumericType::Float64),
+        ],
+        data: data.into(),
+    };
+    let mut buf = Vec::new();
+    Encode::encode(&cloud, &mut buf).expect("encode PointCloud");
+    buf
+}
+
+/// Test that point-cloud compression is enabled by default: a `foxglove.PointCloud` channel
+/// is advertised with the `foxglove.CompressedPointCloud` schema, while other channels are
+/// unchanged.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_point_cloud_compression_rewrites_advertised_schema() -> Result<()> {
+    let ctx = foxglove::Context::new();
+    let cloud_channel = ctx
+        .channel_builder("/cloud")
+        .message_encoding("protobuf")
+        .schema(<foxglove::messages::PointCloud as Encode>::get_schema().unwrap())
+        .build_raw()
+        .context("create point cloud channel")?;
+    let json_channel = ctx
+        .channel_builder("/data")
+        .message_encoding("json")
+        .build_raw()
+        .context("create json channel")?;
+
+    // Compression is on by default; no explicit configuration.
+    let gw = TestGateway::start(&ctx).await?;
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+
+    let _server_info = viewer.expect_server_info().await?;
+    let advertise = viewer.expect_advertise().await?;
+
+    assert_eq!(advertise.channels.len(), 2);
+    for ch in &advertise.channels {
+        if ch.id == u64::from(cloud_channel.id()) {
+            assert_eq!(ch.schema_name, "foxglove.CompressedPointCloud");
+            assert_eq!(ch.encoding, "protobuf");
+            assert_eq!(ch.schema_encoding.as_deref(), Some("protobuf"));
+        } else {
+            assert_eq!(ch.id, u64::from(json_channel.id()));
+            assert_eq!(ch.schema_name, "");
+        }
+    }
+    info!("compressed point cloud schema advertisement validated");
+
+    viewer.close().await?;
+    gw.stop().await?;
+    Ok(())
+}
+
+/// Test that a compression policy returning `None` opts out of the default: the channel
+/// is advertised with the raw `foxglove.PointCloud` schema.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_point_cloud_compression_opt_out() -> Result<()> {
+    let ctx = foxglove::Context::new();
+    let cloud_channel = ctx
+        .channel_builder("/cloud")
+        .message_encoding("protobuf")
+        .schema(<foxglove::messages::PointCloud as Encode>::get_schema().unwrap())
+        .build_raw()
+        .context("create point cloud channel")?;
+
+    let gw = TestGateway::start_with_options(
+        &ctx,
+        TestGatewayOptions {
+            point_cloud_compression: Some(None),
+            ..Default::default()
+        },
+    )
+    .await?;
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+
+    let _server_info = viewer.expect_server_info().await?;
+    let advertise = viewer.expect_advertise().await?;
+
+    assert_eq!(advertise.channels.len(), 1);
+    let ch = &advertise.channels[0];
+    assert_eq!(ch.id, u64::from(cloud_channel.id()));
+    assert_eq!(ch.schema_name, "foxglove.PointCloud");
+    info!("compression opt-out validated");
+
+    viewer.close().await?;
+    gw.stop().await?;
+    Ok(())
+}
+
+/// Test that by default (compression enabled), logged `foxglove.PointCloud` messages are
+/// delivered as Draco-compressed `foxglove.CompressedPointCloud` messages.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_point_cloud_compression_transcodes_messages() -> Result<()> {
+    let ctx = foxglove::Context::new();
+    let cloud_channel = ctx
+        .channel_builder("/cloud")
+        .message_encoding("protobuf")
+        .schema(<foxglove::messages::PointCloud as Encode>::get_schema().unwrap())
+        .build_raw()
+        .context("create point cloud channel")?;
+
+    // Compression is on by default; no explicit configuration.
+    let gw = TestGateway::start(&ctx).await?;
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+
+    let _server_info = viewer.expect_server_info().await?;
+    let advertise = viewer.expect_advertise().await?;
+    let channel_id = advertise.channels[0].id;
+
+    // Point-cloud channels default to lossy QoS, so the transcoded message arrives on the
+    // channel's data track. Wait for the track reader to be ready before logging, since
+    // messages sent before the reader subscribes are dropped.
+    viewer
+        .subscribe_and_wait(&[channel_id], &cloud_channel)
+        .await?;
+    viewer.ensure_device_data_track(channel_id).await?;
+
+    let encoded = encoded_point_cloud();
+    cloud_channel.log(&encoded);
+
+    let msg = viewer
+        .expect_new_data_track_and_message_data(channel_id)
+        .await?;
+    assert_eq!(msg.channel_id, channel_id);
+
+    let compressed =
+        <foxglove::messages::CompressedPointCloud as foxglove::Decode>::decode(msg.data.as_ref())
+            .context("decode CompressedPointCloud")?;
+    assert_eq!(compressed.format, "draco");
+    assert_eq!(compressed.frame_id, "lidar");
+    assert!(!compressed.data.is_empty());
+    // The raw PointCloud message must not have been forwarded as-is.
+    assert_ne!(msg.data.as_ref(), encoded.as_slice());
+    info!("draco-compressed point cloud delivered");
+
+    // A cloud with a float64 field is narrowed to float32 and delivered, not rejected:
+    // the kd-tree encoder cannot quantize float64, so the conditioning pass converts it
+    // before encoding.
+    cloud_channel.log(&encoded_float64_point_cloud());
+    let msg = viewer
+        .expect_new_data_track_and_message_data(channel_id)
+        .await?;
+    let compressed =
+        <foxglove::messages::CompressedPointCloud as foxglove::Decode>::decode(msg.data.as_ref())
+            .context("decode narrowed CompressedPointCloud")?;
+    assert_eq!(compressed.format, "draco");
+    assert_eq!(
+        compressed.frame_id, "f64-cloud",
+        "the float64 cloud must be narrowed and delivered"
+    );
+    info!("float64 cloud narrowed and delivered");
+
+    viewer.close().await?;
+    gw.stop().await?;
+    Ok(())
+}
+
+/// Test that a Reliable point-cloud channel skips compression: advertised with the raw
+/// `foxglove.PointCloud` schema and delivered unmodified on the control bytestream.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_reliable_point_cloud_skips_compression() -> Result<()> {
+    let ctx = foxglove::Context::new();
+    let cloud_channel = ctx
+        .channel_builder("/cloud")
+        .message_encoding("protobuf")
+        .schema(<foxglove::messages::PointCloud as Encode>::get_schema().unwrap())
+        .build_raw()
+        .context("create point cloud channel")?;
+
+    // Compression is on by default; Reliable QoS should auto-suppress it.
+    let gw = TestGateway::start_with_options(
+        &ctx,
+        TestGatewayOptions {
+            qos_classifier: Some(Box::new(|_| {
+                QosProfile::builder()
+                    .reliability(Reliability::Reliable)
+                    .build()
+            })),
+            ..Default::default()
+        },
+    )
+    .await?;
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+
+    let _server_info = viewer.expect_server_info().await?;
+    let advertise = viewer.expect_advertise().await?;
+    let ch = &advertise.channels[0];
+    let channel_id = ch.id;
+
+    assert_eq!(ch.id, u64::from(cloud_channel.id()));
+    assert_eq!(ch.schema_name, "foxglove.PointCloud");
+    assert_eq!(
+        ch.metadata.get("foxglove.reliable"),
+        Some(&"true".to_string()),
+        "reliable point cloud should keep Reliable metadata"
+    );
+
+    viewer
+        .subscribe_and_wait(&[channel_id], &cloud_channel)
+        .await?;
+
+    let encoded = encoded_point_cloud();
+    cloud_channel.log(&encoded);
+
+    let msg_data = viewer.expect_message_data().await?;
+    assert_eq!(msg_data.channel_id, channel_id);
+    assert_eq!(
+        msg_data.data.as_ref(),
+        encoded.as_slice(),
+        "raw PointCloud should be delivered unmodified on the control stream"
+    );
+    info!("reliable point cloud skips compression validated");
+
+    viewer.close().await?;
+    gw.stop().await?;
+    Ok(())
+}
+
+/// Test that a point cloud the encoder cannot compress fails transcoding: the message
+/// is dropped and a throttled warning naming the topic is surfaced to viewers, while
+/// subsequent compressible clouds on the channel still flow.
+///
+/// Uses a cloud with only an `x` field: the conditioning passes leave it untouched, and
+/// the encoder rejects it with `MissingPositionFields`. (float64 fields no longer reach
+/// this path — they are narrowed to float32 by the conditioning passes.)
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_point_cloud_uncompressible_warns() -> Result<()> {
+    use foxglove::messages::{PackedElementField, PointCloud, packed_element_field::NumericType};
+
+    let ctx = foxglove::Context::new();
+    let cloud_channel = ctx
+        .channel_builder("/cloud")
+        .message_encoding("protobuf")
+        .schema(<PointCloud as Encode>::get_schema().unwrap())
+        .build_raw()
+        .context("create point cloud channel")?;
+
+    // Compression is on by default; a cloud with fewer than two of x/y/z cannot be
+    // encoded, so the message is rejected rather than delivered.
+    let gw = TestGateway::start(&ctx).await?;
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+
+    let _server_info = viewer.expect_server_info().await?;
+    let advertise = viewer.expect_advertise().await?;
+    let channel_id = advertise.channels[0].id;
+    viewer
+        .subscribe_and_wait(&[channel_id], &cloud_channel)
+        .await?;
+    viewer.ensure_device_data_track(channel_id).await?;
+
+    let mut data = Vec::new();
+    for i in 0..16 {
+        data.extend_from_slice(&(i as f32).to_le_bytes());
+    }
+    let cloud = PointCloud {
+        timestamp: None,
+        frame_id: "x-only-cloud".to_string(),
+        pose: None,
+        point_stride: 4,
+        fields: vec![PackedElementField {
+            name: "x".to_string(),
+            offset: 0,
+            r#type: NumericType::Float32 as i32,
+        }],
+        data: data.into(),
+    };
+    let mut encoded = Vec::new();
+    Encode::encode(&cloud, &mut encoded).context("encode PointCloud")?;
+    cloud_channel.log(&encoded);
+
+    // A warning status arrives on the control stream naming the failure.
+    let deadline = tokio::time::Instant::now() + EVENT_TIMEOUT;
+    let status = loop {
+        let msg = tokio::time::timeout_at(deadline, viewer.frame_reader.next_server_message())
+            .await
+            .context("timeout waiting for rejection warning status")?
+            .context("failed to read server message")?;
+        if let ServerMessage::Status(s) = msg {
+            break s;
+        }
+    };
+    assert_eq!(
+        status.level,
+        foxglove::protocol::v2::server::status::Level::Warning
+    );
+    assert!(
+        status.message.contains("position"),
+        "unexpected status message: {}",
+        status.message
+    );
+    // The warning is viewer-facing: it names the topic (not an internal channel id) and
+    // carries a stable id, so repeats replace the previous status instead of stacking.
+    assert!(
+        status.message.contains("/cloud"),
+        "status must name the topic: {}",
+        status.message
+    );
+    let status_id = status
+        .id
+        .clone()
+        .expect("compression warning must carry a stable id");
+
+    // The uncompressible cloud was dropped, not delivered: after logging a compressible
+    // cloud (frame_id "lidar"), the first frame on the data track is that cloud.
+    cloud_channel.log(&encoded_point_cloud());
+    let msg = viewer
+        .expect_new_data_track_and_message_data(channel_id)
+        .await?;
+    let compressed =
+        <foxglove::messages::CompressedPointCloud as foxglove::Decode>::decode(msg.data.as_ref())
+            .context("decode CompressedPointCloud")?;
+    assert_eq!(compressed.format, "draco");
+    assert_eq!(
+        compressed.frame_id, "lidar",
+        "the uncompressible cloud must not be delivered"
+    );
+
+    // The session clears the warning once failures stop (a sweeper quiet period too long
+    // for this test) or when the subscriber stops watching the channel. Unsubscribing
+    // clears this viewer's copy of the warning immediately.
+    viewer.send_unsubscribe(&[channel_id]).await?;
+    let deadline = tokio::time::Instant::now() + EVENT_TIMEOUT;
+    loop {
+        let msg = tokio::time::timeout_at(deadline, viewer.frame_reader.next_server_message())
+            .await
+            .context("timeout waiting for the warning to be removed")?
+            .context("failed to read server message")?;
+        if let ServerMessage::RemoveStatus(remove) = msg
+            && remove.status_ids.contains(&status_id)
+        {
+            break;
+        }
+    }
+    info!("uncompressible cloud warning validated");
+
+    viewer.close().await?;
+    gw.stop().await?;
+    Ok(())
+}
+
 /// Test that a classifier returning Reliable for a video-capable channel is
 /// overridden to Lossy, and that a warning is logged.
 #[traced_test]

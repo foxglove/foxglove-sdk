@@ -16,6 +16,7 @@ use crate::{
     sink_channel_filter::SinkChannelFilterFn,
 };
 
+use super::point_cloud_compression::{PointCloudCompressionPolicy, PointCloudCompressionPolicyFn};
 use super::qos::{QosClassifier, QosClassifierFn, QosProfile};
 use super::suppress_video_transcode::{SuppressVideoTranscode, SuppressVideoTranscodeFn};
 
@@ -136,6 +137,7 @@ impl GatewayHandle {
             max_data_track_message_size: None,
             video_codec_override: None,
             video_encoder: VideoEncoderBackend::Auto,
+            point_cloud_compression: None,
             context: std::sync::Weak::new(),
         };
         let services = Arc::new(parking_lot::RwLock::new(ServiceMap::default()));
@@ -255,6 +257,7 @@ pub struct Gateway {
     message_backlog_size: Option<usize>,
     max_data_track_message_size: Option<usize>,
     video_encoder: VideoEncoderBackend,
+    point_cloud_compression: Option<Arc<dyn PointCloudCompressionPolicy>>,
     context: std::sync::Weak<Context>,
 }
 
@@ -279,6 +282,9 @@ impl Default for Gateway {
             message_backlog_size: None,
             max_data_track_message_size: None,
             video_encoder: VideoEncoderBackend::Auto,
+            // Transparent point-cloud compression is opt-out: with no policy set, every
+            // compressible Lossy channel is compressed with the default options.
+            point_cloud_compression: None,
             context: Arc::downgrade(&Context::get_default()),
         }
     }
@@ -315,6 +321,10 @@ impl std::fmt::Debug for Gateway {
             )
             .field("video_encoder", &self.video_encoder)
             .field("has_context", &(self.context.strong_count() > 0));
+        dbg.field(
+            "has_point_cloud_compression_policy",
+            &self.point_cloud_compression.is_some(),
+        );
         dbg.finish()
     }
 }
@@ -448,6 +458,84 @@ impl Gateway {
     /// `nvenc`, `vaapi`, `videotoolbox`), ultimately falling back to [`VideoEncoderBackend::Auto`].
     pub fn video_encoder(mut self, backend: VideoEncoderBackend) -> Self {
         self.video_encoder = backend;
+        self
+    }
+
+    /// Configures per-channel point-cloud compression for remote participants.
+    ///
+    /// The policy is consulted once per compressible channel: it returns the compression
+    /// settings for that channel, or `None` to deliver it unmodified. See
+    /// [`PointCloudCompressionPolicy`] for details, and [`Self::point_cloud_compression_fn`] to
+    /// pass a closure instead.
+    ///
+    /// A compressed channel is advertised with the `foxglove.CompressedPointCloud` schema,
+    /// and each logged point cloud is compressed in a background task (off the logging hot
+    /// path) before delivery. If compression falls behind the log rate, the oldest queued
+    /// message is dropped.
+    ///
+    /// Compression applies only to channels with Lossy QoS (the default). Channels classified
+    /// as [`Reliability::Reliable`](crate::remote_access::Reliability::Reliable) skip
+    /// compression automatically and deliver the raw point cloud on the control bytestream,
+    /// preserving the Reliable contract (no silent drops).
+    ///
+    /// If no policy is set, every compressible Lossy channel is compressed with
+    /// [`PointCloudCompression::default()`]. Note that the default settings are lossy:
+    /// kd-tree encoding with positions quantized to 12 bits. Options are valid by
+    /// construction; the one degenerate case is
+    /// [`DracoEncodeOptions::lossless()`](crate::draco::DracoEncodeOptions::lossless),
+    /// which provides no size reduction over the raw cloud — a channel whose policy
+    /// returns lossless options is delivered unmodified, with a warning.
+    ///
+    /// Per-point fields that carry no value on a remote viewer are dropped before
+    /// encoding, matched by exact `(name, type)` tuple:
+    ///
+    /// - Time: (`t`, uint32), (`time`, float32), (`ts`, float32),
+    ///   (`time_stamp`, uint32), (`timestamp`, float64), (`timestamp_s`, int32),
+    ///   (`timestamp_us`, int32), (`lidar_sec`, uint32), (`lidar_nsec`, uint32)
+    /// - Range/angles, recomputable from the positions: (`range`, uint32),
+    ///   (`range`, float32), (`distance`, float32), (`azimuth`, float32),
+    ///   (`elevation`, float32)
+    /// - Indices: (`point_id`, uint32), (`scan_idx`, uint16)
+    ///
+    /// Near-unique-per-point values are what inflate kd-tree output (a lone uint32
+    /// timestamp measured at +224%), remote viewers do not deskew, and rendering and
+    /// color-by need none of these fields. Return `None` for a channel that must
+    /// deliver them.
+    ///
+    /// The remaining fields are further conditioned before encoding:
+    ///
+    /// - Fields named `rgb` or `rgba` declared float32 — PCL's packed-color convention —
+    ///   are reinterpreted as uint32: quantizing the packed bits as a float would
+    ///   destroy the colors, while integer attributes are copied losslessly.
+    /// - Float64 fields are narrowed to float32 (the kd-tree encoder cannot quantize
+    ///   them, and positions are narrowed regardless), keeping about seven significant
+    ///   digits.
+    /// - Points containing a non-finite (NaN or infinite) value in any float field —
+    ///   including a float64 value that overflows float32 — are removed: publishers
+    ///   commonly pad invalid returns with NaN, and the quantizer rejects non-finite
+    ///   input, which would otherwise fail the whole cloud.
+    ///
+    /// [`PointCloudCompression::default()`]: crate::remote_access::PointCloudCompression
+    #[cfg_attr(docsrs, doc(cfg(feature = "remote-access")))]
+    pub fn point_cloud_compression(mut self, policy: Arc<dyn PointCloudCompressionPolicy>) -> Self {
+        self.point_cloud_compression = Some(policy);
+        self
+    }
+
+    /// Sets a per-channel point-cloud compression function.
+    ///
+    /// The function returns the compression settings for a channel, or `None` to deliver
+    /// it unmodified; return `None` unconditionally to disable point-cloud compression
+    /// entirely. See [`Self::point_cloud_compression`] for details.
+    #[cfg_attr(docsrs, doc(cfg(feature = "remote-access")))]
+    pub fn point_cloud_compression_fn(
+        mut self,
+        policy: impl Fn(&ChannelDescriptor) -> Option<crate::remote_access::PointCloudCompression>
+        + Sync
+        + Send
+        + 'static,
+    ) -> Self {
+        self.point_cloud_compression = Some(Arc::new(PointCloudCompressionPolicyFn(policy)));
         self
     }
 
@@ -694,6 +782,7 @@ impl Gateway {
             max_data_track_message_size: self.max_data_track_message_size,
             video_codec_override,
             video_encoder,
+            point_cloud_compression: self.point_cloud_compression,
             context: self.context,
         };
         let connection = RemoteAccessConnection::new(params, services);

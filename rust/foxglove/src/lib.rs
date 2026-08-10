@@ -342,7 +342,11 @@
 //!   choices.
 //! - `lz4`: enables support for the LZ4 compression algorithm for mcap files. Enabled by default.
 //! - `remote-access`: enables the remote access gateway for live visualization and teleop via
-//!   WebRTC. Requires a crypto backend; `aws-lc-rs` is enabled by default.
+//!   WebRTC. Requires a crypto backend; `aws-lc-rs` is enabled by default. Also enables
+//!   [Draco](https://google.github.io/draco/) point-cloud compression: the
+//!   [`draco`][mod@crate::draco] encoding module, and the gateway's transparent compression of
+//!   `foxglove.PointCloud` channels that uses it — on by default and configurable per channel
+//!   via the gateway builder.
 //! - `require-cuda`: opts into a build-time check that `cuda.h` is present on targets where
 //!   webrtc-sys would build NVENC support. Requires `remote-access` to also be enabled.
 //!   See [NVENC hardware acceleration](#nvenc-hardware-acceleration).
@@ -451,6 +455,9 @@ pub use remote_data_loader_backend as data_provider;
 #[cfg(feature = "img2yuv-core")]
 #[allow(unused)]
 mod img2yuv;
+
+#[cfg(feature = "remote-access")]
+pub mod draco;
 
 pub use app_url::AppUrl;
 // Re-export bytes crate for convenience when implementing the `Encode` trait

@@ -22,6 +22,9 @@ use tracing::{debug, error, info, trace, warn};
 use crate::protocol::v2::DecodeError;
 use crate::protocol::v2::parameter::Parameter;
 use crate::protocol::v2::server::ParameterValues;
+use crate::remote_access::point_cloud_compression::{
+    PointCloudCompressionPolicy, resolve_point_cloud_compression,
+};
 use crate::remote_common::connection_graph::ConnectionGraph;
 use crate::remote_common::{
     AnyClient,
@@ -56,6 +59,8 @@ use crate::{
 
 mod data_track;
 pub(super) use data_track::{DataTrack, OversizedDropReport};
+mod point_cloud_track;
+pub(super) use point_cloud_track::PointCloudPublisher;
 mod video_track;
 pub(super) use video_track::{
     VideoInputSchema, VideoMetadata, VideoPublisher, resolve_video_input_schema,
@@ -90,8 +95,16 @@ pub(super) const DEFAULT_MESSAGE_BACKLOG_SIZE: usize = 1024;
 const DROP_STATUS_QUIET_PERIOD: Duration =
     Duration::from_secs(2 * data_track::OVERSIZED_WARN_INTERVAL.as_secs());
 
-/// How often the drop-status sweeper checks for expired drop statuses.
-const DROP_STATUS_SWEEP_INTERVAL: Duration = Duration::from_secs(15);
+/// How often the warning sweeper checks for expired channel warnings.
+const WARNING_SWEEP_INTERVAL: Duration = Duration::from_secs(15);
+
+/// Interval between throttled point-cloud compression warnings for one channel.
+const COMPRESSION_WARN_INTERVAL: Duration = Duration::from_secs(30);
+
+/// Idle period before clearing a channel's compression warning. Longer than the report
+/// interval so a continuously-failing channel does not flap between warning and cleared.
+const COMPRESSION_WARN_QUIET_PERIOD: Duration =
+    Duration::from_secs(2 * COMPRESSION_WARN_INTERVAL.as_secs());
 
 /// Default per-message size limit for lossy data-track channels, in bytes.
 /// Messages larger than this are dropped before publish so one oversized channel
@@ -169,6 +182,12 @@ fn drop_status_id(channel_id: ChannelId) -> String {
     format!("channel-drops-{}", u64::from(channel_id))
 }
 
+/// Stable per-channel id for the point-cloud compression warning, so repeats replace the
+/// previous status instead of stacking, and recovery/unadvertise can clear it.
+fn compression_status_id(channel_id: ChannelId) -> String {
+    format!("point-cloud-compression-{}", u64::from(channel_id))
+}
+
 /// Formats a byte count with binary units and trimmed decimal zeros.
 fn format_byte_size(bytes: usize) -> String {
     const KIB: f64 = 1024.0;
@@ -215,16 +234,28 @@ struct ActiveDropStatus {
     report: OversizedDropReport,
 }
 
-/// Drains and returns the channels whose most recent drop report is at least
-/// `quiet_period` old, leaving fresher entries in place.
-fn drain_expired_drop_statuses(
-    statuses: &mut HashMap<ChannelId, ActiveDropStatus>,
+/// Latest point-cloud compression warning state for a channel.
+///
+/// Owned by the session (not the transcoding publisher), keyed per channel, so it
+/// outlives the publisher tasks that come and go with the subscriber count. `message` is
+/// the last warning text, retained to replay to a late subscriber.
+struct ActiveCompressionWarning {
+    last_report: std::time::Instant,
+    message: String,
+}
+
+/// Drains and returns the channels whose most recent report is at least `quiet_period`
+/// old, leaving fresher entries in place. `last_report` reads the timestamp from each
+/// entry, so this serves both the drop and compression warning maps.
+fn drain_expired_warnings<V>(
+    statuses: &mut HashMap<ChannelId, V>,
     now: std::time::Instant,
     quiet_period: Duration,
+    last_report: impl Fn(&V) -> std::time::Instant,
 ) -> Vec<ChannelId> {
     let mut expired = Vec::new();
     statuses.retain(|channel_id, status| {
-        if now.duration_since(status.last_report) >= quiet_period {
+        if now.duration_since(last_report(status)) >= quiet_period {
             expired.push(*channel_id);
             false
         } else {
@@ -262,6 +293,9 @@ fn build_advertise_services_msg(services: &[Arc<Service>]) -> Option<AdvertiseSe
 /// The Sink impl is at the RemoteAccessSession level (not per-participant)
 /// so that it can deliver messages via multi-cast to multiple participants.
 pub(super) struct RemoteAccessSession {
+    /// A weak reference to the Arc holding the session, handed to background tasks (e.g.
+    /// point-cloud publishers) that deliver messages back through the session.
+    weak_self: Weak<Self>,
     sink_id: SinkId,
     room: Room,
     context: Weak<Context>,
@@ -312,10 +346,19 @@ pub(super) struct RemoteAccessSession {
     max_data_track_message_size: usize,
     /// Active oversized-drop warnings, keyed by channel.
     active_drop_statuses: parking_lot::Mutex<HashMap<ChannelId, ActiveDropStatus>>,
+    /// Active point-cloud compression warnings, keyed by channel. Owned here rather than
+    /// on the transcoding publisher so the warning has a single per-channel owner that
+    /// outlives the publisher tasks (which come and go with the subscriber count), and is
+    /// swept, replayed, and cleared exactly like [`Self::active_drop_statuses`].
+    active_compression_warnings: parking_lot::Mutex<HashMap<ChannelId, ActiveCompressionWarning>>,
     /// The preferred encoder backend applied to published video tracks.
     /// [`VideoEncoderBackend::Auto`](super::gateway::VideoEncoderBackend::Auto) leaves the
     /// choice to libwebrtc.
     video_encoder: super::gateway::VideoEncoderBackend,
+    /// The per-channel compression policy for transcoding `foxglove.PointCloud` channels
+    /// to `foxglove.CompressedPointCloud` before delivery to participants. `None` applies
+    /// the default: compress every compressible Lossy channel with the default options.
+    point_cloud_compression: Option<Arc<dyn PointCloudCompressionPolicy>>,
 }
 
 impl Sink for RemoteAccessSession {
@@ -346,6 +389,15 @@ impl Sink for RemoteAccessSession {
             // publisher handle is not cloneable out of the map.
             if let Some(publisher) = state.get_video_publisher(&channel_id) {
                 publisher.send(Bytes::copy_from_slice(msg), metadata.log_time);
+            }
+
+            // Point-cloud transcoding fully replaces the raw cloud: the compressed
+            // payload is delivered asynchronously by the publisher's background task,
+            // and the raw message is never sent. The publisher exists only while the
+            // channel has data subscribers, so this never encodes for an empty audience.
+            if let Some(publisher) = state.get_point_cloud_publisher(&channel_id) {
+                publisher.send(Bytes::copy_from_slice(msg), metadata.log_time);
+                return Ok(());
             }
 
             if !state.has_data_subscribers(&channel_id) {
@@ -412,16 +464,18 @@ impl Sink for RemoteAccessSession {
             for &ch in &filtered {
                 if advertised_ids.contains(&u64::from(ch.id())) {
                     state.insert_channel(ch);
-                    let video_schema =
-                        resolve_video_input_schema(ch, self.suppress_video_transcode.as_deref());
-                    if let Some(input_schema) = video_schema {
-                        state.insert_video_schema(ch.id(), input_schema);
-                    }
+                    // Classify QoS before compression/video decisions so Reliable can
+                    // auto-suppress compression, and video can force Lossy.
                     let mut qos = self
                         .qos_classifier
                         .as_ref()
                         .map(|c| c.classify(ch.descriptor()))
                         .unwrap_or_default();
+                    let video_schema =
+                        resolve_video_input_schema(ch, self.suppress_video_transcode.as_deref());
+                    if let Some(input_schema) = video_schema {
+                        state.insert_video_schema(ch.id(), input_schema);
+                    }
                     if video_schema.is_some() && qos.reliability == Reliability::Reliable {
                         warn!(
                             "Forcing QoS to Lossy for video channel {:?} (topic={}): \
@@ -431,6 +485,23 @@ impl Sink for RemoteAccessSession {
                         );
                         qos.reliability = Reliability::Lossy;
                     }
+                    if let Some(options) = resolve_point_cloud_compression(
+                        ch,
+                        self.point_cloud_compression.as_deref(),
+                        qos.reliability,
+                    ) {
+                        // Only record the configuration here: the transcoding publisher
+                        // is created once the channel gains its first data subscriber,
+                        // so encoding never runs for output nobody receives. Reliable
+                        // channels never reach this path (see resolve).
+                        state.insert_point_cloud_compression(
+                            ch.id(),
+                            super::channel_registry::PointCloudCompressionState {
+                                topic: ch.topic().to_string(),
+                                options,
+                            },
+                        );
+                    }
                     state.insert_qos_profile(ch.id(), qos);
                     if qos.reliability != Reliability::Reliable {
                         ids.push(ch.id());
@@ -438,6 +509,7 @@ impl Sink for RemoteAccessSession {
                 }
             }
             state.add_metadata_to_advertisement(&mut advertise_msg);
+            state.rewrite_point_cloud_advertisements(&mut advertise_msg);
             ids
         };
 
@@ -480,6 +552,18 @@ impl Sink for RemoteAccessSession {
             channel_id,
         )])));
 
+        // Clear any point-cloud compression warning for the removed channel.
+        if self
+            .active_compression_warnings
+            .lock()
+            .remove(&channel_id)
+            .is_some()
+        {
+            self.broadcast_control(encode_json_message(&RemoveStatus::new([
+                compression_status_id(channel_id),
+            ])));
+        }
+
         // Fire on_unsubscribe callbacks for subscribers of the removed channel.
         if let Some(listener) = &self.listener {
             let descriptor = channel.descriptor();
@@ -520,13 +604,15 @@ pub(super) struct SessionParams {
     pub(super) device_wait_for_viewer: Option<Duration>,
     pub(super) video_codec_override: Option<VideoCodec>,
     pub(super) video_encoder: super::gateway::VideoEncoderBackend,
+    pub(super) point_cloud_compression: Option<Arc<dyn PointCloudCompressionPolicy>>,
 }
 
 impl RemoteAccessSession {
     pub(super) fn new(params: SessionParams) -> Arc<Self> {
         let (video_metadata_tx, video_metadata_rx) = tokio::sync::watch::channel(());
         let participant_registry = ParticipantRegistry::new(params.message_backlog_size);
-        Arc::new(Self {
+        Arc::new_cyclic(|_weak_self| Self {
+            weak_self: _weak_self.clone(),
             sink_id: SinkId::next(),
             room: params.room,
             context: params.context,
@@ -556,7 +642,9 @@ impl RemoteAccessSession {
             video_codec_override: params.video_codec_override,
             max_data_track_message_size: params.max_data_track_message_size,
             active_drop_statuses: parking_lot::Mutex::new(HashMap::new()),
+            active_compression_warnings: parking_lot::Mutex::new(HashMap::new()),
             video_encoder: params.video_encoder,
+            point_cloud_compression: params.point_cloud_compression,
         })
     }
 
@@ -635,6 +723,102 @@ impl RemoteAccessSession {
         }
     }
 
+    /// Records and reports a point-cloud compression failure for a channel.
+    ///
+    /// The session owns the per-channel warning: it throttles the report to
+    /// [`COMPRESSION_WARN_INTERVAL`], publishes to current data subscribers (replaying to
+    /// late subscribers on subscribe), and clears it once failures stop (the sweeper) or
+    /// the channel is unadvertised ([`Sink::remove_channel`]). The transcoding publisher
+    /// holds no warning state of its own, so overlapping publisher generations across a
+    /// resubscribe can't fight over the channel's single status.
+    pub(super) fn report_compression_failure(&self, channel_id: ChannelId, message: String) {
+        // Resolve subscribers before touching the warning map. A report with no data
+        // subscribers means the publisher is being torn down — either the channel was
+        // unadvertised, or the last subscriber left while this failure was in flight in
+        // `spawn_blocking`. Recording it then would strand a warning for a channel with
+        // no publisher and no viewers until the sweeper's quiet period, replaying it to
+        // the next subscriber ahead of the fresh publisher's own verdict. A non-empty
+        // subscriber list also implies the channel is still advertised, so this subsumes
+        // the has-channel check.
+        let subscriber_sids = self
+            .channel_registry
+            .read()
+            .data_subscriber_sids(&channel_id);
+        if subscriber_sids.is_empty() {
+            return;
+        }
+
+        let now = std::time::Instant::now();
+        {
+            let mut warnings = self.active_compression_warnings.lock();
+            if warnings
+                .get(&channel_id)
+                .is_some_and(|w| now.duration_since(w.last_report) < COMPRESSION_WARN_INTERVAL)
+            {
+                // A warning is already live and was reported within the throttle window.
+                return;
+            }
+            warnings.insert(
+                channel_id,
+                ActiveCompressionWarning {
+                    last_report: now,
+                    message: message.clone(),
+                },
+            );
+        }
+
+        warn!("{message}");
+        let status = Status::warning(message).with_id(compression_status_id(channel_id));
+        let encoded = encode_json_message(&status);
+        for participant in self.participant_registry.resolve_sids(subscriber_sids) {
+            participant.send_control(encoded.clone());
+        }
+    }
+
+    /// Delivers a transcoded `foxglove.CompressedPointCloud` message to the channel's
+    /// current subscribers over the lossy data track.
+    ///
+    /// Called from the channel's background [`PointCloudPublisher`] task. Compression is
+    /// never enabled for Reliable channels (they deliver the raw cloud on the control
+    /// stream instead), so delivery always uses the data track. Mirrors the delivery
+    /// logic of [`Sink::log`], re-resolving subscribers at delivery time.
+    pub(super) fn deliver_transcoded_point_cloud(
+        &self,
+        channel_id: ChannelId,
+        msg: &[u8],
+        log_time: u64,
+    ) {
+        let metadata = Metadata { log_time };
+        let mut drop_report: Option<(OversizedDropReport, SmallVec<[ParticipantSid; 4]>)> = None;
+
+        {
+            let state = self.channel_registry.read();
+            if !state.has_data_subscribers(&channel_id) {
+                return;
+            }
+            if state.qos_profile(&channel_id).reliability == Reliability::Reliable {
+                // Publishers are never created for Reliable channels, so this is a bug;
+                // delivering anyway would send a compressed payload on a channel whose
+                // advertised schema is the raw `foxglove.PointCloud`. Drop the message
+                // (panicking in debug builds).
+                debug_assert!(false, "point-cloud publisher exists for Reliable channel");
+                return;
+            }
+            if let Some(track) = state.get_subscribed_data_track(&channel_id)
+                && let Err(report) = track.log(channel_id, msg, &metadata)
+            {
+                drop_report = Some((report, state.data_subscriber_sids(&channel_id)));
+            }
+        }
+
+        if let Some((report, subscriber_sids)) = drop_report {
+            let channel = self.channel_registry.read().get_channel(&channel_id);
+            if let Some(channel) = channel {
+                self.emit_drop_status(&channel, report, subscriber_sids);
+            }
+        }
+    }
+
     /// Enqueue a control plane message for all currently connected participants.
     /// If a participant's queue is full, a reset is requested for that participant.
     fn broadcast_control(&self, data: Bytes) {
@@ -660,36 +844,53 @@ impl RemoteAccessSession {
         }
     }
 
-    /// Auto-clears viewer-facing oversized-drop statuses once a channel has had
-    /// no drop reports for [`DROP_STATUS_QUIET_PERIOD`].
+    /// Auto-clears viewer-facing channel warnings once a channel has been idle for the
+    /// warning's quiet period: oversized-drop statuses after [`DROP_STATUS_QUIET_PERIOD`]
+    /// without a drop, and point-cloud compression warnings after
+    /// [`COMPRESSION_WARN_QUIET_PERIOD`] without a failure.
     ///
     /// Runs until the cancellation token fires.
-    pub(super) async fn run_drop_status_sweeper(session: Arc<Self>) {
-        let mut interval = tokio::time::interval(DROP_STATUS_SWEEP_INTERVAL);
+    pub(super) async fn run_channel_warning_sweeper(session: Arc<Self>) {
+        let mut interval = tokio::time::interval(WARNING_SWEEP_INTERVAL);
         interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
         loop {
             tokio::select! {
                 biased;
                 () = session.cancellation_token.cancelled() => break,
                 _ = interval.tick() => {
-                    session.sweep_expired_drop_statuses(std::time::Instant::now());
+                    session.sweep_expired_warnings(std::time::Instant::now());
                 }
             }
         }
     }
 
-    /// Clears drop-status entries idle for at least [`DROP_STATUS_QUIET_PERIOD`].
-    fn sweep_expired_drop_statuses(&self, now: std::time::Instant) {
-        let expired = drain_expired_drop_statuses(
+    /// Clears channel-warning entries idle for at least their quiet period: oversized-drop
+    /// statuses and point-cloud compression warnings.
+    fn sweep_expired_warnings(&self, now: std::time::Instant) {
+        let expired_drops = drain_expired_warnings(
             &mut self.active_drop_statuses.lock(),
             now,
             DROP_STATUS_QUIET_PERIOD,
+            |status| status.last_report,
         );
-        if expired.is_empty() {
+        let mut ids: Vec<String> = expired_drops.iter().map(|id| drop_status_id(*id)).collect();
+
+        let expired_compression = drain_expired_warnings(
+            &mut self.active_compression_warnings.lock(),
+            now,
+            COMPRESSION_WARN_QUIET_PERIOD,
+            |warning| warning.last_report,
+        );
+        ids.extend(
+            expired_compression
+                .iter()
+                .map(|id| compression_status_id(*id)),
+        );
+
+        if ids.is_empty() {
             return;
         }
-        let remove = RemoveStatus::new(expired.iter().map(|id| drop_status_id(*id)));
-        self.broadcast_control(encode_json_message(&remove));
+        self.broadcast_control(encode_json_message(&RemoveStatus::new(ids)));
     }
 
     /// Cancel the session's `CancellationToken`, signaling all session-scoped
@@ -954,6 +1155,11 @@ impl RemoteAccessSession {
             state.unsubscribe_video(participant.participant_sid(), &data_channel_ids);
         drop(state);
 
+        // Publishers must exist before `subscribe_channels` opens message flow to this
+        // sink: a message logged in between would find no publisher and be delivered as a
+        // raw `foxglove.PointCloud` on a channel advertised as `CompressedPointCloud`.
+        self.start_point_cloud_publishers(&subscribe_result.first_subscribed);
+
         if !subscribe_result.first_subscribed.is_empty()
             && let Some(context) = self.context.upgrade()
         {
@@ -995,6 +1201,24 @@ impl RemoteAccessSession {
                 }
             }
         }
+
+        // Replay active point-cloud compression warnings to new data subscribers, for the
+        // same timeliness reason as drop warnings above.
+        {
+            let warnings = self.active_compression_warnings.lock();
+            if !warnings.is_empty() {
+                for descriptor in &subscribe_result.newly_subscribed_descriptors {
+                    if !data_channel_ids.contains(&descriptor.id()) {
+                        continue;
+                    }
+                    if let Some(active) = warnings.get(&descriptor.id()) {
+                        let status = Status::warning(active.message.clone())
+                            .with_id(compression_status_id(descriptor.id()));
+                        participant.send_control(encode_json_message(&status));
+                    }
+                }
+            }
+        }
     }
 
     /// Unsubscribes the participant from the requested channels and notifies the listener.
@@ -1026,12 +1250,15 @@ impl RemoteAccessSession {
         }
 
         self.stop_video_tracks(&last_video_unsubscribed);
+        self.stop_point_cloud_publishers(&unsubscribe_result.last_unsubscribed);
 
         if !unsubscribe_result
             .actually_unsubscribed_descriptors
             .is_empty()
         {
-            // Clear warnings for channels this participant just stopped watching.
+            // Clear warnings for channels this participant just stopped watching. The
+            // map entry stays for any remaining subscribers; only this participant's copy
+            // of the status is removed.
             let statuses = self.active_drop_statuses.lock();
             let ids_to_clear: SmallVec<[ChannelId; 4]> = unsubscribe_result
                 .actually_unsubscribed_descriptors
@@ -1043,6 +1270,22 @@ impl RemoteAccessSession {
             if !ids_to_clear.is_empty() {
                 let remove = RemoveStatus::new(ids_to_clear.iter().map(|id| drop_status_id(*id)));
                 participant.send_control(encode_json_message(&remove));
+            }
+
+            {
+                let warnings = self.active_compression_warnings.lock();
+                let ids_to_clear: SmallVec<[ChannelId; 4]> = unsubscribe_result
+                    .actually_unsubscribed_descriptors
+                    .iter()
+                    .map(|descriptor| descriptor.id())
+                    .filter(|id| warnings.contains_key(id))
+                    .collect();
+                drop(warnings);
+                if !ids_to_clear.is_empty() {
+                    let remove =
+                        RemoveStatus::new(ids_to_clear.iter().map(|id| compression_status_id(*id)));
+                    participant.send_control(encode_json_message(&remove));
+                }
             }
 
             if let Some(listener) = &self.listener {
@@ -1427,6 +1670,7 @@ impl RemoteAccessSession {
         }
 
         self.stop_video_tracks(&removed.last_video_unsubscribed);
+        self.stop_point_cloud_publishers(&removed.last_unsubscribed);
 
         if !last_param_unsubscribed.is_empty()
             && let Some(listener) = &self.listener
@@ -1920,6 +2164,7 @@ impl RemoteAccessSession {
             }
             let mut msg = msg.into_owned();
             state.add_metadata_to_advertisement(&mut msg);
+            state.rewrite_point_cloud_advertisements(&mut msg);
             Some(msg)
         })??;
         Some(encode_json_message(&msg))
@@ -2497,6 +2742,86 @@ impl RemoteAccessSession {
     fn stop_video_tracks(self: &Arc<Self>, last_unsubscribed: &[ChannelId]) {
         for &channel_id in last_unsubscribed {
             self.teardown_video_track(channel_id);
+        }
+    }
+
+    /// Creates point-cloud transcoding publishers for compression-enabled channels gaining
+    /// their first data subscriber.
+    ///
+    /// Publishers own a background task that Draco-encodes every logged cloud, so they
+    /// exist only while the channel has subscribers; see
+    /// [`Self::stop_point_cloud_publishers`]. Channels without compression enabled are
+    /// skipped.
+    ///
+    /// Caller must hold `subscription_lock`.
+    fn start_point_cloud_publishers(self: &Arc<Self>, first_subscribed: &[ChannelId]) {
+        if first_subscribed.is_empty() {
+            return;
+        }
+        let mut state = self.channel_registry.write();
+        for &channel_id in first_subscribed {
+            // The compression state carries the topic, so no second (fallible) channel
+            // lookup is needed here.
+            let Some((topic, options)) = state
+                .get_point_cloud_compression(&channel_id)
+                .map(|compression| (compression.topic.clone(), compression.options))
+            else {
+                continue;
+            };
+            state.insert_point_cloud_publisher(
+                channel_id,
+                Arc::new(PointCloudPublisher::new(
+                    &self.runtime,
+                    self.weak_self.clone(),
+                    channel_id,
+                    topic,
+                    options,
+                )),
+            );
+        }
+    }
+
+    /// Drops the point-cloud transcoding publishers for channels losing their last data
+    /// subscriber, terminating their background transcoding tasks. The compression
+    /// configuration (and the advertised `foxglove.CompressedPointCloud` schema) persists
+    /// for the lifetime of the channel.
+    ///
+    /// Any active compression warning is cleared too: unlike an oversized-drop status
+    /// (which tracks the channel's persistent data track), a compression warning is
+    /// produced by the publisher being torn down here. Keeping it would replay a warning
+    /// from a dead publisher generation to the next subscriber before the fresh publisher
+    /// has encoded anything — and leave a resolved failure showing until the sweeper's
+    /// quiet period elapses. If the cloud still can't be compressed, the fresh publisher
+    /// re-warns on its first failure (the throttle entry is gone too).
+    ///
+    /// Called on both explicit unsubscribe and participant disconnect, so it is the common
+    /// point tying the warning's lifetime to the publisher's.
+    ///
+    /// Caller must hold `subscription_lock`.
+    fn stop_point_cloud_publishers(&self, last_unsubscribed: &[ChannelId]) {
+        if last_unsubscribed.is_empty() {
+            return;
+        }
+        {
+            let mut state = self.channel_registry.write();
+            for &channel_id in last_unsubscribed {
+                state.remove_point_cloud_publisher(&channel_id);
+            }
+        }
+        // Drop each torn-down channel's warning, then retract it (broadcast reaches the
+        // last subscriber, who just left; other participants no-op). Collect under the
+        // lock and broadcast after releasing it.
+        let cleared: SmallVec<[ChannelId; 4]> = {
+            let mut warnings = self.active_compression_warnings.lock();
+            last_unsubscribed
+                .iter()
+                .copied()
+                .filter(|id| warnings.remove(id).is_some())
+                .collect()
+        };
+        if !cleared.is_empty() {
+            let remove = RemoveStatus::new(cleared.iter().map(|id| compression_status_id(*id)));
+            self.broadcast_control(encode_json_message(&remove));
         }
     }
 
@@ -3119,7 +3444,7 @@ mod tests {
             (fresh, active_drop_status(now - Duration::from_secs(30))),
         ]);
 
-        let expired = drain_expired_drop_statuses(&mut statuses, now, quiet);
+        let expired = drain_expired_warnings(&mut statuses, now, quiet, |s| s.last_report);
 
         assert_eq!(expired, vec![stale]);
         assert!(
@@ -3139,7 +3464,7 @@ mod tests {
         let fresh = ChannelId::new(9);
         let mut statuses = HashMap::from([(fresh, active_drop_status(now))]);
 
-        let expired = drain_expired_drop_statuses(&mut statuses, now, quiet);
+        let expired = drain_expired_warnings(&mut statuses, now, quiet, |s| s.last_report);
 
         assert!(expired.is_empty());
         assert_eq!(statuses.len(), 1);
