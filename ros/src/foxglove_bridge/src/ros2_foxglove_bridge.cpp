@@ -397,6 +397,13 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
       this, this->get_parameter(PARAM_VIDEO_TRANSCODE_TOPIC_DENYLIST).as_string_array());
     gatewayOptions.suppress_video_transcode =
       std::bind(&FoxgloveBridge::shouldSuppressRemoteAccessVideoTranscode, this, _1);
+    _pointCloudCompressionTopicDenyPatterns = parseRegexStrings(
+      this, this->get_parameter(PARAM_POINT_CLOUD_COMPRESSION_TOPIC_DENYLIST).as_string_array());
+    // In range by declaration: the parameter descriptor constrains it to 1..30.
+    _pointCloudCompressionQuantizationBits = static_cast<uint8_t>(
+      this->get_parameter(PARAM_POINT_CLOUD_COMPRESSION_QUANTIZATION_BITS).as_int());
+    gatewayOptions.point_cloud_compression =
+      std::bind(&FoxgloveBridge::selectRemoteAccessPointCloudCompression, this, _1);
 
     if (hasCapability(_capabilities, foxglove::WebSocketServerCapabilities::ClientPublish)) {
       gatewayOptions.callbacks.onClientAdvertise =
@@ -1642,6 +1649,17 @@ bool FoxgloveBridge::shouldSuppressRemoteAccessVideoTranscode(
   RCLCPP_INFO(this->get_logger(), "Delivering topic \"%s\" as data (no video transcoding)",
               topic.c_str());
   return true;
+}
+
+foxglove::PointCloudCompression FoxgloveBridge::selectRemoteAccessPointCloudCompression(
+  const foxglove::ChannelDescriptor& channel) {
+  const std::string topic(channel.topic());
+  if (!matchesRegex(topic, _pointCloudCompressionTopicDenyPatterns)) {
+    return foxglove::PointCloudCompression::withDraco({_pointCloudCompressionQuantizationBits});
+  }
+  RCLCPP_INFO(this->get_logger(), "Delivering topic \"%s\" unmodified (no point cloud compression)",
+              topic.c_str());
+  return foxglove::PointCloudCompression::disabled();
 }
 #endif
 

@@ -310,8 +310,9 @@ struct RemoteAccessGatewayOptions {
   std::optional<size_t> max_data_track_message_size = std::nullopt;
   /// @brief A per-channel point-cloud compression policy callback.
   ///
-  /// If set, this callback is invoked for each compressible Lossy `foxglove.PointCloud`
-  /// channel to select the compression applied to it; see @ref PointCloudCompressionFn.
+  /// If set, this callback is invoked for each compressible Lossy point-cloud channel to
+  /// select the compression applied to it; see @ref PointCloudCompressionFn, and
+  /// @ref PointCloudCompression for the supported input schemas.
   /// If not set, all compressible Lossy point-cloud channels are compressed with the SDK
   /// default settings. Note that the default settings are lossy: Draco kd-tree encoding
   /// with positions quantized to 12 bits. Channels classified as Reliable skip compression

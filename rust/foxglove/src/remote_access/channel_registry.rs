@@ -41,19 +41,20 @@ pub(super) struct UnsubscribeResult {
     pub(super) actually_unsubscribed_descriptors: SmallVec<[ChannelDescriptor; 4]>,
 }
 
-/// Compression state for a point-cloud channel: the Draco settings and the channel's
-/// topic.
+/// Compression state for a point-cloud channel: the channel's topic plus the resolved
+/// [`PointCloudCompressionConfig`](crate::remote_access::point_cloud_compression::PointCloudCompressionConfig)
+/// (input schema to decode + Draco settings to encode with).
 ///
-/// The topic is captured at advertise time so that publisher creation needs no second,
-/// fallible channel lookup: a silent miss there would deliver raw clouds on a channel
-/// advertised as `foxglove.CompressedPointCloud`. The compression *warning* is owned by
-/// the session ([`RemoteAccessSession::report_compression_failure`]), keyed per channel,
-/// not stored here.
+/// The topic and input schema are captured at advertise time so that publisher creation
+/// needs no second, fallible channel lookup: a silent miss there would deliver raw clouds
+/// on a channel advertised as `foxglove.CompressedPointCloud`. The compression *warning*
+/// is owned by the session ([`RemoteAccessSession::report_compression_failure`]), keyed
+/// per channel, not stored here.
 pub(super) struct PointCloudCompressionState {
     /// The channel's topic, used to name the channel in viewer-facing warnings.
     pub(super) topic: String,
-    /// The Draco encoding settings.
-    pub(super) options: crate::remote_access::PointCloudCompression,
+    /// The input format to decode and the Draco settings to encode with.
+    pub(super) config: crate::remote_access::point_cloud_compression::PointCloudCompressionConfig,
 }
 
 /// Channel registry and per-channel derived state for a remote access session.
@@ -1154,20 +1155,28 @@ mod tests {
                 .unwrap()
         }
 
+        fn make_config()
+        -> crate::remote_access::point_cloud_compression::PointCloudCompressionConfig {
+            crate::remote_access::point_cloud_compression::PointCloudCompressionConfig {
+                input_schema: crate::remote_access::point_cloud_transcode::PointCloudInputSchema::FoxgloveProtobuf,
+                options: PointCloudCompression::default(),
+            }
+        }
+
         fn make_publisher(channel_id: ChannelId) -> Arc<PointCloudPublisher> {
             Arc::new(PointCloudPublisher::new(
                 &tokio::runtime::Handle::current(),
                 std::sync::Weak::new(),
                 channel_id,
                 "/cloud".to_string(),
-                PointCloudCompression::default(),
+                make_config(),
             ))
         }
 
         fn make_compression_state() -> PointCloudCompressionState {
             PointCloudCompressionState {
                 topic: "/cloud".to_string(),
-                options: PointCloudCompression::default(),
+                config: make_config(),
             }
         }
 
@@ -1192,6 +1201,10 @@ mod tests {
             assert_eq!(adv_cloud.schema_name, "foxglove.CompressedPointCloud");
             assert_eq!(adv_cloud.schema_encoding.as_deref(), Some("protobuf"));
             assert_eq!(
+                adv_cloud.metadata.get("foxglove.originalSchemaName"),
+                Some(&"foxglove.PointCloud".to_string())
+            );
+            assert_eq!(
                 adv_cloud.decode_schema().unwrap(),
                 crate::messages::descriptors::COMPRESSED_POINT_CLOUD,
             );
@@ -1213,6 +1226,41 @@ mod tests {
             let mut msg = advertise::advertise_channels(std::iter::once(&cloud_ch)).into_owned();
             state.rewrite_point_cloud_advertisements(&mut msg);
             assert_eq!(msg.channels[0].schema_name, "foxglove.PointCloud");
+        }
+
+        #[tokio::test]
+        async fn rewrite_flips_cdr_channel_encoding_to_protobuf() {
+            use crate::{ChannelBuilder, Context, Schema};
+            let mut state = ChannelRegistry::new();
+            let ctx = Context::new();
+            let cloud_ch = ChannelBuilder::new("/cloud")
+                .context(&ctx)
+                .message_encoding("cdr")
+                .schema(Schema::new("sensor_msgs/msg/PointCloud2", "ros2msg", b""))
+                .build_raw()
+                .unwrap();
+            state.insert_channel(&cloud_ch);
+            state.insert_point_cloud_compression(
+                cloud_ch.id(),
+                PointCloudCompressionState {
+                    topic: "/cloud".to_string(),
+                    config: crate::remote_access::point_cloud_compression::PointCloudCompressionConfig {
+                        input_schema: crate::remote_access::point_cloud_transcode::PointCloudInputSchema::Ros2PointCloud2,
+                        options: PointCloudCompression::default(),
+                    },
+                },
+            );
+
+            let mut msg = advertise::advertise_channels(std::iter::once(&cloud_ch)).into_owned();
+            state.rewrite_point_cloud_advertisements(&mut msg);
+            // Transcoded output is always protobuf, so the message encoding is rewritten
+            // along with the schema, and the source type is recorded in metadata.
+            assert_eq!(msg.channels[0].schema_name, "foxglove.CompressedPointCloud");
+            assert_eq!(msg.channels[0].encoding, "protobuf");
+            assert_eq!(
+                msg.channels[0].metadata.get("foxglove.originalSchemaName"),
+                Some(&"sensor_msgs/msg/PointCloud2".to_string())
+            );
         }
 
         #[tokio::test]

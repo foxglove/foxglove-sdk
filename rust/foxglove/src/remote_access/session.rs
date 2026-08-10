@@ -485,7 +485,7 @@ impl Sink for RemoteAccessSession {
                         );
                         qos.reliability = Reliability::Lossy;
                     }
-                    if let Some(options) = resolve_point_cloud_compression(
+                    if let Some(config) = resolve_point_cloud_compression(
                         ch,
                         self.point_cloud_compression.as_deref(),
                         qos.reliability,
@@ -493,12 +493,13 @@ impl Sink for RemoteAccessSession {
                         // Only record the configuration here: the transcoding publisher
                         // is created once the channel gains its first data subscriber,
                         // so encoding never runs for output nobody receives. Reliable
-                        // channels never reach this path (see resolve).
+                        // channels never reach this path (see resolve). The topic is
+                        // captured alongside the resolved config for viewer-facing warnings.
                         state.insert_point_cloud_compression(
                             ch.id(),
                             super::channel_registry::PointCloudCompressionState {
                                 topic: ch.topic().to_string(),
-                                options,
+                                config,
                             },
                         );
                     }
@@ -2760,11 +2761,11 @@ impl RemoteAccessSession {
         }
         let mut state = self.channel_registry.write();
         for &channel_id in first_subscribed {
-            // The compression state carries the topic, so no second (fallible) channel
-            // lookup is needed here.
-            let Some((topic, options)) = state
+            // The compression state carries the topic and resolved config, so no second
+            // (fallible) channel lookup is needed here.
+            let Some((topic, config)) = state
                 .get_point_cloud_compression(&channel_id)
-                .map(|compression| (compression.topic.clone(), compression.options))
+                .map(|compression| (compression.topic.clone(), compression.config))
             else {
                 continue;
             };
@@ -2775,7 +2776,7 @@ impl RemoteAccessSession {
                     self.weak_self.clone(),
                     channel_id,
                     topic,
-                    options,
+                    config,
                 )),
             );
         }

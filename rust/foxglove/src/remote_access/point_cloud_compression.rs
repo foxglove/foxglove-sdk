@@ -29,10 +29,22 @@ impl Default for PointCloudCompression {
     }
 }
 
+/// Resolved per-channel compression configuration: the input format to decode and the Draco
+/// settings to encode with.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct PointCloudCompressionConfig {
+    /// The message format of the channel's input.
+    pub(crate) input_schema: crate::remote_access::point_cloud_transcode::PointCloudInputSchema,
+    /// The Draco encoding settings.
+    pub(crate) options: PointCloudCompression,
+}
+
 /// Selects, per channel, the point-cloud compression applied over remote access.
 ///
-/// This callback is invoked when a compressible `foxglove.PointCloud` channel is registered
-/// with Lossy QoS. Returning `Some(options)` compresses the channel's messages with those
+/// This callback is invoked when a compressible point-cloud channel — one carrying a
+/// supported input schema, currently protobuf-encoded `foxglove.PointCloud` or CDR-encoded
+/// `sensor_msgs/msg/PointCloud2` — is registered with Lossy QoS. Returning
+/// `Some(options)` compresses the channel's messages with those
 /// settings; returning `None` advertises the channel with its original schema and delivers
 /// its messages unchanged. Return `None` unconditionally to disable point-cloud
 /// compression entirely.
@@ -68,8 +80,8 @@ where
     }
 }
 
-/// Returns the compression options for a channel, or `None` when the channel is not
-/// compressible, QoS is Reliable, or the gateway's compression policy opts it out.
+/// Returns the compression configuration for a channel, or `None` when the channel is
+/// not compressible, QoS is Reliable, or the gateway's compression policy opts it out.
 ///
 /// Reliable channels keep the raw point cloud on the control bytestream: compression is
 /// lossy (and the publisher may drop when behind), which would violate the Reliable
@@ -82,10 +94,9 @@ pub(super) fn resolve_point_cloud_compression(
     channel: &RawChannel,
     policy: Option<&dyn PointCloudCompressionPolicy>,
     reliability: Reliability,
-) -> Option<PointCloudCompression> {
-    if !crate::remote_access::point_cloud_transcode::is_point_cloud_channel(channel) {
-        return None;
-    }
+) -> Option<PointCloudCompressionConfig> {
+    let input_schema =
+        crate::remote_access::point_cloud_transcode::point_cloud_input_schema(channel)?;
     if reliability == Reliability::Reliable {
         tracing::debug!(
             topic = %channel.topic(),
@@ -114,7 +125,10 @@ pub(super) fn resolve_point_cloud_compression(
         );
         return None;
     }
-    Some(options)
+    Some(PointCloudCompressionConfig {
+        input_schema,
+        options,
+    })
 }
 
 #[cfg(test)]
@@ -146,9 +160,12 @@ mod tests {
     #[test]
     fn compresses_with_defaults_when_no_policy_is_set() {
         let cloud = make_channel("/cloud");
+        let config = resolve_point_cloud_compression(&cloud, None, Reliability::Lossy)
+            .expect("channel should resolve");
+        assert_eq!(config.options, PointCloudCompression::default());
         assert_eq!(
-            resolve_point_cloud_compression(&cloud, None, Reliability::Lossy),
-            Some(PointCloudCompression::default())
+            config.input_schema,
+            crate::remote_access::point_cloud_transcode::PointCloudInputSchema::FoxgloveProtobuf
         );
     }
 
@@ -169,9 +186,12 @@ mod tests {
         let tuned = PointCloudCompressionPolicyFn(|ch: &ChannelDescriptor| {
             (ch.topic() == "/cloud").then(|| options_with_bits(10))
         });
+        let config = resolve_point_cloud_compression(&cloud, Some(&tuned), Reliability::Lossy)
+            .expect("channel should resolve");
+        assert_eq!(config.options, options_with_bits(10));
         assert_eq!(
-            resolve_point_cloud_compression(&cloud, Some(&tuned), Reliability::Lossy),
-            Some(options_with_bits(10))
+            config.input_schema,
+            crate::remote_access::point_cloud_transcode::PointCloudInputSchema::FoxgloveProtobuf
         );
     }
 
