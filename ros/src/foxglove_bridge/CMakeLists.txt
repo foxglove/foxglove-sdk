@@ -249,6 +249,10 @@ if(BUILD_TESTING)
   target_link_libraries(utils_test foxglove_bridge_component)
   enable_strict_compiler_warnings(utils_test)
 
+  ament_add_gtest(cdr_serializer_test tests/cdr_serializer_test.cpp)
+  target_link_libraries(cdr_serializer_test foxglove_bridge_component)
+  enable_strict_compiler_warnings(cdr_serializer_test)
+
   ament_add_gtest(message_definition_cache_test tests/message_definition_cache_test.cpp)
   target_link_libraries(message_definition_cache_test foxglove_bridge_component)
   enable_strict_compiler_warnings(message_definition_cache_test)

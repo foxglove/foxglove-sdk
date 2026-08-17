@@ -11,6 +11,7 @@
 #include <rclcpp/version.h>
 #include <resource_retriever/retriever.hpp>
 
+#include <foxglove_bridge/cdr_serializer.hpp>
 #include <foxglove_bridge/ros2_foxglove_bridge.hpp>
 #include <foxglove_bridge/utils.hpp>
 #include <foxglove_bridge/version.hpp>
@@ -1146,7 +1147,7 @@ void FoxgloveBridge::publishClientData(const ClientAdvertisement& ad, const std:
     if (!ad.jsonParser) {
       throw std::runtime_error("no JSON parser found for schema \"" + ad.topicType + "\"");
     }
-    thread_local RosMsgParser::ROS2_Serializer serializer;
+    thread_local CdrSerializer serializer;
     serializer.reset();
     const std::string jsonMessage(reinterpret_cast<const char*>(data), dataLen);
     ad.jsonParser->serializeFromJson(jsonMessage, &serializer);
