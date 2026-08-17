@@ -38,8 +38,8 @@ def test_start_gateway_requires_device_token() -> None:
 
 def test_start_gateway_accepts_asset_handler() -> None:
     """
-    The asset handler is configured before the gateway starts, so the missing-token error
-    proves it was accepted.
+    The asset handler is accepted as a keyword argument; the gateway then fails on the
+    missing token.
     """
     with pytest.raises(RuntimeError, match="No device token provided"):
         start_gateway(asset_handler=lambda _uri: b"asset")
