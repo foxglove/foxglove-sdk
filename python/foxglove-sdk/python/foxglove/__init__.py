@@ -270,6 +270,7 @@ try:
         listener: RemoteAccessListener | None = None,
         supported_encodings: list[str] | None = None,
         services: list[Service] | None = None,
+        asset_handler: AssetHandler | None = None,
         context: Context | None = None,
         channel_filter: SinkChannelFilter | None = None,
         qos_classifier: Callable[[ChannelDescriptor], QosProfile] | None = None,
@@ -294,6 +295,8 @@ try:
             :py:class:`foxglove.remote_access.RemoteAccessListener` protocol.
         :param supported_encodings: A list of encodings to advertise to clients.
         :param services: A list of services to advertise to clients.
+        :param asset_handler: A callback function that returns the asset for a given URI, or None if
+            it doesn't exist.
         :param context: The context to use for logging. If None, the global context is used.
         :param channel_filter: A ``Callable`` that determines whether a channel should be logged
             to. Return ``True`` to log the channel, or ``False`` to skip it. By default, all
@@ -346,6 +349,7 @@ try:
             listener=listener,
             supported_encodings=supported_encodings,
             services=services,
+            asset_handler=asset_handler,
             context=context,
             channel_filter=channel_filter,
             qos_classifier=qos_classifier,

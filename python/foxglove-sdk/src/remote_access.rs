@@ -12,7 +12,9 @@ use pyo3::types::PyBytes;
 use crate::PyContext;
 use crate::errors::PyFoxgloveError;
 use crate::logging::init_logging;
-use crate::remote_common::{PyConnectionGraph, PyParameter, PyService, PyStatusLevel};
+use crate::remote_common::{
+    CallbackAssetHandler, PyConnectionGraph, PyParameter, PyService, PyStatusLevel,
+};
 use crate::sink_channel_filter::{PyChannelDescriptor, PySinkChannelFilter};
 
 /// Options for Draco point-cloud encoding.
@@ -763,7 +765,7 @@ impl foxglove::remote_access::PointCloudCompressionPolicy for PyPointCloudCompre
 
 /// Start a remote access gateway for live visualization and teleop in Foxglove.
 #[pyfunction]
-#[pyo3(signature = (*, name=None, device_token=None, capabilities=None, listener=None, supported_encodings=None, services=None, context=None, channel_filter=None, qos_classifier=None, suppress_video_transcode=None, message_backlog_size=None, foxglove_api_url=None, foxglove_api_timeout=None, video_encoder=None, point_cloud_compression=None))]
+#[pyo3(signature = (*, name=None, device_token=None, capabilities=None, listener=None, supported_encodings=None, services=None, asset_handler=None, context=None, channel_filter=None, qos_classifier=None, suppress_video_transcode=None, message_backlog_size=None, foxglove_api_url=None, foxglove_api_timeout=None, video_encoder=None, point_cloud_compression=None))]
 #[allow(clippy::too_many_arguments)]
 pub fn start_gateway(
     py: Python<'_>,
@@ -773,6 +775,7 @@ pub fn start_gateway(
     listener: Option<Py<PyAny>>,
     supported_encodings: Option<Vec<String>>,
     services: Option<Vec<PyService>>,
+    asset_handler: Option<Py<PyAny>>,
     context: Option<PyRef<PyContext>>,
     channel_filter: Option<Py<PyAny>>,
     qos_classifier: Option<Py<PyAny>>,
@@ -810,6 +813,12 @@ pub fn start_gateway(
 
     if let Some(services) = services {
         gateway = gateway.services(services.into_iter().map(Into::into));
+    }
+
+    if let Some(asset_handler) = asset_handler {
+        gateway = gateway.fetch_asset_handler(Arc::new(CallbackAssetHandler {
+            handler: Arc::new(asset_handler),
+        }));
     }
 
     if let Some(context) = context {

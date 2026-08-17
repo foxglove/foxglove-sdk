@@ -374,6 +374,7 @@ def start_gateway(
     listener: Any = None,
     supported_encodings: list[str] | None = None,
     services: list[Service] | None = None,
+    asset_handler: AssetHandler | None = None,
     context: Context | None = None,
     channel_filter: SinkChannelFilter | None = None,
     qos_classifier: Callable[[ChannelDescriptor], QosProfile] | None = None,
