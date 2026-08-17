@@ -346,8 +346,8 @@
 //!   [Draco](https://google.github.io/draco/) point-cloud compression: the
 //!   [`draco`][mod@crate::draco] encoding module, and the gateway's transparent compression of
 //!   `foxglove.PointCloud` channels that uses it — on by default and configurable per channel
-//!   via the gateway builder. CDR-encoded ROS 2 `sensor_msgs/msg/PointCloud2` channels are a
-//!   supported input too.
+//!   via the gateway builder. JSON- and FlatBuffer-encoded `foxglove.PointCloud` and
+//!   CDR-encoded ROS 2 `sensor_msgs/msg/PointCloud2` channels are supported inputs too.
 //! - `require-cuda`: opts into a build-time check that `cuda.h` is present on targets where
 //!   webrtc-sys would build NVENC support. Requires `remote-access` to also be enabled.
 //!   See [NVENC hardware acceleration](#nvenc-hardware-acceleration).

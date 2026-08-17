@@ -32,6 +32,7 @@ remote-access = [
   "dep:reqwest",
   "dep:rustls",
   "dep:semver",
+  "serde",
 ]
 # Opts into a build-time check that NVENC hardware acceleration for video
 # encoding will be available. Only meaningful in combination with

@@ -316,7 +316,8 @@ try:
             compression. When a channel is compressed, it is advertised as
             ``foxglove.CompressedPointCloud`` and each logged point cloud is compressed in a
             background task before delivery. The ``Callable`` is invoked for each compressible
-            Lossy ``foxglove.PointCloud`` channel; return a
+            Lossy point-cloud channel (protobuf-, JSON-, or FlatBuffer-encoded
+            ``foxglove.PointCloud``, or CDR-encoded ``sensor_msgs/msg/PointCloud2``); return a
             :py:class:`~foxglove.remote_access.DracoEncodeOptions` to compress that channel
             with those settings, ``True`` to compress with the default settings, or ``False``
             (or ``None``) to deliver it unmodified. If the callable raises an exception, the
