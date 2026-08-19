@@ -1220,6 +1220,33 @@ const GeoJSON: FoxgloveMessageSchema = {
   ],
 };
 
+const RobotDescription: FoxgloveMessageSchema = {
+  type: "message",
+  name: "RobotDescription",
+  description:
+    "A robot description used to visualize an articulated 3D model. The description defines its own coordinate frames; the pose of each link is determined by the transform tree or by `foxglove.JointStates` messages.",
+  fields: [
+    {
+      name: "url",
+      type: { type: "primitive", name: "string" },
+      description:
+        "URL pointing to the robot description file. One of `url` or `data` should be non-empty. Relative resources referenced by the description, such as meshes, are resolved against this URL.",
+    },
+    {
+      name: "data",
+      type: { type: "primitive", name: "bytes" },
+      description:
+        "Embedded robot description. One of `url` or `data` should be non-empty. Because an embedded description has no location to resolve against, any resources it references, such as meshes, must use absolute URLs.",
+    },
+    {
+      name: "format",
+      type: { type: "primitive", name: "string" },
+      description:
+        "Robot description format.\n\nSupported values: `urdf` ([Unified Robot Description Format](https://wiki.ros.org/urdf/XML)).",
+    },
+  ],
+};
+
 const NumericType: FoxgloveEnumSchema = {
   type: "enum",
   name: "NumericType",
@@ -2069,6 +2096,7 @@ export const foxgloveMessageSchemas = {
   Quaternion,
   RawAudio,
   RawImage,
+  RobotDescription,
   SpherePrimitive,
   TextAnnotation,
   TextPrimitive,
