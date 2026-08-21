@@ -31,7 +31,7 @@ full = ["aws-lc-rs", "remote-access"]
 workspace = true
 
 [dependencies]
-base64 = "0.22.1"
+base64.workspace = true
 bytes.workspace = true
 log.workspace = true
 pyo3 = { version = "0.29.0", features = ["abi3-py310"] }

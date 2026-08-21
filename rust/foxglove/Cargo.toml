@@ -113,7 +113,7 @@ workspace = true
 
 [dependencies]
 arc-swap = "1.7.1"
-base64 = { version = "0.22", optional = true }
+base64 = { workspace = true, optional = true }
 bimap = "0.6.3"
 bytes.workspace = true
 chrono = { workspace = true, optional = true }
