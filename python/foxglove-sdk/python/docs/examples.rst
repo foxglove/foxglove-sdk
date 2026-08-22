@@ -41,7 +41,7 @@ Advertising Services
 
 Asset server
 ------------
-.. literalinclude:: ../../../foxglove-sdk-examples/ws-asset-server/main.py
+.. literalinclude:: ../../../foxglove-sdk-examples/asset-server/main.py
 
 Connection Graph
 ----------------

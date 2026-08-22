@@ -36,6 +36,15 @@ def test_start_gateway_requires_device_token() -> None:
         start_gateway()
 
 
+def test_start_gateway_accepts_asset_handler() -> None:
+    """
+    The asset handler is accepted as a keyword argument; the gateway then fails on the
+    missing token.
+    """
+    with pytest.raises(RuntimeError, match="No device token provided"):
+        start_gateway(asset_handler=lambda _uri: b"asset")
+
+
 def test_start_gateway_accepts_point_cloud_compression_policy() -> None:
     """
     The point-cloud compression policy is validated before the gateway starts, so the

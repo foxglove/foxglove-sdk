@@ -1,0 +1,30 @@
+# Chassis for the asset-server demo robot.
+#
+# Authored y-up, because the 3D panel's "Mesh up axis" setting defaults to y-up for
+# meshes that carry no orientation info (OBJ, STL). The panel rotates mesh +y onto
+# scene +z, so in base_link this box is 1.2 long, 0.6 wide, and 0.25 tall, resting
+# on the z = 0 plane.
+o demo_robot_body
+
+v -0.6 0 -0.3
+v 0.6 0 -0.3
+v 0.6 0 0.3
+v -0.6 0 0.3
+v -0.6 0.25 -0.3
+v 0.6 0.25 -0.3
+v 0.6 0.25 0.3
+v -0.6 0.25 0.3
+
+vn 0 -1 0
+vn 0 1 0
+vn 0 0 -1
+vn 0 0 1
+vn -1 0 0
+vn 1 0 0
+
+f 1//1 2//1 3//1 4//1
+f 5//2 8//2 7//2 6//2
+f 1//3 5//3 6//3 2//3
+f 4//4 3//4 7//4 8//4
+f 1//5 4//5 8//5 5//5
+f 2//6 6//6 7//6 3//6
