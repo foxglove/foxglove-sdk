@@ -4,7 +4,7 @@ import time
 from pathlib import Path
 
 import foxglove
-from foxglove import Channel, Schema
+from foxglove import Parameter
 from foxglove.messages import (
     FrameTransform,
     FrameTransforms,
@@ -12,10 +12,19 @@ from foxglove.messages import (
     Timestamp,
     Vector3,
 )
+from foxglove.remote_access import Capability as GatewayCapability
+from foxglove.remote_access import Client as GatewayClient
+from foxglove.remote_access import RemoteAccessListener
+from foxglove.websocket import Capability as WebSocketCapability
+from foxglove.websocket import Client as WebSocketClient
+from foxglove.websocket import ServerListener
 
 ASSET_ROOT = Path(__file__).parent.resolve()
-ROBOT_DESCRIPTION_TOPIC = "/robot_description"
-ROBOT_DESCRIPTION = (ASSET_ROOT / "demo_robot" / "robot.urdf").read_text()
+ROBOT_DESCRIPTION_PARAM = "/robot_description"
+ROBOT_DESCRIPTION = Parameter(
+    ROBOT_DESCRIPTION_PARAM,
+    value=(ASSET_ROOT / "demo_robot" / "robot.urdf").read_text(),
+)
 
 
 def asset_handler(uri: str) -> bytes | None:
@@ -32,6 +41,36 @@ def asset_handler(uri: str) -> bytes | None:
     return path.read_bytes()
 
 
+def get_parameters(param_names: list[str]) -> list[Parameter]:
+    """Serve the URDF XML as the /robot_description parameter.
+
+    An empty request means "all parameters".
+    """
+    if param_names and ROBOT_DESCRIPTION_PARAM not in param_names:
+        return []
+    return [ROBOT_DESCRIPTION]
+
+
+class WebSocketParameterServer(ServerListener):
+    def on_get_parameters(
+        self,
+        client: WebSocketClient,
+        param_names: list[str],
+        request_id: str | None = None,
+    ) -> list[Parameter]:
+        return get_parameters(param_names)
+
+
+class GatewayParameterServer(RemoteAccessListener):
+    def on_get_parameters(
+        self,
+        client: GatewayClient,
+        param_names: list[str],
+        request_id: str | None = None,
+    ) -> list[Parameter]:
+        return get_parameters(param_names)
+
+
 def main() -> None:
     logging.basicConfig(
         level=logging.INFO,
@@ -40,21 +79,10 @@ def main() -> None:
     )
     foxglove.set_log_level("INFO")
 
-    robot_description_channel = Channel(
-        ROBOT_DESCRIPTION_TOPIC,
-        message_encoding="json",
-        schema=Schema(
-            name="std_msgs/msg/String",
-            encoding="jsonschema",
-            data=(
-                b'{"type":"object","properties":{"data":{"type":"string"}},'
-                b'"required":["data"]}'
-            ),
-        ),
-    )
-
     server = foxglove.start_server(
         name="asset-server",
+        capabilities=[WebSocketCapability.Parameters],
+        server_listener=WebSocketParameterServer(),
         asset_handler=asset_handler,
     )
     gateway = None
@@ -65,11 +93,12 @@ def main() -> None:
             gateway = foxglove.start_gateway(
                 name="asset-server",
                 device_token=device_token,
+                capabilities=[GatewayCapability.Parameters],
+                listener=GatewayParameterServer(),
                 asset_handler=asset_handler,
             )
 
         while True:
-            robot_description_channel.log({"data": ROBOT_DESCRIPTION})
             foxglove.log(
                 "/tf",
                 FrameTransforms(
