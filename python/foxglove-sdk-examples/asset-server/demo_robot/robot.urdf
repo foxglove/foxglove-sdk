@@ -1,0 +1,58 @@
+<?xml version="1.0"?>
+<robot name="asset_server_demo_robot">
+  <material name="foxglove_blue">
+    <color rgba="0.235 0.502 0.957 1.0"/>
+  </material>
+  <material name="dark_gray">
+    <color rgba="0.12 0.14 0.18 1.0"/>
+  </material>
+
+  <link name="base_link">
+    <visual name="body">
+      <geometry>
+        <mesh filename="package://demo_robot/meshes/body.obj"/>
+      </geometry>
+      <material name="foxglove_blue"/>
+    </visual>
+
+    <visual name="camera">
+      <origin xyz="0.25 0 0.33"/>
+      <geometry>
+        <box size="0.18 0.24 0.16"/>
+      </geometry>
+      <material name="dark_gray"/>
+    </visual>
+
+    <visual name="front_left_wheel">
+      <origin xyz="0.38 -0.36 0.12" rpy="1.5708 0 0"/>
+      <geometry>
+        <cylinder radius="0.16" length="0.12"/>
+      </geometry>
+      <material name="dark_gray"/>
+    </visual>
+
+    <visual name="front_right_wheel">
+      <origin xyz="0.38 0.36 0.12" rpy="1.5708 0 0"/>
+      <geometry>
+        <cylinder radius="0.16" length="0.12"/>
+      </geometry>
+      <material name="dark_gray"/>
+    </visual>
+
+    <visual name="rear_left_wheel">
+      <origin xyz="-0.38 -0.36 0.12" rpy="1.5708 0 0"/>
+      <geometry>
+        <cylinder radius="0.16" length="0.12"/>
+      </geometry>
+      <material name="dark_gray"/>
+    </visual>
+
+    <visual name="rear_right_wheel">
+      <origin xyz="-0.38 0.36 0.12" rpy="1.5708 0 0"/>
+      <geometry>
+        <cylinder radius="0.16" length="0.12"/>
+      </geometry>
+      <material name="dark_gray"/>
+    </visual>
+  </link>
+</robot>
