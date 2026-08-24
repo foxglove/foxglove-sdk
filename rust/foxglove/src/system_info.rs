@@ -337,8 +337,8 @@ async fn run_publisher(channel: Channel<SystemInfo>, refresh_interval: Duration)
     let num_cpus = u32::try_from(system.cpus().len()).unwrap_or(u32::MAX);
 
     let process_refresh = ProcessRefreshKind::nothing().with_cpu().with_memory();
-    // Prime the per-process and global CPU usage; the first reading is always 0
-    // since it relies on diffs between consecutive samples.
+    // Prime the per-process and global CPU usage, which are computed from diffs
+    // between consecutive samples.
     system.refresh_processes_specifics(ProcessesToUpdate::Some(&[pid]), false, process_refresh);
     system.refresh_cpu_specifics(cpu_refresh);
 
