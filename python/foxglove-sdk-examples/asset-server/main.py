@@ -85,19 +85,20 @@ def main() -> None:
         server_listener=WebSocketParameterServer(),
         asset_handler=asset_handler,
     )
-    gateway = None
+
+    device_token = os.getenv("FOXGLOVE_DEVICE_TOKEN")
+    if device_token:
+        gateway = foxglove.start_gateway(
+            name="asset-server",
+            device_token=device_token,
+            capabilities=[GatewayCapability.Parameters],
+            listener=GatewayParameterServer(),
+            asset_handler=asset_handler,
+        )
+    else:
+        gateway = None
 
     try:
-        device_token = os.getenv("FOXGLOVE_DEVICE_TOKEN")
-        if device_token:
-            gateway = foxglove.start_gateway(
-                name="asset-server",
-                device_token=device_token,
-                capabilities=[GatewayCapability.Parameters],
-                listener=GatewayParameterServer(),
-                asset_handler=asset_handler,
-            )
-
         while True:
             foxglove.log(
                 "/tf",
