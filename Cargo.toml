@@ -22,6 +22,7 @@ repository = "https://github.com/foxglove/foxglove-sdk"
 license = "MIT"
 
 [workspace.dependencies]
+base64 = "0.23.1"
 bytes = "1.11.1"
 chrono = { version = "0.4.39" }
 log = "0.4.22"
@@ -35,7 +36,7 @@ serde_with = { version = "3.14", features = ["macros", "base64"] }
 sysinfo = "0.36.1"
 thiserror = "2.0"
 tokio = { version = "1.47", features = ["macros", "net", "rt-multi-thread", "signal", "time"] }
-tokio-tungstenite = "0.29"
+tokio-tungstenite = "0.30"
 tokio-util = { version = "0.7", features = ["io", "rt"] }
 tracing = { version = "0.1", features = ["log"] }
 tracing-test = "0.2.5"

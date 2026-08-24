@@ -47,7 +47,7 @@ foxglove = { path = "../rust/foxglove", default-features = false, features = [
   "websocket-tls",
   "zstd",
 ] }
-base64 = "0.22.1"
+base64.workspace = true
 bitflags = "2.9.0"
 env_logger = "0.11.5"
 log.workspace = true

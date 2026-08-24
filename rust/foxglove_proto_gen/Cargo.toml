@@ -8,7 +8,7 @@ workspace = true
 
 [dependencies]
 anyhow = "1.0.95"
-itertools = "0.14.0"
+itertools = "0.15.0"
 prost.workspace = true
 prost-build.workspace = true
 prost-types.workspace = true
