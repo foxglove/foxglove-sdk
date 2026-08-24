@@ -470,11 +470,10 @@ impl ViewerConnection {
             let writer = self
                 .room
                 .local_participant()
-                .stream_bytes(StreamByteOptions {
-                    topic: "control".to_string(),
-                    destination_identities: vec![gateway_identity],
-                    ..StreamByteOptions::default()
-                })
+                .stream_bytes(
+                    StreamByteOptions::new_with_topic("control")
+                        .with_destination_identity(gateway_identity),
+                )
                 .await
                 .map_err(|e| anyhow::anyhow!("failed to open byte stream to gateway: {e}"))?;
             *guard = Some(writer);

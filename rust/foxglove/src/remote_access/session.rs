@@ -9,6 +9,7 @@ use libwebrtc::video_source::{RtcVideoSource, native::NativeVideoSource};
 use livekit::options::{TrackPublishOptions, VideoCodec};
 use livekit::{
     ByteStreamReader, Room, StreamByteOptions,
+    data_stream::api::StreamError,
     id::{ParticipantIdentity, ParticipantSid},
 };
 use livekit::{StreamWriter, prelude::*};
@@ -65,6 +66,21 @@ mod video_track;
 pub(super) use video_track::{
     VideoInputSchema, VideoMetadata, VideoPublisher, resolve_video_input_schema,
 };
+
+/// Whether a byte stream read error means the sender simply went away.
+///
+/// `UnexpectedEof` is a stream that ended mid-frame. `AbnormalEnd` is LiveKit
+/// aborting the reader because the sending participant disconnected, which is
+/// the routine outcome when a viewer closes its tab.
+fn is_expected_stream_end(e: &std::io::Error) -> bool {
+    if e.kind() == std::io::ErrorKind::UnexpectedEof {
+        return true;
+    }
+    matches!(
+        e.get_ref().and_then(|e| e.downcast_ref::<StreamError>()),
+        Some(StreamError::AbnormalEnd(_))
+    )
+}
 
 #[derive(Debug)]
 struct SessionStats {
@@ -941,7 +957,13 @@ impl RemoteAccessSession {
             };
             match read_result {
                 Ok(_) => {}
-                Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => break,
+                Err(e) if is_expected_stream_end(&e) => {
+                    debug!(
+                        "byte stream for client {:?} ended: {:?}",
+                        participant_identity, e
+                    );
+                    break;
+                }
                 Err(e) => {
                     error!(
                         "Error reading from byte stream for client {:?}: {:?}",
@@ -970,7 +992,13 @@ impl RemoteAccessSession {
             };
             match read_result {
                 Ok(_) => {}
-                Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => break,
+                Err(e) if is_expected_stream_end(&e) => {
+                    debug!(
+                        "byte stream for client {:?} ended: {:?}",
+                        participant_identity, e
+                    );
+                    break;
+                }
                 Err(e) => {
                     error!(
                         "Error reading from byte stream for client {:?}: {:?}",
@@ -1441,11 +1469,10 @@ impl RemoteAccessSession {
         let stream = match self
             .room
             .local_participant()
-            .stream_bytes(StreamByteOptions {
-                topic: CONTROL_CHANNEL_TOPIC.to_string(),
-                destination_identities: vec![participant_id.clone()],
-                ..StreamByteOptions::default()
-            })
+            .stream_bytes(
+                StreamByteOptions::new_with_topic(CONTROL_CHANNEL_TOPIC)
+                    .with_destination_identity(participant_id.clone()),
+            )
             .await
         {
             Ok(s) => s,
@@ -1574,11 +1601,10 @@ impl RemoteAccessSession {
         let stream = self
             .room
             .local_participant()
-            .stream_bytes(StreamByteOptions {
-                topic: CONTROL_CHANNEL_TOPIC.to_string(),
-                destination_identities: vec![participant_id.clone()],
-                ..StreamByteOptions::default()
-            })
+            .stream_bytes(
+                StreamByteOptions::new_with_topic(CONTROL_CHANNEL_TOPIC)
+                    .with_destination_identity(participant_id.clone()),
+            )
             .await
             .inspect_err(|e| {
                 error!("failed to open control stream for {participant_id}: {e:?}");
@@ -2888,6 +2914,25 @@ mod tests {
     use crate::remote_common::fetch_asset::{
         AssetHandler, AsyncAssetHandlerFn, BlockingAssetHandlerFn,
     };
+
+    /// Exercises the same wrapping the reader does: `StreamError` boxed into an
+    /// `io::Error` by `handle_byte_stream_from_client`, then classified.
+    #[test]
+    fn test_is_expected_stream_end() {
+        let abnormal =
+            std::io::Error::other(StreamError::AbnormalEnd("participant left".to_string()));
+        assert!(is_expected_stream_end(&abnormal));
+
+        let eof = std::io::Error::from(std::io::ErrorKind::UnexpectedEof);
+        assert!(is_expected_stream_end(&eof));
+
+        // Other stream errors are still genuine failures worth logging loudly.
+        let bad_header = std::io::Error::other(StreamError::InvalidHeader);
+        assert!(!is_expected_stream_end(&bad_header));
+
+        let reset = std::io::Error::from(std::io::ErrorKind::ConnectionReset);
+        assert!(!is_expected_stream_end(&reset));
+    }
 
     fn make_participant_with_rx(name: &str) -> (Arc<Participant>, flume::Receiver<Bytes>) {
         use std::sync::atomic::{AtomicUsize, Ordering};
