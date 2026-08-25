@@ -2,6 +2,12 @@
 Changelog for package foxglove_bridge
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+3.5.0 (2026-08-25)
+------------------
+* Transparently compress point cloud topics using draco when using remote access, with an opt-out facility
+* Terminate strings for CDR serialization
+* Update Foxglove SDK version to 0.27.0
+
 3.4.3 (2026-07-22)
 ------------------
 * Add support for ROS 2 service introspection event schemas
