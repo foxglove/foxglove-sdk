@@ -2,6 +2,10 @@
 Changelog for package foxglove_msgs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+3.5.0 (2026-08-25)
+------------------
+* Version bump for foxglove_bridge 3.5.0 release
+
 3.4.3 (2026-07-22)
 ------------------
 * Add Event schema
