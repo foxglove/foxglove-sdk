@@ -1310,6 +1310,25 @@ pub struct RawImage {
     #[cfg_attr(feature = "serde", serde(with = "crate::messages::serde_bytes"))]
     pub data: ::prost::bytes::Bytes,
 }
+/// A robot description used to visualize an articulated 3D model. The description defines its own coordinate frames; the pose of each link is determined by the transform tree or by `foxglove.JointStates` messages.
+///
+/// <https://docs.foxglove.dev/docs/visualization/message-schemas/robot-description>
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct RobotDescription {
+    /// URL pointing to the robot description file. One of `url` or `data` should be non-empty. Relative resources referenced by the description, such as meshes, are resolved against this URL.
+    #[prost(string, tag = "1")]
+    pub url: ::prost::alloc::string::String,
+    /// Embedded robot description. One of `url` or `data` should be non-empty. Because an embedded description has no location to resolve against, any resources it references, such as meshes, must use absolute URLs.
+    #[prost(bytes = "bytes", tag = "2")]
+    #[cfg_attr(feature = "serde", serde(with = "crate::messages::serde_bytes"))]
+    pub data: ::prost::bytes::Bytes,
+    /// Robot description format.
+    ///
+    /// Supported values: `urdf` ([Unified Robot Description Format](<https://wiki.ros.org/urdf/XML>)).
+    #[prost(string, tag = "3")]
+    pub format: ::prost::alloc::string::String,
+}
 /// A visual element in a 3D scene. An entity may be composed of multiple primitives which all share the same frame of reference.
 ///
 /// <https://docs.foxglove.dev/docs/visualization/message-schemas/scene-entity>
