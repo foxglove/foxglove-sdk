@@ -1,3 +1,4 @@
+pub mod blackhole_proxy;
 pub mod config;
 pub mod frame;
 pub mod livekit_token;

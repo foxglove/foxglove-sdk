@@ -93,14 +93,14 @@ const CONTROL_CHANNEL_TOPIC: &str = "control";
 const MESSAGE_FRAME_SIZE: usize = 5; // 1 byte opcode + u32 LE length
 const MAX_MESSAGE_SIZE: usize = 16 * 1024 * 1024; // 16 MiB
 
-/// Upper bound on `livekit::Room::close()`. The LiveKit SDK can hang
-/// indefinitely in its data-channel teardown path during room close.
-/// This is a source of sporadic test timeouts in both C++ and Rust integration tests.
-/// Tracked in #FLE-511 and reported to LiveKit.
+/// How long [`RemoteAccessSession::close`] waits for `livekit::Room::close()` before letting the
+/// watch loop move on. Bounds our wait, not the teardown, which keeps running either way.
 ///
-/// The SFU eventually evicts the abandoned participant when its DTLS connection times out,
-/// and the `Room`'s `Drop` impl reclaims any local resources we abandon here.
-const ROOM_CLOSE_TIMEOUT: Duration = Duration::from_secs(5);
+/// The slowest close that still finishes on its own takes about 14s: one racing an in-flight
+/// reconnect, where the `Leave` waits out the signal stream lock (2s drain + 5s connect + 5s
+/// reconnect response) and then drains the stream again. Those are LiveKit-internal constants,
+/// so this is a heuristic rather than a bound.
+const ROOM_CLOSE_TIMEOUT: Duration = Duration::from_secs(20);
 
 pub(super) const DEFAULT_MESSAGE_BACKLOG_SIZE: usize = 1024;
 
@@ -313,7 +313,7 @@ pub(super) struct RemoteAccessSession {
     /// point-cloud publishers) that deliver messages back through the session.
     weak_self: Weak<Self>,
     sink_id: SinkId,
-    room: Room,
+    room: Arc<Room>,
     context: Weak<Context>,
     remote_access_session_id: Option<String>,
     /// Channel-keyed session state: channels, subscriptions, video publishers,
@@ -631,7 +631,7 @@ impl RemoteAccessSession {
         Arc::new_cyclic(|_weak_self| Self {
             weak_self: _weak_self.clone(),
             sink_id: SinkId::next(),
-            room: params.room,
+            room: Arc::new(params.room),
             context: params.context,
             remote_access_session_id: params.remote_access_session_id,
             channel_registry: RwLock::new(ChannelRegistry::new()),
@@ -925,18 +925,52 @@ impl RemoteAccessSession {
         // Cancel flush-tasks and await them before tearing down the transport.
         // In-flight writes either complete or fail once `room.close()` runs.
         self.participant_registry.shutdown().await;
-        match tokio::time::timeout(ROOM_CLOSE_TIMEOUT, self.room.close()).await {
-            Ok(Ok(())) => {}
-            Ok(Err(e)) => error!(
+
+        // `Room::close()` has been seen hanging indefinitely, and `Room` has no `Drop` impl, so
+        // abandoning the wait would leave us in the room. Close it in its own task, and time out
+        // the wait instead.
+        let room = self.room.clone();
+        let session_id = self.remote_access_session_id().map(str::to_string);
+        let mut close_task = self.runtime.spawn(async move { room.close().await });
+
+        match tokio::time::timeout(ROOM_CLOSE_TIMEOUT, &mut close_task).await {
+            Ok(Ok(Ok(()))) => {}
+            Ok(Ok(Err(e))) => error!(
                 remote_access_session_id = self.remote_access_session_id(),
                 error = %e,
                 "failed to close room: {e}",
             ),
-            Err(_) => warn!(
+            Ok(Err(e)) => error!(
                 remote_access_session_id = self.remote_access_session_id(),
-                timeout_secs = ROOM_CLOSE_TIMEOUT.as_secs(),
-                "livekit room close timed out; abandoning room teardown",
+                error = %e,
+                "room close task failed: {e}",
             ),
+            Err(_) => {
+                warn!(
+                    remote_access_session_id = self.remote_access_session_id(),
+                    timeout_secs = ROOM_CLOSE_TIMEOUT.as_secs(),
+                    "livekit room close is taking too long; continuing it in the background",
+                );
+                // Keep it running, and log the result.
+                self.runtime.spawn(async move {
+                    match close_task.await {
+                        Ok(Ok(())) => info!(
+                            remote_access_session_id = session_id,
+                            "background room close completed",
+                        ),
+                        Ok(Err(e)) => error!(
+                            remote_access_session_id = session_id,
+                            error = %e,
+                            "background room close failed: {e}",
+                        ),
+                        Err(e) => error!(
+                            remote_access_session_id = session_id,
+                            error = %e,
+                            "background room close task failed: {e}",
+                        ),
+                    }
+                });
+            }
         }
     }
 
