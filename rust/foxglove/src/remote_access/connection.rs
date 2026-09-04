@@ -540,9 +540,7 @@ impl RemoteAccessConnection {
                 "context has been dropped, stopping remote access connection"
             );
             *self.session.lock() = None;
-            if let Err(e) = session.room().close().await {
-                error!(remote_access_session_id, error = %e, "failed to close room: {e}");
-            }
+            session.close().await;
             return;
         };
         context.add_sink(session.clone());
