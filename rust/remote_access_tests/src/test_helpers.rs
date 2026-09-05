@@ -917,17 +917,8 @@ impl TestGateway {
     /// Use this when you need to perform setup (e.g., connecting a viewer)
     /// before the gateway joins the room.
     pub async fn prepare() -> (String, mock_server::MockServerHandle) {
-        Self::prepare_with_livekit_url(livekit_token::livekit_url()).await
-    }
-
-    /// Like [`TestGateway::prepare`], but the gateway is told to reach LiveKit at
-    /// `livekit_url`. Viewers still connect to the dev server directly, so this puts a proxy
-    /// on the gateway's link alone.
-    pub async fn prepare_with_livekit_url(
-        livekit_url: String,
-    ) -> (String, mock_server::MockServerHandle) {
         let room_name = format!("test-room-{}", unique_id());
-        let mock = mock_server::start_mock_server_with_livekit_url(&room_name, livekit_url).await;
+        let mock = mock_server::start_mock_server(&room_name).await;
         info!("mock server started at {}", mock.url());
         (room_name, mock)
     }
@@ -984,20 +975,12 @@ impl TestGateway {
     }
 
     pub async fn stop(self) -> Result<()> {
-        self.stop_with_timeout(SHUTDOWN_TIMEOUT).await?;
-        Ok(())
-    }
-
-    /// Stops the gateway, allowing up to `timeout` for the runner to finish, and returns how
-    /// long it took. Use this when shutdown has to outlast a slow room close.
-    pub async fn stop_with_timeout(self, timeout: Duration) -> Result<Duration> {
-        let started = tokio::time::Instant::now();
         let runner = self.handle.stop();
-        tokio::time::timeout(timeout, runner)
+        tokio::time::timeout(SHUTDOWN_TIMEOUT, runner)
             .await
             .context("timeout waiting for gateway to stop")?
             .context("gateway runner panicked")?;
-        Ok(started.elapsed())
+        Ok(())
     }
 }
 
