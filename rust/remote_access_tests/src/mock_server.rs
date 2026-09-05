@@ -73,6 +73,8 @@ struct WatchQueryParams {
 
 struct MockState {
     room_name: String,
+    /// LiveKit URL handed to the gateway in the wake event. Defaults to the dev server.
+    livekit_url: String,
 }
 
 pub struct MockServerHandle {
@@ -95,8 +97,18 @@ impl Drop for MockServerHandle {
 /// Starts a mock Foxglove API server that emits a watch stream wake carrying a LiveKit
 /// access token for the local dev server, and accepts heartbeats.
 pub async fn start_mock_server(room_name: &str) -> MockServerHandle {
+    start_mock_server_with_livekit_url(room_name, livekit_token::livekit_url()).await
+}
+
+/// Like [`start_mock_server`], but points the gateway at `livekit_url` instead of the dev
+/// server. Use this to put the gateway's signal link behind a proxy.
+pub async fn start_mock_server_with_livekit_url(
+    room_name: &str,
+    livekit_url: String,
+) -> MockServerHandle {
     let state = Arc::new(MockState {
         room_name: room_name.to_string(),
+        livekit_url,
     });
 
     let app = Router::new()
@@ -171,7 +183,7 @@ async fn watch_handler(
     };
     let wake = WatchWake {
         remote_access_session_id: "ras_0000mockSession".into(),
-        url: livekit_token::livekit_url(),
+        url: state.livekit_url.clone(),
         token,
     };
 

@@ -3981,7 +3981,6 @@ dependencies = [
  "serial_test",
  "tokio",
  "tracing",
- "tracing-subscriber",
  "tracing-test",
 ]
 

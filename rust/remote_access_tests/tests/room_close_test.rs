@@ -1,93 +1,68 @@
-//! Reproduces the LiveKit room-close hang seen in the field (DB-1284): after the
-//! signal link is blackholed, `Room::close()` never returns, so the device stays
-//! in the room even though the SDK believes it has disconnected.
+//! Gateway shutdown when the LiveKit signal link is dead.
+//!
+//! LiveKit's `Room::close()` can block indefinitely when the signal link wedges (DB-1714), so
+//! `RemoteAccessSession::close` bounds its wait and lets the close finish in the background.
+//! This test covers the resulting guarantee: gateway shutdown completes on a schedule we
+//! control, no matter what the signal link does.
+//!
+//! It deliberately does not assert that the close hangs. That is upstream behavior, and an
+//! upstream fix should not turn this red; the bound holds either way.
 //!
 //! Requires a local LiveKit server via `docker compose up -d`.
-//! Run with: `cargo test -p remote_access_tests -- --ignored room_close_`
+//! Run with: `cargo test -p remote_access_tests -- --ignored livekit_room_close`
 
 use std::time::Duration;
 
-use anyhow::{Result, bail};
-use livekit::{ConnectionState, Room, RoomEvent, RoomOptions};
+use anyhow::Result;
+use foxglove::remote_access::ConnectionStatus;
 use remote_access_tests::blackhole_proxy::BlackholeProxy;
 use remote_access_tests::livekit_token;
-use remote_access_tests::test_helpers::unique_id;
+use remote_access_tests::test_helpers::{
+    EVENT_TIMEOUT, TestGateway, TestGatewayOptions, ViewerConnection, poll_until,
+};
 use serial_test::serial;
-use tokio::sync::mpsc::UnboundedReceiver;
 use tracing::info;
+use tracing_test::traced_test;
 
-/// How long to wait for the signal ping timeout to trip after the blackhole.
-const RECONNECT_TIMEOUT: Duration = Duration::from_secs(90);
-/// How long we allow `Room::close()` to take before calling it hung.
-const CLOSE_TIMEOUT: Duration = Duration::from_secs(30);
+/// Ceiling on gateway shutdown with a dead signal link. `ROOM_CLOSE_TIMEOUT` in the SDK is 20s;
+/// the rest covers the teardown either side of the room close.
+const SHUTDOWN_BOUND: Duration = Duration::from_secs(35);
 
-/// Blackholing the signal link wedges `Room::close()`: the LiveKit signal
-/// client's teardown blocks forever, so the room is never actually left.
+/// Blackholing the gateway's signal link must not wedge its shutdown: the room close is bounded
+/// and the runner still returns.
+#[traced_test]
 #[ignore]
 #[tokio::test]
 #[serial(livekit)]
-async fn room_close_hangs_after_signal_blackhole() -> Result<()> {
-    init_logging();
+async fn livekit_room_close_is_bounded_when_signal_blackholed() -> Result<()> {
+    // Only the gateway goes through the proxy. The viewer talks to the dev server directly, so
+    // it keeps observing the room after we cut the gateway's link.
     let proxy = BlackholeProxy::start(livekit_host_port()).await?;
-    let url = format!("ws://{}", proxy.addr());
-    let room_name = format!("test-room-{}", unique_id());
-    let token = livekit_token::generate_token(&room_name, "device")?;
+    let (room_name, mock) =
+        TestGateway::prepare_with_livekit_url(format!("http://{}", proxy.addr())).await;
 
-    let (room, mut events) = Room::connect(&url, &token, RoomOptions::default()).await?;
-    info!("connected to room via proxy at {url}");
+    let ctx = foxglove::Context::new();
+    let gw = TestGateway::start_with_mock(&ctx, room_name, mock, TestGatewayOptions::default())?;
+    poll_until(|| gw.handle.connection_status() == ConnectionStatus::Connected).await;
 
-    proxy.blackhole();
-    let started = tokio::time::Instant::now();
-    wait_for_state(
-        &mut events,
-        ConnectionState::Reconnecting,
-        RECONNECT_TIMEOUT,
+    // A viewer that reaches ServerInfo proves the gateway is fully joined, with a working data
+    // path, before we cut the link.
+    let (viewer, _server_info, _advertise) = ViewerConnection::connect_and_await_startup(
+        &gw.room_name,
+        "viewer-1",
+        false,
+        EVENT_TIMEOUT,
     )
     .await?;
-    info!("room entered Reconnecting after {:?}", started.elapsed());
+    info!("gateway joined and serving; blackholing its signal link");
 
-    let started = tokio::time::Instant::now();
-    match tokio::time::timeout(CLOSE_TIMEOUT, room.close()).await {
-        Ok(result) => {
-            info!("room.close() returned after {:?}", started.elapsed());
-            result?;
-            Ok(())
-        }
-        Err(_) => bail!("room.close() hung for {CLOSE_TIMEOUT:?} after the signal link died"),
-    }
-}
+    proxy.blackhole();
 
-/// Control: with the link intact, `Room::close()` returns promptly. Guards
-/// against the blackhole test passing for an unrelated reason.
-#[ignore]
-#[tokio::test]
-#[serial(livekit)]
-async fn room_close_returns_promptly_when_connected() -> Result<()> {
-    init_logging();
-    let proxy = BlackholeProxy::start(livekit_host_port()).await?;
-    let url = format!("ws://{}", proxy.addr());
-    let room_name = format!("test-room-{}", unique_id());
-    let token = livekit_token::generate_token(&room_name, "device")?;
+    let elapsed = gw.stop_with_timeout(SHUTDOWN_BOUND).await?;
+    info!("gateway stopped after {elapsed:?} with a dead signal link");
 
-    let (room, _events) = Room::connect(&url, &token, RoomOptions::default()).await?;
-
-    let started = tokio::time::Instant::now();
-    tokio::time::timeout(CLOSE_TIMEOUT, room.close())
-        .await
-        .map_err(|_| anyhow::anyhow!("room.close() hung on a healthy connection"))??;
-    info!("room.close() returned after {:?}", started.elapsed());
+    viewer.close().await?;
     Ok(())
-}
-
-/// Installs a subscriber that also captures LiveKit's `log`-crate records, so
-/// the reconnect path's own tracing is visible in test output.
-fn init_logging() {
-    let filter = tracing_subscriber::EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info,livekit=debug"));
-    let _ = tracing_subscriber::fmt()
-        .with_env_filter(filter)
-        .with_test_writer()
-        .try_init();
 }
 
 /// The LiveKit dev server's `host:port`, as a plain TCP address for the proxy.
@@ -102,31 +77,5 @@ fn livekit_host_port() -> String {
         rest.to_string()
     } else {
         format!("{rest}:7880")
-    }
-}
-
-/// Waits for a [`RoomEvent::ConnectionStateChanged`] matching `expected`.
-async fn wait_for_state(
-    events: &mut UnboundedReceiver<RoomEvent>,
-    expected: ConnectionState,
-    timeout: Duration,
-) -> Result<()> {
-    let deadline = tokio::time::Instant::now() + timeout;
-    loop {
-        let remaining = deadline.saturating_duration_since(tokio::time::Instant::now());
-        if remaining.is_zero() {
-            bail!("timed out waiting for connection state {expected:?}");
-        }
-        match tokio::time::timeout(remaining, events.recv()).await {
-            Ok(Some(RoomEvent::ConnectionStateChanged(state))) => {
-                info!("connection state changed: {state:?}");
-                if state == expected {
-                    return Ok(());
-                }
-            }
-            Ok(Some(_)) => {}
-            Ok(None) => bail!("room event stream ended while waiting for {expected:?}"),
-            Err(_) => bail!("timed out waiting for connection state {expected:?}"),
-        }
     }
 }
