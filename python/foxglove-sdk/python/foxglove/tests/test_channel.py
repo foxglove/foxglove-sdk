@@ -155,6 +155,8 @@ def test_typed_channel_attributes(new_topic: str) -> None:
 def test_channel_metadata(new_topic: str) -> None:
     channel = Channel(new_topic, metadata={"foo": "bar"})
     assert channel.metadata() == {"foo": "bar"}
+    channel = Channel(new_topic, context=Context(), metadata={"foo": "baz"})
+    assert channel.metadata() == {"foo": "baz"}
 
 
 def test_channel_metadata_mistyped(new_topic: str) -> None:
