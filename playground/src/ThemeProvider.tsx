@@ -130,6 +130,17 @@ export function ThemeProvider(props: React.PropsWithChildren): React.JSX.Element
               disableElevation: true,
             },
           },
+          MuiTextField: {
+            defaultProps: {
+              variant: "standard",
+            },
+          },
+          MuiInputLabel: {
+            defaultProps: {
+              // always position label above text field
+              shrink: true,
+            },
+          },
         },
       }),
     [isDark],
