@@ -62,6 +62,9 @@ void poseInFrameToC(foxglove_pose_in_frame& dest, const PoseInFrame& src, Arena&
 void posesInFrameToC(foxglove_poses_in_frame& dest, const PosesInFrame& src, Arena& arena);
 void rawAudioToC(foxglove_raw_audio& dest, const RawAudio& src, Arena& arena);
 void rawImageToC(foxglove_raw_image& dest, const RawImage& src, Arena& arena);
+void robotDescriptionToC(
+  foxglove_robot_description& dest, const RobotDescription& src, Arena& arena
+);
 void sceneEntityToC(foxglove_scene_entity& dest, const SceneEntity& src, Arena& arena);
 void sceneEntityDeletionToC(
   foxglove_scene_entity_deletion& dest, const SceneEntityDeletion& src, Arena& arena
@@ -1434,6 +1437,42 @@ bool RawImageChannel::hasSinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
+FoxgloveResult<RobotDescriptionChannel> RobotDescriptionChannel::create(
+  const std::string_view& topic, const Context& context
+) {
+  const foxglove_channel* channel = nullptr;
+  foxglove_error error = foxglove_channel_create_robot_description(
+    {topic.data(), topic.size()}, context.getInner(), &channel
+  );
+  if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
+    return tl::unexpected(FoxgloveError(error));
+  }
+  return RobotDescriptionChannel(ChannelUniquePtr(channel));
+}
+
+FoxgloveError RobotDescriptionChannel::log(
+  const RobotDescription& msg, std::optional<uint64_t> log_time, std::optional<uint64_t> sink_id
+) noexcept {
+  Arena arena;
+  foxglove_robot_description c_msg;
+  robotDescriptionToC(c_msg, msg, arena);
+  return FoxgloveError(foxglove_channel_log_robot_description(
+    impl_.get(), &c_msg, log_time ? &*log_time : nullptr, sink_id ? *sink_id : 0
+  ));
+}
+
+void RobotDescriptionChannel::close() noexcept {
+  foxglove_channel_close(impl_.get());
+}
+
+uint64_t RobotDescriptionChannel::id() const noexcept {
+  return foxglove_channel_get_id(impl_.get());
+}
+
+bool RobotDescriptionChannel::hasSinks() const noexcept {
+  return foxglove_channel_has_sinks(impl_.get());
+}
+
 FoxgloveResult<SceneEntityChannel> SceneEntityChannel::create(
   const std::string_view& topic, const Context& context
 ) {
@@ -2197,6 +2236,15 @@ void rawImageToC(foxglove_raw_image& dest, const RawImage& src, [[maybe_unused]]
   dest.data_len = src.data.size();
 }
 
+void robotDescriptionToC(
+  foxglove_robot_description& dest, const RobotDescription& src, [[maybe_unused]] Arena& arena
+) {
+  dest.url = {src.url.data(), src.url.size()};
+  dest.data = reinterpret_cast<const unsigned char*>(src.data.data());
+  dest.data_len = src.data.size();
+  dest.format = {src.format.data(), src.format.size()};
+}
+
 void sceneEntityToC(
   foxglove_scene_entity& dest, const SceneEntity& src, [[maybe_unused]] Arena& arena
 ) {
@@ -2575,6 +2623,13 @@ FoxgloveError RawImage::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   foxglove_raw_image c_msg;
   rawImageToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_raw_image_encode(&c_msg, ptr, len, encoded_len));
+}
+
+FoxgloveError RobotDescription::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
+  Arena arena;
+  foxglove_robot_description c_msg;
+  robotDescriptionToC(c_msg, *this, arena);
+  return FoxgloveError(foxglove_robot_description_encode(&c_msg, ptr, len, encoded_len));
 }
 
 FoxgloveError SceneEntity::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
@@ -3017,6 +3072,16 @@ Schema RawAudio::schema() {
 
 Schema RawImage::schema() {
   struct foxglove_schema c_schema = foxglove_raw_image_schema();
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data_len = c_schema.data_len;
+  return result;
+}
+
+Schema RobotDescription::schema() {
+  struct foxglove_schema c_schema = foxglove_robot_description_schema();
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);

@@ -57,6 +57,7 @@ If the IDL does not support optional fields (e.g. ROS) you must specify a value 
 - [Quaternion](#quaternion)
 - [RawAudio](#rawaudio)
 - [RawImage](#rawimage)
+- [RobotDescription](#robotdescription)
 - [SceneEntity](#sceneentity)
 - [SceneEntityDeletion](#sceneentitydeletion)
 - [SceneUpdate](#sceneupdate)
@@ -3191,6 +3192,59 @@ For each `encoding` value, the `data` field contains image pixel data serialized
   - Pixel brightness is represented as 16-bit unsigned little-endian integers. Rendering of these values is controlled in [Image panel color mode settings](https://docs.foxglove.dev/docs/visualization/panels/image#general).
   - `step` must be greater than or equal to `width` * 2.
 
+
+</td>
+</tr>
+</table>
+
+## RobotDescription
+
+A robot description used to visualize an articulated 3D model. The description defines its own coordinate frames; the pose of each link is determined by the transform tree or by `foxglove.JointStates` messages.
+
+<table>
+  <tr>
+    <th>field</th>
+    <th>type</th>
+    <th>description</th>
+  </tr>
+<tr>
+<td><code>url</code></td>
+<td>
+
+string
+
+</td>
+<td>
+
+URL pointing to the robot description file. One of `url` or `data` should be non-empty. Relative resources referenced by the description, such as meshes, are resolved against this URL.
+
+</td>
+</tr>
+<tr>
+<td><code>data</code></td>
+<td>
+
+bytes
+
+</td>
+<td>
+
+Embedded robot description. One of `url` or `data` should be non-empty. Because an embedded description has no location to resolve against, any resources it references, such as meshes, must use absolute URLs.
+
+</td>
+</tr>
+<tr>
+<td><code>format</code></td>
+<td>
+
+string
+
+</td>
+<td>
+
+Robot description format.
+
+Supported values: `urdf` ([Unified Robot Description Format](https://wiki.ros.org/urdf/XML)).
 
 </td>
 </tr>

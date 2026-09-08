@@ -7584,6 +7584,171 @@ pub unsafe extern "C" fn foxglove_raw_image_encode(
     }
 }
 
+/// A robot description used to visualize an articulated 3D model. The description defines its own coordinate frames; the pose of each link is determined by the transform tree or by `foxglove.JointStates` messages.
+#[repr(C)]
+pub struct RobotDescription {
+    /// URL pointing to the robot description file. One of `url` or `data` should be non-empty. Relative resources referenced by the description, such as meshes, are resolved against this URL.
+    pub url: FoxgloveString,
+
+    /// Embedded robot description. One of `url` or `data` should be non-empty. Because an embedded description has no location to resolve against, any resources it references, such as meshes, must use absolute URLs.
+    pub data: *const c_uchar,
+    pub data_len: usize,
+
+    /// Robot description format.
+    ///
+    /// Supported values: `urdf` ([Unified Robot Description Format](https://wiki.ros.org/urdf/XML)).
+    pub format: FoxgloveString,
+}
+
+#[cfg(not(target_family = "wasm"))]
+impl RobotDescription {
+    /// Create a new typed channel, and return an owned raw channel pointer to it.
+    ///
+    /// # Safety
+    /// We're trusting the caller that the channel will only be used with this type T.
+    #[unsafe(no_mangle)]
+    pub unsafe extern "C" fn foxglove_channel_create_robot_description(
+        topic: FoxgloveString,
+        context: *const FoxgloveContext,
+        channel: *mut *const FoxgloveChannel,
+    ) -> FoxgloveError {
+        if channel.is_null() {
+            tracing::error!("channel cannot be null");
+            return FoxgloveError::ValueError;
+        }
+        unsafe {
+            let result =
+                do_foxglove_channel_create::<foxglove::messages::RobotDescription>(topic, context);
+            result_to_c(result, channel)
+        }
+    }
+}
+
+impl BorrowToNative for RobotDescription {
+    type NativeType = foxglove::messages::RobotDescription;
+
+    unsafe fn borrow_to_native(
+        &self,
+        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
+        let url = unsafe { string_from_raw(self.url.as_ptr() as *const _, self.url.len(), "url")? };
+        let format = unsafe {
+            string_from_raw(
+                self.format.as_ptr() as *const _,
+                self.format.len(),
+                "format",
+            )?
+        };
+
+        Ok(ManuallyDrop::new(foxglove::messages::RobotDescription {
+            url: ManuallyDrop::into_inner(url),
+            data: ManuallyDrop::into_inner(unsafe { bytes_from_raw(self.data, self.data_len) }),
+            format: ManuallyDrop::into_inner(format),
+        }))
+    }
+}
+
+/// Log a RobotDescription message to a channel.
+///
+/// # Safety
+/// The channel must have been created for this type with foxglove_channel_create_robot_description.
+#[cfg(not(target_family = "wasm"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_channel_log_robot_description(
+    channel: Option<&FoxgloveChannel>,
+    msg: Option<&RobotDescription>,
+    log_time: Option<&u64>,
+    sink_id: FoxgloveSinkId,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { RobotDescription::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
+            log_msg_to_channel(channel, &*msg, log_time, sink_id)
+        }
+        Err(e) => {
+            tracing::error!("RobotDescription: {}", e);
+            e.into()
+        }
+    }
+}
+
+/// Get the RobotDescription schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_robot_description_schema() -> FoxgloveSchema {
+    let native = foxglove::messages::RobotDescription::get_schema()
+        .expect("RobotDescription schema is Some");
+    let name: &'static str = "foxglove.RobotDescription";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("RobotDescription schema data is static");
+    };
+    FoxgloveSchema {
+        name: name.into(),
+        encoding: encoding.into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
+/// Encode a RobotDescription message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_robot_description_encode(
+    msg: Option<&RobotDescription>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { RobotDescription::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg
+                        .encoded_len()
+                        .expect("foxglove messages return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("RobotDescription: {}", e);
+            FoxgloveError::EncodeError
+        }
+    }
+}
+
 /// A primitive representing a sphere or ellipsoid
 #[repr(C)]
 pub struct SpherePrimitive {

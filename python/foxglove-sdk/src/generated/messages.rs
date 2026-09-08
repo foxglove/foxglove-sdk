@@ -3334,6 +3334,66 @@ impl From<RawImage> for foxglove::messages::RawImage {
     }
 }
 
+/// A robot description used to visualize an articulated 3D model. The description defines its own coordinate frames; the pose of each link is determined by the transform tree or by `foxglove.JointStates` messages.
+///
+/// :param url: URL pointing to the robot description file. One of `url` or `data` should be non-empty. Relative resources referenced by the description, such as meshes, are resolved against this URL.
+/// :param data: Embedded robot description. One of `url` or `data` should be non-empty. Because an embedded description has no location to resolve against, any resources it references, such as meshes, must use absolute URLs.
+/// :param format: Robot description format.
+///     
+///     Supported values: `urdf` (`Unified Robot Description Format <https://wiki.ros.org/urdf/XML>`__).
+///
+/// See https://docs.foxglove.dev/docs/visualization/message-schemas/robot-description
+#[pyclass(from_py_object, module = "foxglove.messages")]
+#[derive(Clone)]
+pub(crate) struct RobotDescription(pub(crate) foxglove::messages::RobotDescription);
+#[pymethods]
+impl RobotDescription {
+    #[new]
+    #[pyo3(signature = (*, url="", data=None, format="") )]
+    fn new(url: &str, data: Option<Bound<'_, PyBytes>>, format: &str) -> Self {
+        Self(foxglove::messages::RobotDescription {
+            url: url.to_string(),
+            data: data
+                .map(|x| Bytes::copy_from_slice(x.as_bytes()))
+                .unwrap_or_default(),
+            format: format.to_string(),
+        })
+    }
+    fn __repr__(&self) -> String {
+        format!(
+            "RobotDescription(url={:?}, data={:?}, format={:?})",
+            self.0.url, self.0.data, self.0.format,
+        )
+    }
+    /// Returns the RobotDescription schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::messages::RobotDescription::get_schema()
+            .unwrap()
+            .into()
+    }
+    /// Encodes the RobotDescription as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
+    }
+}
+
+impl From<RobotDescription> for foxglove::messages::RobotDescription {
+    fn from(value: RobotDescription) -> Self {
+        value.0
+    }
+}
+
 /// A primitive representing a sphere or ellipsoid
 ///
 /// :param pose: Position of the center of the sphere and orientation of the sphere
@@ -3771,6 +3831,7 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<Quaternion>()?;
     module.add_class::<RawAudio>()?;
     module.add_class::<RawImage>()?;
+    module.add_class::<RobotDescription>()?;
     module.add_class::<SpherePrimitive>()?;
     module.add_class::<TextAnnotation>()?;
     module.add_class::<TextPrimitive>()?;

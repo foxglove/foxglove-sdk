@@ -2156,6 +2156,44 @@ struct RawImage {
   static Schema schema();
 };
 
+/// @brief A robot description used to visualize an articulated 3D model. The description defines
+/// its own coordinate frames; the pose of each link is determined by the transform tree or by
+/// `foxglove.JointStates` messages.
+struct RobotDescription {
+  /// @brief URL pointing to the robot description file. One of `url` or `data` should be non-empty.
+  /// Relative resources referenced by the description, such as meshes, are resolved against this
+  /// URL.
+  std::string url;
+
+  /// @brief Embedded robot description. One of `url` or `data` should be non-empty. Because an
+  /// embedded description has no location to resolve against, any resources it references, such as
+  /// meshes, must use absolute URLs.
+  std::vector<std::byte> data;
+
+  /// @brief Robot description format.
+  ///
+  /// Supported values: `urdf` ([Unified Robot Description Format](https://wiki.ros.org/urdf/XML)).
+  std::string format;
+
+  /// @brief Encoded the RobotDescription as protobuf to the provided buffer.
+  ///
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
+  /// and returns FoxgloveError::BufferTooShort.
+  /// If the message cannot be encoded, writes the reason to stderr and returns
+  /// FoxgloveError::EncodeError.
+  ///
+  /// @param ptr the destination buffer. must point to at least len valid bytes.
+  /// @param len the length of the destination buffer.
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
+
+  /// @brief Get the RobotDescription schema.
+  ///
+  /// The schema data returned is statically allocated.
+  static Schema schema();
+};
+
 #ifndef __wasm32__
 
 /// @brief A functor for freeing a channel. Used by ChannelUniquePtr. For internal use only.
@@ -4976,6 +5014,73 @@ public:
 
 private:
   explicit RawImageChannel(ChannelUniquePtr&& channel)
+      : impl_(std::move(channel)) {}
+
+  ChannelUniquePtr impl_;
+};
+
+/// @brief A channel for logging RobotDescription messages to a topic.
+///
+/// @note While channels are fully thread-safe, the RobotDescription struct is not thread-safe.
+/// Avoid modifying it concurrently or during a log operation.
+class RobotDescriptionChannel {
+public:
+  /// @brief Create a new channel.
+  ///
+  /// @param topic The topic name. You should choose a unique topic name per channel for
+  /// compatibility with the Foxglove app.
+  /// @param context The context which associates logs to a sink. If omitted, the default context is
+  /// used.
+  static FoxgloveResult<RobotDescriptionChannel> create(
+    const std::string_view& topic, const Context& context = Context()
+  );
+
+  /// @brief Log a message to the channel.
+  ///
+  /// @param msg The RobotDescription message to log.
+  /// @param log_time The timestamp of the message, as nanoseconds since epoch. If omitted, the
+  /// current time is used.
+  /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
+  FoxgloveError log(
+    const RobotDescription& msg, std::optional<uint64_t> log_time = std::nullopt,
+    std::optional<uint64_t> sink_id = std::nullopt
+  ) noexcept;
+
+  /// @brief Close the channel.
+  ///
+  /// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
+  /// dynamically, such as the WebSocketServer.
+  ///
+  /// Attempts to log on a closed channel will elicit a throttled warning message.
+  void close() noexcept;
+
+  /// @brief Uniquely identifies a channel in the context of this program.
+  ///
+  /// @return The ID of the channel.
+  [[nodiscard]] uint64_t id() const noexcept;
+
+  /// @brief Find out if any sinks have been added to the channel.
+  ///
+  /// @return True if sinks have been added to the channel, false otherwise.
+  [[nodiscard]] bool hasSinks() const noexcept;
+
+  /// @deprecated Use hasSinks() instead.
+  // NOLINTNEXTLINE(readability-identifier-naming)
+  [[deprecated("Use hasSinks() instead")]] [[nodiscard]] bool has_sinks() const noexcept {
+    return hasSinks();
+  }
+
+  RobotDescriptionChannel(const RobotDescriptionChannel& other) noexcept = delete;
+  RobotDescriptionChannel& operator=(const RobotDescriptionChannel& other) noexcept = delete;
+  /// @brief Default move constructor.
+  RobotDescriptionChannel(RobotDescriptionChannel&& other) noexcept = default;
+  /// @brief Default move assignment.
+  RobotDescriptionChannel& operator=(RobotDescriptionChannel&& other) noexcept = default;
+  /// @brief Default destructor.
+  ~RobotDescriptionChannel() = default;
+
+private:
+  explicit RobotDescriptionChannel(ChannelUniquePtr&& channel)
       : impl_(std::move(channel)) {}
 
   ChannelUniquePtr impl_;
