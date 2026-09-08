@@ -93,15 +93,6 @@ const CONTROL_CHANNEL_TOPIC: &str = "control";
 const MESSAGE_FRAME_SIZE: usize = 5; // 1 byte opcode + u32 LE length
 const MAX_MESSAGE_SIZE: usize = 16 * 1024 * 1024; // 16 MiB
 
-/// Upper bound on `livekit::Room::close()`. The LiveKit SDK can hang
-/// indefinitely in its data-channel teardown path during room close.
-/// This is a source of sporadic test timeouts in both C++ and Rust integration tests.
-/// Tracked in #FLE-511 and reported to LiveKit.
-///
-/// The SFU eventually evicts the abandoned participant when its DTLS connection times out,
-/// and the `Room`'s `Drop` impl reclaims any local resources we abandon here.
-const ROOM_CLOSE_TIMEOUT: Duration = Duration::from_secs(5);
-
 pub(super) const DEFAULT_MESSAGE_BACKLOG_SIZE: usize = 1024;
 
 /// Idle period before clearing a channel's oversized-drop warning.
@@ -313,7 +304,7 @@ pub(super) struct RemoteAccessSession {
     /// point-cloud publishers) that deliver messages back through the session.
     weak_self: Weak<Self>,
     sink_id: SinkId,
-    room: Room,
+    room: Arc<Room>,
     context: Weak<Context>,
     remote_access_session_id: Option<String>,
     /// Channel-keyed session state: channels, subscriptions, video publishers,
@@ -631,7 +622,7 @@ impl RemoteAccessSession {
         Arc::new_cyclic(|_weak_self| Self {
             weak_self: _weak_self.clone(),
             sink_id: SinkId::next(),
-            room: params.room,
+            room: Arc::new(params.room),
             context: params.context,
             remote_access_session_id: params.remote_access_session_id,
             channel_registry: RwLock::new(ChannelRegistry::new()),
@@ -917,7 +908,7 @@ impl RemoteAccessSession {
     }
 
     /// Shut down the session: cancel every participant's flush-task, await
-    /// their completion, then close the LiveKit room.
+    /// their completion, then close the LiveKit room in the background.
     ///
     /// The caller must ensure that `handle_room_events` has stopped so no new
     /// `remove_participant` / `reset_participant` calls can race with us.
@@ -925,19 +916,23 @@ impl RemoteAccessSession {
         // Cancel flush-tasks and await them before tearing down the transport.
         // In-flight writes either complete or fail once `room.close()` runs.
         self.participant_registry.shutdown().await;
-        match tokio::time::timeout(ROOM_CLOSE_TIMEOUT, self.room.close()).await {
-            Ok(Ok(())) => {}
-            Ok(Err(e)) => error!(
-                remote_access_session_id = self.remote_access_session_id(),
-                error = %e,
-                "failed to close room: {e}",
-            ),
-            Err(_) => warn!(
-                remote_access_session_id = self.remote_access_session_id(),
-                timeout_secs = ROOM_CLOSE_TIMEOUT.as_secs(),
-                "livekit room close timed out; abandoning room teardown",
-            ),
-        }
+
+        // `Room::close()` has been seen hanging indefinitely, and `Room` has no `Drop` impl, so
+        // the close must run to completion rather than be cancelled. Nothing downstream depends
+        // on it finishing: a healthy close takes milliseconds, and if the old participant is
+        // still in the room when we reconnect, the SFU evicts it as a duplicate identity.
+        let room = self.room.clone();
+        let session_id = self.remote_access_session_id().map(str::to_string);
+        self.runtime.spawn(async move {
+            match room.close().await {
+                Ok(()) => info!(remote_access_session_id = session_id, "room closed"),
+                Err(e) => error!(
+                    remote_access_session_id = session_id,
+                    error = %e,
+                    "failed to close room: {e}",
+                ),
+            }
+        });
     }
 
     /// Read framed messages from a client byte stream on the control channel.
