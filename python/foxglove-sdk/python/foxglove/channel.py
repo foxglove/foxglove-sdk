@@ -49,7 +49,10 @@ class Channel:
 
         if context is not None:
             self.base = context._create_channel(
-                topic, message_encoding=message_encoding, schema=schema
+                topic,
+                message_encoding=message_encoding,
+                schema=schema,
+                metadata=metadata,
             )
         else:
             self.base = _foxglove.BaseChannel(

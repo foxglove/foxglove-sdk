@@ -134,9 +134,10 @@ class Context:
     def _create_channel(
         self,
         topic: str,
+        *,
         message_encoding: str,
         schema: Schema | None = None,
-        metadata: list[tuple[str, str]] | None = None,
+        metadata: dict[str, str] | None = None,
     ) -> "BaseChannel":
         """
         Instead of calling this method, pass a context to a channel constructor.
