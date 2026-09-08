@@ -93,15 +93,6 @@ const CONTROL_CHANNEL_TOPIC: &str = "control";
 const MESSAGE_FRAME_SIZE: usize = 5; // 1 byte opcode + u32 LE length
 const MAX_MESSAGE_SIZE: usize = 16 * 1024 * 1024; // 16 MiB
 
-/// How long [`RemoteAccessSession::close`] waits for `livekit::Room::close()` before letting the
-/// watch loop move on. Bounds our wait, not the teardown, which keeps running either way.
-///
-/// The slowest close that still finishes on its own takes about 14s: one racing an in-flight
-/// reconnect, where the `Leave` waits out the signal stream lock (2s drain + 5s connect + 5s
-/// reconnect response) and then drains the stream again. Those are LiveKit-internal constants,
-/// so this is a heuristic rather than a bound.
-const ROOM_CLOSE_TIMEOUT: Duration = Duration::from_secs(20);
-
 pub(super) const DEFAULT_MESSAGE_BACKLOG_SIZE: usize = 1024;
 
 /// Idle period before clearing a channel's oversized-drop warning.
@@ -299,29 +290,6 @@ fn build_advertise_services_msg(services: &[Arc<Service>]) -> Option<AdvertiseSe
         return None;
     }
     Some(msg)
-}
-
-/// Waits up to `timeout` for `task`.
-///
-/// Returns the join result if the task finished in time. Otherwise returns `None`; the task
-/// keeps running, and `observe` is spawned on `runtime` to report its eventual result.
-async fn join_or_observe_late<T, F>(
-    runtime: &Handle,
-    mut task: tokio::task::JoinHandle<T>,
-    timeout: Duration,
-    observe: F,
-) -> Option<Result<T, tokio::task::JoinError>>
-where
-    T: Send + 'static,
-    F: FnOnce(Result<T, tokio::task::JoinError>) + Send + 'static,
-{
-    match tokio::time::timeout(timeout, &mut task).await {
-        Ok(result) => Some(result),
-        Err(_) => {
-            runtime.spawn(async move { observe(task.await) });
-            None
-        }
-    }
 }
 
 /// RemoteAccessSession tracks a connected LiveKit session (the Room)
@@ -940,7 +908,7 @@ impl RemoteAccessSession {
     }
 
     /// Shut down the session: cancel every participant's flush-task, await
-    /// their completion, then close the LiveKit room.
+    /// their completion, then close the LiveKit room in the background.
     ///
     /// The caller must ensure that `handle_room_events` has stopped so no new
     /// `remove_participant` / `reset_participant` calls can race with us.
@@ -950,54 +918,21 @@ impl RemoteAccessSession {
         self.participant_registry.shutdown().await;
 
         // `Room::close()` has been seen hanging indefinitely, and `Room` has no `Drop` impl, so
-        // abandoning the wait would leave us in the room. Close it in its own task, which runs to
-        // completion either way, and bound our wait on that task instead.
+        // the close must run to completion rather than be cancelled. Nothing downstream depends
+        // on it finishing: a healthy close takes milliseconds, and if the old participant is
+        // still in the room when we reconnect, the SFU evicts it as a duplicate identity.
         let room = self.room.clone();
         let session_id = self.remote_access_session_id().map(str::to_string);
-        let close_task = self.runtime.spawn(async move { room.close().await });
-
-        let late_session_id = session_id;
-        let result = join_or_observe_late(
-            &self.runtime,
-            close_task,
-            ROOM_CLOSE_TIMEOUT,
-            move |result| match result {
-                Ok(Ok(())) => info!(
-                    remote_access_session_id = late_session_id,
-                    "background room close completed",
-                ),
-                Ok(Err(e)) => error!(
-                    remote_access_session_id = late_session_id,
-                    error = %e,
-                    "background room close failed: {e}",
-                ),
+        self.runtime.spawn(async move {
+            match room.close().await {
+                Ok(()) => info!(remote_access_session_id = session_id, "room closed"),
                 Err(e) => error!(
-                    remote_access_session_id = late_session_id,
+                    remote_access_session_id = session_id,
                     error = %e,
-                    "background room close task failed: {e}",
+                    "failed to close room: {e}",
                 ),
-            },
-        )
-        .await;
-
-        match result {
-            Some(Ok(Ok(()))) => {}
-            Some(Ok(Err(e))) => error!(
-                remote_access_session_id = self.remote_access_session_id(),
-                error = %e,
-                "failed to close room: {e}",
-            ),
-            Some(Err(e)) => error!(
-                remote_access_session_id = self.remote_access_session_id(),
-                error = %e,
-                "room close task failed: {e}",
-            ),
-            None => warn!(
-                remote_access_session_id = self.remote_access_session_id(),
-                timeout_secs = ROOM_CLOSE_TIMEOUT.as_secs(),
-                "livekit room close is taking too long; continuing it in the background",
-            ),
-        }
+            }
+        });
     }
 
     /// Read framed messages from a client byte stream on the control channel.
@@ -2974,56 +2909,6 @@ mod tests {
     use crate::remote_common::fetch_asset::{
         AssetHandler, AsyncAssetHandlerFn, BlockingAssetHandlerFn,
     };
-
-    /// A task that finishes inside the timeout reports its value to the caller, and the
-    /// late-observer is never invoked.
-    #[tokio::test]
-    async fn test_join_or_observe_late_returns_prompt_result() {
-        let observed = Arc::new(std::sync::atomic::AtomicBool::new(false));
-        let task = tokio::spawn(async { 42 });
-
-        let result = join_or_observe_late(&Handle::current(), task, Duration::from_secs(30), {
-            let observed = observed.clone();
-            move |_| observed.store(true, std::sync::atomic::Ordering::SeqCst)
-        })
-        .await;
-
-        assert_eq!(result.expect("task finished in time").unwrap(), 42);
-        assert!(!observed.load(std::sync::atomic::Ordering::SeqCst));
-    }
-
-    /// The regression this guards: a task that outruns the timeout must keep running to
-    /// completion rather than being dropped, so `Room::close()` always finishes and we
-    /// actually leave the room.
-    #[tokio::test]
-    async fn test_join_or_observe_late_runs_slow_task_to_completion() {
-        let (release_tx, release_rx) = tokio::sync::oneshot::channel::<()>();
-        let (observed_tx, observed_rx) = tokio::sync::oneshot::channel::<i32>();
-        let task = tokio::spawn(async move {
-            release_rx.await.expect("release channel dropped");
-            42
-        });
-
-        // The caller gives up on the still-blocked task.
-        let result = join_or_observe_late(
-            &Handle::current(),
-            task,
-            Duration::from_millis(50),
-            move |result| {
-                let _ = observed_tx.send(result.expect("task panicked"));
-            },
-        )
-        .await;
-        assert!(result.is_none(), "caller should stop waiting");
-
-        // Unblocking it afterwards still produces its result: the task was never abandoned.
-        release_tx.send(()).expect("task dropped its receiver");
-        let observed = tokio::time::timeout(Duration::from_secs(5), observed_rx)
-            .await
-            .expect("late observer never ran")
-            .expect("late observer dropped its sender");
-        assert_eq!(observed, 42);
-    }
 
     /// Exercises the same wrapping the reader does: `StreamError` boxed into an
     /// `io::Error` by `handle_byte_stream_from_client`, then classified.
