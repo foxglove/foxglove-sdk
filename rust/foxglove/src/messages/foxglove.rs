@@ -1206,7 +1206,7 @@ pub struct RawAudio {
     /// Timestamp of the start of the audio block
     #[prost(message, optional, tag = "1")]
     pub timestamp: ::core::option::Option<crate::messages::Timestamp>,
-    /// Raw audio data. Samples must be interleaved. Multibyte samples must be little-endian.
+    /// Raw audio data without WAV, container, or RTP headers. Samples must be interleaved. Multibyte samples must be little-endian.
     ///
     /// For each `format` value, the `data` field contains audio sample data serialized as follows:
     ///
@@ -1215,11 +1215,9 @@ pub struct RawAudio {
     ///    - The byte length must be divisible by `2 * number_of_channels` so the block contains complete sample frames.
     /// - `g711-alaw`:
     ///    - Each byte is one G.711 A-law encoded sample.
-    ///    - `data` contains raw samples without WAV, container, or RTP headers.
     ///    - The byte length must be divisible by `number_of_channels` so the block contains complete sample frames.
     /// - `g711-ulaw`:
     ///    - Each byte is one G.711 mu-law encoded sample.
-    ///    - `data` contains raw samples without WAV, container, or RTP headers.
     ///    - The byte length must be divisible by `number_of_channels` so the block contains complete sample frames.
     #[prost(bytes = "bytes", tag = "2")]
     #[cfg_attr(feature = "serde", serde(with = "crate::messages::serde_bytes"))]

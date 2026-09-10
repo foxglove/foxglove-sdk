@@ -2003,7 +2003,8 @@ struct RawAudio {
   /// @brief Timestamp of the start of the audio block
   std::optional<Timestamp> timestamp;
 
-  /// @brief Raw audio data. Samples must be interleaved. Multibyte samples must be little-endian.
+  /// @brief Raw audio data without WAV, container, or RTP headers. Samples must be interleaved.
+  /// Multibyte samples must be little-endian.
   ///
   /// For each `format` value, the `data` field contains audio sample data serialized as follows:
   ///
@@ -2013,12 +2014,10 @@ struct RawAudio {
   ///   complete sample frames.
   /// - `g711-alaw`:
   ///   - Each byte is one G.711 A-law encoded sample.
-  ///   - `data` contains raw samples without WAV, container, or RTP headers.
   ///   - The byte length must be divisible by `number_of_channels` so the block contains complete
   ///   sample frames.
   /// - `g711-ulaw`:
   ///   - Each byte is one G.711 mu-law encoded sample.
-  ///   - `data` contains raw samples without WAV, container, or RTP headers.
   ///   - The byte length must be divisible by `number_of_channels` so the block contains complete
   ///   sample frames.
   std::vector<std::byte> data;
@@ -2638,8 +2637,8 @@ public:
   }
 
   CompressedPointCloudChannel(const CompressedPointCloudChannel& other) noexcept = delete;
-  CompressedPointCloudChannel& operator=(const CompressedPointCloudChannel& other
-  ) noexcept = delete;
+  CompressedPointCloudChannel& operator=(const CompressedPointCloudChannel& other) noexcept =
+    delete;
   /// @brief Default move constructor.
   CompressedPointCloudChannel(CompressedPointCloudChannel&& other) noexcept = default;
   /// @brief Default move assignment.
@@ -5252,8 +5251,8 @@ public:
   }
 
   TriangleListPrimitiveChannel(const TriangleListPrimitiveChannel& other) noexcept = delete;
-  TriangleListPrimitiveChannel& operator=(const TriangleListPrimitiveChannel& other
-  ) noexcept = delete;
+  TriangleListPrimitiveChannel& operator=(const TriangleListPrimitiveChannel& other) noexcept =
+    delete;
   /// @brief Default move constructor.
   TriangleListPrimitiveChannel(TriangleListPrimitiveChannel&& other) noexcept = default;
   /// @brief Default move assignment.

@@ -2986,7 +2986,7 @@ bytes
 </td>
 <td>
 
-Raw audio data. Samples must be interleaved. Multibyte samples must be little-endian.
+Raw audio data without WAV, container, or RTP headers. Samples must be interleaved. Multibyte samples must be little-endian.
 
 For each `format` value, the `data` field contains audio sample data serialized as follows:
 
@@ -2995,11 +2995,9 @@ For each `format` value, the `data` field contains audio sample data serialized 
   - The byte length must be divisible by `2 * number_of_channels` so the block contains complete sample frames.
 - `g711-alaw`:
   - Each byte is one G.711 A-law encoded sample.
-  - `data` contains raw samples without WAV, container, or RTP headers.
   - The byte length must be divisible by `number_of_channels` so the block contains complete sample frames.
 - `g711-ulaw`:
   - Each byte is one G.711 mu-law encoded sample.
-  - `data` contains raw samples without WAV, container, or RTP headers.
   - The byte length must be divisible by `number_of_channels` so the block contains complete sample frames.
 
 </td>
