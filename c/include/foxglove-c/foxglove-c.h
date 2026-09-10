@@ -2134,18 +2134,26 @@ typedef struct foxglove_raw_audio {
    */
   const struct foxglove_timestamp *timestamp;
   /**
-   * Audio data. Samples must be interleaved. Multibyte samples must be little-endian.
-   * - `pcm-s16`
-   *   - Each sample is a signed 16-bit PCM value. The byte length must be divisible by `2 * number_of_channels` so the block contains complete sample frames.
-   * - `g711-alaw`
-   *   - Each byte is one G.711 A-law encoded sample. Data contains raw samples without WAV, container, or RTP headers. The byte length must be divisible by `number_of_channels` so the block contains complete sample frames.
-   * - `g711-ulaw`
-   *   - Each byte is one G.711 mu-law encoded sample. Data contains raw samples without WAV, container, or RTP headers. The byte length must be divisible by `number_of_channels` so the block contains complete sample frames.
+   * Raw audio data. Samples must be interleaved. Multibyte samples must be little-endian.
+   *
+   * For each `format` value, the `data` field contains audio sample data serialized as follows:
+   *
+   * - `pcm-s16`:
+   *   - Each sample is a signed 16-bit PCM value.
+   *   - The byte length must be divisible by `2 * number_of_channels` so the block contains complete sample frames.
+   * - `g711-alaw`:
+   *   - Each byte is one G.711 A-law encoded sample.
+   *   - `data` contains raw samples without WAV, container, or RTP headers.
+   *   - The byte length must be divisible by `number_of_channels` so the block contains complete sample frames.
+   * - `g711-ulaw`:
+   *   - Each byte is one G.711 mu-law encoded sample.
+   *   - `data` contains raw samples without WAV, container, or RTP headers.
+   *   - The byte length must be divisible by `number_of_channels` so the block contains complete sample frames.
    */
   const unsigned char *data;
   size_t data_len;
   /**
-   * Audio format. Values defined by this schema are `pcm-s16`, `g711-alaw`, and `g711-ulaw`. Consumers may support a subset of these formats.
+   * Format of the audio data. See the `data` field description for supported values. Consumers may support a subset of these formats.
    */
   struct foxglove_string format;
   /**
