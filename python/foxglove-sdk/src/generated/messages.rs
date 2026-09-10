@@ -3129,14 +3129,14 @@ impl From<Quaternion> for foxglove::messages::Quaternion {
 /// :param timestamp: Timestamp of the start of the audio block
 /// :param data: Audio data. Samples must be interleaved. Multibyte samples must be little-endian.
 ///     - `pcm-s16`
-///       - Each sample is a signed 16-bit PCM value.
+///       - Each sample is a signed 16-bit PCM value. The byte length must be divisible by `2 * number_of_channels` so the block contains complete sample frames.
 ///     - `g711-alaw`
 ///       - Each byte is one G.711 A-law encoded sample. Data contains raw samples without WAV, container, or RTP headers. The byte length must be divisible by `number_of_channels` so the block contains complete sample frames.
 ///     - `g711-ulaw`
 ///       - Each byte is one G.711 mu-law encoded sample. Data contains raw samples without WAV, container, or RTP headers. The byte length must be divisible by `number_of_channels` so the block contains complete sample frames.
 /// :param format: Audio format. Values defined by this schema are `pcm-s16`, `g711-alaw`, and `g711-ulaw`. Consumers may support a subset of these formats.
-/// :param sample_rate: Sample rate in Hz. For G.711 formats, this must be greater than zero.
-/// :param number_of_channels: Number of channels in the audio block. For G.711 formats, this must be greater than zero.
+/// :param sample_rate: Sample rate in Hz. This must be greater than zero.
+/// :param number_of_channels: Number of channels in the audio block. This must be greater than zero.
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/raw-audio
 #[pyclass(from_py_object, module = "foxglove.messages")]

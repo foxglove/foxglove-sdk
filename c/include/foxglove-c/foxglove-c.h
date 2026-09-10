@@ -2136,7 +2136,7 @@ typedef struct foxglove_raw_audio {
   /**
    * Audio data. Samples must be interleaved. Multibyte samples must be little-endian.
    * - `pcm-s16`
-   *   - Each sample is a signed 16-bit PCM value.
+   *   - Each sample is a signed 16-bit PCM value. The byte length must be divisible by `2 * number_of_channels` so the block contains complete sample frames.
    * - `g711-alaw`
    *   - Each byte is one G.711 A-law encoded sample. Data contains raw samples without WAV, container, or RTP headers. The byte length must be divisible by `number_of_channels` so the block contains complete sample frames.
    * - `g711-ulaw`
@@ -2149,11 +2149,11 @@ typedef struct foxglove_raw_audio {
    */
   struct foxglove_string format;
   /**
-   * Sample rate in Hz. For G.711 formats, this must be greater than zero.
+   * Sample rate in Hz. This must be greater than zero.
    */
   uint32_t sample_rate;
   /**
-   * Number of channels in the audio block. For G.711 formats, this must be greater than zero.
+   * Number of channels in the audio block. This must be greater than zero.
    */
   uint32_t number_of_channels;
 } foxglove_raw_audio;
