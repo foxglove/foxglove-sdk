@@ -2003,16 +2003,29 @@ struct RawAudio {
   /// @brief Timestamp of the start of the audio block
   std::optional<Timestamp> timestamp;
 
-  /// @brief Audio data. The samples in the data must be interleaved and little-endian
+  /// @brief Audio data. Samples must be interleaved by frame, then channel. Multibyte samples must
+  /// be little-endian.
+  /// - `pcm-s16`
+  ///   - Each sample is a signed 16-bit PCM value.
+  /// - `g711-alaw`
+  ///   - Each byte is one G.711 A-law encoded sample. Data contains raw samples without WAV,
+  ///   container, or RTP headers. The byte length must be divisible by `number_of_channels` so the
+  ///   block contains complete sample frames.
+  /// - `g711-ulaw`
+  ///   - Each byte is one G.711 mu-law encoded sample. Data contains raw samples without WAV,
+  ///   container, or RTP headers. The byte length must be divisible by `number_of_channels` so the
+  ///   block contains complete sample frames.
   std::vector<std::byte> data;
 
-  /// @brief Audio format. Only 'pcm-s16' is currently supported
+  /// @brief Audio format. Values defined by this schema are `pcm-s16`, `g711-alaw`, and
+  /// `g711-ulaw`. Consumers may support a subset of these formats.
   std::string format;
 
-  /// @brief Sample rate in Hz
+  /// @brief Sample rate in Hz. For G.711 formats, this must be greater than zero.
   uint32_t sample_rate = 0;
 
-  /// @brief Number of channels in the audio block
+  /// @brief Number of channels in the audio block. For G.711 formats, this must be greater than
+  /// zero.
   uint32_t number_of_channels = 0;
 
   /// @brief Encoded the RawAudio as protobuf to the provided buffer.

@@ -1206,17 +1206,23 @@ pub struct RawAudio {
     /// Timestamp of the start of the audio block
     #[prost(message, optional, tag = "1")]
     pub timestamp: ::core::option::Option<crate::messages::Timestamp>,
-    /// Audio data. The samples in the data must be interleaved and little-endian
+    /// Audio data. Samples must be interleaved by frame, then channel. Multibyte samples must be little-endian.
+    /// - `pcm-s16`
+    ///    - Each sample is a signed 16-bit PCM value.
+    /// - `g711-alaw`
+    ///    - Each byte is one G.711 A-law encoded sample. Data contains raw samples without WAV, container, or RTP headers. The byte length must be divisible by `number_of_channels` so the block contains complete sample frames.
+    /// - `g711-ulaw`
+    ///    - Each byte is one G.711 mu-law encoded sample. Data contains raw samples without WAV, container, or RTP headers. The byte length must be divisible by `number_of_channels` so the block contains complete sample frames.
     #[prost(bytes = "bytes", tag = "2")]
     #[cfg_attr(feature = "serde", serde(with = "crate::messages::serde_bytes"))]
     pub data: ::prost::bytes::Bytes,
-    /// Audio format. Only 'pcm-s16' is currently supported
+    /// Audio format. Values defined by this schema are `pcm-s16`, `g711-alaw`, and `g711-ulaw`. Consumers may support a subset of these formats.
     #[prost(string, tag = "3")]
     pub format: ::prost::alloc::string::String,
-    /// Sample rate in Hz
+    /// Sample rate in Hz. For G.711 formats, this must be greater than zero.
     #[prost(fixed32, tag = "4")]
     pub sample_rate: u32,
-    /// Number of channels in the audio block
+    /// Number of channels in the audio block. For G.711 formats, this must be greater than zero.
     #[prost(fixed32, tag = "5")]
     pub number_of_channels: u32,
 }
