@@ -7041,7 +7041,7 @@ export const RawAudio = {
     "data": {
       "type": "string",
       "contentEncoding": "base64",
-      "description": "Audio data. Samples must be interleaved by frame, then channel. Multibyte samples must be little-endian.\n- `pcm-s16`\n  - Each sample is a signed 16-bit PCM value.\n- `g711-alaw`\n  - Each byte is one G.711 A-law encoded sample. Data contains raw samples without WAV, container, or RTP headers. The byte length must be divisible by `number_of_channels` so the block contains complete sample frames.\n- `g711-ulaw`\n  - Each byte is one G.711 mu-law encoded sample. Data contains raw samples without WAV, container, or RTP headers. The byte length must be divisible by `number_of_channels` so the block contains complete sample frames."
+      "description": "Audio data. Samples must be interleaved. Multibyte samples must be little-endian.\n- `pcm-s16`\n  - Each sample is a signed 16-bit PCM value.\n- `g711-alaw`\n  - Each byte is one G.711 A-law encoded sample. Data contains raw samples without WAV, container, or RTP headers. The byte length must be divisible by `number_of_channels` so the block contains complete sample frames.\n- `g711-ulaw`\n  - Each byte is one G.711 mu-law encoded sample. Data contains raw samples without WAV, container, or RTP headers. The byte length must be divisible by `number_of_channels` so the block contains complete sample frames."
     },
     "format": {
       "type": "string",

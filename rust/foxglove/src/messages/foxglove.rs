@@ -1206,7 +1206,7 @@ pub struct RawAudio {
     /// Timestamp of the start of the audio block
     #[prost(message, optional, tag = "1")]
     pub timestamp: ::core::option::Option<crate::messages::Timestamp>,
-    /// Audio data. Samples must be interleaved by frame, then channel. Multibyte samples must be little-endian.
+    /// Audio data. Samples must be interleaved. Multibyte samples must be little-endian.
     /// - `pcm-s16`
     ///    - Each sample is a signed 16-bit PCM value.
     /// - `g711-alaw`

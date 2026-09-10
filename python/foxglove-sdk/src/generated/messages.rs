@@ -3127,7 +3127,7 @@ impl From<Quaternion> for foxglove::messages::Quaternion {
 /// A single block of an audio bitstream
 ///
 /// :param timestamp: Timestamp of the start of the audio block
-/// :param data: Audio data. Samples must be interleaved by frame, then channel. Multibyte samples must be little-endian.
+/// :param data: Audio data. Samples must be interleaved. Multibyte samples must be little-endian.
 ///     - `pcm-s16`
 ///       - Each sample is a signed 16-bit PCM value.
 ///     - `g711-alaw`

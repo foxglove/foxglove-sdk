@@ -60,7 +60,7 @@ const RawAudio: FoxgloveMessageSchema = {
     {
       name: "data",
       type: { type: "primitive", name: "bytes" },
-      description: `Audio data. Samples must be interleaved by frame, then channel. Multibyte samples must be little-endian.
+      description: `Audio data. Samples must be interleaved. Multibyte samples must be little-endian.
 - \`pcm-s16\`
   - Each sample is a signed 16-bit PCM value.
 - \`g711-alaw\`
