@@ -24,7 +24,6 @@ prefix_with_name = false
 "target_family = wasm" = "__wasm__"
 "feature = remote-access" = "FOXGLOVE_REMOTE_ACCESS"
 
-[export]
 [export.rename]
 FoxgloveBytes = "foxglove_bytes"
 FoxgloveChannel = "foxglove_channel"
