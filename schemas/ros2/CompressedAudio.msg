@@ -17,6 +17,13 @@ builtin_interfaces/Time timestamp
 # - `mp4a.40.2`:
 #   - Each message must contain a complete MPEG-4 AAC-LC ADTS frame, including the ADTS header, as described in section 1.A.3.2 of ISO/IEC 14496-3:2019.
 #   - The ADTS header supplies stream parameters such as sample rate and channel configuration.
+# - `g726-16`, `g726-24`, `g726-32`, and `g726-40`:
+#   - Each message must contain raw G.726 codewords without WAV, RTP, or other container framing and end on a complete codeword group. Codeword groups may not span messages.
+#   - Audio is mono at 8 kHz. The suffix specifies the bitrate in kbps and therefore the number of bits per sample: 2, 3, 4, or 5 respectively.
+#   - Codewords are packed beginning with the least-significant bit, as described in [RFC 3551 section 4.5.4](https://www.rfc-editor.org/rfc/rfc3551.html#section-4.5.4).
+#   - Messages form a continuous encoded stream and preserve G.726 predictor and quantizer state across message boundaries.
+# - `aal2-g726-16`, `aal2-g726-24`, `aal2-g726-32`, and `aal2-g726-40`:
+#   - These formats have the same requirements as the corresponding `g726-*` formats, except codewords use the opposite bit-packing order specified for AAL2.
 uint8[] data
 
 # Format of the audio data. See the `data` field description for supported values.
