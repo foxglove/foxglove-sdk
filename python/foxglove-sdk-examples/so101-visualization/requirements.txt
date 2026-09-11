@@ -1,5 +1,5 @@
 # Prefer `uv sync` (see pyproject.toml). Listed here for pip-only workflows.
-foxglove-sdk>=0.25.1,<0.26.0
+foxglove-sdk>=0.27.0,<0.28.0
 scipy>=1.0
 yourdfpy
 lerobot[feetech]>=0.6.0

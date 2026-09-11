@@ -22,7 +22,7 @@ from foxglove.messages import (
     SceneUpdate,
     Vector3,
 )
-from pytest_benchmark.fixture import BenchmarkFixture  # type: ignore
+from pytest_benchmark.fixture import BenchmarkFixture
 
 
 @pytest.fixture
