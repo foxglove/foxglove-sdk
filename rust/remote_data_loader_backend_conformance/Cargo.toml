@@ -8,7 +8,7 @@ workspace = true
 
 [dependencies]
 foxglove = { path = "../foxglove", features = ["remote_data_loader_backend"] }
-jsonschema = { version = "0.42", default-features = false }
+jsonschema = { version = "0.56", default-features = false }
 libtest-mimic = "0.8"
 mcap.workspace = true
 reqwest = { workspace = true, features = ["blocking", "json"] }
