@@ -60,22 +60,35 @@ const RawAudio: FoxgloveMessageSchema = {
     {
       name: "data",
       type: { type: "primitive", name: "bytes" },
-      description: `Audio data. The samples in the data must be interleaved and little-endian`,
+      description: `Raw audio data without WAV, container, or RTP headers. Samples must be interleaved. Multibyte samples must be little-endian.
+
+For each \`format\` value, the \`data\` field contains audio sample data serialized as follows:
+
+- \`pcm-s16\`:
+  - Each sample is a signed 16-bit PCM value.
+  - The byte length must be divisible by \`2 * number_of_channels\` so the block contains complete sample frames.
+- \`g711-alaw\`:
+  - Each byte is one G.711 A-law encoded sample.
+  - The byte length must be divisible by \`number_of_channels\` so the block contains complete sample frames.
+- \`g711-ulaw\`:
+  - Each byte is one G.711 mu-law encoded sample.
+  - The byte length must be divisible by \`number_of_channels\` so the block contains complete sample frames.`,
     },
     {
       name: "format",
       type: { type: "primitive", name: "string" },
-      description: "Audio format. Only 'pcm-s16' is currently supported",
+      description:
+        "Format of the audio data. See the `data` field description for supported values. Consumers may support a subset of these formats.",
     },
     {
       name: "sample_rate",
       type: { type: "primitive", name: "uint32" },
-      description: "Sample rate in Hz",
+      description: "Sample rate in Hz. This must be greater than zero.",
     },
     {
       name: "number_of_channels",
       type: { type: "primitive", name: "uint32" },
-      description: "Number of channels in the audio block",
+      description: "Number of channels in the audio block. This must be greater than zero.",
     },
   ],
 };

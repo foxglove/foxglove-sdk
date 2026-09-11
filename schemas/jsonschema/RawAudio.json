@@ -23,21 +23,21 @@
     "data": {
       "type": "string",
       "contentEncoding": "base64",
-      "description": "Audio data. The samples in the data must be interleaved and little-endian"
+      "description": "Raw audio data without WAV, container, or RTP headers. Samples must be interleaved. Multibyte samples must be little-endian.\n\nFor each `format` value, the `data` field contains audio sample data serialized as follows:\n\n- `pcm-s16`:\n  - Each sample is a signed 16-bit PCM value.\n  - The byte length must be divisible by `2 * number_of_channels` so the block contains complete sample frames.\n- `g711-alaw`:\n  - Each byte is one G.711 A-law encoded sample.\n  - The byte length must be divisible by `number_of_channels` so the block contains complete sample frames.\n- `g711-ulaw`:\n  - Each byte is one G.711 mu-law encoded sample.\n  - The byte length must be divisible by `number_of_channels` so the block contains complete sample frames."
     },
     "format": {
       "type": "string",
-      "description": "Audio format. Only 'pcm-s16' is currently supported"
+      "description": "Format of the audio data. See the `data` field description for supported values. Consumers may support a subset of these formats."
     },
     "sample_rate": {
       "type": "integer",
       "minimum": 0,
-      "description": "Sample rate in Hz"
+      "description": "Sample rate in Hz. This must be greater than zero."
     },
     "number_of_channels": {
       "type": "integer",
       "minimum": 0,
-      "description": "Number of channels in the audio block"
+      "description": "Number of channels in the audio block. This must be greater than zero."
     }
   },
   "required": [
