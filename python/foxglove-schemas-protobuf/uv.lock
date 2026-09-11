@@ -35,7 +35,7 @@ dev = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "protobuf", specifier = ">=3.20" }]
+requires-dist = [{ name = "protobuf", specifier = ">=5.29.6" }]
 
 [package.metadata.requires-dev]
 dev = [
