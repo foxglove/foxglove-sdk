@@ -34,7 +34,7 @@ set(CMAKE_WARN_DEPRECATED OFF CACHE BOOL "" FORCE)
 
 find_or_fetch(Catch2
   GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-  GIT_TAG        v3.8.0
+  GIT_TAG        v3.16.0
   VERSION 3
 )
 if(catch2_SOURCE_DIR)
@@ -47,8 +47,8 @@ include(Catch)
 if(NOT FOXGLOVE_PREBUILT_LIB_DIR)
   find_or_fetch(Corrosion
     GIT_REPOSITORY https://github.com/corrosion-rs/corrosion.git
-    GIT_TAG v0.5.1
-    VERSION 0.5.1
+    GIT_TAG v0.6.1
+    VERSION 0.6.1
   )
 endif()
 
@@ -91,12 +91,12 @@ if(FOXGLOVE_BUILD_EXAMPLES)
   set(ENABLE_DATE_INSTALL OFF CACHE BOOL "" FORCE)
   find_or_fetch(date
     GIT_REPOSITORY https://github.com/HowardHinnant/date.git
-    GIT_TAG v3.0.4
+    GIT_TAG v3.0.5
   )
 
   find_or_fetch(mcap
     GIT_REPOSITORY https://github.com/foxglove/mcap.git
-    GIT_TAG releases/cpp/v2.1.2
+    GIT_TAG releases/cpp/v2.1.3
   )
 
   set(LZ4_BUILD_CLI OFF CACHE BOOL "" FORCE)
@@ -122,7 +122,7 @@ if(FOXGLOVE_BUILD_EXAMPLES OR FOXGLOVE_BUILD_INTEGRATION_TESTS)
   set(HTTPLIB_INSTALL OFF CACHE BOOL "" FORCE)
   find_or_fetch(httplib
     GIT_REPOSITORY https://github.com/yhirose/cpp-httplib.git
-    GIT_TAG v0.32.0
+    GIT_TAG v0.54.1
   )
 endif()
 
@@ -382,7 +382,7 @@ if(FOXGLOVE_BUILD_INTEGRATION_TESTS)
   FetchContent_Declare(
     jwt-cpp
     GIT_REPOSITORY https://github.com/Thalhammer/jwt-cpp.git
-    GIT_TAG v0.7.0
+    GIT_TAG v0.7.2
     EXCLUDE_FROM_ALL
   )
   FetchContent_MakeAvailable(jwt-cpp)
