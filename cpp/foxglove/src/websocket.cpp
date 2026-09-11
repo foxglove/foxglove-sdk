@@ -340,7 +340,8 @@ void WebSocketServer::broadcastPlaybackState(const PlaybackState& playback_state
 }
 /// @endcond
 
-FoxgloveError WebSocketServer::clearSession(std::optional<std::string_view> session_id
+FoxgloveError WebSocketServer::clearSession(
+  std::optional<std::string_view> session_id
 ) const noexcept {
   auto c_session_id = session_id
                         ? std::optional<foxglove_string>{{session_id->data(), session_id->size()}}

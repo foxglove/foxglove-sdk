@@ -243,12 +243,14 @@ private:
     }
     uint16_t id = next_schema_id_++;  // wraps to 0 after 65535
 
-    schemas.push_back(Schema{
-      id,
-      schema.name,
-      schema.encoding,
-      std::move(encoded_data),
-    });
+    schemas.push_back(
+      Schema{
+        id,
+        schema.name,
+        schema.encoding,
+        std::move(encoded_data),
+      }
+    );
     return id;
   }
 };

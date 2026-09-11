@@ -25,7 +25,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 # doxygen — pin to match CI (.github/workflows/docs.yml)
-ARG DOXYGEN_VERSION=1.13.2
+ARG DOXYGEN_VERSION=1.18.0
 RUN curl -fsSL https://github.com/doxygen/doxygen/releases/download/Release_$(echo ${DOXYGEN_VERSION} | tr '.' '_')/doxygen-${DOXYGEN_VERSION}.linux.bin.tar.gz \
         -o /tmp/doxygen.tar.gz \
     && tar -xzf /tmp/doxygen.tar.gz -C /tmp \
@@ -41,9 +41,9 @@ RUN ARCH=$(uname -m | sed 's/aarch64/aarch_64/') \
     && rm /tmp/protoc.zip
 
 # flatc — pin to match CI (Install Flatbuffer compiler steps in .github/workflows/{ci,python}.yml)
-ARG FLATC_VERSION=23.1.21
-ARG FLATC_SHA1=359dbbf56153cc1b022170a228adfde4199f67dc
-RUN curl -fsSL https://github.com/google/flatbuffers/releases/download/v${FLATC_VERSION}/Linux.flatc.binary.clang++-12.zip \
+ARG FLATC_VERSION=25.12.19
+ARG FLATC_SHA1=e19243c6824e798dbc4c8b9e426240391ea928f9
+RUN curl -fsSL https://github.com/google/flatbuffers/releases/download/v${FLATC_VERSION}/Linux.flatc.binary.clang++-18.zip \
         -o /tmp/flatc.zip \
     && echo "${FLATC_SHA1}  /tmp/flatc.zip" | sha1sum -c \
     && unzip /tmp/flatc.zip -d /tmp \
@@ -52,10 +52,10 @@ RUN curl -fsSL https://github.com/google/flatbuffers/releases/download/v${FLATC_
 
 # clang
 RUN curl https://apt.llvm.org/llvm.sh -fsS -o llvm.sh \
-    && bash llvm.sh 19 \
-    && apt-get install -y clang-tidy-19 clang-format-19 \
+    && bash llvm.sh 21 \
+    && apt-get install -y clang-tidy-21 clang-format-21 \
     && rm -rf /var/lib/apt/lists/*
-ENV PATH="/usr/lib/llvm-19/bin:${PATH}"
+ENV PATH="/usr/lib/llvm-21/bin:${PATH}"
 
 # rust
 ARG MSRV_RUST_VERSION=1.88.0

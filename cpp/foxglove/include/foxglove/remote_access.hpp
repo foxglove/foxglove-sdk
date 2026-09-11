@@ -19,6 +19,8 @@
 #include <string>
 #include <vector>
 
+// The C API declares this as an unscoped enum, so it cannot be an enum class here.
+// NOLINTNEXTLINE(cppcoreguidelines-use-enum-class)
 enum foxglove_error : uint8_t;
 struct foxglove_gateway;
 
