@@ -14,7 +14,7 @@ jobs:
       - uses: ssciwr/doxygen-install@v2
         with:
           version: "1.13.2"
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@v10.1.0
       - run: make docs
         working-directory: cpp
       - name: Upload artifact
@@ -36,9 +36,9 @@ jobs:
       - run: corepack enable
       - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 24
           cache: yarn
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@v10.1.0
       - run: make -f Container.mk docs-python
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
@@ -69,7 +69,7 @@ jobs:
             </ul>
           EOF
       - name: Deploy to CF Pages
-        uses: cloudflare/pages-action@v1.5.0
+        uses: cloudflare/wrangler-action@v4
         # Run preview deploys on PRs (but not for forks or dependabot PRs, since we do not have
         # access to secrets in these environments). Only run production deploys on release tags, not
         # the main branch.
@@ -84,9 +84,9 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
-          wranglerVersion: "3"
           # For PRs, use the PR head branch name. Otherwise we are running on a release tag, so use
           # "main" to trigger a "production" deploy in CF pages.
-          branch: ${{ github.head_ref || 'main' }}
-          projectName: foxglove-sdk-api-docs
-          directory: artifacts
+          command: >-
+            pages deploy artifacts
+            --project-name=foxglove-sdk-api-docs
+            --branch=${{ github.head_ref || 'main' }}

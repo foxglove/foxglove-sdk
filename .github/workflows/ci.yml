@@ -164,7 +164,7 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 24
           cache: yarn
           registry-url: https://registry.npmjs.org
 
@@ -197,7 +197,7 @@ jobs:
         with:
           python-version: "3.10"
 
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@v10.1.0
 
       - name: Ensure generated files are up to date
         run: |

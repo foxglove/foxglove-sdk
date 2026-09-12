@@ -33,7 +33,7 @@ jobs:
         with:
           python-version: "3.10"
 
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@v10.1.0
       - run: make -f Container.mk lint-python
 
   lint-and-test-sdk:
@@ -48,7 +48,7 @@ jobs:
       - run: corepack enable
       - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 24
           cache: yarn
 
       - run: make -f Container.mk test-python
@@ -64,7 +64,7 @@ jobs:
       - name: Unpack sdist
         run: tar xzf foxglove_sdk-*.tar.gz --strip-components 1
 
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@v10.1.0
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           target: wasm32-unknown-emscripten
@@ -107,7 +107,7 @@ jobs:
       - run: corepack enable
       - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 24
           cache: yarn
       - name: Download wheel
         uses: actions/download-artifact@v8
@@ -116,7 +116,7 @@ jobs:
           path: playground/public
       - run: yarn install
       - run: yarn build
-      - uses: cloudflare/pages-action@v1.5.0
+      - uses: cloudflare/wrangler-action@v4
         # Only run if not a fork, and not a dependabot PR, since we do not have
         # access to secrets in these environments.
         if: ${{ !github.event.pull_request.head.repo.fork && github.actor != 'dependabot[bot]' }}
@@ -125,10 +125,13 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           gitHubToken: ${{ secrets.FOXGLOVEBOT_GITHUB_TOKEN }}
-          wranglerVersion: "3"
-          branch: ${{ github.head_ref || github.ref_name }}
-          projectName: foxglove-sdk-playground
-          directory: playground/dist
+          # Without this, wrangler-action infers yarn from the repo's yarn.lock and tries to add
+          # wrangler to the workspace. Install it with npm instead, outside the yarn workspace.
+          packageManager: npm
+          command: >-
+            pages deploy playground/dist
+            --project-name=foxglove-sdk-playground
+            --branch=${{ github.head_ref || github.ref_name }}
 
   schemas:
     runs-on: ubuntu-latest
@@ -154,7 +157,7 @@ jobs:
           rm Linux.flatc.binary.clang++-12.zip
           sudo mv flatc /usr/local/bin
 
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@v10.1.0
 
       - run: make -f Container.mk build-python-schemas
 
@@ -479,11 +482,11 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: actions-rust-lang/setup-rust-toolchain@v1
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@v10.1.0
       - run: corepack enable
       - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 24
           cache: yarn
       - name: Build sdist
         run: uv build --sdist
@@ -529,7 +532,7 @@ jobs:
       - uses: actions/download-artifact@v8
         with:
           path: python/foxglove-sdk
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@v10.1.0
       - run: find python/foxglove-sdk/wheels-*
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v4
@@ -550,11 +553,11 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.10"
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@v10.1.0
       - run: corepack enable
       - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 24
           cache: yarn
       - run: yarn install
       - run: yarn run-python-sdk-examples
