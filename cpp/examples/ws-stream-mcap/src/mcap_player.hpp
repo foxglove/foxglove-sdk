@@ -35,7 +35,8 @@ public:
   [[nodiscard]] foxglove::PlaybackStatus status() const override;
   [[nodiscard]] uint64_t currentTime() const override;
   [[nodiscard]] float playbackSpeed() const override;
-  std::optional<std::chrono::nanoseconds> logNextMessage(const foxglove::WebSocketServer& server
+  std::optional<std::chrono::nanoseconds> logNextMessage(
+    const foxglove::WebSocketServer& server
   ) override;
 
 private:

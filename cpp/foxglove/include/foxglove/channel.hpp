@@ -38,11 +38,12 @@ public:
   [[nodiscard]] std::string_view messageEncoding() const noexcept;
 
   /// @deprecated Use messageEncoding() instead.
-  // NOLINTNEXTLINE(readability-identifier-naming)
-  [[deprecated("Use messageEncoding() instead")]] [[nodiscard]] std::string_view message_encoding(
-  ) const noexcept {
+  // NOLINTBEGIN(readability-identifier-naming)
+  [[deprecated("Use messageEncoding() instead")]] [[nodiscard]] std::string_view
+  message_encoding() const noexcept {
     return messageEncoding();
   }
+  // NOLINTEND(readability-identifier-naming)
 
   /// @brief Get the metadata for the channel descriptor.
   [[nodiscard]] std::optional<std::map<std::string, std::string>> metadata() const noexcept;
@@ -174,11 +175,12 @@ public:
   [[nodiscard]] std::string_view messageEncoding() const noexcept;
 
   /// @deprecated Use messageEncoding() instead.
-  // NOLINTNEXTLINE(readability-identifier-naming)
-  [[deprecated("Use messageEncoding() instead")]] [[nodiscard]] std::string_view message_encoding(
-  ) const noexcept {
+  // NOLINTBEGIN(readability-identifier-naming)
+  [[deprecated("Use messageEncoding() instead")]] [[nodiscard]] std::string_view
+  message_encoding() const noexcept {
     return messageEncoding();
   }
+  // NOLINTEND(readability-identifier-naming)
 
   /// @brief Find out if any sinks have been added to the channel.
   ///

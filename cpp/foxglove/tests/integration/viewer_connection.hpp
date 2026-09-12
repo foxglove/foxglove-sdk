@@ -76,13 +76,15 @@ struct ViewerEvent {
 class TestRoomDelegate : public livekit::RoomDelegate {
 public:
   void onTrackSubscribed(livekit::Room& room, const livekit::TrackSubscribedEvent& event) override;
-  void onTrackUnsubscribed(livekit::Room& room, const livekit::TrackUnsubscribedEvent& event)
-    override;
+  void onTrackUnsubscribed(
+    livekit::Room& room, const livekit::TrackUnsubscribedEvent& event
+  ) override;
   void onParticipantDisconnected(
     livekit::Room& room, const livekit::ParticipantDisconnectedEvent& event
   ) override;
-  void onDataTrackPublished(livekit::Room& room, const livekit::DataTrackPublishedEvent& event)
-    override;
+  void onDataTrackPublished(
+    livekit::Room& room, const livekit::DataTrackPublishedEvent& event
+  ) override;
 
   /// Wait for an event matching the predicate, up to the given timeout.
   std::optional<ViewerEvent> wait_for_event(
