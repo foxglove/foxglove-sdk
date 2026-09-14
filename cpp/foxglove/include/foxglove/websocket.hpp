@@ -18,6 +18,8 @@
 #include <optional>
 #include <string>
 
+// The C API declares this as an unscoped enum, so it cannot be an enum class here.
+// NOLINTNEXTLINE(cppcoreguidelines-use-enum-class)
 enum foxglove_error : uint8_t;
 struct foxglove_websocket_server;
 struct foxglove_connection_graph;
@@ -240,8 +242,8 @@ struct WebSocketServerCallbacks {
   /// @note Since this playback state is in response to a specific request from the client, the
   /// `request_id` field in the returned `PlaybackState` will be overwritten to match the request_id
   /// in `playback_control_request`.
-  std::function<std::optional<PlaybackState>(const PlaybackControlRequest& playback_control_request
-  )>
+  std::function<
+    std::optional<PlaybackState>(const PlaybackControlRequest& playback_control_request)>
     onPlaybackControlRequest;
 };
 #if defined(__GNUC__) || defined(__clang__)
