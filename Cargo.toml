@@ -45,6 +45,9 @@ livekit = { version = "0.8.3", features = ["rustls-tls-native-roots", "tokio"] }
 livekit-api = { version = "0.6", default-features = false, features = ["access-token"] }
 libwebrtc = { version = "0.3.37" }
 
+[workspace.lints.cargo]
+non_kebab_case_bins = "allow"
+
 [workspace.lints.clippy]
 assigning_clones = "warn"
 borrow_as_ptr = "warn"

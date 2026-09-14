@@ -24,3 +24,6 @@ prost-reflect = "0.16.3"
 prost-types.workspace = true
 tracing.workspace = true
 tracing-test = { workspace = true, features = ["no-env-filter"] }
+
+[lints]
+workspace = true

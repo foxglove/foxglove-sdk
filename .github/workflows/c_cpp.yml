@@ -356,6 +356,8 @@ jobs:
         working-directory: cpp
         env:
           RUSTFLAGS: ""
+          # The LiveKit FFI crate is third-party code built by CMake; don't fail on its warnings.
+          CARGO_BUILD_WARNINGS: warn
           FOXGLOVE_PREBUILT_LIB_DIR: ${{ github.workspace }}/artifacts/foxglove/lib
         run: |
           make build-integration

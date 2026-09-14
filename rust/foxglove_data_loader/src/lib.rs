@@ -230,6 +230,7 @@ impl Problem {
     }
 
     /// Add additional context to the problem.
+    #[must_use]
     pub fn tip(mut self, tip: impl Into<String>) -> Self {
         self.0.tip = Some(tip.into());
         self
@@ -434,18 +435,21 @@ impl Default for TimeRange {
 /// Builder to make an [`Initialization`].
 impl InitializationBuilder {
     /// Set the initialization's time range.
+    #[must_use]
     pub fn time_range(mut self, time_range: TimeRange) -> Self {
         self.time_range = time_range;
         self
     }
 
     /// Set the start time for the initialization's time range.
+    #[must_use]
     pub fn start_time(mut self, start_time: u64) -> Self {
         self.time_range.start_time = start_time;
         self
     }
 
     /// Set the end time for the initialization's time range.
+    #[must_use]
     pub fn end_time(mut self, end_time: u64) -> Self {
         self.time_range.end_time = end_time;
         self
@@ -537,6 +541,7 @@ impl InitializationBuilder {
     ///     .build();
     /// ```
     ///
+    #[must_use]
     pub fn add_problem(mut self, problem: impl Into<Problem>) -> Self {
         self.problems.push(problem.into());
         self
@@ -612,6 +617,7 @@ impl LinkedSchema {
     ///
     /// Ensure this method is called before adding channels. Calling this method after channels
     /// have been added may result in incorrect message encodings.
+    #[must_use]
     pub fn message_encoding(mut self, message_encoding: impl Into<String>) -> Self {
         self.message_encoding = message_encoding.into();
         self
@@ -635,18 +641,21 @@ impl LinkedChannel {
     }
 
     /// Set the message count for this channel.
+    #[allow(clippy::return_self_not_must_use)]
     pub fn message_count(self, message_count: u64) -> Self {
         self.message_count.replace(Some(message_count));
         self
     }
 
     /// Set the message encoding for the channel.
+    #[allow(clippy::return_self_not_must_use)]
     pub fn message_encoding(self, message_encoding: impl Into<String>) -> Self {
         self.message_encoding.replace(message_encoding.into());
         self
     }
 
     /// Set the schema ID for the channel from a [`LinkedSchema`].
+    #[allow(clippy::return_self_not_must_use)]
     pub fn schema(self, linked_schema: &LinkedSchema) -> Self {
         self.schema_id.replace(Some(linked_schema.id));
         self
