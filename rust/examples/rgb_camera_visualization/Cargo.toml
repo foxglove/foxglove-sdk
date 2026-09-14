@@ -3,6 +3,9 @@ name = "example_rgb_camera_visualization"
 edition = "2024"
 publish = false
 
+[lints.cargo]
+non_kebab_case_bins = "allow"
+
 [dependencies]
 foxglove = { path = "../../foxglove" }
 clap = { version = "4.5", features = ["derive"] }
