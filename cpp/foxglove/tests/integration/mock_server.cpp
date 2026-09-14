@@ -35,8 +35,7 @@ MockServerHandle::MockServerHandle(const std::string& room_name)
   auto stop_flag = stop_flag_;
 
   server_->Get(
-    "/internal/platform/v1/device-info",
-    [](const httplib::Request& req, httplib::Response& res) {
+    "/internal/platform/v1/device-info", [](const httplib::Request& req, httplib::Response& res) {
       if (!validate_device_token(req)) {
         res.status = 401;
         return;

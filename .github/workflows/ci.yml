@@ -170,10 +170,10 @@ jobs:
 
       - name: Install Flatbuffer compiler
         run: |
-          curl -LO https://github.com/google/flatbuffers/releases/download/v23.1.21/Linux.flatc.binary.clang++-12.zip
-          echo "359dbbf56153cc1b022170a228adfde4199f67dc  Linux.flatc.binary.clang++-12.zip" | shasum -a 1 -c
-          unzip Linux.flatc.binary.clang++-12.zip
-          rm Linux.flatc.binary.clang++-12.zip
+          curl -LO https://github.com/google/flatbuffers/releases/download/v25.12.19/Linux.flatc.binary.clang++-18.zip
+          echo "e19243c6824e798dbc4c8b9e426240391ea928f9  Linux.flatc.binary.clang++-18.zip" | shasum -a 1 -c
+          unzip Linux.flatc.binary.clang++-18.zip
+          rm Linux.flatc.binary.clang++-18.zip
           sudo mv flatc /usr/local/bin
 
       - uses: arduino/setup-protoc@v3
@@ -198,6 +198,21 @@ jobs:
           python-version: "3.10"
 
       - uses: astral-sh/setup-uv@v7
+
+      # `yarn generate` runs clang-format over the generated C++, so this job writes the formatting
+      # that the C/C++ lint job then checks. Without an explicit install it would use the runner
+      # image's default (18) and the two jobs would demand different wrapping.
+      #
+      # This installs from apt.llvm.org, the same channel as the other two places clang-format is
+      # resolved (.github/workflows/c_cpp.yml and the Dockerfile). Using one channel is what keeps
+      # the job that writes the formatting and the job that checks it on the same build; two
+      # channels could sit at different 21.x patches at the same time.
+      - name: Install clang-format
+        run: |
+          curl https://apt.llvm.org/llvm.sh -fsS -o /tmp/llvm.sh
+          sudo bash /tmp/llvm.sh 21
+          bash "$GITHUB_WORKSPACE/.github/scripts/apt-retry.sh" --no-install-recommends clang-format-21
+          echo "/usr/lib/llvm-21/bin" >> $GITHUB_PATH
 
       - name: Ensure generated files are up to date
         run: |
