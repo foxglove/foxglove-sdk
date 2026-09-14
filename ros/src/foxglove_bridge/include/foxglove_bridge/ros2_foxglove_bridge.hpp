@@ -151,6 +151,7 @@ private:
   size_t _minQosDepth = DEFAULT_MIN_QOS_DEPTH;
   size_t _maxQosDepth = DEFAULT_MAX_QOS_DEPTH;
   std::shared_ptr<rclcpp::Subscription<rosgraph_msgs::msg::Clock>> _clockSubscription;
+  rclcpp::TimerBase::SharedPtr _timeBroadcastTimer;
   bool _useSimTime = false;
   std::atomic<int> _graphSubscriptionCount = 0;
   bool _includeHidden = false;
@@ -162,6 +163,9 @@ private:
   rclcpp::Publisher<std_msgs::msg::UInt32>::SharedPtr _clientCountPublisher;
 
   void subscribeConnectionGraph(bool subscribe);
+
+  // Broadcasts nanoseconds since epoch to WebSocket clients via the Time capability.
+  void broadcastTime(int64_t timestampNanos);
 
   void subscribe(ChannelId channelId, const foxglove::ClientMetadata& client);
 
