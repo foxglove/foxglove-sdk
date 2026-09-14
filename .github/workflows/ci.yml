@@ -68,6 +68,8 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v2
         with:
           toolchain: 1.88.0
+          # `build.warnings` requires cargo 1.97+; the MSRV toolchain needs RUSTFLAGS instead.
+          rustflags: -D warnings
 
       - run: cargo check -p foxglove --features full
 
