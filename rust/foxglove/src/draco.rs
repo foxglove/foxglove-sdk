@@ -879,11 +879,7 @@ mod tests {
 
     #[test]
     fn test_quantization_bits_validated_at_construction() {
-        // The boundaries of the valid range are accepted, usable, and — at the maximum —
-        // decodable. The round-trip only exercises draco-core's own decoder, which is as
-        // permissive as its encoder; the conformance guarantee comes from
-        // MAX_QUANTIZATION_BITS itself matching the reference decoder's 30-bit cap (see
-        // the constant's docs).
+        // The boundaries of the valid range are accepted, usable, and decodable.
         let (cloud, positions, _) = test_cloud();
         DracoEncodeOptions::with_quantization_bits(1).unwrap();
         let options = DracoEncodeOptions::with_quantization_bits(MAX_QUANTIZATION_BITS).unwrap();
