@@ -40,7 +40,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref }}
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - uses: actions-rust-lang/setup-rust-toolchain@v2
       - run: |
           # Ubuntu 24.04 only packages clang up to 20, so pull 21 from apt.llvm.org.
           curl https://apt.llvm.org/llvm.sh -fsS -o /tmp/llvm.sh
@@ -160,7 +160,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref }}
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - uses: actions-rust-lang/setup-rust-toolchain@v2
         with:
           target: ${{ matrix.target }}
           # Set a cache key to distinguish the remote-access-enabled linux
@@ -273,7 +273,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref }}
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - uses: actions-rust-lang/setup-rust-toolchain@v2
         with:
           toolchain: ${{ env.SANITIZE_RUST_TOOLCHAIN }}
           components: rust-src
@@ -315,7 +315,7 @@ jobs:
             libabsl-dev \
             libwayland-dev libdecor-0-dev
 
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - uses: actions-rust-lang/setup-rust-toolchain@v2
         with:
           toolchain: stable
           # Share the cache with the remote-access-enabled linux build job.
