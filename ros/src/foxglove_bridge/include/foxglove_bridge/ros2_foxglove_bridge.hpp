@@ -164,9 +164,7 @@ private:
 
   void subscribeConnectionGraph(bool subscribe);
 
-  // Broadcasts the given timestamp (nanoseconds since epoch) to WebSocket clients via the Time
-  // capability. Shared by both the sim-time (/clock) and wall-clock (timer) sources in the
-  // constructor.
+  // Broadcasts nanoseconds since epoch to WebSocket clients via the Time capability.
   void broadcastTime(int64_t nanoseconds);
 
   void subscribe(ChannelId channelId, const foxglove::ClientMetadata& client);

@@ -194,13 +194,8 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
   sdkServerOptions.host = address;
   sdkServerOptions.port = port;
   sdkServerOptions.supported_encodings = {"cdr", "json"};
-  // Always advertise Time, not just under sim time. Without it Foxglove falls back to the
-  // *client's* wall clock for currentTime (Studio v1.36.0: "Use system time for Foxglove
-  // WebSocket connections if the server does not publish time messages"). Anything resolved at
-  // current time -- coordinate frame axes, frame_locked scene entities -- is then placed using a
-  // transform looked up at the viewer's clock rather than the robot's, while message-stamped
-  // geometry still renders correctly, producing a scene inconsistent by exactly the client/server
-  // clock skew.
+  // Always advertise Time, not just under sim time -- otherwise Foxglove Studio falls back to
+  // the client's wall clock, desyncing current-time-relative rendering from the robot's clock.
   sdkServerOptions.capabilities = _capabilities | foxglove::WebSocketServerCapabilities::Time;
   sdkServerOptions.context = _serverContext;
 
@@ -312,15 +307,9 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
         broadcastTime(rclcpp::Time{msg->clock}.nanoseconds());
       });
   } else {
-    // Outside sim there is no /clock, so drive the broadcast from this node's own clock -- the
-    // same one that stamps log_time and every header in the graph, so the client's timeline
-    // matches the data exactly.
-    //
-    // Deliberately a wall timer rather than a /clock subscription: the bridge's notion of time
-    // must not depend on delivery through the message bus it is itself serving. A stalled topic
-    // would freeze the viewer's clock; a stalled hardware clock is not a failure mode.
+    // No /clock outside sim, so broadcast this node's own wall clock instead -- via a timer, not
+    // a /clock subscription, so a stalled topic can't also freeze the client's clock.
     _timeBroadcastTimer = this->create_wall_timer(std::chrono::milliseconds(100), [this]() {
-      // Skip the broadcast (and its internal per-client work) when nobody is listening.
       if (_server->clientCount() == 0) {
         return;
       }

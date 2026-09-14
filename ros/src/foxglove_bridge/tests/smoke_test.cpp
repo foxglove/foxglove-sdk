@@ -780,9 +780,8 @@ TEST(SmokeTest, receiveMessagesOfMultipleTransientLocalPublishers) {
   const foxglove::test::SubscriptionId subscriptionId = 1;
 
   // Set up binary message handler to resolve the promise when all nPub message have been
-  // received. The bridge also broadcasts periodic Time frames now that Time is advertised
-  // unconditionally, so filter to MESSAGE_DATA frames only -- otherwise those would be
-  // miscounted as received publisher messages.
+  // received. Filter to MESSAGE_DATA frames since the bridge also broadcasts periodic Time
+  // frames now that Time is advertised unconditionally.
   std::promise<void> promise;
   std::atomic<size_t> nReceivedMessages = 0;
   client->setBinaryMessageHandler([&promise, &nReceivedMessages](const uint8_t* data, size_t) {
