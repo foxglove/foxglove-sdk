@@ -63,7 +63,7 @@ class OpQueue {
 public:
   void push(ParameterOp&& op) {
     {
-      std::lock_guard<std::mutex> lock(mu_);
+      std::scoped_lock<std::mutex> lock(mu_);
       queue_.push(std::move(op));
     }
     cv_.notify_one();
