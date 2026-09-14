@@ -907,6 +907,23 @@ class RawImage:
         """Encodes the RawImage."""
         ...
 
+class RobotDescription:
+    """
+    A robot description used to visualize an articulated 3D model. The description defines its own coordinate frames; the pose of each link is determined by the transform tree or by `foxglove.JointStates` messages.
+    """
+
+    def __new__(
+        cls, *, url: str = "", data: bytes = b"", format: str = ""
+    ) -> "RobotDescription": ...
+    @staticmethod
+    def get_schema() -> Schema:
+        """Returns the RobotDescription schema"""
+        ...
+
+    def encode(self) -> bytes:
+        """Encodes the RobotDescription."""
+        ...
+
 class SceneEntity:
     """
     A visual element in a 3D scene. An entity may be composed of multiple primitives which all share the same frame of reference.
@@ -1177,6 +1194,7 @@ FoxgloveMessage = Union[
     Quaternion,
     RawAudio,
     RawImage,
+    RobotDescription,
     SpherePrimitive,
     TextAnnotation,
     TextPrimitive,
