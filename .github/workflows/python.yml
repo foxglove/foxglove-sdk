@@ -148,10 +148,10 @@ jobs:
 
       - name: Install Flatbuffer compiler
         run: |
-          curl -LO https://github.com/google/flatbuffers/releases/download/v23.1.21/Linux.flatc.binary.clang++-12.zip
-          echo "359dbbf56153cc1b022170a228adfde4199f67dc  Linux.flatc.binary.clang++-12.zip" | shasum -a 1 -c
-          unzip Linux.flatc.binary.clang++-12.zip
-          rm Linux.flatc.binary.clang++-12.zip
+          curl -LO https://github.com/google/flatbuffers/releases/download/v25.12.19/Linux.flatc.binary.clang++-18.zip
+          echo "e19243c6824e798dbc4c8b9e426240391ea928f9  Linux.flatc.binary.clang++-18.zip" | shasum -a 1 -c
+          unzip Linux.flatc.binary.clang++-18.zip
+          rm Linux.flatc.binary.clang++-18.zip
           sudo mv flatc /usr/local/bin
 
       - uses: astral-sh/setup-uv@v7

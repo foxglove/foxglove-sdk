@@ -93,7 +93,7 @@ int main(int argc, char* argv[]) {
   options.callbacks.onPlaybackControlRequest = [mtx, player_ref](
                                                  const foxglove::PlaybackControlRequest& request
                                                ) -> std::optional<foxglove::PlaybackState> {
-    std::lock_guard<std::mutex> lock(*mtx);
+    std::scoped_lock<std::mutex> lock(*mtx);
 
     bool did_seek = request.seek_time.has_value();
 
@@ -149,18 +149,20 @@ int main(int argc, char* argv[]) {
 
   while (!done) {
     {
-      std::lock_guard<std::mutex> lock(*mtx);
+      std::scoped_lock<std::mutex> lock(*mtx);
       current_status = player_ptr->status();
 
       if (current_status == foxglove::PlaybackStatus::Ended &&
           last_status != foxglove::PlaybackStatus::Ended) {
-        server.broadcastPlaybackState(foxglove::PlaybackState{
-          foxglove::PlaybackStatus::Ended,
-          player_ptr->currentTime(),
-          player_ptr->playbackSpeed(),
-          false,
-          std::nullopt,
-        });
+        server.broadcastPlaybackState(
+          foxglove::PlaybackState{
+            foxglove::PlaybackStatus::Ended,
+            player_ptr->currentTime(),
+            player_ptr->playbackSpeed(),
+            false,
+            std::nullopt,
+          }
+        );
       }
     }
     last_status = current_status;
@@ -172,7 +174,7 @@ int main(int argc, char* argv[]) {
 
     std::optional<std::chrono::nanoseconds> sleep_duration;
     {
-      std::lock_guard<std::mutex> lock(*mtx);
+      std::scoped_lock<std::mutex> lock(*mtx);
       sleep_duration = player_ptr->logNextMessage(server);
     }
 

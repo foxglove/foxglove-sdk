@@ -61,11 +61,6 @@ impl DracoMethod {
 }
 
 /// The maximum supported value for [`DracoEncodeOptions::with_quantization_bits`].
-///
-/// This follows the reference Draco decoder, whose `IsQuantizationValid` rejects
-/// bitstreams quantized above 30 bits ("Currently we allow only up to 30 bit
-/// quantization"). The draco-core encoder itself accepts 31, but emitting it would
-/// produce output the reference decoder — and the Foxglove app — cannot decode.
 pub const MAX_QUANTIZATION_BITS: u8 = 30;
 
 /// Options for Draco point-cloud encoding.
@@ -480,7 +475,7 @@ fn encode_draco(
     let mut buffer = EncoderBuffer::new();
     encoder
         .encode(&encoder_options, &mut buffer)
-        .map_err(|e| DracoEncodeError::Encode(format!("{e:?}")))?;
+        .map_err(|e| DracoEncodeError::Encode(e.to_string()))?;
     Ok(buffer.data().to_vec())
 }
 
@@ -884,11 +879,7 @@ mod tests {
 
     #[test]
     fn test_quantization_bits_validated_at_construction() {
-        // The boundaries of the valid range are accepted, usable, and — at the maximum —
-        // decodable. The round-trip only exercises draco-core's own decoder, which is as
-        // permissive as its encoder; the conformance guarantee comes from
-        // MAX_QUANTIZATION_BITS itself matching the reference decoder's 30-bit cap (see
-        // the constant's docs).
+        // The boundaries of the valid range are accepted, usable, and decodable.
         let (cloud, positions, _) = test_cloud();
         DracoEncodeOptions::with_quantization_bits(1).unwrap();
         let options = DracoEncodeOptions::with_quantization_bits(MAX_QUANTIZATION_BITS).unwrap();

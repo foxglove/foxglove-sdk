@@ -1074,12 +1074,11 @@ checksum = "1aaf95b3e5c8f23aa320147307562d361db0ae0d51242340f558153b4eb2439b"
 
 [[package]]
 name = "draco-core"
-version = "1.2.0"
+version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9077a2eb6707dbbf6df0f4ab9892809d6be3a19e13f8e83d784ab9622066e5ef"
+checksum = "3b26c811ea5ac660691765976ab2a0d184a410a8b4a6e24ced64e6284c2ce965"
 dependencies = [
  "bytemuck",
- "thiserror 2.0.20",
 ]
 
 [[package]]
