@@ -1023,7 +1023,7 @@ typedef struct foxglove_compressed_audio {
   const unsigned char *data;
   size_t data_len;
   /**
-   * Format of the audio data. See the `data` field description for supported values.
+   * Format of the audio data. See the `data` field description for supported values. Consumers may support a subset of these formats.
    */
   struct foxglove_string format;
 } foxglove_compressed_audio;

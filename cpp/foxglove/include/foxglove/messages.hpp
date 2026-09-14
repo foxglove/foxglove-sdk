@@ -425,6 +425,7 @@ struct CompressedAudio {
   std::vector<std::byte> data;
 
   /// @brief Format of the audio data. See the `data` field description for supported values.
+  /// Consumers may support a subset of these formats.
   std::string format;
 
   /// @brief Encoded the CompressedAudio as protobuf to the provided buffer.

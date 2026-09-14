@@ -19,5 +19,5 @@ builtin_interfaces/Time timestamp
 #   - The ADTS header supplies stream parameters such as sample rate and channel configuration.
 uint8[] data
 
-# Format of the audio data. See the `data` field description for supported values.
+# Format of the audio data. See the `data` field description for supported values. Consumers may support a subset of these formats.
 string format

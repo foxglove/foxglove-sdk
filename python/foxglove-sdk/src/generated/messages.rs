@@ -573,7 +573,7 @@ impl From<Color> for foxglove::messages::Color {
 ///     - `mp4a.40.2`:
 ///       - Each message must contain a complete MPEG-4 AAC-LC ADTS frame, including the ADTS header, as described in section 1.A.3.2 of ISO/IEC 14496-3:2019.
 ///       - The ADTS header supplies stream parameters such as sample rate and channel configuration.
-/// :param format: Format of the audio data. See the `data` field description for supported values.
+/// :param format: Format of the audio data. See the `data` field description for supported values. Consumers may support a subset of these formats.
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/compressed-audio
 #[pyclass(from_py_object, module = "foxglove.messages")]
