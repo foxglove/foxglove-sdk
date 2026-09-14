@@ -69,7 +69,7 @@ jobs:
             </ul>
           EOF
       - name: Deploy to CF Pages
-        uses: cloudflare/wrangler-action@v4
+        uses: cloudflare/pages-action@v1.5.0
         # Run preview deploys on PRs (but not for forks or dependabot PRs, since we do not have
         # access to secrets in these environments). Only run production deploys on release tags, not
         # the main branch.
@@ -84,9 +84,9 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          wranglerVersion: "3"
           # For PRs, use the PR head branch name. Otherwise we are running on a release tag, so use
           # "main" to trigger a "production" deploy in CF pages.
-          command: >-
-            pages deploy artifacts
-            --project-name=foxglove-sdk-api-docs
-            --branch=${{ github.head_ref || 'main' }}
+          branch: ${{ github.head_ref || 'main' }}
+          projectName: foxglove-sdk-api-docs
+          directory: artifacts
