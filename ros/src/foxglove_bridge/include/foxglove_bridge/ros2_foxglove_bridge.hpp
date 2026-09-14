@@ -165,7 +165,7 @@ private:
   void subscribeConnectionGraph(bool subscribe);
 
   // Broadcasts nanoseconds since epoch to WebSocket clients via the Time capability.
-  void broadcastTime(int64_t nanoseconds);
+  void broadcastTime(int64_t timestampNanos);
 
   void subscribe(ChannelId channelId, const foxglove::ClientMetadata& client);
 

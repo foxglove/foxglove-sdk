@@ -455,9 +455,9 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
     std::make_unique<std::thread>(std::bind(&FoxgloveBridge::rosgraphPollThread, this));
 }
 
-void FoxgloveBridge::broadcastTime(int64_t nanoseconds) {
-  assert(nanoseconds >= 0 && "Timestamp is negative");
-  _server->broadcastTime(static_cast<uint64_t>(nanoseconds));
+void FoxgloveBridge::broadcastTime(int64_t timestampNanos) {
+  assert(timestampNanos >= 0 && "Timestamp is negative");
+  _server->broadcastTime(static_cast<uint64_t>(timestampNanos));
 }
 
 FoxgloveBridge::~FoxgloveBridge() {
