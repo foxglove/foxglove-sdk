@@ -42,11 +42,14 @@ jobs:
           ref: ${{ inputs.ref }}
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - run: |
+          # Ubuntu 24.04 only packages clang up to 20, so pull 21 from apt.llvm.org.
+          curl https://apt.llvm.org/llvm.sh -fsS -o /tmp/llvm.sh
+          sudo bash /tmp/llvm.sh 21
           bash "$GITHUB_WORKSPACE/.github/scripts/apt-retry.sh" --no-install-recommends \
-            clang-format-19 clang-tidy-19 \
+            clang-format-21 clang-tidy-21 \
             gcc g++ libglib2.0-dev libva-dev  \
             libwebsockets-dev nlohmann-json3-dev
-          echo "/usr/lib/llvm-19/bin" >> $GITHUB_PATH
+          echo "/usr/lib/llvm-21/bin" >> $GITHUB_PATH
       - run: clang-format --version
       - run: clang-tidy --version
       - run: make lint

@@ -182,8 +182,7 @@ int main() {
 
   // In one MCAP, drop all of our point_cloud (and related tf) messages
   auto small_writer = createMcapWriter(
-    "example-topic-splitting-small.mcap",
-    [](const foxglove::ChannelDescriptor& channel) -> bool {
+    "example-topic-splitting-small.mcap", [](const foxglove::ChannelDescriptor& channel) -> bool {
       return channel.topic().find("/point_cloud") == std::string::npos;
     }
   );
@@ -193,8 +192,7 @@ int main() {
 
   // In the other, log only the point_cloud (and related tf) messages
   auto large_writer = createMcapWriter(
-    "example-topic-splitting-large.mcap",
-    [](const foxglove::ChannelDescriptor& channel) -> bool {
+    "example-topic-splitting-large.mcap", [](const foxglove::ChannelDescriptor& channel) -> bool {
       return channel.topic().find("/point_cloud") != std::string::npos;
     }
   );
