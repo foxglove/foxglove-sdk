@@ -475,7 +475,7 @@ fn encode_draco(
     let mut buffer = EncoderBuffer::new();
     encoder
         .encode(&encoder_options, &mut buffer)
-        .map_err(|e| DracoEncodeError::Encode(format!("{e:?}")))?;
+        .map_err(|e| DracoEncodeError::Encode(e.to_string()))?;
     Ok(buffer.data().to_vec())
 }
 
