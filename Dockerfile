@@ -66,7 +66,7 @@ RUN rustup toolchain install ${MSRV_RUST_VERSION}
 RUN rustup component add rustfmt clippy
 
 # node
-RUN curl -fsSL https://deb.nodesource.com/setup_23.x -o nodesource_setup.sh \
+RUN curl -fsSL https://deb.nodesource.com/setup_24.x -o nodesource_setup.sh \
   && bash nodesource_setup.sh \
   && apt-get update \
   && apt-get install -y nodejs \
