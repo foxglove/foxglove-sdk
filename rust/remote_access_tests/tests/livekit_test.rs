@@ -3025,8 +3025,8 @@ async fn livekit_point_cloud_compression_transcodes_messages() -> Result<()> {
     info!("draco-compressed point cloud delivered");
 
     // A cloud with a float64 field is narrowed to float32 and delivered, not rejected:
-    // the kd-tree encoder cannot quantize float64, so the conditioning pass converts it
-    // before encoding.
+    // the default kd-tree encoder cannot encode float64, so the conditioning pass
+    // converts it before encoding.
     cloud_channel.log(&encoded_float64_point_cloud());
     let msg = viewer
         .expect_new_data_track_and_message_data(channel_id)

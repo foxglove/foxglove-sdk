@@ -130,7 +130,7 @@ foxglove.remote_access
 .. Enums are excluded and manually documented, since pyo3 only emulates them. (https://github.com/PyO3/pyo3/issues/2887)
 .. automodule:: foxglove.remote_access
    :members:
-   :exclude-members: Capability, RemoteAccessConnectionStatus, VideoEncoderBackend, MessageSchema, Parameter, ParameterType, ParameterValue, Service, ServiceRequest, ServiceSchema, StatusLevel
+   :exclude-members: Capability, DracoMethod, RemoteAccessConnectionStatus, VideoEncoderBackend, MessageSchema, Parameter, ParameterType, ParameterValue, Service, ServiceRequest, ServiceSchema, StatusLevel
 
 
 Enums
@@ -210,6 +210,22 @@ Enums
    .. py:data:: VideoToolbox
 
       Prefer VideoToolbox on Apple platforms when available.
+
+
+.. py:enum:: DracoMethod
+
+   Draco point-cloud encoding method, selected with
+   :py:class:`~foxglove.remote_access.DracoEncodeOptions`. Quantization applies to positions
+   and every float32 field under both methods, and integer fields are copied losslessly under
+   both; the methods differ in point order and compression ratio.
+
+   .. py:data:: KdTree
+
+      kd-tree encoding: the best compression ratios, but points are reordered. The default.
+
+   .. py:data:: Sequential
+
+      Sequential encoding: preserves point order, at a lower compression ratio.
 
 
 foxglove.websocket

@@ -15,6 +15,19 @@ enum class PointCloudCompressionMode : uint8_t {
   Draco = 2,
 };
 
+/// @brief Draco point-cloud encoding method.
+///
+/// Quantization applies to positions and every float32 field under both methods, and
+/// integer fields are copied losslessly under both; the methods differ in point order and
+/// compression ratio.
+enum class DracoMethod : uint8_t {
+  /// kd-tree encoding: the best compression ratios, but points are reordered. This is the
+  /// default (0).
+  KdTree = 0,
+  /// Sequential encoding: preserves point order, at a lower compression ratio.
+  Sequential = 1,
+};
+
 /// @brief Options for Draco point-cloud encoding.
 struct DracoEncodeOptions {
   /// @brief The maximum supported value for @ref quantization_bits.
@@ -27,6 +40,8 @@ struct DracoEncodeOptions {
   /// reduction over the raw point cloud, so the channel is delivered unmodified — use
   /// @ref PointCloudCompressionMode::Disabled to do that without the warning.
   uint8_t quantization_bits = 12;
+  /// @brief The encoding method.
+  DracoMethod method = DracoMethod::KdTree;
 };
 
 /// @brief Transparent point-cloud compression for a single channel, returned by the
@@ -66,7 +81,8 @@ struct PointCloudCompression {
   /// @brief Compress with Draco using the given settings.
   ///
   /// Sets @ref mode and @ref draco together so they cannot get out of sync. For example:
-  /// `return PointCloudCompression::withDraco({8});`
+  /// `return PointCloudCompression::withDraco({8});`, or
+  /// `return PointCloudCompression::withDraco({8, DracoMethod::Sequential});`
   static PointCloudCompression withDraco(DracoEncodeOptions options) {
     return {PointCloudCompressionMode::Draco, options};
   }
