@@ -116,8 +116,8 @@ export default (_env: unknown, argv: WebpackArgv): Configuration => {
           // the ones it will try to download at runtime when calling pyodide.loadPackage(). See the
           // list at: https://pyodide.org/en/stable/usage/packages-in-pyodide.html
           "micropip-0.11.1-py3-none-any.whl",
-          "numpy-2.4.3-cp314-cp314-pyemscripten_2026_0_wasm32.whl",
-          "libopenblas-0.3.28.zip",
+          "numpy-2.4.6-cp314-cp314-pyemscripten_2026_0_wasm32.whl",
+          "libopenblas-0.3.31.zip",
           "opencv_python-4.11.0.86-cp314-cp314-pyemscripten_2026_0_wasm32.whl",
           "packaging-26.1-py3-none-any.whl",
           "pandas-3.0.2-cp314-cp314-pyemscripten_2026_0_wasm32.whl",

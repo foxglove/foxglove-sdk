@@ -9,7 +9,7 @@ The core SDK is written in Rust, with bindings for Python, and C++. We publish p
 - Leverage built-in [Foxglove message types](https://docs.foxglove.dev/docs/sdk/schemas) for common visualizations, or your own custom messages using a supported serialization format
 - ROS packages are available for all supported distributions (see our [ROS 2 tutorial](https://docs.foxglove.dev/docs/getting-started/frameworks/ros2))
 
-Visit [Foxglove SDK Docs](https://docs.foxglove.dev/sdk) to get started.
+Visit [Foxglove SDK Docs](https://docs.foxglove.dev/docs/sdk) to get started.
 
 ## Packages
 
