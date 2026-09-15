@@ -13,8 +13,10 @@
 //!
 //! `--quantization-bits` controls the Draco quantization for `/cloud/compressed`, for
 //! eyeballing the quality/size trade-off: fewer bits shrink the message but coarsen every
-//! float32 field. Under kd-tree encoding that includes `intensity`, not just positions, so
-//! the stepping is visible both in the wave and when coloring by `intensity`.
+//! float32 field. That includes `intensity`, not just positions, so the stepping is
+//! visible both in the wave and when coloring by `intensity`. `--sequential` switches
+//! from the default kd-tree encoding to Draco's order-preserving sequential encoding; the
+//! size report shows the compression ratio it gives up.
 //!
 //! Requires `FOXGLOVE_DEVICE_TOKEN` (and `FOXGLOVE_API_URL` for a local platform stack).
 //!
@@ -27,7 +29,7 @@
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use clap::Parser;
-use foxglove::draco::{DracoEncodeOptions, MAX_QUANTIZATION_BITS};
+use foxglove::draco::{DracoEncodeOptions, DracoMethod, MAX_QUANTIZATION_BITS};
 use foxglove::messages::{
     FrameTransform, PackedElementField, PointCloud, Quaternion, Timestamp, Vector3,
     packed_element_field::NumericType,
@@ -59,11 +61,17 @@ struct Args {
     fps: u32,
 
     /// Quantization bits for /cloud/compressed, between 1 and 30. Fewer bits produce
-    /// smaller messages but coarser values. Under kd-tree encoding this applies to
-    /// every float32 field, `intensity` included — not just positions.
+    /// smaller messages but coarser values. This applies to every float32 field,
+    /// `intensity` included — not just positions.
     #[arg(long, default_value_t = 12,
           value_parser = clap::value_parser!(u8).range(1..=MAX_QUANTIZATION_BITS as i64))]
     quantization_bits: u8,
+
+    /// Encode /cloud/compressed with Draco's sequential method instead of the default
+    /// kd-tree method. Sequential encoding preserves point order (and can carry float64
+    /// fields) at a lower compression ratio.
+    #[arg(long)]
+    sequential: bool,
 }
 
 /// A wave surface animated over time, with an intensity field.
@@ -189,8 +197,13 @@ async fn main() {
         args.fps
     );
 
-    let options = DracoEncodeOptions::with_quantization_bits(args.quantization_bits)
-        .expect("clap validates the range");
+    let method = if args.sequential {
+        DracoMethod::Sequential
+    } else {
+        DracoMethod::KdTree
+    };
+    let options =
+        DracoEncodeOptions::new(args.quantization_bits, method).expect("clap validates the range");
 
     // Report the deliverability verdicts up front, before connecting.
     report_sizes(&make_cloud(side, 0.0), &options);
