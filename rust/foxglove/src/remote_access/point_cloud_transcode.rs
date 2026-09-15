@@ -212,7 +212,7 @@ fn field_size(numeric_type: i32) -> Option<usize> {
 ///
 /// PCL's `PointXYZRGB` convention declares the `rgb`/`rgba` field float32 while packing
 /// `(a << 24) | (r << 16) | (g << 8) | b` into the bits — integer data masquerading as
-/// denormal floats. The kd-tree encoder quantizes every float32 attribute, and quantizing
+/// denormal floats. The encoder quantizes every float32 attribute, and quantizing
 /// a range of denormals collapses nearly every color in the cloud to a single wrong
 /// value; integer attributes are copied losslessly instead, so flipping the declared type
 /// preserves the packed bits exactly. Only the declared type changes — both types are
@@ -238,14 +238,16 @@ fn reinterpret_packed_color_fields(cloud: &mut PointCloud) {
 
 /// Narrows float64 fields to float32 so the cloud can be quantized.
 ///
-/// The kd-tree encoder cannot quantize float64 attributes, and clouds carrying one not
-/// on the drop list (doubles from PCL pipelines, vendor fields under nonstandard names)
-/// still occur — without this pass they cannot be delivered at all: compression fails,
-/// and delivered raw they exceed the data-track message limit. Compression is lossy by
-/// design, and positions were already narrowed to float32 by the encoder, so narrowing
-/// the remaining float64 fields is in keeping: values retain float32's ~7 significant
-/// digits, and a value whose magnitude overflows float32 becomes non-finite, dropping
-/// that point in [`drop_non_finite_points`] (which runs after).
+/// The default kd-tree encoder cannot encode float64 attributes, and clouds carrying one
+/// not on the drop list (doubles from PCL pipelines, vendor fields under nonstandard
+/// names) still occur — without this pass they cannot be delivered at all: compression
+/// fails, and delivered raw they exceed the data-track message limit. Compression is
+/// lossy by design, and positions were already narrowed to float32 by the encoder, so
+/// narrowing the remaining float64 fields is in keeping: values retain float32's ~7
+/// significant digits, and a value whose magnitude overflows float32 becomes non-finite,
+/// dropping that point in [`drop_non_finite_points`] (which runs after). Sequential
+/// encoding could carry float64 raw, but eight uncompressed bytes per point defeats the
+/// compression, so narrowing applies under either method.
 ///
 /// Narrowing halves each float64 field, so the buffer is repacked: every field is
 /// assigned a new offset in declaration order and the stride becomes the sum of the field
@@ -326,11 +328,10 @@ fn narrow_float64_fields(cloud: &mut PointCloud) {
 /// Publishers commonly pad invalid returns with NaN — RGBD cameras and rotating lidars
 /// mark non-returns this way — but the Draco quantizer derives each attribute's range
 /// from its min/max and errors on any non-finite value, which would fail (and drop) the
-/// whole cloud. Every float32 field is quantized under kd-tree encoding, so this applies
-/// to positions and attributes (intensity, per-point stamps, ...) alike; dropping just
-/// the poisoned points delivers the valid ones instead. Values are judged after the same
-/// f64-to-f32 narrowing the encoder applies, so a float64 value that only overflows f32
-/// is dropped too.
+/// whole cloud. Every float32 field is quantized, so this applies to positions and
+/// attributes (intensity, per-point stamps, ...) alike; dropping just the poisoned points
+/// delivers the valid ones instead. Values are judged after the same f64-to-f32 narrowing
+/// the encoder applies, so a float64 value that only overflows f32 is dropped too.
 ///
 /// Layout problems (zero or misaligned stride, fields past the stride) are left for the
 /// encoder, which reports them precisely; this pass only filters clouds it can read.
@@ -694,7 +695,7 @@ mod tests {
     #[test]
     fn test_transcodes_float64_fields() {
         // Clouds with float64 fields not on the drop list (like this `stamp`) still
-        // occur, and the kd-tree encoder cannot quantize them; narrowing lets them
+        // occur, and the default kd-tree encoder cannot encode them; narrowing lets them
         // through. Previously these were rejected with UnquantizableField, making the
         // channel undeliverable.
         let options = PointCloudCompression::default();

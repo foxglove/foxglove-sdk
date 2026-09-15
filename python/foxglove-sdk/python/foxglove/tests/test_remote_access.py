@@ -13,6 +13,7 @@ try:
     from foxglove.remote_access import (
         Capability,
         DracoEncodeOptions,
+        DracoMethod,
         RemoteAccessConnectionStatus,
         RemoteAccessListener,
     )
@@ -76,9 +77,35 @@ def test_start_gateway_rejects_non_callable_point_cloud_compression() -> None:
 def test_draco_encode_options_defaults() -> None:
     options = DracoEncodeOptions()
     assert options.quantization_bits == 12
+    assert options.method == DracoMethod.KdTree
 
     options = DracoEncodeOptions(quantization_bits=10)
     assert options.quantization_bits == 10
+    assert options.method == DracoMethod.KdTree
+
+
+def test_draco_encode_options_method() -> None:
+    options = DracoEncodeOptions(method=DracoMethod.Sequential)
+    assert options.quantization_bits == 12
+    assert options.method == DracoMethod.Sequential
+
+    options = DracoEncodeOptions(quantization_bits=8, method=DracoMethod.Sequential)
+    assert options.quantization_bits == 8
+    assert options.method == DracoMethod.Sequential
+
+    # The method is an enum, not a bare int or string.
+    with pytest.raises(TypeError):
+        DracoEncodeOptions(method=1)  # type: ignore[arg-type]
+    with pytest.raises(TypeError):
+        DracoEncodeOptions(method="Sequential")  # type: ignore[arg-type]
+
+
+def test_draco_method_enum() -> None:
+    assert DracoMethod.KdTree.name == "KdTree"
+    assert DracoMethod.KdTree.value == 0
+    assert DracoMethod.Sequential.name == "Sequential"
+    assert DracoMethod.Sequential.value == 1
+    assert DracoMethod.KdTree != DracoMethod.Sequential
 
 
 def test_draco_encode_options_reject_invalid_quantization_bits() -> None:
