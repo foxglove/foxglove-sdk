@@ -153,7 +153,10 @@ mod tests {
 
     fn options_with_bits(quantization_bits: u8) -> PointCloudCompression {
         PointCloudCompression::Draco(
-            DracoEncodeOptions::with_quantization_bits(quantization_bits).unwrap(),
+            DracoEncodeOptions::builder()
+                .quantization_bits(quantization_bits)
+                .build()
+                .unwrap(),
         )
     }
 

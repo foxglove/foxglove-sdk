@@ -119,6 +119,21 @@ pub const FOXGLOVE_DRACO_MAX_QUANTIZATION_BITS: u8 = 30;
 const _: () =
     assert!(FOXGLOVE_DRACO_MAX_QUANTIZATION_BITS == foxglove::draco::MAX_QUANTIZATION_BITS);
 
+/// Draco point-cloud encoding method.
+///
+/// Quantization applies to positions and every float32 field under both methods, and
+/// integer fields are copied losslessly under both; the methods differ in point order and
+/// compression ratio.
+#[repr(u8)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FoxgloveDracoMethod {
+    /// kd-tree encoding: the best compression ratios, but points are reordered. This is
+    /// the default (0).
+    KdTree = 0,
+    /// Sequential encoding: preserves point order, at a lower compression ratio.
+    Sequential = 1,
+}
+
 /// Options for Draco point-cloud encoding.
 #[repr(C)]
 #[derive(Clone, Copy)]
@@ -131,6 +146,9 @@ pub struct FoxgloveDracoEncodeOptions {
     /// the channel is delivered unmodified — use
     /// `FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DISABLED` to do that without the warning.
     pub quantization_bits: u8,
+    /// The encoding method; zero-initialized (`FOXGLOVE_DRACO_METHOD_KD_TREE`) selects the
+    /// default kd-tree encoding.
+    pub method: FoxgloveDracoMethod,
 }
 
 /// Transparent point-cloud compression mode for a sink.
@@ -169,7 +187,8 @@ pub enum FoxglovePointCloudCompressionMode {
 /// Zero-initialize this struct (mode 0) to use the SDK default. Note that when `mode` is
 /// `FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DRACO`, `draco.quantization_bits` should be set
 /// to a value between 1 and 30; out-of-range values are repaired, with a logged warning
-/// (see `foxglove_draco_encode_options`).
+/// (see `foxglove_draco_encode_options`). `draco.method` selects the encoding method, and
+/// is kd-tree when left zero.
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct FoxglovePointCloudCompression {
@@ -217,9 +236,15 @@ impl FoxglovePointCloudCompression {
                          maximum of {MAX_BITS}; clamping"
                     );
                 }
-                let options =
-                    foxglove::draco::DracoEncodeOptions::with_quantization_bits(bits.min(MAX_BITS))
-                        .expect("clamped quantization_bits are in range");
+                let method = match self.draco.method {
+                    FoxgloveDracoMethod::KdTree => foxglove::draco::DracoMethod::KdTree,
+                    FoxgloveDracoMethod::Sequential => foxglove::draco::DracoMethod::Sequential,
+                };
+                let options = foxglove::draco::DracoEncodeOptions::builder()
+                    .quantization_bits(bits.min(MAX_BITS))
+                    .method(method)
+                    .build()
+                    .expect("clamped quantization_bits are in range");
                 Some(foxglove::remote_access::PointCloudCompression::Draco(
                     options,
                 ))
@@ -1310,10 +1335,10 @@ pub extern "C" fn foxglove_gateway_publish_connection_graph(
 #[cfg(test)]
 mod point_cloud_compression_tests {
     use super::{
-        FoxgloveDracoEncodeOptions, FoxglovePointCloudCompression,
+        FoxgloveDracoEncodeOptions, FoxgloveDracoMethod, FoxglovePointCloudCompression,
         FoxglovePointCloudCompressionMode,
     };
-    use foxglove::draco::DracoEncodeOptions;
+    use foxglove::draco::{DracoEncodeOptions, DracoMethod};
     use foxglove::remote_access::PointCloudCompression;
 
     #[test]
@@ -1325,6 +1350,8 @@ mod point_cloud_compression_tests {
             compression.mode,
             FoxglovePointCloudCompressionMode::Default
         ));
+        // Likewise, zero in the method field is the default kd-tree encoding.
+        assert_eq!(compression.draco.method, FoxgloveDracoMethod::KdTree);
         assert_eq!(
             compression.to_compression_options("/cloud"),
             Some(PointCloudCompression::default())
@@ -1337,6 +1364,7 @@ mod point_cloud_compression_tests {
             mode: FoxglovePointCloudCompressionMode::Disabled,
             draco: FoxgloveDracoEncodeOptions {
                 quantization_bits: 12,
+                method: FoxgloveDracoMethod::KdTree,
             },
         };
         assert_eq!(compression.to_compression_options("/cloud"), None);
@@ -1348,9 +1376,33 @@ mod point_cloud_compression_tests {
             mode: FoxglovePointCloudCompressionMode::Draco,
             draco: FoxgloveDracoEncodeOptions {
                 quantization_bits: 14,
+                method: FoxgloveDracoMethod::KdTree,
             },
         };
-        let expected = DracoEncodeOptions::with_quantization_bits(14).unwrap();
+        let expected = DracoEncodeOptions::builder()
+            .quantization_bits(14)
+            .build()
+            .unwrap();
+        assert_eq!(
+            compression.to_compression_options("/cloud"),
+            Some(PointCloudCompression::Draco(expected))
+        );
+    }
+
+    #[test]
+    fn test_draco_maps_sequential_method() {
+        let compression = FoxglovePointCloudCompression {
+            mode: FoxglovePointCloudCompressionMode::Draco,
+            draco: FoxgloveDracoEncodeOptions {
+                quantization_bits: 14,
+                method: FoxgloveDracoMethod::Sequential,
+            },
+        };
+        let expected = DracoEncodeOptions::builder()
+            .quantization_bits(14)
+            .method(DracoMethod::Sequential)
+            .build()
+            .unwrap();
         assert_eq!(
             compression.to_compression_options("/cloud"),
             Some(PointCloudCompression::Draco(expected))
@@ -1363,14 +1415,18 @@ mod point_cloud_compression_tests {
         // the channel — 0 delivers it unmodified, values above the cap clamp to it.
         let draco = |quantization_bits| FoxglovePointCloudCompression {
             mode: FoxglovePointCloudCompressionMode::Draco,
-            draco: FoxgloveDracoEncodeOptions { quantization_bits },
+            draco: FoxgloveDracoEncodeOptions {
+                quantization_bits,
+                method: FoxgloveDracoMethod::KdTree,
+            },
         };
 
         assert_eq!(draco(0).to_compression_options("/cloud"), None);
 
-        let clamped =
-            DracoEncodeOptions::with_quantization_bits(foxglove::draco::MAX_QUANTIZATION_BITS)
-                .unwrap();
+        let clamped = DracoEncodeOptions::builder()
+            .quantization_bits(foxglove::draco::MAX_QUANTIZATION_BITS)
+            .build()
+            .unwrap();
         for bits in [31, u8::MAX] {
             assert_eq!(
                 draco(bits).to_compression_options("/cloud"),
