@@ -908,17 +908,14 @@ mod tests {
     #[allow(deprecated)]
     fn test_deprecated_with_quantization_bits_matches_builder() {
         assert_eq!(
-            DracoEncodeOptions::builder()
-                .quantization_bits(10)
-                .build()
-                .unwrap(),
+            DracoEncodeOptions::with_quantization_bits(10).unwrap(),
             DracoEncodeOptions::builder()
                 .quantization_bits(10)
                 .build()
                 .unwrap()
         );
         assert!(matches!(
-            DracoEncodeOptions::builder().quantization_bits(0).build(),
+            DracoEncodeOptions::with_quantization_bits(0),
             Err(DracoEncodeError::InvalidQuantizationBits { bits: 0 })
         ));
     }
