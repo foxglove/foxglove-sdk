@@ -194,16 +194,13 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
   sdkServerOptions.host = address;
   sdkServerOptions.port = port;
   sdkServerOptions.supported_encodings = {"cdr", "json"};
-  sdkServerOptions.capabilities = _capabilities;
+  // Always advertise Time, not just under sim time -- otherwise Foxglove Studio falls back to
+  // the client's wall clock, desyncing current-time-relative rendering from the robot's clock.
+  sdkServerOptions.capabilities = _capabilities | foxglove::WebSocketServerCapabilities::Time;
   sdkServerOptions.context = _serverContext;
 
   sdkServerOptions.server_info = rosServerInfo;
   sdkServerOptions.message_backlog_size = messageBacklogSize;
-
-  if (_useSimTime) {
-    sdkServerOptions.capabilities =
-      sdkServerOptions.capabilities | foxglove::WebSocketServerCapabilities::Time;
-  }
 
   // If TLS is enabled, load the certificate and key files from disk
   if (useTls) {
@@ -306,11 +303,18 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
   if (_useSimTime) {
     _clockSubscription = this->create_subscription<rosgraph_msgs::msg::Clock>(
       "/clock", rclcpp::QoS{rclcpp::KeepLast(1)}.best_effort(),
-      [&](std::shared_ptr<const rosgraph_msgs::msg::Clock> msg) {
-        const auto timestamp = rclcpp::Time{msg->clock}.nanoseconds();
-        assert(timestamp >= 0 && "Timestamp is negative");
-        _server->broadcastTime(static_cast<uint64_t>(timestamp));
+      [this](std::shared_ptr<const rosgraph_msgs::msg::Clock> msg) {
+        broadcastTime(rclcpp::Time{msg->clock}.nanoseconds());
       });
+  } else {
+    // No /clock outside sim, so broadcast this node's own wall clock instead -- via a timer, not
+    // a /clock subscription, so a stalled topic can't also freeze the client's clock.
+    _timeBroadcastTimer = this->create_wall_timer(std::chrono::milliseconds(100), [this]() {
+      if (_server->clientCount() == 0) {
+        return;
+      }
+      broadcastTime(this->now().nanoseconds());
+    });
   }
 
 #ifndef FOXGLOVE_REMOTE_ACCESS
@@ -449,6 +453,11 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
 
   _rosgraphPollThread =
     std::make_unique<std::thread>(std::bind(&FoxgloveBridge::rosgraphPollThread, this));
+}
+
+void FoxgloveBridge::broadcastTime(int64_t timestampNanos) {
+  assert(timestampNanos >= 0 && "Timestamp is negative");
+  _server->broadcastTime(static_cast<uint64_t>(timestampNanos));
 }
 
 FoxgloveBridge::~FoxgloveBridge() {
