@@ -34,7 +34,7 @@ use crate::messages::{CompressedPointCloud, PointCloud};
 
 /// Draco point-cloud encoding method.
 ///
-/// Selected at construction with [`DracoEncodeOptions::new`]; the default is
+/// Selected with [`DracoEncodeOptionsBuilder::method`]; the default is
 /// [`DracoMethod::KdTree`]. Lossless options ([`DracoEncodeOptions::lossless`]) always
 /// encode sequentially, since kd-tree encoding requires quantization.
 ///
@@ -62,26 +62,28 @@ impl DracoMethod {
     }
 }
 
-/// The maximum supported value for [`DracoEncodeOptions::with_quantization_bits`].
+/// The maximum supported value for [`DracoEncodeOptionsBuilder::quantization_bits`].
 pub const MAX_QUANTIZATION_BITS: u8 = 30;
 
 /// Options for Draco point-cloud encoding.
 ///
 /// Construct with [`Default::default`] (kd-tree encoding with 12-bit quantization),
-/// [`DracoEncodeOptions::new`], [`DracoEncodeOptions::with_quantization_bits`], or
-/// [`DracoEncodeOptions::lossless`]. Invalid settings are unrepresentable: whatever
-/// options a caller holds are valid.
+/// [`DracoEncodeOptions::builder`], or [`DracoEncodeOptions::lossless`]. Invalid settings
+/// are unrepresentable: whatever options a caller holds are valid.
 ///
 /// ```
 /// use foxglove::draco::{DracoEncodeOptions, DracoMethod};
-/// let kd_tree = DracoEncodeOptions::with_quantization_bits(10)?;
-/// let sequential = DracoEncodeOptions::new(10, DracoMethod::Sequential)?;
+/// let kd_tree = DracoEncodeOptions::builder().quantization_bits(10).build()?;
+/// let sequential = DracoEncodeOptions::builder()
+///     .quantization_bits(10)
+///     .method(DracoMethod::Sequential)
+///     .build()?;
 /// # Ok::<(), foxglove::draco::DracoEncodeError>(())
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct DracoEncodeOptions {
     /// Invariant: `0` (lossless) or `1..=MAX_QUANTIZATION_BITS`, enforced by the
-    /// constructors.
+    /// constructors and [`DracoEncodeOptionsBuilder::build`].
     quantization_bits: u8,
     /// Invariant: [`DracoMethod::Sequential`] whenever `quantization_bits` is `0`, since
     /// kd-tree encoding requires quantization; enforced by the constructors.
@@ -89,29 +91,20 @@ pub struct DracoEncodeOptions {
 }
 
 impl DracoEncodeOptions {
-    /// Creates options that quantize positions to `quantization_bits` bits (lossy) and
-    /// encode with `method`.
-    ///
-    /// `quantization_bits` must be between `1` and [`MAX_QUANTIZATION_BITS`] inclusive;
-    /// anything else is rejected with [`DracoEncodeError::InvalidQuantizationBits`]. For
-    /// lossless encoding use [`DracoEncodeOptions::lossless`] instead of `0`.
-    pub fn new(quantization_bits: u8, method: DracoMethod) -> Result<Self, DracoEncodeError> {
-        if quantization_bits == 0 || quantization_bits > MAX_QUANTIZATION_BITS {
-            return Err(DracoEncodeError::InvalidQuantizationBits {
-                bits: quantization_bits,
-            });
-        }
-        Ok(Self {
-            quantization_bits,
-            method,
-        })
+    /// Returns a builder for lossy options, starting from the defaults (kd-tree encoding
+    /// with 12-bit quantization).
+    pub fn builder() -> DracoEncodeOptionsBuilder {
+        DracoEncodeOptionsBuilder::default()
     }
 
     /// Creates options that quantize positions to `bits` bits (lossy) with the default
-    /// kd-tree encoding; shorthand for [`DracoEncodeOptions::new`] with
-    /// [`DracoMethod::KdTree`].
+    /// kd-tree encoding.
+    #[deprecated(
+        since = "0.28.0",
+        note = "use DracoEncodeOptions::builder().quantization_bits(bits).build()"
+    )]
     pub fn with_quantization_bits(bits: u8) -> Result<Self, DracoEncodeError> {
-        Self::new(bits, DracoMethod::KdTree)
+        Self::builder().quantization_bits(bits).build()
     }
 
     /// Creates options that encode positions as lossless float32, using the
@@ -149,6 +142,69 @@ impl Default for DracoEncodeOptions {
             quantization_bits: 12,
             method: DracoMethod::KdTree,
         }
+    }
+}
+
+/// Builder for lossy [`DracoEncodeOptions`], obtained from [`DracoEncodeOptions::builder`].
+///
+/// Settings default to kd-tree encoding with 12-bit quantization and are validated by
+/// [`build`](Self::build). Lossless options are not built; use
+/// [`DracoEncodeOptions::lossless`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DracoEncodeOptionsBuilder {
+    quantization_bits: u8,
+    method: DracoMethod,
+}
+
+impl Default for DracoEncodeOptionsBuilder {
+    fn default() -> Self {
+        let DracoEncodeOptions {
+            quantization_bits,
+            method,
+        } = DracoEncodeOptions::default();
+        Self {
+            quantization_bits,
+            method,
+        }
+    }
+}
+
+impl DracoEncodeOptionsBuilder {
+    /// Sets the quantization bits for positions and float32 fields, between `1` and
+    /// [`MAX_QUANTIZATION_BITS`] inclusive; anything else is rejected by
+    /// [`build`](Self::build).
+    #[must_use]
+    pub fn quantization_bits(mut self, bits: u8) -> Self {
+        self.quantization_bits = bits;
+        self
+    }
+
+    /// Sets the encoding method.
+    #[must_use]
+    pub fn method(mut self, method: DracoMethod) -> Self {
+        self.method = method;
+        self
+    }
+
+    /// Validates the settings and builds the options.
+    ///
+    /// Quantization bits outside `1..=MAX_QUANTIZATION_BITS` are rejected with
+    /// [`DracoEncodeError::InvalidQuantizationBits`]; for lossless encoding use
+    /// [`DracoEncodeOptions::lossless`] instead of `0`.
+    pub fn build(self) -> Result<DracoEncodeOptions, DracoEncodeError> {
+        let Self {
+            quantization_bits,
+            method,
+        } = self;
+        if quantization_bits == 0 || quantization_bits > MAX_QUANTIZATION_BITS {
+            return Err(DracoEncodeError::InvalidQuantizationBits {
+                bits: quantization_bits,
+            });
+        }
+        Ok(DracoEncodeOptions {
+            quantization_bits,
+            method,
+        })
     }
 }
 
@@ -755,7 +811,10 @@ mod tests {
     #[test]
     fn test_quantization_error_within_tolerance() {
         let (cloud, positions, _) = test_cloud();
-        let options = DracoEncodeOptions::with_quantization_bits(14).unwrap();
+        let options = DracoEncodeOptions::builder()
+            .quantization_bits(14)
+            .build()
+            .unwrap();
         let compressed = compress_point_cloud(&cloud, &options).unwrap();
         let mut decoded = decode_positions(&compressed.data);
         assert_eq!(decoded.len(), positions.len());
@@ -792,7 +851,10 @@ mod tests {
     #[test]
     fn test_kd_tree_roundtrip_point_count() {
         let (cloud, positions, _) = test_cloud();
-        let options = DracoEncodeOptions::with_quantization_bits(12).unwrap();
+        let options = DracoEncodeOptions::builder()
+            .quantization_bits(12)
+            .build()
+            .unwrap();
         let compressed = compress_point_cloud(&cloud, &options).unwrap();
         // kd-tree reorders points, so only the point count is directly comparable.
         let decoded = decode_positions(&compressed.data);
@@ -810,22 +872,28 @@ mod tests {
     }
 
     #[test]
-    fn test_options_method() {
+    fn test_options_builder() {
+        // The builder starts from the defaults.
         assert_eq!(DracoEncodeOptions::default().method(), DracoMethod::KdTree);
-        let quantized = DracoEncodeOptions::with_quantization_bits(12).unwrap();
-        assert_eq!(quantized.method(), DracoMethod::KdTree);
         assert_eq!(
-            quantized,
-            DracoEncodeOptions::new(12, DracoMethod::KdTree).unwrap()
+            DracoEncodeOptions::builder().build().unwrap(),
+            DracoEncodeOptions::default()
         );
-        let sequential = DracoEncodeOptions::new(12, DracoMethod::Sequential).unwrap();
+        let sequential = DracoEncodeOptions::builder()
+            .quantization_bits(10)
+            .method(DracoMethod::Sequential)
+            .build()
+            .unwrap();
         assert_eq!(sequential.method(), DracoMethod::Sequential);
-        assert_eq!(sequential.quantization_bits(), 12);
+        assert_eq!(sequential.quantization_bits(), 10);
         assert!(!sequential.is_lossless());
-        // `new` validates the bits like `with_quantization_bits`, whatever the method.
+        // `build` validates the bits whatever the method.
         for bits in [0, MAX_QUANTIZATION_BITS + 1] {
             assert!(matches!(
-                DracoEncodeOptions::new(bits, DracoMethod::Sequential),
+                DracoEncodeOptions::builder()
+                    .quantization_bits(bits)
+                    .method(DracoMethod::Sequential)
+                    .build(),
                 Err(DracoEncodeError::InvalidQuantizationBits { bits: b }) if b == bits
             ));
         }
@@ -834,6 +902,25 @@ mod tests {
             DracoEncodeOptions::lossless().method(),
             DracoMethod::Sequential
         );
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn test_deprecated_with_quantization_bits_matches_builder() {
+        assert_eq!(
+            DracoEncodeOptions::builder()
+                .quantization_bits(10)
+                .build()
+                .unwrap(),
+            DracoEncodeOptions::builder()
+                .quantization_bits(10)
+                .build()
+                .unwrap()
+        );
+        assert!(matches!(
+            DracoEncodeOptions::builder().quantization_bits(0).build(),
+            Err(DracoEncodeError::InvalidQuantizationBits { bits: 0 })
+        ));
     }
 
     #[test]
@@ -850,7 +937,11 @@ mod tests {
     #[test]
     fn test_sequential_quantized_preserves_point_order() {
         let (cloud, positions, intensities) = test_cloud();
-        let options = DracoEncodeOptions::new(14, DracoMethod::Sequential).unwrap();
+        let options = DracoEncodeOptions::builder()
+            .quantization_bits(14)
+            .method(DracoMethod::Sequential)
+            .build()
+            .unwrap();
         let compressed = compress_point_cloud(&cloud, &options).unwrap();
 
         // Positions are quantized (so compare within tolerance) but keep their order (so
@@ -879,7 +970,11 @@ mod tests {
         // support but not which fields quantization applies to.
         let (cloud, _, intensities) = float_intensity_cloud(NumericType::Float32);
         let expected: Vec<f32> = intensities.iter().map(|&i| f32::from(i)).collect();
-        let options = DracoEncodeOptions::new(8, DracoMethod::Sequential).unwrap();
+        let options = DracoEncodeOptions::builder()
+            .quantization_bits(8)
+            .method(DracoMethod::Sequential)
+            .build()
+            .unwrap();
         let compressed = compress_point_cloud(&cloud, &options).unwrap();
 
         let decoded = decode_generic(&compressed.data, read_f32);
@@ -902,7 +997,10 @@ mod tests {
 
         // The kd-tree encoder doesn't support float64 attributes, so quantized kd-tree
         // encoding of a float64 field is an error naming the field.
-        let options = DracoEncodeOptions::with_quantization_bits(12).unwrap();
+        let options = DracoEncodeOptions::builder()
+            .quantization_bits(12)
+            .build()
+            .unwrap();
         let err = compress_point_cloud(&cloud, &options).unwrap_err();
         assert!(matches!(
             err,
@@ -922,7 +1020,11 @@ mod tests {
         // float64 field is not an error and its values round-trip exactly, in order.
         let (cloud, positions, intensities) = float_intensity_cloud(NumericType::Float64);
         let expected: Vec<f64> = intensities.iter().map(|&i| f64::from(i)).collect();
-        let options = DracoEncodeOptions::new(12, DracoMethod::Sequential).unwrap();
+        let options = DracoEncodeOptions::builder()
+            .quantization_bits(12)
+            .method(DracoMethod::Sequential)
+            .build()
+            .unwrap();
         let compressed = compress_point_cloud(&cloud, &options).unwrap();
 
         assert_eq!(decode_positions(&compressed.data).len(), positions.len());
@@ -965,7 +1067,10 @@ mod tests {
             data: Bytes::from(data),
         };
 
-        let options = DracoEncodeOptions::with_quantization_bits(12).unwrap();
+        let options = DracoEncodeOptions::builder()
+            .quantization_bits(12)
+            .build()
+            .unwrap();
         let compressed = compress_point_cloud(&cloud, &options).unwrap();
         assert_eq!(decode_positions(&compressed.data).len(), positions.len());
     }
@@ -1003,15 +1108,24 @@ mod tests {
     fn test_quantization_bits_validated_at_construction() {
         // The boundaries of the valid range are accepted, usable, and decodable.
         let (cloud, positions, _) = test_cloud();
-        DracoEncodeOptions::with_quantization_bits(1).unwrap();
-        let options = DracoEncodeOptions::with_quantization_bits(MAX_QUANTIZATION_BITS).unwrap();
+        DracoEncodeOptions::builder()
+            .quantization_bits(1)
+            .build()
+            .unwrap();
+        let options = DracoEncodeOptions::builder()
+            .quantization_bits(MAX_QUANTIZATION_BITS)
+            .build()
+            .unwrap();
         let compressed = compress_point_cloud(&cloud, &options).unwrap();
         assert_eq!(decode_positions(&compressed.data).len(), positions.len());
 
         // ...and anything outside it is unrepresentable: rejected at construction, so
         // encoding never sees invalid options. Lossless has its own constructor.
         for bits in [0, MAX_QUANTIZATION_BITS + 1] {
-            let err = DracoEncodeOptions::with_quantization_bits(bits).unwrap_err();
+            let err = DracoEncodeOptions::builder()
+                .quantization_bits(bits)
+                .build()
+                .unwrap_err();
             assert!(matches!(
                 err,
                 DracoEncodeError::InvalidQuantizationBits { bits: b } if b == bits
@@ -1057,7 +1171,10 @@ mod tests {
         let (mut cloud, _, _) = test_cloud();
         cloud.data = Bytes::new();
 
-        let options = DracoEncodeOptions::with_quantization_bits(12).unwrap();
+        let options = DracoEncodeOptions::builder()
+            .quantization_bits(12)
+            .build()
+            .unwrap();
         let compressed = compress_point_cloud(&cloud, &options).unwrap();
         assert!(!compressed.data.is_empty());
 

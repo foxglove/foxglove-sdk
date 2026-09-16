@@ -128,7 +128,10 @@ impl From<PyDracoEncodeOptions> for foxglove::draco::DracoEncodeOptions {
             PyDracoMethod::KdTree => foxglove::draco::DracoMethod::KdTree,
             PyDracoMethod::Sequential => foxglove::draco::DracoMethod::Sequential,
         };
-        Self::new(value.quantization_bits, method)
+        Self::builder()
+            .quantization_bits(value.quantization_bits)
+            .method(method)
+            .build()
             .expect("quantization_bits is validated in PyDracoEncodeOptions::new")
     }
 }

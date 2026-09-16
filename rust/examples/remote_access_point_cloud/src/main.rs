@@ -202,8 +202,11 @@ async fn main() {
     } else {
         DracoMethod::KdTree
     };
-    let options =
-        DracoEncodeOptions::new(args.quantization_bits, method).expect("clap validates the range");
+    let options = DracoEncodeOptions::builder()
+        .quantization_bits(args.quantization_bits)
+        .method(method)
+        .build()
+        .expect("clap validates the range");
 
     // Report the deliverability verdicts up front, before connecting.
     report_sizes(&make_cloud(side, 0.0), &options);

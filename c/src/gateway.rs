@@ -240,7 +240,10 @@ impl FoxglovePointCloudCompression {
                     FoxgloveDracoMethod::KdTree => foxglove::draco::DracoMethod::KdTree,
                     FoxgloveDracoMethod::Sequential => foxglove::draco::DracoMethod::Sequential,
                 };
-                let options = foxglove::draco::DracoEncodeOptions::new(bits.min(MAX_BITS), method)
+                let options = foxglove::draco::DracoEncodeOptions::builder()
+                    .quantization_bits(bits.min(MAX_BITS))
+                    .method(method)
+                    .build()
                     .expect("clamped quantization_bits are in range");
                 Some(foxglove::remote_access::PointCloudCompression::Draco(
                     options,
@@ -1376,7 +1379,10 @@ mod point_cloud_compression_tests {
                 method: FoxgloveDracoMethod::KdTree,
             },
         };
-        let expected = DracoEncodeOptions::with_quantization_bits(14).unwrap();
+        let expected = DracoEncodeOptions::builder()
+            .quantization_bits(14)
+            .build()
+            .unwrap();
         assert_eq!(
             compression.to_compression_options("/cloud"),
             Some(PointCloudCompression::Draco(expected))
@@ -1392,7 +1398,11 @@ mod point_cloud_compression_tests {
                 method: FoxgloveDracoMethod::Sequential,
             },
         };
-        let expected = DracoEncodeOptions::new(14, DracoMethod::Sequential).unwrap();
+        let expected = DracoEncodeOptions::builder()
+            .quantization_bits(14)
+            .method(DracoMethod::Sequential)
+            .build()
+            .unwrap();
         assert_eq!(
             compression.to_compression_options("/cloud"),
             Some(PointCloudCompression::Draco(expected))
@@ -1413,9 +1423,10 @@ mod point_cloud_compression_tests {
 
         assert_eq!(draco(0).to_compression_options("/cloud"), None);
 
-        let clamped =
-            DracoEncodeOptions::with_quantization_bits(foxglove::draco::MAX_QUANTIZATION_BITS)
-                .unwrap();
+        let clamped = DracoEncodeOptions::builder()
+            .quantization_bits(foxglove::draco::MAX_QUANTIZATION_BITS)
+            .build()
+            .unwrap();
         for bits in [31, u8::MAX] {
             assert_eq!(
                 draco(bits).to_compression_options("/cloud"),
