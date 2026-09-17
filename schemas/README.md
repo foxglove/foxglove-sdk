@@ -645,7 +645,7 @@ string
 </td>
 <td>
 
-Format of the audio data. See the `data` field description for supported values.
+Format of the audio data. See the `data` field description for supported values. Consumers may support a subset of these formats.
 
 </td>
 </tr>

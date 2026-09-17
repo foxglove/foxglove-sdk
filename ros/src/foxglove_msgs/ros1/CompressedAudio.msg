@@ -26,5 +26,5 @@ time timestamp
 #   - These formats have the same requirements as the corresponding `g726-*` formats, except codewords use the opposite bit-packing order specified for AAL2.
 uint8[] data
 
-# Format of the audio data. See the `data` field description for supported values.
+# Format of the audio data. See the `data` field description for supported values. Consumers may support a subset of these formats.
 string format

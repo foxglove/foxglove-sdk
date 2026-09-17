@@ -866,7 +866,7 @@ pub struct CompressedAudio {
     pub data: *const c_uchar,
     pub data_len: usize,
 
-    /// Format of the audio data. See the `data` field description for supported values.
+    /// Format of the audio data. See the `data` field description for supported values. Consumers may support a subset of these formats.
     pub format: FoxgloveString,
 }
 

@@ -29,7 +29,7 @@ table CompressedAudio {
   ///   - These formats have the same requirements as the corresponding `g726-*` formats, except codewords use the opposite bit-packing order specified for AAL2.
   data:[uint8] (id: 1);
 
-  /// Format of the audio data. See the `data` field description for supported values.
+  /// Format of the audio data. See the `data` field description for supported values. Consumers may support a subset of these formats.
   format:string (id: 2);
 }
 

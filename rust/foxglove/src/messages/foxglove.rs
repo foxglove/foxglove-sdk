@@ -182,7 +182,7 @@ pub struct CompressedAudio {
     #[prost(bytes = "bytes", tag = "2")]
     #[cfg_attr(feature = "serde", serde(with = "crate::messages::serde_bytes"))]
     pub data: ::prost::bytes::Bytes,
-    /// Format of the audio data. See the `data` field description for supported values.
+    /// Format of the audio data. See the `data` field description for supported values. Consumers may support a subset of these formats.
     #[prost(string, tag = "3")]
     pub format: ::prost::alloc::string::String,
 }

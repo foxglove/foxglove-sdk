@@ -415,7 +415,7 @@ export const CompressedAudio = {
     },
     "format": {
       "type": "string",
-      "description": "Format of the audio data. See the `data` field description for supported values."
+      "description": "Format of the audio data. See the `data` field description for supported values. Consumers may support a subset of these formats."
     }
   },
   "required": [

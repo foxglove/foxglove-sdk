@@ -580,7 +580,7 @@ impl From<Color> for foxglove::messages::Color {
 ///       - Messages form a continuous encoded stream and preserve G.726 predictor and quantizer state across message boundaries.
 ///     - `aal2-g726-16`, `aal2-g726-24`, `aal2-g726-32`, and `aal2-g726-40`:
 ///       - These formats have the same requirements as the corresponding `g726-*` formats, except codewords use the opposite bit-packing order specified for AAL2.
-/// :param format: Format of the audio data. See the `data` field description for supported values.
+/// :param format: Format of the audio data. See the `data` field description for supported values. Consumers may support a subset of these formats.
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/compressed-audio
 #[pyclass(from_py_object, module = "foxglove.messages")]
