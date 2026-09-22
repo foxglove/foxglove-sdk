@@ -1,0 +1,424 @@
+import json
+import math
+from collections.abc import Iterable
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Literal
+
+import foxglove
+import pyarrow as pa
+from foxglove.channels import CompressedImageChannel, CompressedVideoChannel
+from foxglove.mcap import MCAPWriter
+from foxglove.messages import CompressedImage, CompressedVideo, Timestamp
+from lerobot_dataset import INDEX_COLUMNS, Episode, Feature, FrameReader, LeRobotDataset
+from video import read_episode_video
+
+NS_PER_SEC = 1_000_000_000
+
+DEFAULT_START_TIME = datetime(2020, 1, 1, tzinfo=timezone.utc)
+DEFAULT_EPISODE_GAP_S = 1.0
+
+LEROBOT_TIMESTAMP_TOLERANCE_S = 1e-4
+
+TASK_TOPIC = "/task"
+
+SCALARS_SCHEMA = {
+    "type": "object",
+    "title": "lerobot.Scalars",
+    "properties": {
+        "scalars": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "label": {"type": "string"},
+                    "value": {"type": "number"},
+                },
+            },
+        }
+    },
+}
+
+TASK_SCHEMA = {
+    "type": "object",
+    "title": "lerobot.Task",
+    "properties": {
+        "task": {"type": "string"},
+        "task_index": {"type": "integer"},
+    },
+}
+
+TEXT_SCHEMA = {
+    "type": "object",
+    "title": "lerobot.Text",
+    "properties": {"value": {"type": "string"}},
+}
+
+NUMERIC_DTYPES = frozenset(
+    {
+        "bool",
+        "float16",
+        "float32",
+        "float64",
+        "int8",
+        "int16",
+        "int32",
+        "int64",
+        "uint8",
+        "uint16",
+        "uint32",
+        "uint64",
+    }
+)
+
+TopicKind = Literal["video", "image", "scalars", "text"]
+
+
+@dataclass(frozen=True)
+class Topic:
+    name: str
+    kind: TopicKind
+    features: tuple[Feature, ...]
+
+
+@dataclass(frozen=True)
+class WrittenEpisode:
+    path: Path
+    preroll_packets: int
+
+
+def plan_topics(
+    dataset: LeRobotDataset,
+) -> tuple[list[Topic], list[tuple[Feature, str]]]:
+    topics: dict[str, Topic] = {}
+    skipped: list[tuple[Feature, str]] = []
+    for feature in dataset.features:
+        kind: TopicKind
+        if feature.key in INDEX_COLUMNS:
+            continue
+        if feature.is_depth_map:
+            skipped.append(
+                (
+                    feature,
+                    "depth maps are stored as quantized video and aren't supported",
+                )
+            )
+            continue
+        if feature.dtype == "video":
+            kind, name = "video", camera_topic(feature.key)
+        elif feature.dtype == "image":
+            kind, name = "image", camera_topic(feature.key)
+        elif feature.dtype in NUMERIC_DTYPES:
+            kind, name = "scalars", scalars_topic(feature.key)
+        elif feature.dtype == "string":
+            kind, name = "text", "/" + feature.key.replace(".", "/")
+        else:
+            skipped.append((feature, f"dtype {feature.dtype!r} isn't supported"))
+            continue
+
+        existing = topics.get(name)
+        if existing is None:
+            topics[name] = Topic(name, kind, (feature,))
+        elif kind == existing.kind == "scalars":
+            topics[name] = Topic(name, kind, (*existing.features, feature))
+        else:
+            raise ValueError(
+                f"features {existing.features[0].key!r} and {feature.key!r} "
+                f"would both be written to {name}"
+            )
+    return list(topics.values()), skipped
+
+
+def camera_topic(key: str) -> str:
+    name = key
+    for prefix in ("observation.images.", "observation."):
+        if key.startswith(prefix):
+            name = key[len(prefix) :]
+            break
+    return "/observation/images/" + name.replace(".", "_")
+
+
+def scalars_topic(key: str) -> str:
+    if key == "action":
+        return "/action/state"
+    if key.startswith("next."):
+        return "/episode/state"
+    return "/" + key.replace(".", "/")
+
+
+def scalar_labels(feature: Feature) -> list[str]:
+    if feature.names is not None:
+        return list(feature.names)
+    name = feature.key
+    for prefix in ("observation.", "action.", "next."):
+        if name.startswith(prefix):
+            name = name[len(prefix) :]
+            break
+    size = math.prod(feature.shape)
+    return [name] if size == 1 else [f"{name}_{index}" for index in range(size)]
+
+
+def episode_start_times(
+    episodes: Iterable[Episode], fps: float, start_time: datetime, gap_s: float
+) -> dict[int, int]:
+    since_epoch = start_time - datetime(1970, 1, 1, tzinfo=timezone.utc)
+    cursor = (
+        since_epoch.days * 86_400 + since_epoch.seconds
+    ) * NS_PER_SEC + since_epoch.microseconds * 1_000
+    gap_ns = round(gap_s * NS_PER_SEC)
+    starts = {}
+    for episode in sorted(episodes, key=lambda item: item.index):
+        starts[episode.index] = cursor
+        cursor += round(episode.length * NS_PER_SEC / fps) + gap_ns
+    return starts
+
+
+def frame_offset_ns(offset_s: float, fps: float) -> int:
+    frame = round(offset_s * fps)
+    if abs(offset_s - frame / fps) <= LEROBOT_TIMESTAMP_TOLERANCE_S:
+        return round(frame * NS_PER_SEC / fps)
+    return round(offset_s * NS_PER_SEC)
+
+
+class EpisodeWriter:
+    def __init__(
+        self,
+        dataset: LeRobotDataset,
+        *,
+        start_time: datetime = DEFAULT_START_TIME,
+        episode_gap_s: float = DEFAULT_EPISODE_GAP_S,
+        strict_keyframes: bool = False,
+    ) -> None:
+        self.dataset = dataset
+        self.topics, self.skipped = plan_topics(dataset)
+        self._strict_keyframes = strict_keyframes
+        self._start_times = episode_start_times(
+            dataset.episodes, dataset.fps, start_time, episode_gap_s
+        )
+        self._info = (dataset.root / "meta" / "info.json").read_bytes()
+        self._frames = FrameReader(
+            columns=[
+                feature.key
+                for topic in self.topics
+                if topic.kind != "video"
+                for feature in topic.features
+            ],
+            optional_columns=["timestamp", "task_index"],
+        )
+
+        self._context = foxglove.Context()
+        self._channels: dict[str, Any] = {}
+        for topic in self.topics:
+            metadata = {"lerobot_features": ",".join(f.key for f in topic.features)}
+            if topic.kind == "video":
+                self._channels[topic.name] = CompressedVideoChannel(
+                    topic.name, metadata=metadata, context=self._context
+                )
+            elif topic.kind == "image":
+                self._channels[topic.name] = CompressedImageChannel(
+                    topic.name, metadata=metadata, context=self._context
+                )
+            else:
+                self._channels[topic.name] = foxglove.Channel(
+                    topic.name,
+                    schema=SCALARS_SCHEMA if topic.kind == "scalars" else TEXT_SCHEMA,
+                    message_encoding="json",
+                    metadata=metadata,
+                    context=self._context,
+                )
+        self._task_channel = foxglove.Channel(
+            TASK_TOPIC,
+            schema=TASK_SCHEMA,
+            message_encoding="json",
+            context=self._context,
+        )
+
+    def write(self, episode: Episode, output_dir: Path) -> WrittenEpisode:
+        path = output_dir / f"episode_{episode.index:06d}.mcap"
+        partial = path.with_name(path.name + ".partial")
+        try:
+            with foxglove.open_mcap(
+                partial, allow_overwrite=True, context=self._context
+            ) as writer:
+                preroll_packets = self._write(episode, writer)
+        except BaseException:
+            partial.unlink(missing_ok=True)
+            raise
+        partial.replace(path)
+        return WrittenEpisode(path=path, preroll_packets=preroll_packets)
+
+    def _write(self, episode: Episode, writer: MCAPWriter) -> int:
+        fps = self.dataset.fps
+        start_ns = self._start_times[episode.index]
+        frames = self._frames.read(episode)
+        if "timestamp" in frames.column_names:
+            offsets = frames["timestamp"].to_pylist()
+        else:
+            offsets = [row / fps for row in range(frames.num_rows)]
+        log_times = [start_ns + frame_offset_ns(offset, fps) for offset in offsets]
+
+        writer.write_metadata("lerobot", self._metadata(episode))
+        writer.attach(
+            log_time=start_ns,
+            create_time=start_ns,
+            name="meta/info.json",
+            media_type="application/json",
+            data=self._info,
+        )
+        self._write_tasks(episode, frames, log_times, start_ns)
+
+        preroll_packets = 0
+        for topic in self.topics:
+            channel = self._channels[topic.name]
+            if topic.kind == "video":
+                preroll_packets += self._write_video(
+                    episode, topic.features[0], channel, start_ns
+                )
+            elif topic.kind == "image":
+                self._write_images(topic.features[0], channel, frames, log_times)
+            elif topic.kind == "scalars":
+                _write_scalars(topic.features, channel, frames, log_times)
+            else:
+                for value, log_time in zip(
+                    frames[topic.features[0].key].to_pylist(), log_times
+                ):
+                    channel.log({"value": value}, log_time=log_time)
+        return preroll_packets
+
+    def _metadata(self, episode: Episode) -> dict[str, str]:
+        metadata = {
+            "dataset": self.dataset.root.name,
+            "codebase_version": self.dataset.version,
+            "fps": str(self.dataset.info["fps"]),
+            "episode_index": str(episode.index),
+            "length": str(episode.length),
+            "tasks": json.dumps(list(episode.tasks)),
+            "total_episodes": str(len(self.dataset.episodes)),
+        }
+        if self.dataset.robot_type is not None:
+            metadata["robot_type"] = self.dataset.robot_type
+        return metadata
+
+    def _write_tasks(
+        self, episode: Episode, frames: pa.Table, log_times: list[int], start_ns: int
+    ) -> None:
+        if "task_index" not in frames.column_names:
+            for task in episode.tasks:
+                self._task_channel.log({"task": task}, log_time=start_ns)
+            return
+
+        previous = None
+        for task_index, log_time in zip(frames["task_index"].to_pylist(), log_times):
+            if task_index == previous:
+                continue
+            previous = task_index
+            self._task_channel.log(
+                {"task": self.dataset.tasks.get(task_index), "task_index": task_index},
+                log_time=log_time,
+            )
+
+    def _write_video(
+        self,
+        episode: Episode,
+        feature: Feature,
+        channel: CompressedVideoChannel,
+        start_ns: int,
+    ) -> int:
+        segment = episode.videos.get(feature.key)
+        if segment is None:
+            raise ValueError(f"episode {episode.index} has no video for {feature.key}")
+
+        preroll_packets = 0
+        for packet in read_episode_video(
+            segment, self.dataset.fps, strict_keyframes=self._strict_keyframes
+        ):
+            log_time = start_ns + frame_offset_ns(packet.offset_s, self.dataset.fps)
+            channel.log(
+                CompressedVideo(
+                    timestamp=_timestamp(log_time),
+                    frame_id=feature.key,
+                    data=packet.data,
+                    format=packet.format,
+                ),
+                log_time=log_time,
+            )
+            preroll_packets += packet.is_preroll
+        return preroll_packets
+
+    def _write_images(
+        self,
+        feature: Feature,
+        channel: CompressedImageChannel,
+        frames: pa.Table,
+        log_times: list[int],
+    ) -> None:
+        for value, log_time in zip(frames[feature.key].to_pylist(), log_times):
+            data = _image_bytes(value, self.dataset.root)
+            channel.log(
+                CompressedImage(
+                    timestamp=_timestamp(log_time),
+                    frame_id=feature.key,
+                    data=data,
+                    format=_image_format(feature, data),
+                ),
+                log_time=log_time,
+            )
+
+
+def _write_scalars(
+    features: tuple[Feature, ...],
+    channel: foxglove.Channel,
+    frames: pa.Table,
+    log_times: list[int],
+) -> None:
+    columns = [
+        (scalar_labels(feature), frames[feature.key].to_pylist())
+        for feature in features
+    ]
+    for row, log_time in enumerate(log_times):
+        scalars = [
+            {"label": label, "value": _number(value)}
+            for labels, values in columns
+            for label, value in zip(labels, _flatten(values[row]), strict=True)
+        ]
+        channel.log({"scalars": scalars}, log_time=log_time)
+
+
+def _flatten(value: Any) -> list[Any]:
+    if isinstance(value, list):
+        return [item for element in value for item in _flatten(element)]
+    return [value]
+
+
+def _number(value: Any) -> float | None:
+    if value is None:
+        return None
+    number = float(value)
+    return number if math.isfinite(number) else None
+
+
+def _timestamp(log_time: int) -> Timestamp:
+    return Timestamp(sec=log_time // NS_PER_SEC, nsec=log_time % NS_PER_SEC)
+
+
+def _image_bytes(value: Any, root: Path) -> bytes:
+    if isinstance(value, bytes):
+        return value
+    if isinstance(value, dict):
+        if value.get("bytes"):
+            return bytes(value["bytes"])
+        if value.get("path"):
+            path = Path(value["path"])
+            return (path if path.is_absolute() else root / path).read_bytes()
+    raise ValueError(f"unrecognized image value {value!r:.80}")
+
+
+def _image_format(feature: Feature, data: bytes) -> str:
+    if data.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "png"
+    if data.startswith(b"\xff\xd8\xff"):
+        return "jpeg"
+    if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+        return "webp"
+    raise ValueError(f"{feature.key}: image isn't PNG, JPEG or WebP")

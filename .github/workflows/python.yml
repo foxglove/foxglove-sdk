@@ -558,6 +558,9 @@ jobs:
           cache: yarn
       - run: yarn install
       - run: yarn run-python-sdk-examples
+      - name: Test lerobot-to-mcap example
+        run: uv run --with ../../foxglove-sdk pytest
+        working-directory: python/foxglove-sdk-examples/lerobot-to-mcap
 
   # Gate job for branch protection. Always posts a status so that the required
   # check passes even when the other jobs are skipped. Configure your required

@@ -40,9 +40,11 @@ async function main(opts: { timeout: string; installSdkFromPath: boolean }) {
     }
 
     // Skip examples that require external credentials, services, or hardware.
-    const skipList = ["remote-access", "oak-camera-streaming"];
+    const skipList = ["remote-access", "oak-camera-streaming", "lerobot-to-mcap"];
     if (skipList.includes(entry.name)) {
-      console.debug(`Skipping example ${entry.name} (requires external credentials or hardware)`);
+      console.debug(
+        `Skipping example ${entry.name} (requires external credentials, hardware, or input data)`,
+      );
       continue;
     }
 
