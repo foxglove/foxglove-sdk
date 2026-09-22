@@ -101,6 +101,7 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           packageManager: npm
+          wranglerVersion: "4.136.1"
           command: >-
             pages deploy artifacts
             --project-name=foxglove-sdk-api-docs

@@ -144,6 +144,7 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           packageManager: npm
+          wranglerVersion: "4.136.1"
           command: >-
             pages deploy playground/dist
             --project-name=foxglove-sdk-playground
@@ -597,6 +598,7 @@ jobs:
         macos,
         playground-wasm,
         playground,
+        deploy-playground,
         test-sdk-examples,
       ]
     if: always()
