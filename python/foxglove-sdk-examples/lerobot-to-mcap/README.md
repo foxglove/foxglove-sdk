@@ -22,12 +22,12 @@ download a dataset from the Hugging Face Hub:
 uvx --from huggingface_hub hf download lerobot/svla_so101_pickplace --repo-type dataset --local-dir svla_so101_pickplace
 ```
 
-| Option               | Description                                                                                                                                                                                       |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--episodes`         | Episodes to convert, e.g. `0,3,10-12`. Defaults to all of them.                                                                                                                                   |
-| `--start-time`       | ISO 8601 time the first episode starts at, in UTC unless it has an offset. It has to be at or after `1970-01-01T00:00:00Z` and before `2100-01-01T00:00:00Z`. Defaults to `2020-01-01T00:00:00Z`. |
-| `--episode-gap`      | Seconds between one episode's end and the next one's start, 0 or more. Defaults to 1.                                                                                                             |
-| `--strict-keyframes` | Fail if an episode's video doesn't start on a keyframe, rather than starting it earlier.                                                                                                          |
+| Option               | Description                                                                                                                                                                                                 |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--episodes`         | Episodes to convert, e.g. `0,3,10-12`. Defaults to all of them.                                                                                                                                             |
+| `--start-time`       | ISO 8601 time the dataset's first episode starts at, in UTC unless it has an offset. It has to be at or after `1970-01-01T00:00:00Z` and before `2100-01-01T00:00:00Z`. Defaults to `2020-01-01T00:00:00Z`. |
+| `--episode-gap`      | Seconds between one episode's end and the next one's start, 0 or more. Defaults to 1.                                                                                                                       |
+| `--strict-keyframes` | Fail if an episode's video doesn't start on a keyframe, rather than starting it earlier.                                                                                                                    |
 
 Each episode is written to the output directory as `episode_<index>.mcap`, with the index
 padded to six digits, e.g. `episode_000003.mcap`.
@@ -75,10 +75,10 @@ video and data share a log time.
 
 ## Video
 
-AV1 and VP9 frames are copied as they are, and H.264 and H.265 frames are rewritten from
-the mp4 format into the Annex B format that `foxglove.CompressedVideo` expects. Every
-keyframe carries the sequence header or parameter sets needed to decode it, so playback can
-start from any keyframe.
+H.264 and H.265 frames are rewritten from the mp4 format into the Annex B format that
+`foxglove.CompressedVideo` expects, and AV1 keyframes without a sequence header get the one
+from the mp4. Other frames are copied as they are. Every keyframe then carries the sequence
+header or parameter sets needed to decode it, so playback can start from any keyframe.
 
 In v3.0 datasets, many episodes share one mp4. If an episode doesn't start on a keyframe, it
 gets the frames back to the previous keyframe, before its start time, so that its first
@@ -101,8 +101,9 @@ frame decodes. Episodes recorded with LeRobot start on a keyframe, so this is ra
 - LeRobot datasets have no camera calibration or transform tree, so there's no
   `foxglove.CameraCalibration` or `/tf` to write. Joint values come without the URDF joint
   names or units that driving a robot model with `foxglove.JointStates` would need.
-- The `timestamp`, `frame_index`, `episode_index`, `index` and `task_index` columns aren't
-  written as topics, since log times, the metadata record and `/task` carry what they hold.
+- The `timestamp`, `frame_index`, `episode_index` and `task_index` columns aren't written as
+  topics, since log times, the metadata record and `/task` carry what they hold. The `index`
+  column, a frame's position in the whole dataset, isn't written either.
 - v1.x datasets aren't supported. Convert them to v2.0 with LeRobot first.
 
 ## Tests
