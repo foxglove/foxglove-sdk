@@ -126,7 +126,7 @@ def load_metadata(root: str | Path) -> DatasetMetadata:
             )
         raise UnsupportedDatasetError(f"{root_path} has no meta/info.json")
 
-    info = json.loads(info_path.read_text())
+    info = json.loads(info_path.read_text(encoding="utf-8"))
     version = info.get("codebase_version")
     if version not in SUPPORTED_VERSIONS:
         raise UnsupportedDatasetError(
@@ -179,7 +179,7 @@ def _names(spec: dict[str, Any]) -> tuple[str, ...] | None:
 
 
 def _read_jsonl(path: Path) -> list[dict[str, Any]]:
-    with path.open() as lines:
+    with path.open(encoding="utf-8") as lines:
         return [json.loads(line) for line in lines if line.strip()]
 
 
