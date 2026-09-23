@@ -347,7 +347,8 @@
 //!   [`draco`][mod@crate::draco] encoding module, and the gateway's transparent compression of
 //!   `foxglove.PointCloud` channels that uses it — on by default and configurable per channel
 //!   via the gateway builder. JSON- and FlatBuffer-encoded `foxglove.PointCloud` and
-//!   CDR-encoded ROS 2 `sensor_msgs/msg/PointCloud2` channels are supported inputs too.
+//!   CDR-encoded ROS 2 `sensor_msgs/msg/PointCloud2` and ROS 1 `sensor_msgs/PointCloud2`
+//!   channels are supported inputs too.
 //! - `require-cuda`: opts into a build-time check that `cuda.h` is present on targets where
 //!   webrtc-sys would build NVENC support. Requires `remote-access` to also be enabled.
 //!   See [NVENC hardware acceleration](#nvenc-hardware-acceleration).
@@ -457,8 +458,10 @@ pub use remote_data_loader_backend as data_provider;
 #[allow(unused)]
 mod img2yuv;
 
-// `remote-access` implies `img2yuv-core` today, but the point-cloud decoder must keep
-// these types even if the video pipeline is ever carved out of remote access.
+// `remote-access` implies `img2yuv` today, but the point-cloud decoders must keep these
+// wire helpers even if the video pipeline is ever carved out of remote access.
+#[cfg(any(feature = "img2yuv-ros1", feature = "remote-access"))]
+mod ros1;
 #[cfg(any(feature = "img2yuv-core", feature = "remote-access"))]
 mod ros2;
 

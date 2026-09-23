@@ -15,10 +15,11 @@
 //!
 //! # Point-cloud compression and the opt-out
 //!
-//! Point-cloud channels (`foxglove.PointCloud` with protobuf encoding) are transparently
-//! compressed with [Draco](https://google.github.io/draco/) by default: the channel is
-//! advertised with the `foxglove.CompressedPointCloud` schema and each point cloud is
-//! compressed before delivery. The default settings are lossy —
+//! Point-cloud channels (protobuf-, JSON-, or FlatBuffer-encoded `foxglove.PointCloud`,
+//! CDR-encoded ROS 2 `sensor_msgs/msg/PointCloud2`, or ROS 1 `sensor_msgs/PointCloud2`) are
+//! transparently compressed with [Draco](https://google.github.io/draco/) by default: the
+//! channel is advertised with the `foxglove.CompressedPointCloud` schema and each point cloud
+//! is compressed before delivery. The default settings are lossy —
 //! kd-tree encoding with positions quantized to 12 bits — and per-point fields that carry no
 //! value on a remote viewer (timestamps, ranges and angles derivable from the positions, and
 //! per-point indices) are dropped. Compression applies only to Lossy channels; Reliable
