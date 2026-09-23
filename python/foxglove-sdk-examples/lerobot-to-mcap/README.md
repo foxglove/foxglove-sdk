@@ -22,12 +22,12 @@ download a dataset from the Hugging Face Hub:
 uvx --from huggingface_hub hf download lerobot/svla_so101_pickplace --repo-type dataset --local-dir svla_so101_pickplace
 ```
 
-| Option               | Description                                                                              |
-| -------------------- | ---------------------------------------------------------------------------------------- |
-| `--episodes`         | Episodes to convert, e.g. `0,3,10-12`. Defaults to all of them.                          |
-| `--start-time`       | ISO 8601 time the first episode starts at. Defaults to `2020-01-01T00:00:00Z`.           |
-| `--episode-gap`      | Seconds between one episode's end and the next one's start. Defaults to 1.               |
-| `--strict-keyframes` | Fail if an episode's video doesn't start on a keyframe, rather than starting it earlier. |
+| Option               | Description                                                                                                                           |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `--episodes`         | Episodes to convert, e.g. `0,3,10-12`. Defaults to all of them.                                                                       |
+| `--start-time`       | ISO 8601 time the first episode starts at, between 1970 and 2100, in UTC unless it has an offset. Defaults to `2020-01-01T00:00:00Z`. |
+| `--episode-gap`      | Seconds between one episode's end and the next one's start, 0 or more. Defaults to 1.                                                 |
+| `--strict-keyframes` | Fail if an episode's video doesn't start on a keyframe, rather than starting it earlier.                                              |
 
 Each episode is written to the output directory as `episode_<index>.mcap`, with the index
 padded to six digits, e.g. `episode_000003.mcap`.
@@ -50,9 +50,10 @@ converted episodes too.
 | string features                                     | named after the feature      | `lerobot.Text`             |
 | the frame's task                                    | `/task`, whenever it changes | `lerobot.Task`             |
 
-A `lerobot.Scalars` message is a JSON list of `{label, value}` pairs, labeled with the
-feature's `names` from `meta/info.json`. Plotting `/observation/state.scalars[:]` draws one
-series per joint, named after it.
+A `lerobot.Scalars` message holds a `scalars` list of `{label, value}` pairs. The labels are
+the feature's `names` from `meta/info.json`, or the feature's name and an index, like
+`state_0`, when it has none. Plotting `/observation/state.scalars[:]` draws one series per
+joint, named after it.
 
 Each file also has:
 
@@ -89,6 +90,8 @@ frame decodes. Episodes recorded with LeRobot start on a keyframe, so this is ra
 - Depth map videos (`video.is_depth_map`) are skipped. LeRobot stores them as quantized
   12-bit HEVC, which would need decoding and dequantizing into `foxglove.RawImage` frames.
 - `language` features, LeRobot's language annotations, are skipped.
+- Image features have to embed their images in the data files, as LeRobot does. Images
+  stored only as file paths are rejected.
 - Videos with B-frames are rejected, because Foxglove can't play them back. Re-encode them
   without B-frames first, e.g. with ffmpeg's `-bf 0`. Codecs other than AV1, H.264, H.265
   and VP9 are rejected too.
