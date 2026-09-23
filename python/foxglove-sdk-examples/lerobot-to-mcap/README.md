@@ -22,12 +22,12 @@ download a dataset from the Hugging Face Hub:
 uvx --from huggingface_hub hf download lerobot/svla_so101_pickplace --repo-type dataset --local-dir svla_so101_pickplace
 ```
 
-| Option               | Description                                                                                                                           |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `--episodes`         | Episodes to convert, e.g. `0,3,10-12`. Defaults to all of them.                                                                       |
-| `--start-time`       | ISO 8601 time the first episode starts at, between 1970 and 2100, in UTC unless it has an offset. Defaults to `2020-01-01T00:00:00Z`. |
-| `--episode-gap`      | Seconds between one episode's end and the next one's start, 0 or more. Defaults to 1.                                                 |
-| `--strict-keyframes` | Fail if an episode's video doesn't start on a keyframe, rather than starting it earlier.                                              |
+| Option               | Description                                                                                                                                                                                       |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--episodes`         | Episodes to convert, e.g. `0,3,10-12`. Defaults to all of them.                                                                                                                                   |
+| `--start-time`       | ISO 8601 time the first episode starts at, in UTC unless it has an offset. It has to be at or after `1970-01-01T00:00:00Z` and before `2100-01-01T00:00:00Z`. Defaults to `2020-01-01T00:00:00Z`. |
+| `--episode-gap`      | Seconds between one episode's end and the next one's start, 0 or more. Defaults to 1.                                                                                                             |
+| `--strict-keyframes` | Fail if an episode's video doesn't start on a keyframe, rather than starting it earlier.                                                                                                          |
 
 Each episode is written to the output directory as `episode_<index>.mcap`, with the index
 padded to six digits, e.g. `episode_000003.mcap`.

@@ -334,10 +334,22 @@ def test_parses_start_times_as_utc_unless_they_give_an_offset() -> None:
     assert parse_start_time("2021-06-01T14:00:00+02:00") == datetime(
         2021, 6, 1, 12, tzinfo=timezone.utc
     )
+    assert parse_start_time("1970-01-01T00:00:00Z") == datetime(
+        1970, 1, 1, tzinfo=timezone.utc
+    )
 
 
-@pytest.mark.parametrize("value", ["1960-01-01", "2200-01-01", "yesterday"])
-def test_rejects_start_times_mcap_cannot_hold(value: str) -> None:
+@pytest.mark.parametrize(
+    "value",
+    [
+        "1969-12-31T23:59:59Z",
+        "1970-01-01T00:30:00+01:00",
+        "2100-01-01T00:00:00Z",
+        "2200-01-01",
+        "yesterday",
+    ],
+)
+def test_rejects_start_times_outside_1970_to_2100(value: str) -> None:
     with pytest.raises(ArgumentTypeError):
         parse_start_time(value)
 

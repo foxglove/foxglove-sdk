@@ -41,7 +41,10 @@ def parse_start_time(value: str) -> datetime:
     if start_time.tzinfo is None:
         start_time = start_time.replace(tzinfo=timezone.utc)
     if not EARLIEST_START_TIME <= start_time < LATEST_START_TIME:
-        raise argparse.ArgumentTypeError(f"{value!r} isn't between 1970 and 2100")
+        raise argparse.ArgumentTypeError(
+            f"{value!r} must be at or after {EARLIEST_START_TIME:%Y-%m-%dT%H:%M:%SZ} "
+            f"and before {LATEST_START_TIME:%Y-%m-%dT%H:%M:%SZ}"
+        )
     return start_time
 
 
