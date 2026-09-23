@@ -106,7 +106,7 @@ class LeRobotDataset:
         return None if robot_type is None else str(robot_type)
 
 
-def load_dataset(root: Path) -> LeRobotDataset:
+def load_dataset(root: str | Path) -> LeRobotDataset:
     """Load the metadata of a LeRobot dataset in the v2.0, v2.1 or v3.0 format.
 
     Frames and videos are read later, one episode at a time, by :class:`EpisodeWriter`.
@@ -116,14 +116,15 @@ def load_dataset(root: Path) -> LeRobotDataset:
     :raises UnsupportedDatasetError: If the directory doesn't hold a dataset in a
         supported format.
     """
-    info_path = root / "meta" / "info.json"
+    root_path = Path(root)
+    info_path = root_path / "meta" / "info.json"
     if not info_path.exists():
-        if (root / "meta_data").exists():
+        if (root_path / "meta_data").exists():
             raise UnsupportedDatasetError(
-                f"{root} is a LeRobot v1.x dataset, which predates the documented format. "
+                f"{root_path} is a LeRobot v1.x dataset, which predates the documented format. "
                 "Convert it to v2.0 with LeRobot's v1 to v2 conversion script first."
             )
-        raise UnsupportedDatasetError(f"{root} has no meta/info.json")
+        raise UnsupportedDatasetError(f"{root_path} has no meta/info.json")
 
     info = json.loads(info_path.read_text())
     version = info.get("codebase_version")
@@ -145,16 +146,16 @@ def load_dataset(root: Path) -> LeRobotDataset:
     )
     video_keys = [feature.key for feature in features if feature.dtype == "video"]
     if version == "v3.0":
-        episodes = _episodes_v3(root, info, video_keys)
+        episodes = _episodes_v3(root_path, info, video_keys)
     else:
-        episodes = _episodes_v2(root, info, video_keys)
+        episodes = _episodes_v2(root_path, info, video_keys)
 
     return LeRobotDataset(
-        root=root,
+        root=root_path,
         info=info,
         features=features,
         episodes=episodes,
-        tasks=_tasks(root),
+        tasks=_tasks(root_path),
     )
 
 

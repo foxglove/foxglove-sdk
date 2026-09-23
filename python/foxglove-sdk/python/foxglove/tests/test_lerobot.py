@@ -431,6 +431,15 @@ def test_writes_one_mcap_per_episode(dataset_root: Path, tmp_path: Path) -> None
     ]
 
 
+def test_accepts_string_paths(v2_dataset: Path, tmp_path: Path) -> None:
+    dataset = load_dataset(str(v2_dataset))
+
+    written = EpisodeWriter(dataset).write(dataset.episodes[0], str(tmp_path))
+
+    assert written.path == tmp_path / "episode_000000.mcap"
+    assert len(read_mcap(written.path).messages["/observation/state"]) == 6
+
+
 def test_labels_scalars_with_feature_names(v3_dataset: Path, tmp_path: Path) -> None:
     first, _ = convert(v3_dataset, tmp_path)
 

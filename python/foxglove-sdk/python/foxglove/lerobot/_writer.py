@@ -203,7 +203,8 @@ class EpisodeWriter:
     :param start_time: When the dataset's first episode starts. A time without a time zone
         is taken as UTC. It has to be at or after 1970-01-01T00:00:00Z and before
         2100-01-01T00:00:00Z.
-    :param episode_gap_s: Seconds between one episode's end and the next one's start.
+    :param episode_gap_s: Seconds between one episode's end and the next one's start. It has
+        to be finite and 0 or more.
     :param strict_keyframes: Fail if an episode's video doesn't start on a keyframe, rather
         than starting it from the previous keyframe.
     :raises ValueError: If ``start_time`` or ``episode_gap_s`` is out of range, or two
@@ -284,7 +285,7 @@ class EpisodeWriter:
             context=self._context,
         )
 
-    def write(self, episode: Episode, output_dir: Path) -> WrittenEpisode:
+    def write(self, episode: Episode, output_dir: str | Path) -> WrittenEpisode:
         """Write an episode to ``output_dir/episode_<index>.mcap``, with the index padded to
         six digits.
 
@@ -298,7 +299,7 @@ class EpisodeWriter:
         :raises KeyframeError: If one of the episode's videos can't start on a keyframe.
         :raises ValueError: If the episode's frames don't match the dataset's metadata.
         """
-        path = output_dir / f"episode_{episode.index:06d}.mcap"
+        path = Path(output_dir) / f"episode_{episode.index:06d}.mcap"
         partial = path.with_name(path.name + ".partial")
         try:
             with open_mcap(
