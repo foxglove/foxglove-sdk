@@ -3,6 +3,7 @@ import json
 import math
 import sys
 from collections.abc import Callable, Sequence
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -20,7 +21,7 @@ from foxglove.lerobot import (
     KeyframeError,
     UnsupportedDatasetError,
     UnsupportedVideoError,
-    load_dataset,
+    load_metadata,
 )
 from foxglove.lerobot._video import _with_sequence_header
 from mcap.reader import make_reader
@@ -378,11 +379,11 @@ def read_mcap(path: Path) -> Recording:
 
 
 def convert(root: Path, output: Path, **options: Any) -> list[Recording]:
-    dataset = load_dataset(root)
-    writer = EpisodeWriter(dataset, **options)
+    metadata = load_metadata(root)
+    writer = EpisodeWriter(metadata, **options)
     output.mkdir(exist_ok=True)
     return [
-        read_mcap(writer.write(episode, output).path) for episode in dataset.episodes
+        read_mcap(writer.write(episode, output).path) for episode in metadata.episodes
     ]
 
 
@@ -432,12 +433,37 @@ def test_writes_one_mcap_per_episode(dataset_root: Path, tmp_path: Path) -> None
 
 
 def test_accepts_string_paths(v2_dataset: Path, tmp_path: Path) -> None:
-    dataset = load_dataset(str(v2_dataset))
+    metadata = load_metadata(str(v2_dataset))
 
-    written = EpisodeWriter(dataset).write(dataset.episodes[0], str(tmp_path))
+    written = EpisodeWriter(metadata).write(metadata.episodes[0], str(tmp_path))
 
     assert written.path == tmp_path / "episode_000000.mcap"
     assert len(read_mcap(written.path).messages["/observation/state"]) == 6
+
+
+def test_writes_episodes_from_several_threads_into_separate_files(
+    v3_dataset: Path, tmp_path: Path
+) -> None:
+    metadata = load_metadata(v3_dataset)
+    writer = EpisodeWriter(metadata)
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        written = list(
+            pool.map(lambda episode: writer.write(episode, tmp_path), metadata.episodes)
+        )
+
+    assert [
+        len(read_mcap(episode.path).messages["/observation/state"])
+        for episode in written
+    ] == [6, 4]
+    assert all(episode.preroll_frames == {} for episode in written)
+
+
+def test_metadata_and_episodes_are_hashable(v3_dataset: Path) -> None:
+    metadata = load_metadata(v3_dataset)
+
+    assert len(set(metadata.episodes)) == 2
+    assert hash(metadata) == hash(load_metadata(v3_dataset))
 
 
 def test_labels_scalars_with_feature_names(v3_dataset: Path, tmp_path: Path) -> None:
@@ -489,26 +515,26 @@ def test_video_shares_log_times_with_data_and_starts_on_a_keyframe(
 def test_starts_an_episode_between_keyframes_at_the_previous_keyframe(
     make_dataset: Callable[..., Path], tmp_path: Path
 ) -> None:
-    dataset = load_dataset(make_dataset("v3.0", gop=4))
+    metadata = load_metadata(make_dataset("v3.0", gop=4))
 
-    written = EpisodeWriter(dataset).write(dataset.episodes[1], tmp_path)
+    written = EpisodeWriter(metadata).write(metadata.episodes[1], tmp_path)
     recording = read_mcap(written.path)
     start = recording.log_times("/observation/state")[0]
-    assert written.preroll_packets == 2
+    assert written.preroll_frames == {CAMERA: 2}
     assert [t - start for t in recording.log_times(VIDEO_TOPIC)] == [
         frame * FRAME_NS for frame in range(-2, 4)
     ]
     assert decodes_standalone(recording.messages[VIDEO_TOPIC][0][1])
 
-    strict = EpisodeWriter(dataset, strict_keyframes=True)
+    strict = EpisodeWriter(metadata, strict_keyframes=True)
     with pytest.raises(KeyframeError):
-        strict.write(dataset.episodes[1], tmp_path)
+        strict.write(metadata.episodes[1], tmp_path)
 
 
 def test_rejects_b_frames_without_leaving_a_file_behind(
     make_dataset: Callable[..., Path], tmp_path: Path
 ) -> None:
-    dataset = load_dataset(
+    metadata = load_metadata(
         make_dataset(
             "v2.1",
             codec="libx264",
@@ -518,7 +544,7 @@ def test_rejects_b_frames_without_leaving_a_file_behind(
     )
 
     with pytest.raises(UnsupportedVideoError, match="B-frames"):
-        EpisodeWriter(dataset).write(dataset.episodes[0], tmp_path)
+        EpisodeWriter(metadata).write(metadata.episodes[0], tmp_path)
     assert list(tmp_path.glob("episode_*")) == []
 
 
@@ -620,7 +646,7 @@ def test_skips_features_it_cannot_convert(v2_dataset: Path) -> None:
     }
     info_path.write_text(json.dumps(info))
 
-    writer = EpisodeWriter(load_dataset(v2_dataset))
+    writer = EpisodeWriter(load_metadata(v2_dataset))
 
     assert [feature.key for feature, _ in writer.skipped] == [
         "observation.images.depth",
@@ -662,11 +688,11 @@ def test_takes_start_times_without_a_time_zone_as_utc(
 def test_rejects_start_times_outside_1970_to_2100(
     v2_dataset: Path, start_time: datetime
 ) -> None:
-    dataset = load_dataset(v2_dataset)
+    metadata = load_metadata(v2_dataset)
 
     with pytest.raises(ValueError, match="start time"):
-        EpisodeWriter(dataset, start_time=start_time)
-    EpisodeWriter(dataset, start_time=datetime(1970, 1, 1, tzinfo=timezone.utc))
+        EpisodeWriter(metadata, start_time=start_time)
+    EpisodeWriter(metadata, start_time=datetime(1970, 1, 1, tzinfo=timezone.utc))
 
 
 @pytest.mark.parametrize("episode_gap_s", [-1.0, math.inf, math.nan])
@@ -674,17 +700,17 @@ def test_rejects_episode_gaps_that_are_negative_or_not_finite(
     v2_dataset: Path, episode_gap_s: float
 ) -> None:
     with pytest.raises(ValueError, match="episode gap"):
-        EpisodeWriter(load_dataset(v2_dataset), episode_gap_s=episode_gap_s)
+        EpisodeWriter(load_metadata(v2_dataset), episode_gap_s=episode_gap_s)
 
 
 def test_rejects_datasets_it_cannot_read(tmp_path: Path) -> None:
     (tmp_path / "v1" / "meta_data").mkdir(parents=True)
     with pytest.raises(UnsupportedDatasetError, match="v1.x"):
-        load_dataset(tmp_path / "v1")
+        load_metadata(tmp_path / "v1")
 
     (tmp_path / "future" / "meta").mkdir(parents=True)
     (tmp_path / "future" / "meta" / "info.json").write_text(
         json.dumps({"codebase_version": "v9.0", "fps": 10, "features": {}})
     )
     with pytest.raises(UnsupportedDatasetError, match="v9.0"):
-        load_dataset(tmp_path / "future")
+        load_metadata(tmp_path / "future")

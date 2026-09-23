@@ -1,6 +1,6 @@
 import json
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -68,13 +68,13 @@ class Episode:
     length: int
     tasks: tuple[str, ...]
     data_path: Path
-    videos: dict[str, VideoSegment]
+    videos: dict[str, VideoSegment] = field(hash=False)
 
 
 @dataclass(frozen=True)
-class LeRobotDataset:
-    """A LeRobot dataset, as described by its ``meta`` directory. Use :func:`load_dataset`
-    to load one.
+class DatasetMetadata:
+    """A LeRobot dataset's metadata, from its ``meta`` directory. Use :func:`load_metadata`
+    to load it.
 
     :param root: The dataset's root directory.
     :param info: The contents of ``meta/info.json``.
@@ -84,10 +84,10 @@ class LeRobotDataset:
     """
 
     root: Path
-    info: dict[str, Any]
+    info: dict[str, Any] = field(hash=False)
     features: tuple[Feature, ...]
     episodes: tuple[Episode, ...]
-    tasks: dict[int, str]
+    tasks: dict[int, str] = field(hash=False)
 
     @property
     def version(self) -> str:
@@ -106,7 +106,7 @@ class LeRobotDataset:
         return None if robot_type is None else str(robot_type)
 
 
-def load_dataset(root: str | Path) -> LeRobotDataset:
+def load_metadata(root: str | Path) -> DatasetMetadata:
     """Load the metadata of a LeRobot dataset in the v2.0, v2.1 or v3.0 format.
 
     Frames and videos are read later, one episode at a time, by :class:`EpisodeWriter`.
@@ -150,7 +150,7 @@ def load_dataset(root: str | Path) -> LeRobotDataset:
     else:
         episodes = _episodes_v2(root_path, info, video_keys)
 
-    return LeRobotDataset(
+    return DatasetMetadata(
         root=root_path,
         info=info,
         features=features,

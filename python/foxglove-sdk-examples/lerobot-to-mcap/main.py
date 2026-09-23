@@ -10,7 +10,7 @@ from foxglove.lerobot import (
     KeyframeError,
     UnsupportedDatasetError,
     UnsupportedVideoError,
-    load_dataset,
+    load_metadata,
 )
 
 
@@ -87,21 +87,21 @@ def main() -> None:
     args = parser.parse_args()
 
     try:
-        dataset = load_dataset(args.input.resolve())
+        metadata = load_metadata(args.input.resolve())
     except UnsupportedDatasetError as err:
         sys.exit(f"error: {err}")
 
     if args.episodes is None:
-        episodes = list(dataset.episodes)
+        episodes = list(metadata.episodes)
     else:
-        unknown = args.episodes - {episode.index for episode in dataset.episodes}
+        unknown = args.episodes - {episode.index for episode in metadata.episodes}
         if unknown:
             sys.exit(f"error: the dataset has no episode(s) {sorted(unknown)}")
-        episodes = [e for e in dataset.episodes if e.index in args.episodes]
+        episodes = [e for e in metadata.episodes if e.index in args.episodes]
 
     try:
         writer = EpisodeWriter(
-            dataset,
+            metadata,
             start_time=args.start_time,
             episode_gap_s=args.episode_gap,
             strict_keyframes=args.strict_keyframes,
@@ -129,10 +129,10 @@ def main() -> None:
             f"episode {episode.index}: {episode.length} frames -> {written.path} "
             f"({size / 1e6:.1f} MB)"
         )
-        if written.preroll_packets:
+        for key, frames_early in written.preroll_frames.items():
             print(
-                f"  started {written.preroll_packets} video frame(s) early, at the "
-                "previous keyframe, so the episode's first frame decodes"
+                f"  {key} started {frames_early} frame(s) early, at the previous "
+                "keyframe, so its first frame decodes"
             )
     print(f"wrote {len(episodes)} episode(s), {total_bytes / 1e6:.1f} MB")
 

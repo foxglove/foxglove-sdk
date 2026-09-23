@@ -1,7 +1,8 @@
 import json
 import math
+import threading
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal
@@ -12,7 +13,7 @@ from .. import Channel, Context, open_mcap
 from ..channels import CompressedImageChannel, CompressedVideoChannel
 from ..mcap import MCAPWriter
 from ..messages import CompressedImage, CompressedVideo, Timestamp
-from ._dataset import INDEX_COLUMNS, Episode, Feature, FrameReader, LeRobotDataset
+from ._dataset import INDEX_COLUMNS, DatasetMetadata, Episode, Feature, FrameReader
 from ._video import read_episode_video
 
 NS_PER_SEC = 1_000_000_000
@@ -90,20 +91,21 @@ class WrittenEpisode:
     """An episode that :meth:`EpisodeWriter.write` wrote.
 
     :param path: The MCAP file.
-    :param preroll_packets: The number of video frames written from before the episode's
-        start, so that its first frame decodes.
+    :param preroll_frames: For each video feature whose video doesn't start the episode on a
+        keyframe, the number of frames written from before the episode's start, back to the
+        previous keyframe, so that its first frame decodes.
     """
 
     path: Path
-    preroll_packets: int
+    preroll_frames: dict[str, int] = field(hash=False)
 
 
 def plan_topics(
-    dataset: LeRobotDataset,
+    metadata: DatasetMetadata,
 ) -> tuple[list[Topic], list[tuple[Feature, str]]]:
     topics: dict[str, Topic] = {}
     skipped: list[tuple[Feature, str]] = []
-    for feature in dataset.features:
+    for feature in metadata.features:
         kind: TopicKind
         if feature.key in INDEX_COLUMNS:
             continue
@@ -199,7 +201,10 @@ class EpisodeWriter:
     the dataset and these options, so converting a dataset again reproduces the same time
     ranges.
 
-    :param dataset: The dataset, from :func:`load_dataset`.
+    ``write`` calls run one at a time, so calling it from several threads gains nothing. To
+    write episodes in parallel, use one ``EpisodeWriter`` per thread or process.
+
+    :param metadata: The dataset's metadata, from :func:`load_metadata`.
     :param start_time: When the dataset's first episode starts. A time without a time zone
         is taken as UTC. It has to be at or after 1970-01-01T00:00:00Z and before
         2100-01-01T00:00:00Z.
@@ -218,7 +223,7 @@ class EpisodeWriter:
 
     def __init__(
         self,
-        dataset: LeRobotDataset,
+        metadata: DatasetMetadata,
         *,
         start_time: datetime = DEFAULT_START_TIME,
         episode_gap_s: float = DEFAULT_EPISODE_GAP_S,
@@ -241,13 +246,14 @@ class EpisodeWriter:
                 "0 or more"
             )
 
-        self._dataset = dataset
-        self._topics, self.skipped = plan_topics(dataset)
+        self._metadata = metadata
+        self._lock = threading.Lock()
+        self._topics, self.skipped = plan_topics(metadata)
         self._strict_keyframes = strict_keyframes
         self._start_times = episode_start_times(
-            dataset.episodes, dataset.fps, utc_start_time, episode_gap_s
+            metadata.episodes, metadata.fps, utc_start_time, episode_gap_s
         )
-        self._info = (dataset.root / "meta" / "info.json").read_bytes()
+        self._info = (metadata.root / "meta" / "info.json").read_bytes()
         self._frames = FrameReader(
             columns=[
                 feature.key
@@ -261,21 +267,23 @@ class EpisodeWriter:
         self._context = Context()
         self._channels: dict[str, Any] = {}
         for topic in self._topics:
-            metadata = {"lerobot_features": ",".join(f.key for f in topic.features)}
+            channel_metadata = {
+                "lerobot_features": ",".join(f.key for f in topic.features)
+            }
             if topic.kind == "video":
                 self._channels[topic.name] = CompressedVideoChannel(
-                    topic.name, metadata=metadata, context=self._context
+                    topic.name, metadata=channel_metadata, context=self._context
                 )
             elif topic.kind == "image":
                 self._channels[topic.name] = CompressedImageChannel(
-                    topic.name, metadata=metadata, context=self._context
+                    topic.name, metadata=channel_metadata, context=self._context
                 )
             else:
                 self._channels[topic.name] = Channel(
                     topic.name,
                     schema=SCALARS_SCHEMA if topic.kind == "scalars" else TEXT_SCHEMA,
                     message_encoding="json",
-                    metadata=metadata,
+                    metadata=channel_metadata,
                     context=self._context,
                 )
         self._task_channel = Channel(
@@ -292,7 +300,7 @@ class EpisodeWriter:
         The file is written under a temporary name and renamed once it's complete, so a
         failed or interrupted write doesn't leave a partial file behind.
 
-        :param episode: The episode, one of the dataset's ``episodes``.
+        :param episode: The episode, one of the metadata's ``episodes``.
         :param output_dir: The directory to write to. It has to exist.
         :raises FileNotFoundError: If one of the episode's files is missing.
         :raises UnsupportedVideoError: If one of the episode's videos can't be written.
@@ -301,19 +309,20 @@ class EpisodeWriter:
         """
         path = Path(output_dir) / f"episode_{episode.index:06d}.mcap"
         partial = path.with_name(path.name + ".partial")
-        try:
-            with open_mcap(
-                partial, allow_overwrite=True, context=self._context
-            ) as writer:
-                preroll_packets = self._write(episode, writer)
-        except BaseException:
-            partial.unlink(missing_ok=True)
-            raise
-        partial.replace(path)
-        return WrittenEpisode(path=path, preroll_packets=preroll_packets)
+        with self._lock:
+            try:
+                with open_mcap(
+                    partial, allow_overwrite=True, context=self._context
+                ) as writer:
+                    preroll_frames = self._write(episode, writer)
+            except BaseException:
+                partial.unlink(missing_ok=True)
+                raise
+            partial.replace(path)
+        return WrittenEpisode(path=path, preroll_frames=preroll_frames)
 
-    def _write(self, episode: Episode, writer: MCAPWriter) -> int:
-        fps = self._dataset.fps
+    def _write(self, episode: Episode, writer: MCAPWriter) -> dict[str, int]:
+        fps = self._metadata.fps
         start_ns = self._start_times[episode.index]
         frames = self._frames.read(episode)
         if "timestamp" in frames.column_names:
@@ -324,7 +333,7 @@ class EpisodeWriter:
             start_ns + offset_ns_snapped_to_frames(offset, fps) for offset in offsets
         ]
 
-        writer.write_metadata("lerobot", self._metadata(episode))
+        writer.write_metadata("lerobot", self._metadata_record(episode))
         writer.attach(
             log_time=start_ns,
             create_time=start_ns,
@@ -334,13 +343,14 @@ class EpisodeWriter:
         )
         self._write_tasks(episode, frames, log_times, start_ns)
 
-        preroll_packets = 0
+        preroll_frames: dict[str, int] = {}
         for topic in self._topics:
             channel = self._channels[topic.name]
             if topic.kind == "video":
-                preroll_packets += self._write_video(
-                    episode, topic.features[0], channel, start_ns
-                )
+                feature = topic.features[0]
+                frames_early = self._write_video(episode, feature, channel, start_ns)
+                if frames_early:
+                    preroll_frames[feature.key] = frames_early
             elif topic.kind == "image":
                 self._write_images(topic.features[0], channel, frames, log_times)
             elif topic.kind == "scalars":
@@ -350,20 +360,20 @@ class EpisodeWriter:
                     frames[topic.features[0].key].to_pylist(), log_times
                 ):
                     channel.log({"value": value}, log_time=log_time)
-        return preroll_packets
+        return preroll_frames
 
-    def _metadata(self, episode: Episode) -> dict[str, str]:
+    def _metadata_record(self, episode: Episode) -> dict[str, str]:
         metadata = {
-            "dataset": self._dataset.root.name,
-            "codebase_version": self._dataset.version,
-            "fps": str(self._dataset.info["fps"]),
+            "dataset": self._metadata.root.name,
+            "codebase_version": self._metadata.version,
+            "fps": str(self._metadata.info["fps"]),
             "episode_index": str(episode.index),
             "length": str(episode.length),
             "tasks": json.dumps(list(episode.tasks)),
-            "total_episodes": str(len(self._dataset.episodes)),
+            "total_episodes": str(len(self._metadata.episodes)),
         }
-        if self._dataset.robot_type is not None:
-            metadata["robot_type"] = self._dataset.robot_type
+        if self._metadata.robot_type is not None:
+            metadata["robot_type"] = self._metadata.robot_type
         return metadata
 
     def _write_tasks(
@@ -380,7 +390,10 @@ class EpisodeWriter:
                 continue
             previous = task_index
             self._task_channel.log(
-                {"task": self._dataset.tasks.get(task_index), "task_index": task_index},
+                {
+                    "task": self._metadata.tasks.get(task_index),
+                    "task_index": task_index,
+                },
                 log_time=log_time,
             )
 
@@ -395,12 +408,12 @@ class EpisodeWriter:
         if segment is None:
             raise ValueError(f"no video for {feature.key}")
 
-        preroll_packets = 0
+        frames_early = 0
         for packet in read_episode_video(
-            segment, self._dataset.fps, strict_keyframes=self._strict_keyframes
+            segment, self._metadata.fps, strict_keyframes=self._strict_keyframes
         ):
             log_time = start_ns + offset_ns_snapped_to_frames(
-                packet.offset_s, self._dataset.fps
+                packet.offset_s, self._metadata.fps
             )
             channel.log(
                 CompressedVideo(
@@ -411,8 +424,8 @@ class EpisodeWriter:
                 ),
                 log_time=log_time,
             )
-            preroll_packets += packet.is_preroll
-        return preroll_packets
+            frames_early += packet.is_preroll
+        return frames_early
 
     def _write_images(
         self,

@@ -13,13 +13,13 @@ video is copied into the MCAP files without re-encoding.
 
    from pathlib import Path
 
-   from foxglove.lerobot import EpisodeWriter, load_dataset
+   from foxglove.lerobot import EpisodeWriter, load_metadata
 
-   dataset = load_dataset(Path("svla_so101_pickplace"))
-   writer = EpisodeWriter(dataset)
+   metadata = load_metadata("svla_so101_pickplace")
+   writer = EpisodeWriter(metadata)
    output_dir = Path("mcap")
    output_dir.mkdir(exist_ok=True)
-   for episode in dataset.episodes:
+   for episode in metadata.episodes:
        writer.write(episode, output_dir)
 
 For a command-line converter, see the `lerobot-to-mcap example
@@ -125,14 +125,14 @@ Limitations
 API
 ---
 
-.. autofunction:: foxglove.lerobot.load_dataset
+.. autofunction:: foxglove.lerobot.load_metadata
 
 .. autoclass:: foxglove.lerobot.EpisodeWriter
    :members: write
 
 .. autoclass:: foxglove.lerobot.WrittenEpisode
 
-.. autoclass:: foxglove.lerobot.LeRobotDataset
+.. autoclass:: foxglove.lerobot.DatasetMetadata
    :members: version, fps, robot_type
 
 .. autoclass:: foxglove.lerobot.Episode

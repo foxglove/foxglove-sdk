@@ -487,7 +487,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "anywidget", marker = "extra == 'notebook'" },
-    { name = "av", marker = "extra == 'lerobot'", specifier = ">=17,<19" },
+    { name = "av", marker = "extra == 'lerobot'", specifier = ">=15" },
     { name = "mcap", marker = "extra == 'notebook'" },
     { name = "pyarrow", marker = "extra == 'lerobot'", specifier = ">=16" },
     { name = "traitlets", marker = "extra == 'notebook'" },

@@ -8,12 +8,12 @@ This module is only available when the ``lerobot`` extra is installed. Install i
 
 try:
     from ._dataset import (
+        DatasetMetadata,
         Episode,
         Feature,
-        LeRobotDataset,
         UnsupportedDatasetError,
         VideoSegment,
-        load_dataset,
+        load_metadata,
     )
     from ._video import KeyframeError, UnsupportedVideoError
     from ._writer import (
@@ -33,14 +33,14 @@ except ModuleNotFoundError as err:
 __all__ = [
     "DEFAULT_EPISODE_GAP_S",
     "DEFAULT_START_TIME",
+    "DatasetMetadata",
     "Episode",
     "EpisodeWriter",
     "Feature",
     "KeyframeError",
-    "LeRobotDataset",
     "UnsupportedDatasetError",
     "UnsupportedVideoError",
     "VideoSegment",
     "WrittenEpisode",
-    "load_dataset",
+    "load_metadata",
 ]
