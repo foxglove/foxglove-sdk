@@ -172,7 +172,12 @@ def test_rejects_b_frames_without_leaving_a_file_behind(
     make_dataset: Callable[..., Path], tmp_path: Path
 ) -> None:
     dataset = load_dataset(
-        make_dataset("v2.1", codec="libx264", gop=6, video_options={"bf": "2"})
+        make_dataset(
+            "v2.1",
+            codec="libx264",
+            gop=6,
+            video_options={"bf": "2", "x264-params": "b-adapt=0"},
+        )
     )
 
     with pytest.raises(UnsupportedVideoError, match="B-frames"):
