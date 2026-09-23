@@ -100,8 +100,6 @@ jobs:
     defaults:
       run:
         working-directory: playground
-    permissions:
-      deployments: write
     steps:
       - uses: actions/checkout@v7
       - run: corepack enable
@@ -116,19 +114,41 @@ jobs:
           path: playground/public
       - run: yarn install
       - run: yarn build
-      - uses: cloudflare/pages-action@v1.5.0
-        # Only run if not a fork, and not a dependabot PR, since we do not have
-        # access to secrets in these environments.
-        if: ${{ !github.event.pull_request.head.repo.fork && github.actor != 'dependabot[bot]' }}
+      - name: Upload playground
+        uses: actions/upload-artifact@v7
+        with:
+          name: playground
+          path: playground/dist
+          if-no-files-found: error
+
+  deploy-playground:
+    if: ${{ !github.event.pull_request.head.repo.fork && github.actor != 'dependabot[bot]' }}
+    runs-on: ubuntu-latest
+    needs: [playground]
+    permissions:
+      contents: read
+      deployments: write
+    environment:
+      name: ${{ github.ref == 'refs/heads/main' && 'foxglove-sdk-playground (Production)' || 'foxglove-sdk-playground (Preview)' }}
+      url: ${{ steps.deploy.outputs.deployment-url }}
+    steps:
+      - name: Download playground
+        uses: actions/download-artifact@v8
+        with:
+          name: playground
+          path: playground/dist
+      - name: Deploy to CF Pages
         id: deploy
+        uses: cloudflare/wrangler-action@v4
         with:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          gitHubToken: ${{ secrets.FOXGLOVEBOT_GITHUB_TOKEN }}
-          wranglerVersion: "3"
-          branch: ${{ github.head_ref || github.ref_name }}
-          projectName: foxglove-sdk-playground
-          directory: playground/dist
+          packageManager: npm
+          wranglerVersion: "4.136.1"
+          command: >-
+            pages deploy playground/dist
+            --project-name=foxglove-sdk-playground
+            --branch=${{ github.head_ref || github.ref_name }}
 
   schemas:
     runs-on: ubuntu-latest
@@ -581,6 +601,7 @@ jobs:
         macos,
         playground-wasm,
         playground,
+        deploy-playground,
         test-sdk-examples,
       ]
     if: always()
