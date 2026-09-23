@@ -15,11 +15,16 @@ def parse_episodes(spec: str) -> set[int]:
             continue
         first, _, last = part.partition("-")
         try:
-            selected.update(range(int(first), int(last or first) + 1))
+            start, end = int(first), int(last or first)
         except ValueError:
             raise argparse.ArgumentTypeError(
                 f"invalid episode selection {part!r}"
             ) from None
+        if end < start:
+            raise argparse.ArgumentTypeError(f"invalid episode selection {part!r}")
+        selected.update(range(start, end + 1))
+    if not selected:
+        raise argparse.ArgumentTypeError("no episodes selected")
     return selected
 
 
@@ -76,6 +81,8 @@ def main() -> None:
         "including the frames back to the previous keyframe",
     )
     args = parser.parse_args()
+    if args.episode_gap < 0:
+        parser.error("--episode-gap can't be negative")
 
     try:
         dataset = load_dataset(args.input.resolve())
@@ -90,12 +97,15 @@ def main() -> None:
             sys.exit(f"error: the dataset has no episode(s) {sorted(unknown)}")
         episodes = [e for e in dataset.episodes if e.index in args.episodes]
 
-    writer = EpisodeWriter(
-        dataset,
-        start_time=args.start_time,
-        episode_gap_s=args.episode_gap,
-        strict_keyframes=args.strict_keyframes,
-    )
+    try:
+        writer = EpisodeWriter(
+            dataset,
+            start_time=args.start_time,
+            episode_gap_s=args.episode_gap,
+            strict_keyframes=args.strict_keyframes,
+        )
+    except ValueError as err:
+        sys.exit(f"error: {err}")
     for feature, reason in writer.skipped:
         print(f"warning: skipping {feature.key}: {reason}", file=sys.stderr)
 
@@ -104,7 +114,12 @@ def main() -> None:
     for episode in episodes:
         try:
             written = writer.write(episode, args.output)
-        except (FileNotFoundError, KeyframeError, UnsupportedVideoError) as err:
+        except (
+            FileNotFoundError,
+            KeyframeError,
+            UnsupportedVideoError,
+            ValueError,
+        ) as err:
             sys.exit(f"error: episode {episode.index}: {err}")
         size = written.path.stat().st_size
         total_bytes += size

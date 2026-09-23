@@ -174,7 +174,7 @@ def episode_start_times(
     return starts
 
 
-def frame_offset_ns(offset_s: float, fps: float) -> int:
+def offset_ns_snapped_to_frames(offset_s: float, fps: float) -> int:
     frame = round(offset_s * fps)
     if abs(offset_s - frame / fps) <= LEROBOT_TIMESTAMP_TOLERANCE_S:
         return round(frame * NS_PER_SEC / fps)
@@ -256,7 +256,9 @@ class EpisodeWriter:
             offsets = frames["timestamp"].to_pylist()
         else:
             offsets = [row / fps for row in range(frames.num_rows)]
-        log_times = [start_ns + frame_offset_ns(offset, fps) for offset in offsets]
+        log_times = [
+            start_ns + offset_ns_snapped_to_frames(offset, fps) for offset in offsets
+        ]
 
         writer.write_metadata("lerobot", self._metadata(episode))
         writer.attach(
@@ -333,7 +335,9 @@ class EpisodeWriter:
         for packet in read_episode_video(
             segment, self.dataset.fps, strict_keyframes=self._strict_keyframes
         ):
-            log_time = start_ns + frame_offset_ns(packet.offset_s, self.dataset.fps)
+            log_time = start_ns + offset_ns_snapped_to_frames(
+                packet.offset_s, self.dataset.fps
+            )
             channel.log(
                 CompressedVideo(
                     timestamp=_timestamp(log_time),
@@ -354,7 +358,7 @@ class EpisodeWriter:
         log_times: list[int],
     ) -> None:
         for value, log_time in zip(frames[feature.key].to_pylist(), log_times):
-            data = _image_bytes(value, self.dataset.root)
+            data = _image_bytes(value)
             channel.log(
                 CompressedImage(
                     timestamp=_timestamp(log_time),
@@ -373,15 +377,22 @@ def _write_scalars(
     log_times: list[int],
 ) -> None:
     columns = [
-        (scalar_labels(feature), frames[feature.key].to_pylist())
+        (feature.key, scalar_labels(feature), frames[feature.key].to_pylist())
         for feature in features
     ]
     for row, log_time in enumerate(log_times):
-        scalars = [
-            {"label": label, "value": _number(value)}
-            for labels, values in columns
-            for label, value in zip(labels, _flatten(values[row]), strict=True)
-        ]
+        scalars: list[dict[str, Any]] = []
+        for key, labels, values in columns:
+            elements = _flatten(values[row])
+            if len(elements) != len(labels):
+                raise ValueError(
+                    f"{key}: frame {row} has {len(elements)} values, but the "
+                    f"feature's shape has {len(labels)}"
+                )
+            scalars.extend(
+                {"label": label, "value": _number(element)}
+                for label, element in zip(labels, elements)
+            )
         channel.log({"scalars": scalars}, log_time=log_time)
 
 
@@ -402,16 +413,12 @@ def _timestamp(log_time: int) -> Timestamp:
     return Timestamp(sec=log_time // NS_PER_SEC, nsec=log_time % NS_PER_SEC)
 
 
-def _image_bytes(value: Any, root: Path) -> bytes:
+def _image_bytes(value: Any) -> bytes:
     if isinstance(value, bytes):
         return value
-    if isinstance(value, dict):
-        if value.get("bytes"):
-            return bytes(value["bytes"])
-        if value.get("path"):
-            path = Path(value["path"])
-            return (path if path.is_absolute() else root / path).read_bytes()
-    raise ValueError(f"unrecognized image value {value!r:.80}")
+    if isinstance(value, dict) and value.get("bytes"):
+        return bytes(value["bytes"])
+    raise ValueError(f"image isn't embedded in the data file: {value!r:.80}")
 
 
 def _image_format(feature: Feature, data: bytes) -> str:

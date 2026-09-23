@@ -29,7 +29,8 @@ uvx --from huggingface_hub hf download lerobot/svla_so101_pickplace --repo-type 
 | `--episode-gap`      | Seconds between one episode's end and the next one's start. Defaults to 1.               |
 | `--strict-keyframes` | Fail if an episode's video doesn't start on a keyframe, rather than starting it earlier. |
 
-Each episode is written to `episode_<index>.mcap` in the output directory.
+Each episode is written to the output directory as `episode_<index>.mcap`, with the index
+padded to six digits, e.g. `episode_000003.mcap`.
 
 ## Topics
 
@@ -55,8 +56,8 @@ series per joint, named after it.
 
 Each file also has:
 
-- a metadata record named `lerobot`, with the dataset's name, codebase version, robot type
-  and frame rate, and the episode's index, length and tasks
+- a metadata record named `lerobot`, with the dataset's name, codebase version, robot type,
+  frame rate and episode count, and the episode's index, length and tasks
 - the dataset's `meta/info.json` as an attachment, so that each file carries the full
   feature definitions
 

@@ -312,6 +312,19 @@ def test_parses_episode_selections(spec: str, expected: set[int]) -> None:
     assert parse_episodes(spec) == expected
 
 
-def test_rejects_malformed_episode_selections() -> None:
+@pytest.mark.parametrize("spec", ["1-x", "5-3", "", " , "])
+def test_rejects_malformed_or_empty_episode_selections(spec: str) -> None:
     with pytest.raises(ArgumentTypeError):
-        parse_episodes("1-x")
+        parse_episodes(spec)
+
+
+def test_names_the_feature_whose_values_do_not_match_its_shape(
+    v2_dataset: Path, tmp_path: Path
+) -> None:
+    info_path = v2_dataset / "meta" / "info.json"
+    info = json.loads(info_path.read_text())
+    info["features"]["observation.state"]["shape"] = [3]
+    info_path.write_text(json.dumps(info))
+
+    with pytest.raises(ValueError, match="observation.state"):
+        convert(v2_dataset, tmp_path)

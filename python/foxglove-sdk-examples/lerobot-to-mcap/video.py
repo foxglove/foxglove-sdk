@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import av
+from av.bitstream import BitStreamFilterContext
 from av.video.stream import VideoStream
 from lerobot_dataset import VideoSegment
 
@@ -34,7 +35,7 @@ def read_episode_video(
     if not segment.path.exists():
         raise FileNotFoundError(f"missing video file {segment.path}")
 
-    tolerance_s = 0.5 / fps
+    half_frame_s = 0.5 / fps
     with av.open(str(segment.path)) as container:
         stream = container.streams.video[0]
         video_format = _video_format(segment.path, stream)
@@ -44,7 +45,7 @@ def read_episode_video(
 
         annex_b = None
         if video_format in ANNEX_B_FILTERS:
-            annex_b = av.BitStreamFilterContext(ANNEX_B_FILTERS[video_format], stream)
+            annex_b = BitStreamFilterContext(ANNEX_B_FILTERS[video_format], stream)
         sequence_header = b""
         if video_format == "av1":
             av1c = bytes(stream.codec_context.extradata or b"")
@@ -52,7 +53,7 @@ def read_episode_video(
 
         if segment.start_s > 0:
             container.seek(
-                int((segment.start_s + tolerance_s) / time_base),
+                int((segment.start_s + half_frame_s) / time_base),
                 stream=stream,
                 backward=True,
                 any_frame=False,
@@ -73,17 +74,14 @@ def read_episode_video(
             last_pts = pts
 
             time_s = float(pts * time_base)
-            if time_s >= segment.end_s - tolerance_s:
+            if time_s >= segment.end_s - half_frame_s:
                 break
 
-            if annex_b is None:
-                data = bytes(packet)
-            else:
-                data = b"".join(bytes(out) for out in annex_b.filter(packet))
+            data = _take_payload(packet, annex_b)
             if video_format == "av1" and is_keyframe:
                 data = _with_sequence_header(segment.path, data, sequence_header)
 
-            is_preroll = time_s < segment.start_s - tolerance_s
+            is_preroll = time_s < segment.start_s - half_frame_s
             frame = VideoPacket(
                 format=video_format,
                 data=data,
@@ -129,6 +127,12 @@ def _video_format(path: Path, stream: VideoStream) -> str:
             f"(supported: {', '.join(sorted(FORMATS))})"
         )
     return video_format
+
+
+def _take_payload(packet: av.Packet, annex_b: BitStreamFilterContext | None) -> bytes:
+    if annex_b is None:
+        return bytes(packet)
+    return b"".join(bytes(out) for out in annex_b.filter(packet))
 
 
 def _with_sequence_header(path: Path, data: bytes, sequence_header: bytes) -> bytes:
