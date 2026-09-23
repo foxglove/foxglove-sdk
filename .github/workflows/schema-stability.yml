@@ -21,22 +21,30 @@ jobs:
         run: |
           set -euo pipefail
 
-          # --diff-filter=MDR: Modified, Deleted, or Renamed. Pure additions of
-          # new .msg files don't break existing downstream consumers, but renames
-          # do (a consumer importing Foo.msg breaks when it becomes Bar.msg).
-          # --name-status prints M/D/R prefixes so the summary distinguishes
-          # them, and renames show both old and new paths on one line.
-          changed=$(git diff --name-status --diff-filter=MDR \
+          # Pure additions and changes to standalone comments do not alter the
+          # message structure. Deletions and renames can break consumers.
+          changed=$(git diff --name-status --diff-filter=DR \
+            "$BASE_SHA"..."$HEAD_SHA" \
+            -- 'schemas/ros1/*.msg' 'schemas/ros2/*.msg')
+
+          while IFS= read -r path; do
+            if ! diff -q \
+              <(git show "$BASE_SHA:$path" | sed '/^[[:space:]]*#/d; /^[[:space:]]*$/d') \
+              <(git show "$HEAD_SHA:$path" | sed '/^[[:space:]]*#/d; /^[[:space:]]*$/d') \
+              > /dev/null; then
+              changed="${changed}${changed:+$'\n'}"$'M\t'"${path}"
+            fi
+          done < <(git diff --name-only --diff-filter=M \
             "$BASE_SHA"..."$HEAD_SHA" \
             -- 'schemas/ros1/*.msg' 'schemas/ros2/*.msg')
 
           if [ -z "$changed" ]; then
-            echo "No modified or deleted ROS .msg files."
+            echo "No structural changes to ROS .msg files."
             exit 0
           fi
 
           {
-            echo "## Modified or deleted ROS .msg files"
+            echo "## Structural changes to ROS .msg files"
             echo
             echo '```'
             echo "$changed"
@@ -54,8 +62,8 @@ jobs:
 
           {
             echo
-            echo "This PR modifies or deletes ROS .msg files, which can break downstream consumers."
+            echo "This PR changes ROS .msg structure, which can break downstream consumers."
             echo "If this is intentional and approved by reviewers, add the \`breaking:msg-schema\` label to override."
           } >> "$GITHUB_STEP_SUMMARY"
-          echo "::error::Modified or deleted ROS .msg files require the 'breaking:msg-schema' label."
+          echo "::error::Structural ROS .msg changes require the 'breaking:msg-schema' label."
           exit 1
