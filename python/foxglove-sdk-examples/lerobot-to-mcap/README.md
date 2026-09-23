@@ -51,9 +51,10 @@ converted episodes too.
 | the frame's task                                    | `/task`, whenever it changes | `lerobot.Task`             |
 
 A `lerobot.Scalars` message holds a `scalars` list of `{label, value}` pairs. The labels are
-the feature's `names` from `meta/info.json`, or the feature's name and an index, like
-`state_0`, when it has none. Plotting `/observation/state.scalars[:]` draws one series per
-joint, named after it.
+the feature's `names` from `meta/info.json` when they give one name per element. Otherwise
+they're the feature's name and an index, like `state_0`, or just the name, like `reward`,
+for a feature with one element. Plotting `/observation/state.scalars[:]` draws one series
+per joint, named after it.
 
 Each file also has:
 
