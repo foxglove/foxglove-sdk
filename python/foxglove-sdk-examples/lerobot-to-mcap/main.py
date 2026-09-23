@@ -73,8 +73,9 @@ def main() -> None:
         "--start-time",
         type=parse_start_time,
         default=DEFAULT_START_TIME,
-        help="ISO 8601 time the first episode starts at. LeRobot records no wall-clock "
-        "time, so episodes are laid end to end from here (default: %(default)s)",
+        help="ISO 8601 time the dataset's first episode starts at. LeRobot records "
+        "no wall-clock time, so episodes are laid end to end from here "
+        "(default: %(default)s)",
     )
     parser.add_argument(
         "--episode-gap",
