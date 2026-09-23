@@ -259,8 +259,8 @@ class FrameReader:
         )
         if frames.num_rows != episode.length:
             raise ValueError(
-                f"episode {episode.index}: {episode.data_path.name} holds "
-                f"{frames.num_rows} frames, but the episode metadata says {episode.length}"
+                f"{episode.data_path.name} holds {frames.num_rows} of the episode's "
+                f"frames, but its metadata says {episode.length}"
             )
         return frames
 

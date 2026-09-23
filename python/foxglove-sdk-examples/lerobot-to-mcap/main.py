@@ -1,4 +1,5 @@
 import argparse
+import math
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -81,8 +82,8 @@ def main() -> None:
         "including the frames back to the previous keyframe",
     )
     args = parser.parse_args()
-    if args.episode_gap < 0:
-        parser.error("--episode-gap can't be negative")
+    if not math.isfinite(args.episode_gap) or args.episode_gap < 0:
+        parser.error("--episode-gap must be a finite number of seconds, 0 or more")
 
     try:
         dataset = load_dataset(args.input.resolve())

@@ -329,7 +329,7 @@ class EpisodeWriter:
     ) -> int:
         segment = episode.videos.get(feature.key)
         if segment is None:
-            raise ValueError(f"episode {episode.index} has no video for {feature.key}")
+            raise ValueError(f"no video for {feature.key}")
 
         preroll_packets = 0
         for packet in read_episode_video(
