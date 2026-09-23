@@ -15,7 +15,7 @@ float64 latitude
 # Longitude in degrees
 float64 longitude
 
-# Altitude in meters
+# Altitude in meters above the WGS84 ellipsoid
 float64 altitude
 
 # Position covariance (m^2) defined relative to a tangential plane through the reported position. The components are East, North, and Up (ENU), in row-major order.

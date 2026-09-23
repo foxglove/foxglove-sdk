@@ -37,7 +37,7 @@ message LocationFix {
   // Longitude in degrees
   double longitude = 2;
 
-  // Altitude in meters
+  // Altitude in meters above the WGS84 ellipsoid
   double altitude = 3;
 
   // Position covariance (m^2) defined relative to a tangential plane through the reported position. The components are East, North, and Up (ENU), in row-major order.
