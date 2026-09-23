@@ -8,6 +8,9 @@ from convert import DEFAULT_EPISODE_GAP_S, DEFAULT_START_TIME, EpisodeWriter
 from lerobot_dataset import UnsupportedDatasetError, load_dataset
 from video import KeyframeError, UnsupportedVideoError
 
+EARLIEST_START_TIME = datetime(1970, 1, 1, tzinfo=timezone.utc)
+LATEST_START_TIME = datetime(2100, 1, 1, tzinfo=timezone.utc)
+
 
 def parse_episodes(spec: str) -> set[int]:
     selected: set[int] = set()
@@ -36,7 +39,9 @@ def parse_start_time(value: str) -> datetime:
     except ValueError:
         raise argparse.ArgumentTypeError(f"invalid ISO 8601 time {value!r}") from None
     if start_time.tzinfo is None:
-        return start_time.replace(tzinfo=timezone.utc)
+        start_time = start_time.replace(tzinfo=timezone.utc)
+    if not EARLIEST_START_TIME <= start_time < LATEST_START_TIME:
+        raise argparse.ArgumentTypeError(f"{value!r} isn't between 1970 and 2100")
     return start_time
 
 

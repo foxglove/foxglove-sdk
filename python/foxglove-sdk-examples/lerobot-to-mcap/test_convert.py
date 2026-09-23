@@ -3,6 +3,7 @@ import math
 from argparse import ArgumentTypeError
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -13,7 +14,7 @@ import pytest
 from av.video.codeccontext import VideoCodecContext
 from convert import DEFAULT_START_TIME, EpisodeWriter, plan_topics
 from lerobot_dataset import UnsupportedDatasetError, load_dataset
-from main import parse_episodes
+from main import parse_episodes, parse_start_time
 from mcap.reader import make_reader
 from mcap_protobuf.decoder import DecoderFactory
 from video import KeyframeError, UnsupportedVideoError, _with_sequence_header
@@ -321,6 +322,24 @@ def test_parses_episode_selections(spec: str, expected: set[int]) -> None:
 def test_rejects_malformed_or_empty_episode_selections(spec: str) -> None:
     with pytest.raises(ArgumentTypeError):
         parse_episodes(spec)
+
+
+def test_parses_start_times_as_utc_unless_they_give_an_offset() -> None:
+    assert parse_start_time("2021-06-01T12:00:00Z") == datetime(
+        2021, 6, 1, 12, tzinfo=timezone.utc
+    )
+    assert parse_start_time("2021-06-01T12:00:00") == datetime(
+        2021, 6, 1, 12, tzinfo=timezone.utc
+    )
+    assert parse_start_time("2021-06-01T14:00:00+02:00") == datetime(
+        2021, 6, 1, 12, tzinfo=timezone.utc
+    )
+
+
+@pytest.mark.parametrize("value", ["1960-01-01", "2200-01-01", "yesterday"])
+def test_rejects_start_times_mcap_cannot_hold(value: str) -> None:
+    with pytest.raises(ArgumentTypeError):
+        parse_start_time(value)
 
 
 def test_names_the_feature_whose_values_do_not_match_its_shape(
