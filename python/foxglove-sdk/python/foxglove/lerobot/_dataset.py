@@ -18,11 +18,20 @@ VIDEO_COLUMNS = ("chunk_index", "file_index", "from_timestamp", "to_timestamp")
 
 
 class UnsupportedDatasetError(Exception):
-    pass
+    """The directory doesn't hold a LeRobot dataset in a supported format."""
 
 
 @dataclass(frozen=True)
 class Feature:
+    """A feature from the dataset's ``meta/info.json``.
+
+    :param key: The feature's key, such as ``observation.state``.
+    :param dtype: The feature's dtype, such as ``float32`` or ``video``.
+    :param shape: The feature's shape.
+    :param names: One name per element, or None if the dataset doesn't give exactly one.
+    :param is_depth_map: Whether the feature is a depth map video.
+    """
+
     key: str
     dtype: str
     shape: tuple[int, ...]
@@ -32,6 +41,13 @@ class Feature:
 
 @dataclass(frozen=True)
 class VideoSegment:
+    """The part of an mp4 that holds one episode's video.
+
+    :param path: The mp4's path.
+    :param start_s: The episode's start in the mp4, in seconds.
+    :param end_s: The episode's end in the mp4, in seconds.
+    """
+
     path: Path
     start_s: float
     end_s: float
@@ -39,6 +55,15 @@ class VideoSegment:
 
 @dataclass(frozen=True)
 class Episode:
+    """An episode of a dataset.
+
+    :param index: The episode's index.
+    :param length: The episode's number of frames.
+    :param tasks: The episode's tasks.
+    :param data_path: The parquet file that holds the episode's frames.
+    :param videos: The episode's video for each video feature, by feature key.
+    """
+
     index: int
     length: int
     tasks: tuple[str, ...]
@@ -48,6 +73,16 @@ class Episode:
 
 @dataclass(frozen=True)
 class LeRobotDataset:
+    """A LeRobot dataset, as described by its ``meta`` directory. Use :func:`load_dataset`
+    to load one.
+
+    :param root: The dataset's root directory.
+    :param info: The contents of ``meta/info.json``.
+    :param features: The dataset's features.
+    :param episodes: The dataset's episodes, in index order.
+    :param tasks: The dataset's tasks, by task index.
+    """
+
     root: Path
     info: dict[str, Any]
     features: tuple[Feature, ...]
@@ -56,19 +91,31 @@ class LeRobotDataset:
 
     @property
     def version(self) -> str:
+        """The dataset's codebase version, such as ``v3.0``."""
         return str(self.info["codebase_version"])
 
     @property
     def fps(self) -> float:
+        """The dataset's frame rate."""
         return float(self.info["fps"])
 
     @property
     def robot_type(self) -> str | None:
+        """The dataset's robot type, if it has one."""
         robot_type = self.info.get("robot_type")
         return None if robot_type is None else str(robot_type)
 
 
 def load_dataset(root: Path) -> LeRobotDataset:
+    """Load the metadata of a LeRobot dataset in the v2.0, v2.1 or v3.0 format.
+
+    Frames and videos are read later, one episode at a time, by :class:`EpisodeWriter`.
+
+    :param root: The dataset's root directory, the one holding ``meta/``, ``data/`` and
+        ``videos/``.
+    :raises UnsupportedDatasetError: If the directory doesn't hold a dataset in a
+        supported format.
+    """
     info_path = root / "meta" / "info.json"
     if not info_path.exists():
         if (root / "meta_data").exists():

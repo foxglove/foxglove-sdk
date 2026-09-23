@@ -105,6 +105,12 @@ Notebook integration
 
 See :doc:`../notebook/index` for details on using Foxglove with Python/Jupyter notebooks.
 
+LeRobot integration
+^^^^^^^^^^^^^^^^^^^
+
+See :doc:`../lerobot/index` for details on converting `LeRobot
+<https://github.com/huggingface/lerobot>`__ datasets into MCAP files.
+
 Playground
 ^^^^^^^^^^
 
@@ -125,3 +131,4 @@ Table of contents
    examples
    api/index
    notebook/index
+   lerobot/index

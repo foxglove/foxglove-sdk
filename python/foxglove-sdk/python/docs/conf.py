@@ -35,8 +35,10 @@ nitpicky = True
 nitpick_ignore_regex = [
     # Ignore warnings for built-in types from autodoc_typehints
     ("py:data", r"typing.*"),
+    ("py:data", r"Ellipsis"),
     ("py:class", r"collections\.abc\.Callable"),
-    ("py:class", r"Path"),
+    ("py:class", r"(pathlib(\._local)?\.)?Path"),
+    ("py:class", r"datetime\.datetime"),
 ]
 
 templates_path = ["_templates"]

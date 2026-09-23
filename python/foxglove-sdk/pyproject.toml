@@ -15,6 +15,7 @@ documentation = "https://docs.foxglove.dev/"
 
 [project.optional-dependencies]
 notebook = ["anywidget", "mcap", "traitlets"]
+lerobot = ["av>=17,<19", "pyarrow>=16"]
 
 [dependency-groups]
 dev = [
@@ -68,6 +69,10 @@ warn_redundant_casts = true
 warn_unused_ignores = true
 warn_no_return = true
 warn_unreachable = true
+
+[[tool.mypy.overrides]]
+module = ["pyarrow", "pyarrow.*"]
+ignore_missing_imports = true
 
 [tool.black]
 include = '\.pyi?$'

@@ -5,14 +5,10 @@ description = "Convert a LeRobot dataset into MCAP files, one per episode"
 authors = [{ name = "Foxglove", email = "support@foxglove.dev" }]
 requires-python = ">=3.10"
 readme = "README.md"
-dependencies = ["av>=17,<19", "foxglove-sdk>=0.27.0", "pyarrow>=16"]
+dependencies = ["foxglove-sdk[lerobot]>=0.28.0"]
 
 [dependency-groups]
-dev = ["mcap>=1.2", "mcap-protobuf-support>=0.5", "mypy>=1,<2", "numpy>=1.26", "pytest>=8"]
+dev = ["mypy>=1,<2", "pytest>=8"]
 
 [tool.uv]
 package = false
-
-[[tool.mypy.overrides]]
-module = ["pyarrow", "pyarrow.*"]
-ignore_missing_imports = true

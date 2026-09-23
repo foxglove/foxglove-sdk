@@ -6,18 +6,21 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal
 
-import foxglove
 import pyarrow as pa
-from foxglove.channels import CompressedImageChannel, CompressedVideoChannel
-from foxglove.mcap import MCAPWriter
-from foxglove.messages import CompressedImage, CompressedVideo, Timestamp
-from lerobot_dataset import INDEX_COLUMNS, Episode, Feature, FrameReader, LeRobotDataset
-from video import read_episode_video
+
+from .. import Channel, Context, open_mcap
+from ..channels import CompressedImageChannel, CompressedVideoChannel
+from ..mcap import MCAPWriter
+from ..messages import CompressedImage, CompressedVideo, Timestamp
+from ._dataset import INDEX_COLUMNS, Episode, Feature, FrameReader, LeRobotDataset
+from ._video import read_episode_video
 
 NS_PER_SEC = 1_000_000_000
 
 DEFAULT_START_TIME = datetime(2020, 1, 1, tzinfo=timezone.utc)
 DEFAULT_EPISODE_GAP_S = 1.0
+EARLIEST_START_TIME = datetime(1970, 1, 1, tzinfo=timezone.utc)
+LATEST_START_TIME = datetime(2100, 1, 1, tzinfo=timezone.utc)
 
 LEROBOT_TIMESTAMP_TOLERANCE_S = 1e-4
 
@@ -84,6 +87,13 @@ class Topic:
 
 @dataclass(frozen=True)
 class WrittenEpisode:
+    """An episode that :meth:`EpisodeWriter.write` wrote.
+
+    :param path: The MCAP file.
+    :param preroll_packets: The number of video frames written from before the episode's
+        start, so that its first frame decodes.
+    """
+
     path: Path
     preroll_packets: int
 
@@ -182,6 +192,29 @@ def offset_ns_snapped_to_frames(offset_s: float, fps: float) -> int:
 
 
 class EpisodeWriter:
+    """Writes the episodes of a LeRobot dataset to MCAP files, one file per episode.
+
+    LeRobot doesn't record when data was captured, so the episodes are laid end to end, in
+    index order, on a timeline that starts at ``start_time``. The timeline only depends on
+    the dataset and these options, so converting a dataset again reproduces the same time
+    ranges.
+
+    :param dataset: The dataset, from :func:`load_dataset`.
+    :param start_time: When the dataset's first episode starts. A time without a time zone
+        is taken as UTC. It has to be at or after 1970-01-01T00:00:00Z and before
+        2100-01-01T00:00:00Z.
+    :param episode_gap_s: Seconds between one episode's end and the next one's start.
+    :param strict_keyframes: Fail if an episode's video doesn't start on a keyframe, rather
+        than starting it from the previous keyframe.
+    :raises ValueError: If ``start_time`` or ``episode_gap_s`` is out of range, or two
+        features would be written to the same topic.
+
+    .. py:attribute:: skipped
+       :type: list[tuple[Feature, str]]
+
+       The features that aren't converted, each with the reason.
+    """
+
     def __init__(
         self,
         dataset: LeRobotDataset,
@@ -190,26 +223,43 @@ class EpisodeWriter:
         episode_gap_s: float = DEFAULT_EPISODE_GAP_S,
         strict_keyframes: bool = False,
     ) -> None:
-        self.dataset = dataset
-        self.topics, self.skipped = plan_topics(dataset)
+        utc_start_time = (
+            start_time
+            if start_time.tzinfo is not None
+            else start_time.replace(tzinfo=timezone.utc)
+        )
+        if not EARLIEST_START_TIME <= utc_start_time < LATEST_START_TIME:
+            raise ValueError(
+                f"start time {utc_start_time.isoformat()} must be at or after "
+                f"{EARLIEST_START_TIME:%Y-%m-%dT%H:%M:%SZ} and before "
+                f"{LATEST_START_TIME:%Y-%m-%dT%H:%M:%SZ}"
+            )
+        if not math.isfinite(episode_gap_s) or episode_gap_s < 0:
+            raise ValueError(
+                f"episode gap {episode_gap_s} must be a finite number of seconds, "
+                "0 or more"
+            )
+
+        self._dataset = dataset
+        self._topics, self.skipped = plan_topics(dataset)
         self._strict_keyframes = strict_keyframes
         self._start_times = episode_start_times(
-            dataset.episodes, dataset.fps, start_time, episode_gap_s
+            dataset.episodes, dataset.fps, utc_start_time, episode_gap_s
         )
         self._info = (dataset.root / "meta" / "info.json").read_bytes()
         self._frames = FrameReader(
             columns=[
                 feature.key
-                for topic in self.topics
+                for topic in self._topics
                 if topic.kind != "video"
                 for feature in topic.features
             ],
             optional_columns=["timestamp", "task_index"],
         )
 
-        self._context = foxglove.Context()
+        self._context = Context()
         self._channels: dict[str, Any] = {}
-        for topic in self.topics:
+        for topic in self._topics:
             metadata = {"lerobot_features": ",".join(f.key for f in topic.features)}
             if topic.kind == "video":
                 self._channels[topic.name] = CompressedVideoChannel(
@@ -220,14 +270,14 @@ class EpisodeWriter:
                     topic.name, metadata=metadata, context=self._context
                 )
             else:
-                self._channels[topic.name] = foxglove.Channel(
+                self._channels[topic.name] = Channel(
                     topic.name,
                     schema=SCALARS_SCHEMA if topic.kind == "scalars" else TEXT_SCHEMA,
                     message_encoding="json",
                     metadata=metadata,
                     context=self._context,
                 )
-        self._task_channel = foxglove.Channel(
+        self._task_channel = Channel(
             TASK_TOPIC,
             schema=TASK_SCHEMA,
             message_encoding="json",
@@ -235,10 +285,23 @@ class EpisodeWriter:
         )
 
     def write(self, episode: Episode, output_dir: Path) -> WrittenEpisode:
+        """Write an episode to ``output_dir/episode_<index>.mcap``, with the index padded to
+        six digits.
+
+        The file is written under a temporary name and renamed once it's complete, so a
+        failed or interrupted write doesn't leave a partial file behind.
+
+        :param episode: The episode, one of the dataset's ``episodes``.
+        :param output_dir: The directory to write to. It has to exist.
+        :raises FileNotFoundError: If one of the episode's files is missing.
+        :raises UnsupportedVideoError: If one of the episode's videos can't be written.
+        :raises KeyframeError: If one of the episode's videos can't start on a keyframe.
+        :raises ValueError: If the episode's frames don't match the dataset's metadata.
+        """
         path = output_dir / f"episode_{episode.index:06d}.mcap"
         partial = path.with_name(path.name + ".partial")
         try:
-            with foxglove.open_mcap(
+            with open_mcap(
                 partial, allow_overwrite=True, context=self._context
             ) as writer:
                 preroll_packets = self._write(episode, writer)
@@ -249,7 +312,7 @@ class EpisodeWriter:
         return WrittenEpisode(path=path, preroll_packets=preroll_packets)
 
     def _write(self, episode: Episode, writer: MCAPWriter) -> int:
-        fps = self.dataset.fps
+        fps = self._dataset.fps
         start_ns = self._start_times[episode.index]
         frames = self._frames.read(episode)
         if "timestamp" in frames.column_names:
@@ -271,7 +334,7 @@ class EpisodeWriter:
         self._write_tasks(episode, frames, log_times, start_ns)
 
         preroll_packets = 0
-        for topic in self.topics:
+        for topic in self._topics:
             channel = self._channels[topic.name]
             if topic.kind == "video":
                 preroll_packets += self._write_video(
@@ -290,16 +353,16 @@ class EpisodeWriter:
 
     def _metadata(self, episode: Episode) -> dict[str, str]:
         metadata = {
-            "dataset": self.dataset.root.name,
-            "codebase_version": self.dataset.version,
-            "fps": str(self.dataset.info["fps"]),
+            "dataset": self._dataset.root.name,
+            "codebase_version": self._dataset.version,
+            "fps": str(self._dataset.info["fps"]),
             "episode_index": str(episode.index),
             "length": str(episode.length),
             "tasks": json.dumps(list(episode.tasks)),
-            "total_episodes": str(len(self.dataset.episodes)),
+            "total_episodes": str(len(self._dataset.episodes)),
         }
-        if self.dataset.robot_type is not None:
-            metadata["robot_type"] = self.dataset.robot_type
+        if self._dataset.robot_type is not None:
+            metadata["robot_type"] = self._dataset.robot_type
         return metadata
 
     def _write_tasks(
@@ -316,7 +379,7 @@ class EpisodeWriter:
                 continue
             previous = task_index
             self._task_channel.log(
-                {"task": self.dataset.tasks.get(task_index), "task_index": task_index},
+                {"task": self._dataset.tasks.get(task_index), "task_index": task_index},
                 log_time=log_time,
             )
 
@@ -333,10 +396,10 @@ class EpisodeWriter:
 
         preroll_packets = 0
         for packet in read_episode_video(
-            segment, self.dataset.fps, strict_keyframes=self._strict_keyframes
+            segment, self._dataset.fps, strict_keyframes=self._strict_keyframes
         ):
             log_time = start_ns + offset_ns_snapped_to_frames(
-                packet.offset_s, self.dataset.fps
+                packet.offset_s, self._dataset.fps
             )
             channel.log(
                 CompressedVideo(
@@ -372,7 +435,7 @@ class EpisodeWriter:
 
 def _write_scalars(
     features: tuple[Feature, ...],
-    channel: foxglove.Channel,
+    channel: Channel,
     frames: pa.Table,
     log_times: list[int],
 ) -> None:

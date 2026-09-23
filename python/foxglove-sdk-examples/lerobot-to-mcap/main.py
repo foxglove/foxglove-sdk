@@ -1,15 +1,17 @@
 import argparse
-import math
 import sys
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 
-from convert import DEFAULT_EPISODE_GAP_S, DEFAULT_START_TIME, EpisodeWriter
-from lerobot_dataset import UnsupportedDatasetError, load_dataset
-from video import KeyframeError, UnsupportedVideoError
-
-EARLIEST_START_TIME = datetime(1970, 1, 1, tzinfo=timezone.utc)
-LATEST_START_TIME = datetime(2100, 1, 1, tzinfo=timezone.utc)
+from foxglove.lerobot import (
+    DEFAULT_EPISODE_GAP_S,
+    DEFAULT_START_TIME,
+    EpisodeWriter,
+    KeyframeError,
+    UnsupportedDatasetError,
+    UnsupportedVideoError,
+    load_dataset,
+)
 
 
 def parse_episodes(spec: str) -> set[int]:
@@ -35,17 +37,9 @@ def parse_episodes(spec: str) -> set[int]:
 def parse_start_time(value: str) -> datetime:
     iso = value[:-1] + "+00:00" if value.endswith("Z") else value
     try:
-        start_time = datetime.fromisoformat(iso)
+        return datetime.fromisoformat(iso)
     except ValueError:
         raise argparse.ArgumentTypeError(f"invalid ISO 8601 time {value!r}") from None
-    if start_time.tzinfo is None:
-        start_time = start_time.replace(tzinfo=timezone.utc)
-    if not EARLIEST_START_TIME <= start_time < LATEST_START_TIME:
-        raise argparse.ArgumentTypeError(
-            f"{value!r} must be at or after {EARLIEST_START_TIME:%Y-%m-%dT%H:%M:%SZ} "
-            f"and before {LATEST_START_TIME:%Y-%m-%dT%H:%M:%SZ}"
-        )
-    return start_time
 
 
 def main() -> None:
@@ -91,8 +85,6 @@ def main() -> None:
         "including the frames back to the previous keyframe",
     )
     args = parser.parse_args()
-    if not math.isfinite(args.episode_gap) or args.episode_gap < 0:
-        parser.error("--episode-gap must be a finite number of seconds, 0 or more")
 
     try:
         dataset = load_dataset(args.input.resolve())

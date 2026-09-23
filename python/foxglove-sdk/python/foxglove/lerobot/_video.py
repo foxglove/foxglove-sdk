@@ -5,7 +5,8 @@ from pathlib import Path
 import av
 from av.bitstream import BitStreamFilterContext
 from av.video.stream import VideoStream
-from lerobot_dataset import VideoSegment
+
+from ._dataset import VideoSegment
 
 FORMATS = {"av1": "av1", "h264": "h264", "hevc": "h265", "vp9": "vp9"}
 ANNEX_B_FILTERS = {"h264": "h264_mp4toannexb", "h265": "hevc_mp4toannexb"}
@@ -14,11 +15,14 @@ AV1C_HEADER_SIZE = 4
 
 
 class UnsupportedVideoError(Exception):
-    pass
+    """A video can't be written as ``foxglove.CompressedVideo`` that Foxglove can play, for
+    example because it has B-frames or uses a codec other than AV1, H.264, H.265 or VP9.
+    """
 
 
 class KeyframeError(Exception):
-    pass
+    """An episode's video doesn't start on a keyframe, and either there's no earlier
+    keyframe to start from or ``strict_keyframes`` is set."""
 
 
 @dataclass(frozen=True)
