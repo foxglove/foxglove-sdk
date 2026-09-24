@@ -345,7 +345,8 @@ class EpisodeWriter:
         for key in b_frame_videos:
             warnings.warn(
                 f"{key} has B-frames, which Foxglove can't play back. Its frames are "
-                "written as they are, in decode order.",
+                "written as they are, in decode order. To view it, re-encode it "
+                "without B-frames, e.g. with ffmpeg's -bf 0.",
                 BFrameWarning,
                 stacklevel=2,
             )

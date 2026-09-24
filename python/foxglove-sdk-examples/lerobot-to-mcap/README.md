@@ -36,6 +36,9 @@ uvx --from huggingface_hub hf download lerobot/svla_so101_pickplace --repo-type 
 Each episode is written to the output directory as `episode_<index>.mcap`, with the index
 padded to six digits, e.g. `episode_000003.mcap`.
 
+Videos with B-frames are written too, with a warning, but Foxglove can't play them back. To view
+them, re-encode the dataset's videos without B-frames first, e.g. with ffmpeg's `-bf 0`.
+
 ## Tests
 
 ```bash
