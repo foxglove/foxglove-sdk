@@ -183,7 +183,7 @@ def scalar_labels(feature: Feature) -> list[str]:
         if name.startswith(prefix):
             name = name[len(prefix) :]
             break
-    size = math.prod(feature.shape)
+    size = math.prod(dim for dim in feature.shape if dim is not None)
     return [name] if size == 1 else [f"{name}_{index}" for index in range(size)]
 
 

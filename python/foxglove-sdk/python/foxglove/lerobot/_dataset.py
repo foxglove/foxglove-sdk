@@ -28,14 +28,15 @@ class Feature:
 
     :param key: The feature's key, such as ``observation.state``.
     :param dtype: The feature's dtype, such as ``float32`` or ``video``.
-    :param shape: The feature's shape.
+    :param shape: The feature's shape. A dimension is None if its length varies from frame to
+        frame.
     :param names: One name per element, or None if the dataset doesn't give exactly one.
     :param is_depth_map: Whether the feature is a depth map video.
     """
 
     key: str
     dtype: str
-    shape: tuple[int, ...]
+    shape: tuple[int | None, ...]
     names: tuple[str, ...] | None
     is_depth_map: bool
 
