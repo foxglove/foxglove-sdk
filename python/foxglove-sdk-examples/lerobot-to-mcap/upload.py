@@ -92,12 +92,11 @@ def dataset_name(args: argparse.Namespace) -> str:
 
 
 def check_dataset_name(api: Api, project_id: str, name: str) -> None:
-    datasets = api.call(
-        "GET", "/datasets", params={"projectId": project_id, "name": name}
-    )
-    if any(dataset["name"] == name for dataset in datasets):
+    datasets = api.list_all("/datasets", {"projectId": project_id, "name": name})
+    taken = [d["name"] for d in datasets if d["name"].casefold() == name.casefold()]
+    if taken:
         sys.exit(
-            f"error: project {project_id} already has a dataset named {name!r}. "
+            f"error: project {project_id} already has a dataset named {taken[0]!r}. "
             "Choose another name with --dataset-name, or delete that dataset."
         )
 

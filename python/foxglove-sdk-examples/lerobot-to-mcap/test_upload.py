@@ -81,12 +81,15 @@ def _handler(api: FakeFoxglove) -> type[BaseHTTPRequestHandler]:
                 name = query["name"][0].lower()
                 self._reply(
                     200,
-                    [
-                        {"id": dataset_id, **dataset}
-                        for dataset_id, dataset in api.datasets.items()
-                        if dataset["projectId"] == query["projectId"][0]
-                        and name in dataset["name"].lower()
-                    ],
+                    self._page(
+                        [
+                            {"id": dataset_id, **dataset}
+                            for dataset_id, dataset in api.datasets.items()
+                            if dataset["projectId"] == query["projectId"][0]
+                            and name in dataset["name"].lower()
+                        ],
+                        query,
+                    ),
                 )
                 return
             recordings = [
@@ -328,21 +331,25 @@ def test_uploads_files_again_when_their_contents_change(
 
 
 def test_stops_before_converting_when_the_dataset_name_is_taken(
-    api: FakeFoxglove, run: Callable[..., None]
+    api: FakeFoxglove, run: Callable[..., None], tmp_path: Path
 ) -> None:
-    run()
+    run("--dataset-name", "Pick_Place")
+    output = tmp_path / "second"
 
-    with pytest.raises(SystemExit, match="already has a dataset named 'pick_place'"):
-        run()
+    with pytest.raises(SystemExit, match="already has a dataset named 'Pick_Place'"):
+        run("--output", str(output))
+    assert not output.exists()
     assert len(api.upload_requests) == 3
 
 
 @pytest.mark.parametrize("timeout", ["nan", "inf", "-1"])
 def test_rejects_import_timeouts_that_are_negative_or_not_finite(
-    run: Callable[..., None], timeout: str
+    run: Callable[..., None], timeout: str, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    with pytest.raises(SystemExit):
+    with pytest.raises(SystemExit) as exit_info:
         run("--import-timeout", timeout)
+    assert exit_info.value.code == 2
+    assert "--import-timeout must be" in capsys.readouterr().err
 
 
 def test_requires_an_api_key(
