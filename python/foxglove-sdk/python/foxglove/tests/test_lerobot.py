@@ -398,6 +398,16 @@ def decodes_standalone(video: Image) -> bool:
     return bool(codec.decode(av.Packet(video.data)) or codec.decode(None))
 
 
+def decoded_levels(videos: list[Image]) -> list[int]:
+    codec = av.CodecContext.create("h264", "r")
+    assert isinstance(codec, VideoCodecContext)
+    frames = [
+        frame for video in videos for frame in codec.decode(av.Packet(video.data))
+    ]
+    frames += codec.decode(None)
+    return [bytes(frame.planes[0])[0] for frame in frames]
+
+
 def obu_with_size_field(obu_type: int, payload: bytes) -> bytes:
     return bytes([obu_type << 3 | 0x2, len(payload)]) + payload
 
@@ -525,6 +535,7 @@ def test_starts_an_episode_between_keyframes_at_the_previous_keyframe(
     recording = read_mcap(written.path)
     start = recording.log_times("/observation/state")[0]
     assert written.preroll_frames == {CAMERA: 2}
+    assert written.b_frame_videos == ()
     assert [t - start for t in recording.log_times(VIDEO_TOPIC)] == [
         frame * FRAME_NS for frame in range(-2, 4)
     ]
@@ -535,19 +546,61 @@ def test_starts_an_episode_between_keyframes_at_the_previous_keyframe(
         strict.write(metadata.episodes[1], tmp_path)
 
 
-def test_rejects_b_frames_without_leaving_a_file_behind(
-    make_dataset: Callable[..., Path], tmp_path: Path
+@pytest.mark.parametrize("version", ["v2.1", "v3.0"])
+def test_writes_b_frames_in_decode_order_with_their_display_times(
+    make_dataset: Callable[..., Path], tmp_path: Path, version: str
 ) -> None:
     metadata = load_metadata(
         make_dataset(
-            "v2.1",
+            version,
             codec="libx264",
             gop=6,
             video_options={"bf": "2", "x264-params": "b-adapt=0"},
         )
     )
+    writer = EpisodeWriter(metadata)
 
-    with pytest.raises(UnsupportedVideoError, match="B-frames"):
+    for episode in metadata.episodes:
+        written = writer.write(episode, tmp_path)
+        recording = read_mcap(written.path)
+        videos = [video for _, video in recording.messages[VIDEO_TOPIC]]
+        display_times = [video.timestamp_ns for video in videos]
+        levels = decoded_levels(videos)
+
+        assert written.b_frame_videos == (CAMERA,)
+        assert display_times != sorted(display_times)
+        assert sorted(display_times) == recording.log_times("/observation/state")
+        assert len(levels) == episode.length
+        assert levels == sorted(set(levels))
+
+
+def test_keeps_the_frames_an_episodes_b_frames_depend_on(
+    make_dataset: Callable[..., Path], tmp_path: Path
+) -> None:
+    metadata = load_metadata(
+        make_dataset(
+            "v3.0",
+            codec="libx264",
+            gop=6,
+            video_options={"bf": "2", "x264-params": "b-adapt=0:open-gop=1"},
+        )
+    )
+
+    written = EpisodeWriter(metadata).write(metadata.episodes[0], tmp_path)
+    videos = [video for _, video in read_mcap(written.path).messages[VIDEO_TOPIC]]
+
+    assert sorted(video.timestamp_ns - START_NS for video in videos) == [
+        frame * FRAME_NS for frame in range(7)
+    ]
+    assert len(decoded_levels(videos)) == 7
+
+
+def test_rejects_unsupported_codecs_without_leaving_a_file_behind(
+    make_dataset: Callable[..., Path], tmp_path: Path
+) -> None:
+    metadata = load_metadata(make_dataset("v2.1", codec="mpeg4"))
+
+    with pytest.raises(UnsupportedVideoError, match="mpeg4"):
         EpisodeWriter(metadata).write(metadata.episodes[0], tmp_path)
     assert list(tmp_path.glob("episode_*")) == []
 

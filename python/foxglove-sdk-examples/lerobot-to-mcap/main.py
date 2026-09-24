@@ -113,6 +113,7 @@ def main() -> None:
 
     args.output.mkdir(parents=True, exist_ok=True)
     total_bytes = 0
+    warned_b_frames: set[str] = set()
     for episode in episodes:
         try:
             written = writer.write(episode, args.output)
@@ -134,6 +135,14 @@ def main() -> None:
                 f"  {key} started {frames_early} frame(s) early, at the previous "
                 "keyframe, so its first frame decodes"
             )
+        for key in written.b_frame_videos:
+            if key not in warned_b_frames:
+                warned_b_frames.add(key)
+                print(
+                    f"warning: {key} has B-frames, which Foxglove can't play back. "
+                    "Its frames are written as they are, in decode order.",
+                    file=sys.stderr,
+                )
     print(f"wrote {len(episodes)} episode(s), {total_bytes / 1e6:.1f} MB")
 
 

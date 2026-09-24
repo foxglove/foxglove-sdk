@@ -15,8 +15,8 @@ AV1C_HEADER_SIZE = 4
 
 
 class UnsupportedVideoError(Exception):
-    """A video can't be written as ``foxglove.CompressedVideo`` that Foxglove can play, for
-    example because it has B-frames or uses a codec other than AV1, H.264, H.265 or VP9.
+    """A video can't be written as ``foxglove.CompressedVideo``, for example because it uses a
+    codec other than AV1, H.264, H.265 or VP9.
     """
 
 
@@ -30,7 +30,9 @@ class VideoPacket:
     format: str
     data: bytes
     offset_s: float
+    decode_offset_s: float
     is_preroll: bool
+    is_b_frame: bool
 
 
 def read_episode_video(
@@ -63,46 +65,54 @@ def read_episode_video(
                 any_frame=False,
             )
 
-        preroll: list[VideoPacket] = []
+        # Frames not written yet: before the episode's first frame, the ones since the
+        # latest keyframe, which it may depend on. After it, the ones shown after the
+        # episode since its latest frame, which a later one may depend on.
+        held: list[VideoPacket] = []
         started = False
-        last_pts: int | None = None
+        latest_pts: int | None = None
+        decode_delay: int | None = None
         for packet in container.demux(stream):
             pts, is_keyframe = packet.pts, packet.is_keyframe
             if pts is None:
                 continue
-            if last_pts is not None and pts < last_pts:
-                raise UnsupportedVideoError(
-                    f"{segment.path.name}: the video has B-frames, which Foxglove can't "
-                    "play back. Re-encode it without them, e.g. with ffmpeg's `-bf 0`."
-                )
-            last_pts = pts
-
-            time_s = float(pts * time_base)
-            if time_s >= segment.end_s - half_frame_s:
+            dts = pts if packet.dts is None else packet.dts
+            # Every frame shown before the end is decoded before it.
+            if float(dts * time_base) >= segment.end_s - half_frame_s:
                 break
+            if decode_delay is None:
+                decode_delay = pts - dts
+            is_b_frame = latest_pts is not None and pts < latest_pts
+            latest_pts = pts if latest_pts is None else max(latest_pts, pts)
 
             data = _take_payload(packet, annex_b)
             if video_format == "av1" and is_keyframe:
                 data = _with_sequence_header(segment.path, data, sequence_header)
 
-            is_preroll = time_s < segment.start_s - half_frame_s
+            time_s = float(pts * time_base)
+            # Shifted so that frames decoded in display order are logged when shown.
+            decode_time_s = float((dts + decode_delay) * time_base)
             frame = VideoPacket(
                 format=video_format,
                 data=data,
                 offset_s=time_s - segment.start_s,
-                is_preroll=is_preroll,
+                decode_offset_s=decode_time_s - segment.start_s,
+                is_preroll=time_s < segment.start_s - half_frame_s,
+                is_b_frame=is_b_frame,
             )
-            if is_preroll:
-                if is_keyframe:
-                    preroll = [frame]
-                elif preroll:
-                    preroll.append(frame)
-                continue
-
+            in_episode = (
+                segment.start_s - half_frame_s <= time_s < segment.end_s - half_frame_s
+            )
             if not started:
+                if is_keyframe:
+                    held = []
+                if not in_episode:
+                    if is_keyframe or held:
+                        held.append(frame)
+                    continue
                 started = True
                 if not is_keyframe:
-                    if not preroll:
+                    if not held:
                         raise KeyframeError(
                             f"{segment.path.name}: no keyframe at or before "
                             f"{segment.start_s:.3f}s"
@@ -112,7 +122,11 @@ def read_episode_video(
                             f"{segment.path.name}: the episode starting at "
                             f"{segment.start_s:.3f}s doesn't start on a keyframe"
                         )
-                    yield from preroll
+            elif not in_episode:
+                held.append(frame)
+                continue
+            yield from held
+            held = []
             yield frame
 
         if not started:

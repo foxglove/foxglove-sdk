@@ -100,6 +100,14 @@ In v3.0 datasets, many episodes share one mp4. If an episode doesn't start on a 
 gets the frames back to the previous keyframe, before its start time, so that its first frame
 decodes. Episodes recorded with LeRobot start on a keyframe, so this is rare.
 
+Videos with B-frames store their frames out of display order. They're written as they are,
+in decode order, with each frame's ``timestamp`` set to the time it's shown, so reading the
+file in log time order decodes them. An episode also gets any frames from just outside it that
+its frames depend on. These videos are listed in the ``b_frame_videos`` of the
+:class:`~foxglove.lerobot.WrittenEpisode` that :meth:`~foxglove.lerobot.EpisodeWriter.write`
+returns. Foxglove can't play them back. To view them, re-encode them without B-frames first,
+e.g. with ffmpeg's ``-bf 0``.
+
 Limitations
 -----------
 
@@ -110,9 +118,8 @@ Limitations
 - A feature named ``task`` is skipped, since its topic, ``/task``, holds the frame's task.
 - Image features have to embed their images in the data files, as LeRobot does. Images stored
   only as file paths are rejected.
-- Videos with B-frames are rejected, because Foxglove can't play them back. Re-encode them
-  without B-frames first, e.g. with ffmpeg's ``-bf 0``. Codecs other than AV1, H.264, H.265 and
-  VP9 are rejected too.
+- Videos with B-frames are written, but Foxglove can't play them back, see `Video`_. Codecs
+  other than AV1, H.264, H.265 and VP9 are rejected.
 - Dataset and episode statistics (``meta/stats.json``, ``meta/episodes_stats.jsonl``, and the
   ``stats/*`` columns in v3.0) aren't written.
 - LeRobot datasets have no camera calibration or transform tree, so there's no

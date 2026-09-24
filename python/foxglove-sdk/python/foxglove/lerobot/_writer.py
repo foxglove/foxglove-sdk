@@ -94,10 +94,13 @@ class WrittenEpisode:
     :param preroll_frames: For each video feature whose video doesn't start the episode on a
         keyframe, the number of frames written from before the episode's start, back to the
         previous keyframe, so that its first frame decodes.
+    :param b_frame_videos: The video features whose video has B-frames. Their frames are
+        written in decode order, which Foxglove can't play back.
     """
 
     path: Path
     preroll_frames: dict[str, int] = field(hash=False)
+    b_frame_videos: tuple[str, ...]
 
 
 def plan_topics(
@@ -319,14 +322,18 @@ class EpisodeWriter:
                 with open_mcap(
                     partial, allow_overwrite=True, context=self._context
                 ) as writer:
-                    preroll_frames = self._write(episode, writer)
+                    preroll_frames, b_frame_videos = self._write(episode, writer)
             except BaseException:
                 partial.unlink(missing_ok=True)
                 raise
             partial.replace(path)
-        return WrittenEpisode(path=path, preroll_frames=preroll_frames)
+        return WrittenEpisode(
+            path=path, preroll_frames=preroll_frames, b_frame_videos=b_frame_videos
+        )
 
-    def _write(self, episode: Episode, writer: MCAPWriter) -> dict[str, int]:
+    def _write(
+        self, episode: Episode, writer: MCAPWriter
+    ) -> tuple[dict[str, int], tuple[str, ...]]:
         fps = self._metadata.fps
         start_ns = self._start_times[episode.index]
         frames = self._frames.read(episode)
@@ -349,13 +356,18 @@ class EpisodeWriter:
         self._write_tasks(episode, frames, log_times, start_ns)
 
         preroll_frames: dict[str, int] = {}
+        b_frame_videos: list[str] = []
         for topic in self._topics:
             channel = self._channels[topic.name]
             if topic.kind == "video":
                 feature = topic.features[0]
-                frames_early = self._write_video(episode, feature, channel, start_ns)
+                frames_early, has_b_frames = self._write_video(
+                    episode, feature, channel, start_ns
+                )
                 if frames_early:
                     preroll_frames[feature.key] = frames_early
+                if has_b_frames:
+                    b_frame_videos.append(feature.key)
             elif topic.kind == "image":
                 self._write_images(topic.features[0], channel, frames, log_times)
             elif topic.kind == "scalars":
@@ -365,7 +377,7 @@ class EpisodeWriter:
                     frames[topic.features[0].key].to_pylist(), log_times
                 ):
                     channel.log({"value": value}, log_time=log_time)
-        return preroll_frames
+        return preroll_frames, tuple(b_frame_videos)
 
     def _metadata_record(self, episode: Episode) -> dict[str, str]:
         metadata = {
@@ -408,29 +420,33 @@ class EpisodeWriter:
         feature: Feature,
         channel: CompressedVideoChannel,
         start_ns: int,
-    ) -> int:
+    ) -> tuple[int, bool]:
         segment = episode.videos.get(feature.key)
         if segment is None:
             raise ValueError(f"no video for {feature.key}")
 
+        fps = self._metadata.fps
         frames_early = 0
+        has_b_frames = False
         for packet in read_episode_video(
-            segment, self._metadata.fps, strict_keyframes=self._strict_keyframes
+            segment, fps, strict_keyframes=self._strict_keyframes
         ):
-            log_time = start_ns + offset_ns_snapped_to_frames(
-                packet.offset_s, self._metadata.fps
+            shown = start_ns + offset_ns_snapped_to_frames(packet.offset_s, fps)
+            decoded = start_ns + offset_ns_snapped_to_frames(
+                packet.decode_offset_s, fps
             )
             channel.log(
                 CompressedVideo(
-                    timestamp=_timestamp(log_time),
+                    timestamp=_timestamp(shown),
                     frame_id=feature.key,
                     data=packet.data,
                     format=packet.format,
                 ),
-                log_time=log_time,
+                log_time=decoded,
             )
             frames_early += packet.is_preroll
-        return frames_early
+            has_b_frames = has_b_frames or packet.is_b_frame
+        return frames_early, has_b_frames
 
     def _write_images(
         self,
