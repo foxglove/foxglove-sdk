@@ -136,6 +136,12 @@ def _write_parquet(path: Path, table: pa.Table) -> None:
     pq.write_table(table, path)
 
 
+def _write_tasks(path: Path, task_column: str) -> None:
+    table = pa.table({"task_index": list(range(len(TASKS))), task_column: TASKS})
+    pandas_metadata = json.dumps({"index_columns": [task_column]})
+    pq.write_table(table.replace_schema_metadata({"pandas": pandas_metadata}), path)
+
+
 def write_dataset(
     root: Path,
     version: str,
@@ -145,6 +151,7 @@ def write_dataset(
     codec: str | None = None,
     gop: int = 2,
     video_options: dict[str, str] | None = None,
+    task_column: str = "task",
 ) -> Path:
     lengths = [len(indexes) for indexes in frame_task_indexes]
     starts = [sum(lengths[:episode]) for episode in range(len(lengths))]
@@ -173,10 +180,7 @@ def write_dataset(
         info["video_path"] = (
             "videos/{video_key}/chunk-{chunk_index:03d}/file-{file_index:03d}.mp4"
         )
-        pq.write_table(
-            pa.table({"task_index": list(range(len(TASKS))), "task": TASKS}),
-            root / "meta" / "tasks.parquet",
-        )
+        _write_tasks(root / "meta" / "tasks.parquet", task_column)
         _write_parquet(
             root / "data" / "chunk-000" / "file-000.parquet", pa.concat_tables(frames)
         )
@@ -575,6 +579,23 @@ def test_logs_the_task_when_it_changes(
     assert [task for _, task in second.messages["/task"]] == [
         {"task": "put the cube down", "task_index": 1}
     ]
+
+
+@pytest.mark.parametrize("task_column", ["task", "__index_level_0__"])
+def test_reads_v3_tasks_from_a_named_or_unnamed_pandas_index(
+    make_dataset: Callable[..., Path], task_column: str
+) -> None:
+    metadata = load_metadata(make_dataset("v3.0", task_column=task_column))
+
+    assert metadata.tasks == dict(enumerate(TASKS))
+
+
+def test_rejects_a_v3_tasks_file_without_task_strings(v3_dataset: Path) -> None:
+    path = v3_dataset / "meta" / "tasks.parquet"
+    pq.write_table(pa.table({"task_index": [0, 1]}), path)
+
+    with pytest.raises(UnsupportedDatasetError, match="no task column"):
+        load_metadata(v3_dataset)
 
 
 def test_records_episode_metadata_and_dataset_info(

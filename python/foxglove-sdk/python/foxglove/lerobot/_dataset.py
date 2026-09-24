@@ -281,13 +281,28 @@ def _tasks(root: Path) -> dict[int, str]:
     parquet = root / "meta" / "tasks.parquet"
     if not parquet.exists():
         return {}
-    table = pq.read_table(parquet, columns=["task_index", "task"])
+    column = _task_column(parquet)
+    table = pq.read_table(parquet, columns=["task_index", column])
     return {
         int(index): str(task)
         for index, task in zip(
-            table["task_index"].to_pylist(), table["task"].to_pylist()
+            table["task_index"].to_pylist(), table[column].to_pylist()
         )
     }
+
+
+def _task_column(path: Path) -> str:
+    schema = pq.read_schema(path)
+    if "task" in schema.names:
+        return "task"
+    # LeRobot before v0.5.0 wrote the task strings as an unnamed pandas index.
+    index_columns = (schema.pandas_metadata or {}).get("index_columns", [])
+    names = [
+        name for name in index_columns if isinstance(name, str) and name in schema.names
+    ]
+    if len(names) != 1:
+        raise UnsupportedDatasetError(f"{path} has no task column")
+    return names[0]
 
 
 class FrameReader:
