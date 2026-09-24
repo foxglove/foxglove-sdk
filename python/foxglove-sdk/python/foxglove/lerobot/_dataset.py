@@ -186,7 +186,12 @@ def _names(spec: dict[str, Any]) -> tuple[str, ...] | None:
     elif isinstance(names, list):
         labels = [str(name) for name in names]
 
-    if labels is None or len(labels) != math.prod(spec.get("shape") or ()):
+    shape = spec.get("shape") or ()
+    if (
+        labels is None
+        or not all(isinstance(size, int) for size in shape)
+        or len(labels) != math.prod(shape)
+    ):
         return None
     return tuple(labels)
 

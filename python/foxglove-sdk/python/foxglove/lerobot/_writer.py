@@ -125,6 +125,14 @@ def plan_topics(
         elif feature.dtype == "image":
             kind, name = "image", camera_topic(feature.key)
         elif feature.dtype in NUMERIC_DTYPES:
+            if not all(isinstance(size, int) for size in feature.shape):
+                skipped.append(
+                    (
+                        feature,
+                        "shapes with a variable-length dimension aren't supported",
+                    )
+                )
+                continue
             kind, name = "scalars", scalars_topic(feature.key)
         elif feature.dtype == "string":
             kind, name = "text", "/" + feature.key.replace(".", "/")

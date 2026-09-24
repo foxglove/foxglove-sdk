@@ -718,6 +718,11 @@ def test_skips_features_it_cannot_convert(v2_dataset: Path) -> None:
         "shape": [1],
         "names": None,
     }
+    info["features"]["observation.task_info"] = {
+        "dtype": "float32",
+        "shape": [None],
+        "names": ["progress"],
+    }
     info_path.write_text(json.dumps(info))
 
     writer = EpisodeWriter(load_metadata(v2_dataset))
@@ -725,6 +730,7 @@ def test_skips_features_it_cannot_convert(v2_dataset: Path) -> None:
     assert [feature.key for feature, _ in writer.skipped] == [
         "observation.images.depth",
         "language_events",
+        "observation.task_info",
     ]
 
 
