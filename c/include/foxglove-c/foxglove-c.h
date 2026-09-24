@@ -551,6 +551,42 @@ typedef uint8_t foxglove_point_cloud_compression_mode;
 #endif // __cplusplus
 #endif
 
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
+ * Draco point-cloud encoding method.
+ *
+ * Quantization applies to positions and every float32 field under both methods, and
+ * integer fields are copied losslessly under both; the methods differ in point order and
+ * compression ratio.
+ */
+enum foxglove_draco_method
+#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+  : uint8_t
+#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+ {
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+  /**
+   * kd-tree encoding: the best compression ratios, but points are reordered. This is
+   * the default (0).
+   */
+  FOXGLOVE_DRACO_METHOD_KD_TREE = 0,
+#endif
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+  /**
+   * Sequential encoding: preserves point order, at a lower compression ratio.
+   */
+  FOXGLOVE_DRACO_METHOD_SEQUENTIAL = 1,
+#endif
+};
+#ifndef __cplusplus
+#if __STDC_VERSION__ >= 202311L
+typedef enum foxglove_draco_method foxglove_draco_method;
+#else
+typedef uint8_t foxglove_draco_method;
+#endif // __STDC_VERSION__ >= 202311L
+#endif // __cplusplus
+#endif
+
 #if !defined(__wasm__)
 /**
  * Level indicator for a server status message.
@@ -2826,7 +2862,7 @@ typedef struct foxglove_parameter_handler {
  */
 typedef struct foxglove_draco_encode_options {
   /**
-   * Quantization bits for the position attribute; must be between 1 and
+   * Quantization bits for positions and float32 fields; must be between 1 and
    * `FOXGLOVE_DRACO_MAX_QUANTIZATION_BITS` (30) inclusive. Out-of-range values are
    * repaired toward the caller's intent, with a logged warning naming the channel:
    * values above the maximum (which the reference Draco decoder rejects) are clamped
@@ -2835,6 +2871,11 @@ typedef struct foxglove_draco_encode_options {
    * `FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DISABLED` to do that without the warning.
    */
   uint8_t quantization_bits;
+  /**
+   * The encoding method; zero-initialized (`FOXGLOVE_DRACO_METHOD_KD_TREE`) selects the
+   * default kd-tree encoding.
+   */
+  foxglove_draco_method method;
 } foxglove_draco_encode_options;
 #endif
 
@@ -2863,7 +2904,8 @@ typedef struct foxglove_draco_encode_options {
  * Zero-initialize this struct (mode 0) to use the SDK default. Note that when `mode` is
  * `FOXGLOVE_POINT_CLOUD_COMPRESSION_MODE_DRACO`, `draco.quantization_bits` should be set
  * to a value between 1 and 30; out-of-range values are repaired, with a logged warning
- * (see `foxglove_draco_encode_options`).
+ * (see `foxglove_draco_encode_options`). `draco.method` selects the encoding method, and
+ * is kd-tree when left zero.
  */
 typedef struct foxglove_point_cloud_compression {
   /**

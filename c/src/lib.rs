@@ -50,7 +50,8 @@ pub use server::*;
 // boundary; without a public path, their variants trip the dead-code lint.
 #[cfg(feature = "remote-access")]
 pub use gateway::{
-    FoxgloveDracoEncodeOptions, FoxglovePointCloudCompression, FoxglovePointCloudCompressionMode,
+    FoxgloveDracoEncodeOptions, FoxgloveDracoMethod, FoxglovePointCloudCompression,
+    FoxglovePointCloudCompressionMode,
 };
 
 #[cfg(not(target_family = "wasm"))]
