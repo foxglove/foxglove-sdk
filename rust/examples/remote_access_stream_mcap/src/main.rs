@@ -11,7 +11,11 @@ use std::{
 
 use anyhow::{Context, Result, anyhow};
 use clap::Parser;
-use foxglove::{ChannelBuilder, RawChannel, Schema, remote_access::Gateway};
+use foxglove::{
+    ChannelBuilder, RawChannel, Schema,
+    draco::{DracoEncodeOptions, MAX_QUANTIZATION_BITS},
+    remote_access::{Gateway, PointCloudCompression},
+};
 use mcap::Summary;
 use mcap::sans_io::indexed_reader::{IndexedReadEvent, IndexedReader, IndexedReaderOptions};
 use mcap::sans_io::summary_reader::{SummaryReadEvent, SummaryReader};
@@ -21,6 +25,19 @@ struct Args {
     /// Path to an MCAP file to play back in a loop.
     #[arg(long)]
     file: PathBuf,
+
+    /// The maximum size in bytes of a single message published to a lossy channel's data track.
+    ///
+    /// Larger messages are dropped, with a throttled warning. Must be at least 1200 bytes (one
+    /// WebRTC data-channel packet).
+    #[arg(long, default_value_t = 100 * 1024)]
+    max_data_track_message_size: usize,
+
+    /// Quantization bits for point cloud compression, between 1 and 30. Fewer bits produce smaller
+    /// messages but coarser values.
+    #[arg(long, default_value_t = 12,
+          value_parser = clap::value_parser!(u8).range(1..=MAX_QUANTIZATION_BITS as i64))]
+    quantization_bits: u8,
 }
 
 #[tokio::main]
@@ -30,7 +47,16 @@ async fn main() -> Result<()> {
 
     let args = Args::parse();
 
+    let pcc_opts = PointCloudCompression::Draco(
+        DracoEncodeOptions::builder()
+            .quantization_bits(args.quantization_bits)
+            .build()
+            .expect("clap validates the range"),
+    );
+
     let handle = Gateway::new()
+        .max_data_track_message_size(args.max_data_track_message_size)
+        .point_cloud_compression_fn(move |_| Some(pcc_opts))
         .start()
         .expect("Failed to start remote access gateway");
 

@@ -1,13 +1,15 @@
 //! Transparent point-cloud transcoding for the remote-access sink.
 //!
-//! Detects channels carrying point-cloud messages — protobuf-, JSON-, or
-//! FlatBuffer-encoded `foxglove.PointCloud`, or CDR-encoded ROS 2
-//! `sensor_msgs/msg/PointCloud2` — rewrites their advertisement to the
-//! `foxglove.CompressedPointCloud` schema, and transcodes individual messages using the
-//! Draco mechanism in [`crate::draco`]. Every input format is decoded to a
-//! `foxglove.PointCloud` before Draco encoding.
+//! Detects channels carrying point-cloud messages (protobuf-, JSON-, or
+//! FlatBuffer-encoded `foxglove.PointCloud`, CDR-encoded ROS 2
+//! `sensor_msgs/msg/PointCloud2`, or ROS 1 `sensor_msgs/PointCloud2`), rewrites their
+//! advertisement to the `foxglove.CompressedPointCloud` schema, and transcodes individual
+//! messages using the Draco mechanism in [`crate::draco`]. Every input format is decoded to
+//! a `foxglove.PointCloud` before Draco encoding.
 
 mod flatbuffer;
+mod point_cloud2;
+mod ros1;
 mod ros2;
 
 use bytes::Bytes;
@@ -25,8 +27,10 @@ use crate::{Decode, RawChannel};
 pub(crate) enum TranscodeError {
     #[error("failed to decode PointCloud message: {0}")]
     Decode(#[from] prost::DecodeError),
-    #[error("failed to decode PointCloud2 message: {0}")]
+    #[error("failed to decode ROS 2 PointCloud2 message: {0}")]
     Ros2(#[from] ros2::Ros2PointCloudError),
+    #[error("failed to decode ROS 1 PointCloud2 message: {0}")]
+    Ros1(#[from] ros1::Ros1PointCloudError),
     #[error("failed to decode JSON PointCloud message: {0}")]
     Json(#[from] serde_json::Error),
     #[error("failed to decode FlatBuffer PointCloud message: {0}")]
@@ -50,6 +54,8 @@ pub(crate) enum PointCloudInputSchema {
     FoxgloveFlatbuffer,
     /// ROS 2 `sensor_msgs/msg/PointCloud2` with cdr encoding.
     Ros2PointCloud2,
+    /// ROS 1 `sensor_msgs/PointCloud2` with ros1 encoding.
+    Ros1PointCloud2,
 }
 
 /// Maps a channel's message encoding and schema name to a point-cloud input format.
@@ -59,6 +65,7 @@ fn detect_point_cloud_schema(encoding: &str, schema_name: &str) -> Option<PointC
         ("json", "foxglove.PointCloud") => Some(PointCloudInputSchema::FoxgloveJson),
         ("flatbuffer", "foxglove.PointCloud") => Some(PointCloudInputSchema::FoxgloveFlatbuffer),
         ("cdr", "sensor_msgs/msg/PointCloud2") => Some(PointCloudInputSchema::Ros2PointCloud2),
+        ("ros1", "sensor_msgs/PointCloud2") => Some(PointCloudInputSchema::Ros1PointCloud2),
         _ => None,
     }
 }
@@ -82,7 +89,8 @@ pub(crate) fn transcode_point_cloud_message(
         PointCloudInputSchema::FoxgloveProtobuf => <PointCloud as Decode>::decode(msg)?,
         PointCloudInputSchema::FoxgloveJson => serde_json::from_slice::<PointCloud>(msg)?,
         PointCloudInputSchema::FoxgloveFlatbuffer => flatbuffer::decode_point_cloud(msg)?,
-        PointCloudInputSchema::Ros2PointCloud2 => ros2::Ros2PointCloud2::decode(msg)?.try_into()?,
+        PointCloudInputSchema::Ros2PointCloud2 => ros2::decode_point_cloud(msg)?,
+        PointCloudInputSchema::Ros1PointCloud2 => ros1::decode_point_cloud(msg)?,
     };
     // The conditioning passes and Draco encoding run on the converted cloud, so every
     // input format gets the same treatment as native ones.
@@ -459,6 +467,34 @@ mod tests {
     }
 
     #[test]
+    fn test_detects_ros1_point_cloud2() {
+        let ch = make_channel(
+            "ros1",
+            Some(Schema::new("sensor_msgs/PointCloud2", "ros1msg", b"")),
+        );
+        assert_eq!(
+            point_cloud_input_schema(&ch),
+            Some(PointCloudInputSchema::Ros1PointCloud2)
+        );
+    }
+
+    #[test]
+    fn test_ignores_mismatched_ros_encoding_and_schema_name() {
+        // ROS 1 and ROS 2 name the type differently; each name is only valid with its
+        // own message encoding.
+        let ch = make_channel(
+            "ros1",
+            Some(Schema::new("sensor_msgs/msg/PointCloud2", "ros2msg", b"")),
+        );
+        assert_eq!(point_cloud_input_schema(&ch), None);
+        let ch = make_channel(
+            "cdr",
+            Some(Schema::new("sensor_msgs/PointCloud2", "ros1msg", b"")),
+        );
+        assert_eq!(point_cloud_input_schema(&ch), None);
+    }
+
+    #[test]
     fn test_detects_flatbuffer_point_cloud() {
         let ch = make_channel(
             "flatbuffer",
@@ -593,6 +629,26 @@ mod tests {
         let transcoded = transcode_point_cloud_message(
             &encoded,
             PointCloudInputSchema::Ros2PointCloud2,
+            &PointCloudCompression::default(),
+        )
+        .unwrap();
+        let compressed =
+            <crate::messages::CompressedPointCloud as Decode>::decode(transcoded.as_ref()).unwrap();
+        assert_eq!(compressed.format, "draco");
+        assert_eq!(compressed.frame_id, "lidar");
+        assert!(!compressed.data.is_empty());
+    }
+
+    #[test]
+    fn test_transcodes_ros1_point_cloud2_to_compressed_point_cloud() {
+        use super::point_cloud2::tests::make_cloud;
+        use super::ros1::tests::encode_point_cloud2;
+        use crate::Decode;
+
+        let encoded = encode_point_cloud2(&make_cloud(&[[1.0, 2.0, 3.0]]));
+        let transcoded = transcode_point_cloud_message(
+            &encoded,
+            PointCloudInputSchema::Ros1PointCloud2,
             &PointCloudCompression::default(),
         )
         .unwrap();
