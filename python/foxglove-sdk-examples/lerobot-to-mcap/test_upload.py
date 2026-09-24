@@ -69,7 +69,8 @@ def _handler(api: FakeFoxglove) -> type[BaseHTTPRequestHandler]:
 
         def _page(self, items: list[Any], query: dict[str, list[str]]) -> list[Any]:
             offset = int(query.get("offset", ["0"])[0])
-            return items[offset : offset + int(query.get("limit", ["2000"])[0])]
+            limit = int(query.get("limit", [str(upload.PAGE_SIZE)])[0])
+            return items[offset : offset + limit]
 
         def do_GET(self) -> None:
             if not self._authorized():
@@ -146,7 +147,8 @@ def _handler(api: FakeFoxglove) -> type[BaseHTTPRequestHandler]:
             elif self.path == "/v1/datasets":
                 assert len(body["episodeIds"]) <= upload.BATCH_SIZE
                 if any(
-                    dataset["name"] == body["name"] for dataset in api.datasets.values()
+                    dataset["name"].casefold() == body["name"].casefold()
+                    for dataset in api.datasets.values()
                 ):
                     self._reply(409, {"error": "name taken"})
                     return
@@ -340,6 +342,18 @@ def test_stops_before_converting_when_the_dataset_name_is_taken(
         run("--output", str(output))
     assert not output.exists()
     assert len(api.upload_requests) == 3
+
+
+def test_finds_a_taken_dataset_name_on_a_later_page(
+    api: FakeFoxglove, run: Callable[..., None], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    api.datasets["ds_a"] = {"projectId": "prj_1", "name": "pick_place_v2"}
+    api.datasets["ds_b"] = {"projectId": "prj_1", "name": "pick_place"}
+    monkeypatch.setattr(upload, "PAGE_SIZE", 1)
+
+    with pytest.raises(SystemExit, match="already has a dataset named 'pick_place'"):
+        run()
+    assert api.upload_requests == []
 
 
 @pytest.mark.parametrize("timeout", ["nan", "inf", "-1"])
