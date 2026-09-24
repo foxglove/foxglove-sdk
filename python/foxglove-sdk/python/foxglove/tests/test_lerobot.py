@@ -17,6 +17,7 @@ from av.video.codeccontext import VideoCodecContext
 from av.video.stream import VideoStream
 from foxglove.lerobot import (
     DEFAULT_START_TIME,
+    BFrameWarning,
     EpisodeWriter,
     KeyframeError,
     UnsupportedDatasetError,
@@ -561,7 +562,8 @@ def test_writes_b_frames_in_decode_order_with_their_display_times(
     writer = EpisodeWriter(metadata)
 
     for episode in metadata.episodes:
-        written = writer.write(episode, tmp_path)
+        with pytest.warns(BFrameWarning, match=CAMERA):
+            written = writer.write(episode, tmp_path)
         recording = read_mcap(written.path)
         videos = [video for _, video in recording.messages[VIDEO_TOPIC]]
         display_times = [video.timestamp_ns for video in videos]
@@ -574,6 +576,7 @@ def test_writes_b_frames_in_decode_order_with_their_display_times(
         assert levels == sorted(set(levels))
 
 
+@pytest.mark.filterwarnings("ignore::foxglove.lerobot.BFrameWarning")
 def test_keeps_the_frames_an_episodes_b_frames_depend_on(
     make_dataset: Callable[..., Path], tmp_path: Path
 ) -> None:
@@ -605,6 +608,7 @@ def test_keeps_the_frames_an_episodes_b_frames_depend_on(
     assert len(decoded_levels(second_videos)) == 4
 
 
+@pytest.mark.filterwarnings("ignore::foxglove.lerobot.BFrameWarning")
 def test_starts_an_open_gop_episode_at_a_keyframe_shown_before_it(
     make_dataset: Callable[..., Path], tmp_path: Path
 ) -> None:

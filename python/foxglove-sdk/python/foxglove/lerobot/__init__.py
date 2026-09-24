@@ -15,7 +15,7 @@ try:
         VideoSegment,
         load_metadata,
     )
-    from ._video import KeyframeError, UnsupportedVideoError
+    from ._video import BFrameWarning, KeyframeError, UnsupportedVideoError
     from ._writer import (
         DEFAULT_EPISODE_GAP_S,
         DEFAULT_START_TIME,
@@ -31,6 +31,7 @@ except ModuleNotFoundError as err:
     ) from err
 
 __all__ = [
+    "BFrameWarning",
     "DEFAULT_EPISODE_GAP_S",
     "DEFAULT_START_TIME",
     "DatasetMetadata",

@@ -25,6 +25,12 @@ class UnsupportedVideoError(Exception):
     """
 
 
+class BFrameWarning(UserWarning):
+    """A video has B-frames. Its frames are written in decode order, which Foxglove can't play
+    back. Re-encode it without B-frames to view it, e.g. with ffmpeg's ``-bf 0``.
+    """
+
+
 class KeyframeError(Exception):
     """An episode's video doesn't start on a keyframe, and either there's no earlier
     keyframe to start from or ``strict_keyframes`` is set."""

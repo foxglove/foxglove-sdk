@@ -1,11 +1,13 @@
 import argparse
 import sys
+import warnings
 from datetime import datetime
 from pathlib import Path
 
 from foxglove.lerobot import (
     DEFAULT_EPISODE_GAP_S,
     DEFAULT_START_TIME,
+    BFrameWarning,
     EpisodeWriter,
     KeyframeError,
     UnsupportedDatasetError,
@@ -112,6 +114,7 @@ def main() -> None:
         print(f"warning: skipping {feature.key}: {reason}", file=sys.stderr)
 
     args.output.mkdir(parents=True, exist_ok=True)
+    warnings.simplefilter("ignore", BFrameWarning)
     total_bytes = 0
     warned_b_frames: set[str] = set()
     for episode in episodes:

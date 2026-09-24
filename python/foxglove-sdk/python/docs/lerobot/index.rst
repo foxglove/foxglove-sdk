@@ -106,8 +106,9 @@ in decode order, with each frame's ``timestamp`` set to the time it's shown, so 
 file in log time order decodes them. An episode also gets any frames from just outside it that
 its frames depend on. These videos are listed in the ``b_frame_videos`` of the
 :class:`~foxglove.lerobot.WrittenEpisode` that :meth:`~foxglove.lerobot.EpisodeWriter.write`
-returns. Foxglove can't play them back. To view them, re-encode them without B-frames first,
-e.g. with ffmpeg's ``-bf 0``.
+returns, and ``write`` warns about them with :class:`~foxglove.lerobot.BFrameWarning`.
+Foxglove can't play them back. To view them, re-encode them without B-frames first, e.g. with
+ffmpeg's ``-bf 0``.
 
 Limitations
 -----------
@@ -156,3 +157,5 @@ API
 .. autoexception:: foxglove.lerobot.UnsupportedVideoError
 
 .. autoexception:: foxglove.lerobot.KeyframeError
+
+.. autoexception:: foxglove.lerobot.BFrameWarning

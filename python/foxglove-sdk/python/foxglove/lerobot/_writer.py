@@ -1,6 +1,7 @@
 import json
 import math
 import threading
+import warnings
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -14,7 +15,7 @@ from ..channels import CompressedImageChannel, CompressedVideoChannel
 from ..mcap import MCAPWriter
 from ..messages import CompressedImage, CompressedVideo, Timestamp
 from ._dataset import INDEX_COLUMNS, DatasetMetadata, Episode, Feature, FrameReader
-from ._video import read_episode_video
+from ._video import BFrameWarning, read_episode_video
 
 NS_PER_SEC = 1_000_000_000
 
@@ -314,7 +315,8 @@ class EpisodeWriter:
         six digits.
 
         The file is written under a temporary name and renamed once it's complete, so a
-        failed or interrupted write doesn't leave a partial file behind.
+        failed or interrupted write doesn't leave a partial file behind. For each video with
+        B-frames, which Foxglove can't play back, it warns with :class:`BFrameWarning`.
 
         :param episode: The episode, one of the metadata's ``episodes``.
         :param output_dir: The directory to write to. It has to exist.
@@ -335,6 +337,13 @@ class EpisodeWriter:
                 partial.unlink(missing_ok=True)
                 raise
             partial.replace(path)
+        for key in b_frame_videos:
+            warnings.warn(
+                f"{key} has B-frames, which Foxglove can't play back. Its frames are "
+                "written as they are, in decode order.",
+                BFrameWarning,
+                stacklevel=2,
+            )
         return WrittenEpisode(
             path=path, preroll_frames=preroll_frames, b_frame_videos=b_frame_videos
         )
