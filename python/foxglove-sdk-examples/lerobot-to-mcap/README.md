@@ -62,7 +62,8 @@ It takes the same `--input`, `--episodes`, `--start-time`, `--episode-gap` and
 | `--import-timeout` | Seconds to wait for Foxglove to import the uploads. Defaults to 3600.                  |
 
 Each episode's LeRobot metadata, such as its index and tasks, becomes the Foxglove episode's
-metadata. Running it again skips files it already uploaded, but a dataset's name has to be new.
+metadata. Running it again skips files it already uploaded with the same contents, but a
+dataset's name has to be new, which it checks before converting.
 Set `FOXGLOVE_API_URL` to use a Foxglove API other than `https://api.foxglove.dev`.
 
 ## Tests

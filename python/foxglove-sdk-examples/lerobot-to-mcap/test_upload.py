@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
-from urllib.parse import unquote, urlparse
+from urllib.parse import parse_qs, urlparse
 
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -28,7 +28,8 @@ class FakeFoxglove:
     recordings: dict[str, dict[str, Any]] = field(default_factory=dict)
     episodes: dict[str, dict[str, Any]] = field(default_factory=dict)
     datasets: dict[str, dict[str, Any]] = field(default_factory=dict)
-    failed_keys: set[str] = field(default_factory=set)
+    failed_files: set[str] = field(default_factory=set)
+    list_requests: int = 0
 
 
 def _handler(api: FakeFoxglove) -> type[BaseHTTPRequestHandler]:
@@ -53,45 +54,81 @@ def _handler(api: FakeFoxglove) -> type[BaseHTTPRequestHandler]:
             return False
 
         def do_PUT(self) -> None:
-            key = unquote(self.path.removeprefix("/signed/"))
-            api.uploads[key] = self._body()
-            api.recordings[key] = {
+            request = api.upload_requests[int(self.path.removeprefix("/signed/"))]
+            api.uploads[request["key"]] = self._body()
+            api.recordings[request["key"]] = {
                 "id": f"rec_{len(api.recordings)}",
-                "key": key,
+                "key": request["key"],
+                "deviceName": request["deviceName"],
+                "projectId": request["projectId"],
+                "path": request["filename"],
+                "requestId": request["requestId"],
                 "importStatus": "importing",
             }
             self._reply(200)
+
+        def _page(self, items: list[Any], query: dict[str, list[str]]) -> list[Any]:
+            offset = int(query.get("offset", ["0"])[0])
+            return items[offset : offset + int(query.get("limit", ["2000"])[0])]
 
         def do_GET(self) -> None:
             if not self._authorized():
                 return
             url = urlparse(self.path)
-            if url.path == "/v1/data/pending-imports":
-                key = url.query.removeprefix("key=")
-                failed = key in api.failed_keys
+            query = parse_qs(url.query)
+            api.list_requests += 1
+            if url.path == "/v1/datasets":
+                name = query["name"][0].lower()
                 self._reply(
-                    200, [{"status": "error", "error": "bad file"}] if failed else []
+                    200,
+                    [
+                        {"id": dataset_id, **dataset}
+                        for dataset_id, dataset in api.datasets.items()
+                        if dataset["projectId"] == query["projectId"][0]
+                        and name in dataset["name"].lower()
+                    ],
                 )
                 return
-            recording = api.recordings.get(
-                unquote(url.path.removeprefix("/v1/recordings/"))
-            )
-            if recording is None:
-                self._reply(404, {"error": "not found"})
+            recordings = [
+                recording
+                for recording in api.recordings.values()
+                if recording["deviceName"] == query["deviceName"][0]
+                and recording["projectId"] == query["projectId"][0]
+            ]
+            if url.path == "/v1/data/pending-imports":
+                self._reply(
+                    200,
+                    self._page(
+                        [
+                            {
+                                "requestId": recording["requestId"],
+                                "filename": recording["path"],
+                                "status": "error",
+                                "error": "bad file",
+                            }
+                            for recording in recordings
+                            if recording["path"] in api.failed_files
+                        ],
+                        query,
+                    ),
+                )
                 return
-            reply = dict(recording)
-            if recording["key"] not in api.failed_keys:
-                recording["importStatus"] = "complete"
-            self._reply(200, reply)
+            assert url.path == "/v1/recordings"
+            self._reply(200, self._page([dict(r) for r in recordings], query))
+            for recording in recordings:
+                if recording["path"] not in api.failed_files:
+                    recording["importStatus"] = "complete"
 
         def do_POST(self) -> None:
             if not self._authorized():
                 return
             body = json.loads(self._body() or b"{}")
             if self.path == "/v1/data/upload":
-                api.upload_requests.append(body)
+                index = len(api.upload_requests)
+                api.upload_requests.append({**body, "requestId": f"req_{index}"})
                 self._reply(
-                    200, {"link": f"{api.url}/signed/{body['key']}", "requestId": "r"}
+                    200,
+                    {"link": f"{api.url}/signed/{index}", "requestId": f"req_{index}"},
                 )
             elif self.path == "/v1/episodes":
                 assert len(body["episodes"]) <= upload.BATCH_SIZE
@@ -239,7 +276,7 @@ def test_uploads_only_the_selected_episodes(
 ) -> None:
     run("--episodes", "0,2")
 
-    assert [request["key"] for request in api.upload_requests] == [
+    assert [request["key"].rsplit("-", 1)[0] for request in api.upload_requests] == [
         "lerobot-pick_place-episode_000000",
         "lerobot-pick_place-episode_000002",
     ]
@@ -272,11 +309,40 @@ def test_skips_files_it_already_uploaded(
 def test_stops_when_an_import_fails(
     api: FakeFoxglove, run: Callable[..., None]
 ) -> None:
-    api.failed_keys.add("lerobot-pick_place-episode_000001")
+    api.failed_files.add("episode_000001.mcap")
 
-    with pytest.raises(SystemExit, match="episode_000001 failed: bad file"):
+    with pytest.raises(SystemExit, match=r"episode_000001\.mcap failed: bad file"):
         run()
     assert api.datasets == {}
+
+
+def test_uploads_files_again_when_their_contents_change(
+    api: FakeFoxglove, run: Callable[..., None]
+) -> None:
+    run()
+    run("--dataset-name", "pick_place later", "--start-time", "2021-01-01T00:00:00Z")
+
+    assert len(api.upload_requests) == 6
+    first, second = api.datasets.values()
+    assert not set(first["episodeIds"]) & set(second["episodeIds"])
+
+
+def test_stops_before_converting_when_the_dataset_name_is_taken(
+    api: FakeFoxglove, run: Callable[..., None]
+) -> None:
+    run()
+
+    with pytest.raises(SystemExit, match="already has a dataset named 'pick_place'"):
+        run()
+    assert len(api.upload_requests) == 3
+
+
+@pytest.mark.parametrize("timeout", ["nan", "inf", "-1"])
+def test_rejects_import_timeouts_that_are_negative_or_not_finite(
+    run: Callable[..., None], timeout: str
+) -> None:
+    with pytest.raises(SystemExit):
+        run("--import-timeout", timeout)
 
 
 def test_requires_an_api_key(
