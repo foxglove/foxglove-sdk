@@ -747,6 +747,23 @@ def test_skips_a_task_feature_instead_of_writing_a_second_task_topic(
     ]
 
 
+@pytest.mark.parametrize("version", ["v2.1", "v3.0"])
+def test_rejects_metadata_that_lists_an_episode_twice(
+    make_dataset: Callable[..., Path], version: str
+) -> None:
+    root = make_dataset(version)
+    if version == "v3.0":
+        path = root / "meta" / "episodes" / "chunk-000" / "file-000.parquet"
+        table = pq.read_table(path)
+        pq.write_table(pa.concat_tables([table, table.slice(0, 1)]), path)
+    else:
+        path = root / "meta" / "episodes.jsonl"
+        path.write_text(path.read_text() + path.read_text().splitlines()[0] + "\n")
+
+    with pytest.raises(UnsupportedDatasetError, match=r"episode\(s\) 0 more than once"):
+        load_metadata(root)
+
+
 def test_names_the_feature_whose_values_do_not_match_its_shape(
     v2_dataset: Path, tmp_path: Path
 ) -> None:

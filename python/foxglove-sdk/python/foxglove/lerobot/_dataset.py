@@ -1,5 +1,6 @@
 import json
 import math
+from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -114,7 +115,7 @@ def load_metadata(root: str | Path) -> DatasetMetadata:
     :param root: The dataset's root directory, the one holding ``meta/``, ``data/`` and
         ``videos/``.
     :raises UnsupportedDatasetError: If the directory doesn't hold a dataset in a
-        supported format.
+        supported format, or its metadata lists an episode more than once.
     """
     root_path = Path(root)
     info_path = root_path / "meta" / "info.json"
@@ -149,6 +150,18 @@ def load_metadata(root: str | Path) -> DatasetMetadata:
         episodes = _episodes_v3(root_path, info, video_keys)
     else:
         episodes = _episodes_v2(root_path, info, video_keys)
+    repeated = sorted(
+        index
+        for index, count in Counter(episode.index for episode in episodes).items()
+        if count > 1
+    )
+    if repeated:
+        listed = ", ".join(map(str, repeated[:5])) + (
+            ", ..." if len(repeated) > 5 else ""
+        )
+        raise UnsupportedDatasetError(
+            f"{root_path}'s meta/episodes lists episode(s) {listed} more than once"
+        )
 
     return DatasetMetadata(
         root=root_path,
