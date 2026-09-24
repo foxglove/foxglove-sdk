@@ -59,7 +59,7 @@ impl PyDracoMethod {
 
 /// Options for Draco point-cloud encoding.
 ///
-/// :param quantization_bits: Quantization bits for the position attribute; must be
+/// :param quantization_bits: Quantization bits for positions and float32 fields; must be
 ///     between 1 and 30 inclusive, or a :py:exc:`ValueError` is raised. To disable
 ///     compression for a channel, return ``False`` from the ``point_cloud_compression``
 ///     policy rather than passing ``0``. Defaults to 12.

@@ -68,8 +68,8 @@ struct Args {
     quantization_bits: u8,
 
     /// Encode /cloud/compressed with Draco's sequential method instead of the default
-    /// kd-tree method. Sequential encoding preserves point order (and can carry float64
-    /// fields) at a lower compression ratio.
+    /// kd-tree method. Sequential encoding preserves point order at a lower compression
+    /// ratio.
     #[arg(long)]
     sequential: bool,
 }

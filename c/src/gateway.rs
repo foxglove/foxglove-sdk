@@ -138,7 +138,7 @@ pub enum FoxgloveDracoMethod {
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct FoxgloveDracoEncodeOptions {
-    /// Quantization bits for the position attribute; must be between 1 and
+    /// Quantization bits for positions and float32 fields; must be between 1 and
     /// `FOXGLOVE_DRACO_MAX_QUANTIZATION_BITS` (30) inclusive. Out-of-range values are
     /// repaired toward the caller's intent, with a logged warning naming the channel:
     /// values above the maximum (which the reference Draco decoder rejects) are clamped

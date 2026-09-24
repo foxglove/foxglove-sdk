@@ -33,7 +33,7 @@ struct DracoEncodeOptions {
   /// @brief The maximum supported value for @ref quantization_bits.
   static constexpr uint8_t kMaxQuantizationBits = 30;
 
-  /// @brief Quantization bits for the position attribute; must be between 1 and
+  /// @brief Quantization bits for positions and float32 fields; must be between 1 and
   /// @ref kMaxQuantizationBits (30) inclusive. Out-of-range values are repaired, with a
   /// logged warning naming the channel: values above the maximum (which the reference
   /// Draco decoder rejects) are clamped to it, and `0` (lossless) provides no size
