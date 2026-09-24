@@ -92,9 +92,10 @@ Video
 -----
 
 H.264 and H.265 frames are rewritten from the mp4 format into the Annex B format that
-``foxglove.CompressedVideo`` expects, and AV1 keyframes without a sequence header get the one
-from the mp4. Other frames are copied as they are. Every keyframe then carries the sequence
-header or parameter sets needed to decode it, so playback can start from any keyframe.
+``foxglove.CompressedVideo`` expects. H.264 keyframes without parameter sets and AV1 keyframes
+without a sequence header get the ones from the mp4. Other frames are copied as they are.
+Every keyframe then carries the sequence header or parameter sets needed to decode it, so
+playback can start from any keyframe.
 
 In v3.0 datasets, many episodes share one mp4. If an episode doesn't start on a keyframe, it
 gets the frames back to the previous keyframe, before its start time, so that its first frame

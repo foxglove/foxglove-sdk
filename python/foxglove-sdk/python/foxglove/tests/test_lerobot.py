@@ -586,13 +586,43 @@ def test_keeps_the_frames_an_episodes_b_frames_depend_on(
         )
     )
 
-    written = EpisodeWriter(metadata).write(metadata.episodes[0], tmp_path)
-    videos = [video for _, video in read_mcap(written.path).messages[VIDEO_TOPIC]]
+    writer = EpisodeWriter(metadata)
+    first, second = (writer.write(episode, tmp_path) for episode in metadata.episodes)
+    first_videos = [video for _, video in read_mcap(first.path).messages[VIDEO_TOPIC]]
+    recording = read_mcap(second.path)
+    second_videos = [video for _, video in recording.messages[VIDEO_TOPIC]]
+    second_start = recording.log_times("/observation/state")[0]
 
-    assert sorted(video.timestamp_ns - START_NS for video in videos) == [
+    assert sorted(video.timestamp_ns - START_NS for video in first_videos) == [
         frame * FRAME_NS for frame in range(7)
     ]
-    assert len(decoded_levels(videos)) == 7
+    assert len(decoded_levels(first_videos)) == 7
+    assert second.preroll_frames == {}
+    assert sorted(video.timestamp_ns - second_start for video in second_videos) == [
+        frame * FRAME_NS for frame in range(4)
+    ]
+    assert max(recording.log_times(VIDEO_TOPIC)) == second_start + 3 * FRAME_NS
+    assert len(decoded_levels(second_videos)) == 4
+
+
+def test_starts_an_open_gop_episode_at_a_keyframe_shown_before_it(
+    make_dataset: Callable[..., Path], tmp_path: Path
+) -> None:
+    metadata = load_metadata(
+        make_dataset(
+            "v3.0",
+            frame_task_indexes=([0] * 4, [0] * 8),
+            codec="libx264",
+            gop=6,
+            video_options={"bf": "2", "x264-params": "b-adapt=0:open-gop=1"},
+        )
+    )
+
+    written = EpisodeWriter(metadata).write(metadata.episodes[1], tmp_path)
+    videos = [video for _, video in read_mcap(written.path).messages[VIDEO_TOPIC]]
+
+    assert written.preroll_frames == {CAMERA: 4}
+    assert len(decoded_levels(videos)) == 12
 
 
 def test_rejects_unsupported_codecs_without_leaving_a_file_behind(
