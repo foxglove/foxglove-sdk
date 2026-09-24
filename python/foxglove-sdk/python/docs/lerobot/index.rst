@@ -107,6 +107,7 @@ Limitations
 - Depth map videos (``video.is_depth_map``) are skipped. LeRobot stores them as quantized 12-bit
   HEVC, which would need decoding and dequantizing into ``foxglove.RawImage`` frames.
 - ``language`` features, LeRobot's language annotations, are skipped.
+- A feature named ``task`` is skipped, since its topic, ``/task``, holds the frame's task.
 - Image features have to embed their images in the data files, as LeRobot does. Images stored
   only as file paths are rejected.
 - Videos with B-frames are rejected, because Foxglove can't play them back. Re-encode them

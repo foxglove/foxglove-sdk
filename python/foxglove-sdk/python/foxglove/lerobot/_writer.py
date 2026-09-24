@@ -128,6 +128,11 @@ def plan_topics(
         else:
             skipped.append((feature, f"dtype {feature.dtype!r} isn't supported"))
             continue
+        if name == TASK_TOPIC:
+            skipped.append(
+                (feature, f"its topic, {TASK_TOPIC}, holds the frame's task")
+            )
+            continue
 
         existing = topics.get(name)
         if existing is None:

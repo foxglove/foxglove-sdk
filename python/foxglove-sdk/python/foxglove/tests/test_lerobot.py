@@ -675,6 +675,25 @@ def test_skips_features_it_cannot_convert(v2_dataset: Path) -> None:
     ]
 
 
+@pytest.mark.parametrize("dtype", ["string", "int64"])
+def test_skips_a_task_feature_instead_of_writing_a_second_task_topic(
+    v2_dataset: Path, tmp_path: Path, dtype: str
+) -> None:
+    info_path = v2_dataset / "meta" / "info.json"
+    info = json.loads(info_path.read_text())
+    info["features"]["task"] = {"dtype": dtype, "shape": [1], "names": None}
+    info_path.write_text(json.dumps(info))
+    metadata = load_metadata(v2_dataset)
+
+    writer = EpisodeWriter(metadata)
+    recording = read_mcap(writer.write(metadata.episodes[0], tmp_path).path)
+
+    assert [feature.key for feature, _ in writer.skipped] == ["task"]
+    assert recording.messages["/task"] == [
+        (START_NS, {"task": "pick up the cube", "task_index": 0})
+    ]
+
+
 def test_names_the_feature_whose_values_do_not_match_its_shape(
     v2_dataset: Path, tmp_path: Path
 ) -> None:
