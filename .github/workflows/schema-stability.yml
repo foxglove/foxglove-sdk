@@ -13,7 +13,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Check for modified or deleted ROS .msg files
+      - name: Check for structural changes to ROS .msg files
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
@@ -26,17 +26,11 @@ jobs:
           changed=$(git diff --name-status --diff-filter=DR \
             "$BASE_SHA"..."$HEAD_SHA" \
             -- 'schemas/ros1/*.msg' 'schemas/ros2/*.msg')
-
-          while IFS= read -r path; do
-            if ! diff -q \
-              <(git show "$BASE_SHA:$path" | sed '/^[[:space:]]*#/d; /^[[:space:]]*$/d') \
-              <(git show "$HEAD_SHA:$path" | sed '/^[[:space:]]*#/d; /^[[:space:]]*$/d') \
-              > /dev/null; then
-              changed="${changed}${changed:+$'\n'}"$'M\t'"${path}"
-            fi
-          done < <(git diff --name-only --diff-filter=M \
+          modified=$(git diff --name-status --diff-filter=M \
+            -G '^[[:space:]]*[^#[:space:]]' \
             "$BASE_SHA"..."$HEAD_SHA" \
             -- 'schemas/ros1/*.msg' 'schemas/ros2/*.msg')
+          changed="${changed}${changed:+$'\n'}${modified}"
 
           if [ -z "$changed" ]; then
             echo "No structural changes to ROS .msg files."
