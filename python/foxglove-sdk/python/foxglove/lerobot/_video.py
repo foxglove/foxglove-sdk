@@ -73,8 +73,8 @@ def read_episode_video(
 
         decode_delay: int | None = None
         if segment.start_s > 0:
-            decode_delay = _decode_delay(container, stream)
-            _seek_to_keyframe_before(
+            decode_delay = _stream_decode_delay(container, stream)
+            _seek_to_keyframe_shown_before(
                 container, stream, time_base, segment.start_s + half_frame_s
             )
 
@@ -148,7 +148,7 @@ def read_episode_video(
             )
 
 
-def _seek_to_keyframe_before(
+def _seek_to_keyframe_shown_before(
     container: InputContainer, stream: VideoStream, time_base: Fraction, time_s: float
 ) -> None:
     target = int(time_s / time_base)
@@ -171,7 +171,7 @@ def _seek_to_keyframe_before(
     container.seek(target, stream=stream, backward=True, any_frame=False)
 
 
-def _decode_delay(container: InputContainer, stream: VideoStream) -> int:
+def _stream_decode_delay(container: InputContainer, stream: VideoStream) -> int:
     for packet in container.demux(stream):
         if packet.pts is not None:
             return 0 if packet.dts is None else packet.pts - packet.dts
