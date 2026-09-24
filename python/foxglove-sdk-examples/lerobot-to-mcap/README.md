@@ -39,6 +39,32 @@ padded to six digits, e.g. `episode_000003.mcap`.
 Videos with B-frames are written too, with a warning, but Foxglove can't play them back. To view
 them, re-encode the dataset's videos without B-frames first, e.g. with ffmpeg's `-bf 0`.
 
+## Upload to Foxglove
+
+`upload.py` does the conversion and then puts the dataset in Foxglove: it uploads the files,
+makes a [Foxglove episode](https://docs.foxglove.dev/api) of each, and commits them all as a
+new dataset. It needs an API key that can upload data and manage episodes and datasets, in
+`FOXGLOVE_API_KEY`:
+
+```bash
+FOXGLOVE_API_KEY=fox_sk_... uv run upload.py --input path/to/dataset --project-id prj_...
+```
+
+It takes the same `--input`, `--episodes`, `--start-time`, `--episode-gap` and
+`--strict-keyframes` options as `main.py`, and these:
+
+| Option             | Description                                                                            |
+| ------------------ | -------------------------------------------------------------------------------------- |
+| `--project-id`     | Foxglove project to add the recordings, episodes and dataset to. Required.             |
+| `--output`         | Directory to keep the MCAP files in. Defaults to a temporary directory, deleted after. |
+| `--dataset-name`   | Name of the new dataset. Defaults to the LeRobot dataset's name.                       |
+| `--device-name`    | Device to upload the recordings to. Defaults to `lerobot-<dataset name>`.              |
+| `--import-timeout` | Seconds to wait for Foxglove to import the uploads. Defaults to 3600.                  |
+
+Each episode's LeRobot metadata, such as its index and tasks, becomes the Foxglove episode's
+metadata. Running it again skips files it already uploaded, but a dataset's name has to be new.
+Set `FOXGLOVE_API_URL` to use a Foxglove API other than `https://api.foxglove.dev`.
+
 ## Tests
 
 ```bash

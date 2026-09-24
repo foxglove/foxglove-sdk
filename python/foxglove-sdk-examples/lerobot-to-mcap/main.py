@@ -8,6 +8,7 @@ from foxglove.lerobot import (
     DEFAULT_EPISODE_GAP_S,
     DEFAULT_START_TIME,
     BFrameWarning,
+    DatasetMetadata,
     EpisodeWriter,
     KeyframeError,
     UnsupportedDatasetError,
@@ -44,21 +45,12 @@ def parse_start_time(value: str) -> datetime:
         raise argparse.ArgumentTypeError(f"invalid ISO 8601 time {value!r}") from None
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Convert a LeRobot dataset into MCAP files, one per episode."
-    )
+def add_conversion_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--input",
         type=Path,
         required=True,
         help="LeRobot dataset directory, the one holding meta/, data/ and videos/",
-    )
-    parser.add_argument(
-        "--output",
-        type=Path,
-        required=True,
-        help="directory to write MCAP files to, created if missing",
     )
     parser.add_argument(
         "--episodes",
@@ -86,8 +78,13 @@ def main() -> None:
         help="fail if an episode's video doesn't start on a keyframe, instead of "
         "including the frames back to the previous keyframe",
     )
-    args = parser.parse_args()
 
+
+def convert(
+    args: argparse.Namespace, output: Path
+) -> tuple[DatasetMetadata, list[Path]]:
+    """Convert the episodes that ``args`` selects into ``output``, and return the
+    dataset's metadata and the files written, in episode order."""
     try:
         metadata = load_metadata(args.input.resolve())
     except UnsupportedDatasetError as err:
@@ -113,13 +110,14 @@ def main() -> None:
     for feature, reason in writer.skipped:
         print(f"warning: skipping {feature.key}: {reason}", file=sys.stderr)
 
-    args.output.mkdir(parents=True, exist_ok=True)
+    output.mkdir(parents=True, exist_ok=True)
     warnings.simplefilter("ignore", BFrameWarning)
+    paths: list[Path] = []
     total_bytes = 0
     warned_b_frames: set[str] = set()
     for episode in episodes:
         try:
-            written = writer.write(episode, args.output)
+            written = writer.write(episode, output)
         except (
             FileNotFoundError,
             KeyframeError,
@@ -127,6 +125,7 @@ def main() -> None:
             ValueError,
         ) as err:
             sys.exit(f"error: episode {episode.index}: {err}")
+        paths.append(written.path)
         size = written.path.stat().st_size
         total_bytes += size
         print(
@@ -149,6 +148,22 @@ def main() -> None:
                     file=sys.stderr,
                 )
     print(f"wrote {len(episodes)} episode(s), {total_bytes / 1e6:.1f} MB")
+    return metadata, paths
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Convert a LeRobot dataset into MCAP files, one per episode."
+    )
+    add_conversion_arguments(parser)
+    parser.add_argument(
+        "--output",
+        type=Path,
+        required=True,
+        help="directory to write MCAP files to, created if missing",
+    )
+    args = parser.parse_args()
+    convert(args, args.output)
 
 
 if __name__ == "__main__":
