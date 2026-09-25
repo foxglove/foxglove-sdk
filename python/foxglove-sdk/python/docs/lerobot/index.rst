@@ -71,7 +71,9 @@ one series per joint, named after it.
 
 A ``lerobot.Value`` message holds the frame's value as JSON, in ``value``. Numbers, strings,
 lists and objects are kept as they are, NaN and infinity become ``null``, and binary data is
-written as a base64 string.
+written as a base64 string. The schema gives the value's type, from the data files' column.
+Values Foxglove's JSON schemas can't describe, such as lists of lists, are written as JSON
+text in a string.
 
 Each file also has:
 

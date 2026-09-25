@@ -69,7 +69,7 @@ TASK_SCHEMA = {
 VALUE_SCHEMA = {
     "type": "object",
     "title": "lerobot.Value",
-    "properties": {"value": {}},
+    "properties": {"value": {"type": "string"}},
 }
 
 VIDEO_PACKET_SCHEMA = {
@@ -116,6 +116,7 @@ class _WrittenVideo:
 class _Settings:
     context: Context
     fps: float
+    data_schema: pa.Schema | None
 
 
 @dataclass(frozen=True)
@@ -137,8 +138,6 @@ class _Topic:
     """
 
     schema: dict[str, Any] = VALUE_SCHEMA
-    # Whether the data files must have the features' columns, or None if they aren't read.
-    required: bool | None = True
 
     def __init__(
         self, name: str, features: tuple[Feature, ...], settings: _Settings
@@ -149,6 +148,14 @@ class _Topic:
         self.columns = [feature.key for feature in features]
         self._settings = settings
         self._metadata = {"lerobot_features": ",".join(self.columns)}
+
+    @property
+    def required_columns(self) -> list[str]:
+        return self.columns
+
+    @property
+    def optional_columns(self) -> list[str]:
+        return []
 
     def write(self, frames: _Frames) -> _WrittenVideo | None:
         raise NotImplementedError
@@ -192,14 +199,43 @@ class _ScalarsTopic(_Topic):
 
 
 class _ValueTopic(_Topic):
-    required = False
+    def __init__(
+        self, name: str, features: tuple[Feature, ...], settings: _Settings
+    ) -> None:
+        super().__init__(name, features, settings)
+        data_schema = settings.data_schema
+        self._value_schema = (
+            _json_schema(data_schema.field(self.feature.key).type)
+            if data_schema is not None and self.feature.key in data_schema.names
+            else None
+        )
+
+    @property
+    def required_columns(self) -> list[str]:
+        return []
+
+    @property
+    def optional_columns(self) -> list[str]:
+        return self.columns
 
     def write(self, frames: _Frames) -> None:
         if self.feature.key in frames.table.column_names:
             for value, log_time in zip(
                 frames.column(self.feature.key), frames.log_times
             ):
-                self._channel.log({"value": _json_value(value)}, log_time=log_time)
+                json_value = _json_value(value)
+                if self._value_schema is None:
+                    json_value = json.dumps(json_value)
+                self._channel.log({"value": json_value}, log_time=log_time)
+
+    @cached_property
+    def _channel(self) -> Any:
+        return self._json_channel(
+            {
+                **VALUE_SCHEMA,
+                "properties": {"value": self._value_schema or {"type": "string"}},
+            }
+        )
 
 
 class _ImageTopic(_Topic):
@@ -227,19 +263,17 @@ class _VideoTopic(_Topic):
     """Frames go to a ``foxglove.CompressedVideo`` channel, or a ``lerobot.VideoPacket`` one
     for other codecs."""
 
-    required = None
+    @property
+    def required_columns(self) -> list[str]:
+        return []
 
     def earliest_ns(self, episode: Episode) -> int:
         """How far from the episode's start its earliest frame is shown or decoded."""
+        first = next(self._read(episode, with_data=False), None)
+        if first is None:
+            return 0
         return min(
-            (
-                min(
-                    self._offset_ns(packet.offset_s),
-                    self._offset_ns(packet.decode_offset_s),
-                )
-                for packet in self._read(episode, with_data=False)
-            ),
-            default=0,
+            self._offset_ns(first.offset_s), self._offset_ns(first.decode_offset_s)
         )
 
     def write(self, frames: _Frames) -> _WrittenVideo:
@@ -310,6 +344,13 @@ def plan_topics(
         kind: type[_Topic]
         if feature.key in INDEX_COLUMNS:
             continue
+        if (
+            feature.dtype != "video"
+            and data_schema is not None
+            and feature.key not in data_schema.names
+        ):
+            skipped.append((feature, "the data files have no column for it"))
+            continue
         if feature.dtype == "video":
             kind, name = _VideoTopic, camera_topic(feature.key)
         elif feature.dtype == "image":
@@ -318,11 +359,6 @@ def plan_topics(
             isinstance(size, int) for size in feature.shape
         ):
             kind, name = _ScalarsTopic, scalars_topic(feature.key)
-        elif data_schema is not None and feature.key not in data_schema.names:
-            skipped.append(
-                (feature, f"the data files have no column for its {feature.dtype!r}")
-            )
-            continue
         else:
             kind, name = _ValueTopic, _feature_topic(feature.key)
         if name == TASK_TOPIC:
@@ -402,19 +438,24 @@ class EpisodeWriter:
         self._metadata = metadata
         self._lock = threading.Lock()
         self._context = Context()
-        settings = _Settings(self._context, metadata.fps)
-        planned, self.skipped = plan_topics(metadata, _data_schema(metadata))
+        data_schema = _data_schema(metadata)
+        settings = _Settings(self._context, metadata.fps, data_schema)
+        planned, self.skipped = plan_topics(metadata, data_schema)
         self._topics = [
             kind(name, features, settings) for name, (kind, features) in planned.items()
         ]
-        columns: dict[bool | None, list[str]] = {
-            True: [],
-            False: ["timestamp", "task_index"],
-            None: [],
-        }
-        for topic in self._topics:
-            columns[topic.required] += topic.columns
-        self._frames = FrameReader(columns[True], optional_columns=columns[False])
+        self._frames = FrameReader(
+            [column for topic in self._topics for column in topic.required_columns],
+            optional_columns=[
+                "timestamp",
+                "task_index",
+                *(
+                    column
+                    for topic in self._topics
+                    for column in topic.optional_columns
+                ),
+            ],
+        )
         self._video_topics = [
             topic for topic in self._topics if isinstance(topic, _VideoTopic)
         ]
@@ -444,7 +485,9 @@ class EpisodeWriter:
 
         The file is written under a temporary name and renamed once it's complete, so a
         failed or interrupted write doesn't leave a partial file behind. For each video with
-        B-frames, which Foxglove can't play back, it warns with :class:`BFrameWarning`.
+        B-frames, which Foxglove can't play back, it warns with :class:`BFrameWarning`, and
+        for each video in a codec ``foxglove.CompressedVideo`` can't hold, with
+        :class:`UnsupportedCodecWarning`.
 
         :param episode: The episode, one of the metadata's ``episodes``.
         :param output_dir: The directory to write to. It has to exist.
@@ -565,6 +608,41 @@ def _data_schema(metadata: DatasetMetadata) -> pa.Schema | None:
     for episode in metadata.episodes:
         if episode.data_path.exists():
             return pq.read_schema(episode.data_path)
+    return None
+
+
+def _json_schema(arrow_type: pa.DataType) -> dict[str, Any] | None:
+    if pa.types.is_boolean(arrow_type):
+        return {"type": "boolean"}
+    if pa.types.is_integer(arrow_type):
+        return {"type": "integer"}
+    if pa.types.is_floating(arrow_type):
+        return {"type": "number"}
+    if pa.types.is_string(arrow_type) or pa.types.is_large_string(arrow_type):
+        return {"type": "string"}
+    if (
+        pa.types.is_binary(arrow_type)
+        or pa.types.is_large_binary(arrow_type)
+        or pa.types.is_fixed_size_binary(arrow_type)
+    ):
+        return {"type": "string", "contentEncoding": "base64"}
+    if (
+        pa.types.is_list(arrow_type)
+        or pa.types.is_large_list(arrow_type)
+        or pa.types.is_fixed_size_list(arrow_type)
+    ):
+        items = _json_schema(arrow_type.value_type)
+        if items is None or items["type"] == "array":
+            return None
+        return {"type": "array", "items": items}
+    if pa.types.is_struct(arrow_type):
+        properties = {}
+        for arrow_field in arrow_type:
+            field_schema = _json_schema(arrow_field.type)
+            if field_schema is None:
+                return None
+            properties[arrow_field.name] = field_schema
+        return {"type": "object", "properties": properties}
     return None
 
 

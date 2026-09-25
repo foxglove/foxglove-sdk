@@ -364,6 +364,26 @@ class Recording:
         return [log_time for log_time, _ in self.messages[topic]]
 
 
+FIELD_TYPES = {"boolean", "string", "number", "integer", "object", "array"}
+ITEM_TYPES = FIELD_TYPES - {"array"}
+
+
+def assert_foxglove_can_parse(schema: dict[str, Any], where: str) -> None:
+    assert schema.get("type") == "object", where
+    for name, field_schema in schema.get("properties", {}).items():
+        path = f"{where}.{name}"
+        assert field_schema.get("type") in FIELD_TYPES, path
+        if field_schema["type"] == "string":
+            assert field_schema.get("contentEncoding") in (None, "base64"), path
+        elif field_schema["type"] == "object":
+            assert_foxglove_can_parse(field_schema, path)
+        elif field_schema["type"] == "array":
+            items = field_schema.get("items", {})
+            assert items.get("type") in ITEM_TYPES, path
+            if items["type"] == "object":
+                assert_foxglove_can_parse(items, path)
+
+
 def read_mcap(path: Path) -> Recording:
     recording = Recording()
     with path.open("rb") as file:
@@ -372,6 +392,7 @@ def read_mcap(path: Path) -> Recording:
             assert schema is not None
             recording.schemas[channel.topic] = schema.name
             if channel.message_encoding == "json":
+                assert_foxglove_can_parse(json.loads(schema.data), channel.topic)
                 decoded: Any = json.loads(message.data)
             else:
                 decoded = _decode_image(schema.name, message.data)
@@ -756,7 +777,9 @@ def test_writes_non_finite_values_as_null(v2_dataset: Path, tmp_path: Path) -> N
     assert [scalar["value"] for scalar in state["scalars"]] == [None, None]
 
 
-def test_skips_features_the_data_files_have_no_column_for(v2_dataset: Path) -> None:
+def test_skips_features_the_data_files_have_no_column_for(
+    v2_dataset: Path, tmp_path: Path
+) -> None:
     info_path = v2_dataset / "meta" / "info.json"
     info = json.loads(info_path.read_text())
     info["features"]["language_events"] = {
@@ -769,14 +792,29 @@ def test_skips_features_the_data_files_have_no_column_for(v2_dataset: Path) -> N
         "shape": [None],
         "names": ["progress"],
     }
+    info["features"]["observation.images.wrist"] = {
+        "dtype": "image",
+        "shape": [HEIGHT, WIDTH, 3],
+        "names": ["height", "width", "channels"],
+    }
+    info["features"]["observation.effort"] = {
+        "dtype": "float32",
+        "shape": [2],
+        "names": None,
+    }
     info_path.write_text(json.dumps(info))
+    metadata = load_metadata(v2_dataset)
 
-    writer = EpisodeWriter(load_metadata(v2_dataset))
+    writer = EpisodeWriter(metadata)
+    recording = read_mcap(writer.write(metadata.episodes[0], tmp_path))
 
     assert [feature.key for feature, _ in writer.skipped] == [
         "language_events",
         "observation.task_info",
+        "observation.images.wrist",
+        "observation.effort",
     ]
+    assert len(recording.messages["/observation/state"]) == 6
 
 
 @pytest.mark.parametrize(
@@ -856,6 +894,11 @@ def test_writes_features_without_a_topic_of_their_own_as_json_values(
                 "names": None,
             },
             "observation.blob": {"dtype": "binary", "shape": [1], "names": None},
+            "observation.points": {
+                "dtype": "float32",
+                "shape": [None, 2],
+                "names": None,
+            },
         },
         pa.table(
             {
@@ -868,6 +911,10 @@ def test_writes_features_without_a_topic_of_their_own_as_json_values(
                 ),
                 "observation.blob": pa.array(
                     [bytes([frame]) for frame in range(6)], pa.binary()
+                ),
+                "observation.points": pa.array(
+                    [[[0.0, 1.0]] * frame for frame in range(6)],
+                    pa.list_(pa.list_(pa.float32())),
                 ),
             }
         ),
@@ -889,6 +936,8 @@ def test_writes_features_without_a_topic_of_their_own_as_json_values(
     assert contacts[:2] == [[None], [0.5, None]]
     blobs = [message["value"] for _, message in recording.messages["/observation/blob"]]
     assert blobs[1] == base64.b64encode(b"\x01").decode()
+    _, points = recording.messages["/observation/points"][2]
+    assert json.loads(points["value"]) == [[0.0, 1.0], [0.0, 1.0]]
 
 
 @pytest.mark.parametrize("version", ["v2.1", "v3.0"])
