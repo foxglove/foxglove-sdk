@@ -142,7 +142,7 @@ def load_metadata(root: str | Path) -> DatasetMetadata:
             dtype=spec["dtype"],
             shape=tuple(spec.get("shape") or ()),
             names=_names(spec),
-            is_depth_map=bool((spec.get("info") or {}).get("video.is_depth_map")),
+            is_depth_map=_is_depth_map(spec),
         )
         for key, spec in info["features"].items()
     )
@@ -170,6 +170,16 @@ def load_metadata(root: str | Path) -> DatasetMetadata:
         features=features,
         episodes=episodes,
         tasks=_tasks(root_path),
+    )
+
+
+def _is_depth_map(spec: dict[str, Any]) -> bool:
+    info = spec.get("info") or {}
+    video_info = spec.get("video_info") or {}
+    return bool(
+        info.get("is_depth_map")
+        or info.get("video.is_depth_map")
+        or video_info.get("video.is_depth_map")
     )
 
 
@@ -358,3 +368,72 @@ class FrameReader:
         optional = [name for name in self._optional_columns if name in available]
         columns = list(dict.fromkeys(["episode_index", *self._columns, *optional]))
         return pq.read_table(path, columns=columns)
+
+
+class EpisodeStatsReader:
+    """Reads an episode's statistics, from ``meta/episodes_stats.jsonl`` in v2.1 or the
+    ``stats/*`` columns of ``meta/episodes`` in v3.0, as ``{feature: {stat: value}}``.
+    """
+
+    def __init__(self, metadata: DatasetMetadata) -> None:
+        self._root = metadata.root
+        self._is_v3 = metadata.version == "v3.0"
+        self._offsets: dict[int, int] | None = None
+        self._paths: dict[int, Path] | None = None
+        self._path: Path | None = None
+        self._table: pa.Table | None = None
+
+    def read(self, index: int) -> dict[str, Any] | None:
+        if self._is_v3:
+            if self._paths is None:
+                self._paths = self._index_v3()
+            path = self._paths.get(index)
+            return None if path is None else self._read_v3(path, index)
+        if self._offsets is None:
+            self._offsets = self._index_v2()
+        offset = self._offsets.get(index)
+        if offset is None:
+            return None
+        with (self._root / "meta" / "episodes_stats.jsonl").open("rb") as lines:
+            lines.seek(offset)
+            stats: dict[str, Any] = json.loads(lines.readline())["stats"]
+            return stats
+
+    def _index_v2(self) -> dict[int, int]:
+        path = self._root / "meta" / "episodes_stats.jsonl"
+        offsets: dict[int, int] = {}
+        if not path.exists():
+            return offsets
+        offset = 0
+        with path.open("rb") as lines:
+            for line in lines:
+                if line.strip():
+                    offsets[int(json.loads(line)["episode_index"])] = offset
+                offset += len(line)
+        return offsets
+
+    def _index_v3(self) -> dict[int, Path]:
+        paths: dict[int, Path] = {}
+        for path in sorted((self._root / "meta" / "episodes").rglob("*.parquet")):
+            if any(name.startswith("stats/") for name in pq.read_schema(path).names):
+                indexes = pq.read_table(path, columns=["episode_index"])[
+                    "episode_index"
+                ]
+                paths.update(dict.fromkeys(map(int, indexes.to_pylist()), path))
+        return paths
+
+    def _read_v3(self, path: Path, index: int) -> dict[str, Any]:
+        if self._table is None or path != self._path:
+            names = pq.read_schema(path).names
+            columns = ["episode_index", *(n for n in names if n.startswith("stats/"))]
+            self._table = pq.read_table(path, columns=columns)
+            self._path = path
+        (row,) = self._table.filter(
+            pc.equal(self._table["episode_index"], index)
+        ).to_pylist()
+        stats: dict[str, dict[str, Any]] = {}
+        for name, value in row.items():
+            if name != "episode_index":
+                feature, _, stat = name.removeprefix("stats/").rpartition("/")
+                stats.setdefault(feature, {})[stat] = value
+        return stats

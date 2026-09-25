@@ -15,12 +15,14 @@ try:
         VideoSegment,
         load_metadata,
     )
-    from ._video import BFrameWarning, KeyframeError, UnsupportedVideoError
+    from ._video import (
+        BFrameWarning,
+        DepthMapWarning,
+        UnsupportedCodecWarning,
+        UnsupportedVideoError,
+    )
     from ._writer import (
-        DEFAULT_EPISODE_GAP_S,
-        DEFAULT_START_TIME,
         EpisodeWriter,
-        WrittenEpisode,
     )
 except ModuleNotFoundError as err:
     if err.name not in ("av", "pyarrow"):
@@ -32,16 +34,14 @@ except ModuleNotFoundError as err:
 
 __all__ = [
     "BFrameWarning",
-    "DEFAULT_EPISODE_GAP_S",
-    "DEFAULT_START_TIME",
     "DatasetMetadata",
+    "DepthMapWarning",
     "Episode",
     "EpisodeWriter",
     "Feature",
-    "KeyframeError",
+    "UnsupportedCodecWarning",
     "UnsupportedDatasetError",
     "UnsupportedVideoError",
     "VideoSegment",
-    "WrittenEpisode",
     "load_metadata",
 ]

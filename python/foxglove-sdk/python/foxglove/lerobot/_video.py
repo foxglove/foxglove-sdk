@@ -11,6 +11,7 @@ from av.video.stream import VideoStream
 from ._dataset import VideoSegment
 
 FORMATS = {"av1": "av1", "h264": "h264", "hevc": "h265", "vp9": "vp9"}
+COMPRESSED_VIDEO_FORMATS = frozenset(FORMATS.values())
 ANNEX_B_FILTERS = {"h264": "h264_mp4toannexb", "h265": "hevc_mp4toannexb"}
 AV1_SEQUENCE_HEADER = 1
 AV1C_HEADER_SIZE = 4
@@ -20,8 +21,8 @@ ANNEX_B_START_CODE = b"\x00\x00\x00\x01"
 
 
 class UnsupportedVideoError(Exception):
-    """A video can't be written as ``foxglove.CompressedVideo``, for example because it uses a
-    codec other than AV1, H.264, H.265 or VP9.
+    """A video can't be read, for example because it has no keyframe to start an episode
+    from, or an AV1 keyframe has no sequence header and the mp4 has none to add.
     """
 
 
@@ -31,9 +32,19 @@ class BFrameWarning(UserWarning):
     """
 
 
-class KeyframeError(Exception):
-    """An episode's video doesn't start on a keyframe, and either there's no earlier
-    keyframe to start from or ``strict_keyframes`` is set."""
+class UnsupportedCodecWarning(UserWarning):
+    """A video uses a codec other than AV1, H.264, H.265 or VP9, which
+    ``foxglove.CompressedVideo`` can't hold. Its frames are written as ``lerobot.VideoPacket``
+    messages instead, which Foxglove can't play back.
+    """
+
+
+class DepthMapWarning(UserWarning):
+    """A video is a depth map. LeRobot stores depth maps as 12-bit codes quantized from depth
+    in meters, and they're written as they are, so Foxglove shows the codes rather than depth.
+    The parameters to convert them back are in the feature's ``info`` in ``meta/info.json``,
+    which each file has as an attachment.
+    """
 
 
 @dataclass(frozen=True)
@@ -42,12 +53,15 @@ class VideoPacket:
     data: bytes
     offset_s: float
     decode_offset_s: float
-    is_preroll: bool
     is_b_frame: bool
+    extradata: bytes
 
 
 def read_episode_video(
-    segment: VideoSegment, fps: float, *, strict_keyframes: bool = False
+    segment: VideoSegment,
+    fps: float,
+    *,
+    with_data: bool = True,
 ) -> Iterator[VideoPacket]:
     if not segment.path.exists():
         raise FileNotFoundError(f"missing video file {segment.path}")
@@ -55,7 +69,7 @@ def read_episode_video(
     half_frame_s = 0.5 / fps
     with av.open(str(segment.path)) as container:
         stream = container.streams.video[0]
-        video_format = _video_format(segment.path, stream)
+        video_format = _video_format(stream)
         time_base = stream.time_base
         if time_base is None:
             raise UnsupportedVideoError(f"{segment.path.name}: stream has no time base")
@@ -98,11 +112,13 @@ def read_episode_video(
             is_b_frame = latest_pts is not None and pts < latest_pts
             latest_pts = pts if latest_pts is None else max(latest_pts, pts)
 
-            data = _take_payload(packet, annex_b)
-            if video_format == "av1" and is_keyframe:
-                data = _with_sequence_header(segment.path, data, sequence_header)
-            if video_format == "h264" and is_keyframe:
-                data = _with_parameter_sets(data, parameter_sets)
+            data = b""
+            if with_data:
+                data = _take_payload(packet, annex_b)
+                if video_format == "av1" and is_keyframe:
+                    data = _with_sequence_header(segment.path, data, sequence_header)
+                if video_format == "h264" and is_keyframe:
+                    data = _with_parameter_sets(data, parameter_sets)
 
             time_s = float(pts * time_base)
             # Shifted so that frames decoded in display order are logged when shown.
@@ -112,8 +128,12 @@ def read_episode_video(
                 data=data,
                 offset_s=time_s - segment.start_s,
                 decode_offset_s=decode_time_s - segment.start_s,
-                is_preroll=time_s < segment.start_s - half_frame_s,
                 is_b_frame=is_b_frame,
+                extradata=(
+                    extradata
+                    if is_keyframe and video_format not in COMPRESSED_VIDEO_FORMATS
+                    else b""
+                ),
             )
             in_episode = (
                 segment.start_s - half_frame_s <= time_s < segment.end_s - half_frame_s
@@ -128,14 +148,9 @@ def read_episode_video(
             if not started:
                 started = True
                 if start_keyframe_pts is None:
-                    raise KeyframeError(
+                    raise UnsupportedVideoError(
                         f"{segment.path.name}: no keyframe at or before "
                         f"{segment.start_s:.3f}s"
-                    )
-                if held and strict_keyframes:
-                    raise KeyframeError(
-                        f"{segment.path.name}: the episode starting at "
-                        f"{segment.start_s:.3f}s doesn't start on a keyframe"
                     )
             yield from held
             held = []
@@ -178,15 +193,9 @@ def _stream_decode_delay(container: InputContainer, stream: VideoStream) -> int:
     return 0
 
 
-def _video_format(path: Path, stream: VideoStream) -> str:
+def _video_format(stream: VideoStream) -> str:
     codec = stream.codec_context.codec.canonical_name
-    video_format = FORMATS.get(codec)
-    if video_format is None:
-        raise UnsupportedVideoError(
-            f"{path.name}: {codec} video has no foxglove.CompressedVideo equivalent "
-            f"(supported: {', '.join(sorted(FORMATS))})"
-        )
-    return video_format
+    return FORMATS.get(codec, codec)
 
 
 def _take_payload(packet: av.Packet, annex_b: BitStreamFilterContext | None) -> bytes:

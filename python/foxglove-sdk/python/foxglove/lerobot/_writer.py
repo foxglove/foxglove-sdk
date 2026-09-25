@@ -1,32 +1,44 @@
+import base64
 import json
 import math
 import threading
 import warnings
-from collections.abc import Iterable
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from collections.abc import Iterator
+from dataclasses import dataclass
+from functools import cached_property
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any
 
 import pyarrow as pa
+import pyarrow.parquet as pq
 
 from .. import Channel, Context, open_mcap
 from ..channels import CompressedImageChannel, CompressedVideoChannel
 from ..mcap import MCAPWriter
 from ..messages import CompressedImage, CompressedVideo, Timestamp
-from ._dataset import INDEX_COLUMNS, DatasetMetadata, Episode, Feature, FrameReader
-from ._video import BFrameWarning, read_episode_video
+from ._dataset import (
+    INDEX_COLUMNS,
+    DatasetMetadata,
+    Episode,
+    EpisodeStatsReader,
+    Feature,
+    FrameReader,
+)
+from ._video import (
+    COMPRESSED_VIDEO_FORMATS,
+    BFrameWarning,
+    DepthMapWarning,
+    UnsupportedCodecWarning,
+    VideoPacket,
+    read_episode_video,
+)
 
 NS_PER_SEC = 1_000_000_000
-
-DEFAULT_START_TIME = datetime(2020, 1, 1, tzinfo=timezone.utc)
-DEFAULT_EPISODE_GAP_S = 1.0
-EARLIEST_START_TIME = datetime(1970, 1, 1, tzinfo=timezone.utc)
-LATEST_START_TIME = datetime(2100, 1, 1, tzinfo=timezone.utc)
 
 LEROBOT_TIMESTAMP_TOLERANCE_S = 1e-4
 
 TASK_TOPIC = "/task"
+TASK_FEATURE_TOPIC = "/task_feature"
 
 SCALARS_SCHEMA = {
     "type": "object",
@@ -54,10 +66,25 @@ TASK_SCHEMA = {
     },
 }
 
-TEXT_SCHEMA = {
+VALUE_SCHEMA = {
     "type": "object",
-    "title": "lerobot.Text",
-    "properties": {"value": {"type": "string"}},
+    "title": "lerobot.Value",
+    "properties": {"value": {}},
+}
+
+VIDEO_PACKET_SCHEMA = {
+    "type": "object",
+    "title": "lerobot.VideoPacket",
+    "properties": {
+        "timestamp": {
+            "type": "object",
+            "properties": {"sec": {"type": "integer"}, "nsec": {"type": "integer"}},
+        },
+        "frame_id": {"type": "string"},
+        "codec": {"type": "string"},
+        "data": {"type": "string", "contentEncoding": "base64"},
+        "extradata": {"type": "string", "contentEncoding": "base64"},
+    },
 }
 
 NUMERIC_DTYPES = frozenset(
@@ -77,94 +104,245 @@ NUMERIC_DTYPES = frozenset(
     }
 )
 
-TopicKind = Literal["video", "image", "scalars", "text"]
+
+@dataclass(frozen=True)
+class _WrittenVideo:
+    key: str
+    has_b_frames: bool
+    codec: str
 
 
 @dataclass(frozen=True)
-class Topic:
-    name: str
-    kind: TopicKind
-    features: tuple[Feature, ...]
+class _Settings:
+    context: Context
+    fps: float
 
 
 @dataclass(frozen=True)
-class WrittenEpisode:
-    """An episode that :meth:`EpisodeWriter.write` wrote.
+class _Frames:
+    """An episode's frames from the data files, and when each is logged."""
 
-    :param path: The MCAP file.
-    :param preroll_frames: For each video feature whose video doesn't start the episode on a
-        keyframe, the number of frames written from before the episode's start, back to the
-        previous keyframe, so that its first frame decodes.
-    :param b_frame_videos: The video features whose video has B-frames. Their frames are
-        written in decode order, which Foxglove can't play back.
+    episode: Episode
+    table: pa.Table
+    log_times: list[int]
+    start_ns: int
+
+    def column(self, key: str) -> list[Any]:
+        return list(self.table[key].to_pylist())
+
+
+class _Topic:
+    """A topic, the features written to it, and how an episode's messages are written.
+    Channels are made when first used, so a file only lists the ones it has messages on.
     """
 
-    path: Path
-    preroll_frames: dict[str, int] = field(hash=False)
-    b_frame_videos: tuple[str, ...]
+    schema: dict[str, Any] = VALUE_SCHEMA
+    # Whether the data files must have the features' columns, or None if they aren't read.
+    required: bool | None = True
+
+    def __init__(
+        self, name: str, features: tuple[Feature, ...], settings: _Settings
+    ) -> None:
+        self.name = name
+        self.features = features
+        self.feature = features[0]
+        self.columns = [feature.key for feature in features]
+        self._settings = settings
+        self._metadata = {"lerobot_features": ",".join(self.columns)}
+
+    def write(self, frames: _Frames) -> _WrittenVideo | None:
+        raise NotImplementedError
+
+    @cached_property
+    def _channel(self) -> Any:
+        return self._json_channel(self.schema)
+
+    def _json_channel(self, schema: dict[str, Any]) -> Channel:
+        return Channel(
+            self.name,
+            schema=schema,
+            message_encoding="json",
+            metadata=self._metadata,
+            context=self._settings.context,
+        )
+
+
+class _ScalarsTopic(_Topic):
+    schema = SCALARS_SCHEMA
+
+    def write(self, frames: _Frames) -> None:
+        columns = [
+            (feature.key, scalar_labels(feature), frames.column(feature.key))
+            for feature in self.features
+        ]
+        for row, log_time in enumerate(frames.log_times):
+            scalars: list[dict[str, Any]] = []
+            for key, labels, values in columns:
+                elements = _flatten(values[row])
+                if len(elements) != len(labels):
+                    raise ValueError(
+                        f"{key}: frame {row} has {len(elements)} values, but the "
+                        f"feature's shape has {len(labels)}"
+                    )
+                scalars.extend(
+                    {"label": label, "value": _number(element)}
+                    for label, element in zip(labels, elements)
+                )
+            self._channel.log({"scalars": scalars}, log_time=log_time)
+
+
+class _ValueTopic(_Topic):
+    required = False
+
+    def write(self, frames: _Frames) -> None:
+        if self.feature.key in frames.table.column_names:
+            for value, log_time in zip(
+                frames.column(self.feature.key), frames.log_times
+            ):
+                self._channel.log({"value": _json_value(value)}, log_time=log_time)
+
+
+class _ImageTopic(_Topic):
+    def write(self, frames: _Frames) -> None:
+        for value, log_time in zip(frames.column(self.feature.key), frames.log_times):
+            data = _image_bytes(value)
+            self._channel.log(
+                CompressedImage(
+                    timestamp=_timestamp(log_time),
+                    frame_id=self.feature.key,
+                    data=data,
+                    format=_image_format(self.feature, data),
+                ),
+                log_time=log_time,
+            )
+
+    @cached_property
+    def _channel(self) -> Any:
+        return CompressedImageChannel(
+            self.name, metadata=self._metadata, context=self._settings.context
+        )
+
+
+class _VideoTopic(_Topic):
+    """Frames go to a ``foxglove.CompressedVideo`` channel, or a ``lerobot.VideoPacket`` one
+    for other codecs."""
+
+    required = None
+
+    def earliest_ns(self, episode: Episode) -> int:
+        """How far from the episode's start its earliest frame is shown or decoded."""
+        return min(
+            (
+                min(
+                    self._offset_ns(packet.offset_s),
+                    self._offset_ns(packet.decode_offset_s),
+                )
+                for packet in self._read(episode, with_data=False)
+            ),
+            default=0,
+        )
+
+    def write(self, frames: _Frames) -> _WrittenVideo:
+        key = self.feature.key
+        has_b_frames = False
+        codec = ""
+        for packet in self._read(frames.episode):
+            shown = frames.start_ns + self._offset_ns(packet.offset_s)
+            decoded = frames.start_ns + self._offset_ns(packet.decode_offset_s)
+            codec = packet.format
+            if codec in COMPRESSED_VIDEO_FORMATS:
+                self._channel.log(
+                    CompressedVideo(
+                        timestamp=_timestamp(shown),
+                        frame_id=key,
+                        data=packet.data,
+                        format=codec,
+                    ),
+                    log_time=decoded,
+                )
+            else:
+                message = {
+                    "timestamp": _timestamp_fields(shown),
+                    "frame_id": key,
+                    "codec": codec,
+                    "data": _base64(packet.data),
+                }
+                if packet.extradata:
+                    message["extradata"] = _base64(packet.extradata)
+                self._packet_channel.log(message, log_time=decoded)
+            has_b_frames = has_b_frames or packet.is_b_frame
+        return _WrittenVideo(key, has_b_frames, codec)
+
+    @cached_property
+    def _channel(self) -> Any:
+        return CompressedVideoChannel(
+            self.name, metadata=self._metadata, context=self._settings.context
+        )
+
+    @cached_property
+    def _packet_channel(self) -> Channel:
+        return self._json_channel(VIDEO_PACKET_SCHEMA)
+
+    def _read(
+        self, episode: Episode, *, with_data: bool = True
+    ) -> Iterator[VideoPacket]:
+        segment = episode.videos.get(self.feature.key)
+        if segment is None:
+            raise ValueError(f"no video for {self.feature.key}")
+        return read_episode_video(
+            segment,
+            self._settings.fps,
+            with_data=with_data,
+        )
+
+    def _offset_ns(self, offset_s: float) -> int:
+        return offset_ns_snapped_to_frames(offset_s, self._settings.fps)
 
 
 def plan_topics(
-    metadata: DatasetMetadata,
-) -> tuple[list[Topic], list[tuple[Feature, str]]]:
-    topics: dict[str, Topic] = {}
+    metadata: DatasetMetadata, data_schema: pa.Schema | None = None
+) -> tuple[
+    dict[str, tuple[type[_Topic], tuple[Feature, ...]]], list[tuple[Feature, str]]
+]:
+    topics: dict[str, tuple[type[_Topic], tuple[Feature, ...]]] = {}
     skipped: list[tuple[Feature, str]] = []
     for feature in metadata.features:
-        kind: TopicKind
+        kind: type[_Topic]
         if feature.key in INDEX_COLUMNS:
             continue
-        if feature.is_depth_map:
-            skipped.append(
-                (
-                    feature,
-                    "depth maps are stored as quantized video and aren't supported",
-                )
-            )
-            continue
         if feature.dtype == "video":
-            kind, name = "video", camera_topic(feature.key)
+            kind, name = _VideoTopic, camera_topic(feature.key)
         elif feature.dtype == "image":
-            kind, name = "image", camera_topic(feature.key)
-        elif feature.dtype in NUMERIC_DTYPES:
-            if not all(isinstance(size, int) for size in feature.shape):
-                skipped.append(
-                    (
-                        feature,
-                        "shapes with a variable-length dimension aren't supported",
-                    )
-                )
-                continue
-            kind, name = "scalars", scalars_topic(feature.key)
-        elif feature.dtype == "string":
-            kind, name = "text", "/" + feature.key.replace(".", "/")
-        else:
-            skipped.append((feature, f"dtype {feature.dtype!r} isn't supported"))
-            continue
-        if name == TASK_TOPIC:
+            kind, name = _ImageTopic, camera_topic(feature.key)
+        elif feature.dtype in NUMERIC_DTYPES and all(
+            isinstance(size, int) for size in feature.shape
+        ):
+            kind, name = _ScalarsTopic, scalars_topic(feature.key)
+        elif data_schema is not None and feature.key not in data_schema.names:
             skipped.append(
-                (feature, f"its topic, {TASK_TOPIC}, holds the frame's task")
+                (feature, f"the data files have no column for its {feature.dtype!r}")
             )
             continue
+        else:
+            kind, name = _ValueTopic, _feature_topic(feature.key)
+        if name == TASK_TOPIC:
+            name = TASK_FEATURE_TOPIC
 
         existing = topics.get(name)
         if existing is None:
-            topics[name] = Topic(name, kind, (feature,))
-        elif kind == existing.kind == "scalars":
-            topics[name] = Topic(name, kind, (*existing.features, feature))
+            topics[name] = (kind, (feature,))
+        elif kind is existing[0] is _ScalarsTopic:
+            topics[name] = (kind, (*existing[1], feature))
         else:
             raise ValueError(
-                f"features {existing.features[0].key!r} and {feature.key!r} "
+                f"features {existing[1][0].key!r} and {feature.key!r} "
                 f"would both be written to {name}"
             )
-    return list(topics.values()), skipped
+    return topics, skipped
 
 
 def camera_topic(key: str) -> str:
-    name = key
-    for prefix in ("observation.images.", "observation."):
-        if key.startswith(prefix):
-            name = key[len(prefix) :]
-            break
+    name = _without_prefix(key, ("observation.images.", "observation."))
     return "/observation/images/" + name.replace(".", "_")
 
 
@@ -173,17 +351,13 @@ def scalars_topic(key: str) -> str:
         return "/action/state"
     if key.startswith("next."):
         return "/episode/state"
-    return "/" + key.replace(".", "/")
+    return _feature_topic(key)
 
 
 def scalar_labels(feature: Feature) -> list[str]:
     if feature.names is not None:
         return list(feature.names)
-    name = feature.key
-    for prefix in ("observation.", "action.", "next."):
-        if name.startswith(prefix):
-            name = name[len(prefix) :]
-            break
+    name = _without_prefix(feature.key, ("observation.", "action.", "next."))
     dims = [dim for dim in feature.shape if dim is not None]
     if len(dims) != len(feature.shape):
         raise ValueError(
@@ -191,21 +365,6 @@ def scalar_labels(feature: Feature) -> list[str]:
         )
     size = math.prod(dims)
     return [name] if size == 1 else [f"{name}_{index}" for index in range(size)]
-
-
-def episode_start_times(
-    episodes: Iterable[Episode], fps: float, start_time: datetime, gap_s: float
-) -> dict[int, int]:
-    since_epoch = start_time - datetime(1970, 1, 1, tzinfo=timezone.utc)
-    cursor = (
-        since_epoch.days * 86_400 + since_epoch.seconds
-    ) * NS_PER_SEC + since_epoch.microseconds * 1_000
-    gap_ns = round(gap_s * NS_PER_SEC)
-    starts = {}
-    for episode in sorted(episodes, key=lambda item: item.index):
-        starts[episode.index] = cursor
-        cursor += round(episode.length * NS_PER_SEC / fps) + gap_ns
-    return starts
 
 
 def offset_ns_snapped_to_frames(offset_s: float, fps: float) -> int:
@@ -218,24 +377,20 @@ def offset_ns_snapped_to_frames(offset_s: float, fps: float) -> int:
 class EpisodeWriter:
     """Writes the episodes of a LeRobot dataset to MCAP files, one file per episode.
 
-    LeRobot doesn't record when data was captured, so the episodes are laid end to end, in
-    index order, on a timeline that starts at ``start_time``. The timeline only depends on
-    the dataset and these options, so converting a dataset again reproduces the same time
-    ranges.
+    LeRobot doesn't record when data was captured, so each episode starts at time zero,
+    1970-01-01T00:00:00Z, the earliest time an MCAP file can hold, and its log times are its
+    own timestamps. An episode whose video has frames from before its start, back to the
+    keyframe decoding starts from, starts just late enough that the earliest of them is at
+    time zero.
+
+    Depth map videos are written like other videos, as the 12-bit codes LeRobot quantizes
+    depth to, and the writer warns about each with :class:`DepthMapWarning`.
 
     ``write`` calls run one at a time, so calling it from several threads gains nothing. To
     write episodes in parallel, use one ``EpisodeWriter`` per thread or process.
 
     :param metadata: The dataset's metadata, from :func:`load_metadata`.
-    :param start_time: When the dataset's first episode starts. A time without a time zone
-        is taken as UTC. It has to be at or after 1970-01-01T00:00:00Z and before
-        2100-01-01T00:00:00Z.
-    :param episode_gap_s: Seconds between one episode's end and the next one's start. It has
-        to be finite and 0 or more.
-    :param strict_keyframes: Fail if an episode's video doesn't start on a keyframe, rather
-        than starting it from the previous keyframe.
-    :raises ValueError: If ``start_time`` or ``episode_gap_s`` is out of range, or two
-        features would be written to the same topic.
+    :raises ValueError: If two features would be written to the same topic.
 
     .. py:attribute:: skipped
        :type: list[tuple[Feature, str]]
@@ -243,71 +398,39 @@ class EpisodeWriter:
        The features that aren't converted, each with the reason.
     """
 
-    def __init__(
-        self,
-        metadata: DatasetMetadata,
-        *,
-        start_time: datetime = DEFAULT_START_TIME,
-        episode_gap_s: float = DEFAULT_EPISODE_GAP_S,
-        strict_keyframes: bool = False,
-    ) -> None:
-        utc_start_time = (
-            start_time
-            if start_time.tzinfo is not None
-            else start_time.replace(tzinfo=timezone.utc)
-        )
-        if not EARLIEST_START_TIME <= utc_start_time < LATEST_START_TIME:
-            raise ValueError(
-                f"start time {utc_start_time.isoformat()} must be at or after "
-                f"{EARLIEST_START_TIME:%Y-%m-%dT%H:%M:%SZ} and before "
-                f"{LATEST_START_TIME:%Y-%m-%dT%H:%M:%SZ}"
-            )
-        if not math.isfinite(episode_gap_s) or episode_gap_s < 0:
-            raise ValueError(
-                f"episode gap {episode_gap_s} must be a finite number of seconds, "
-                "0 or more"
-            )
-
+    def __init__(self, metadata: DatasetMetadata) -> None:
         self._metadata = metadata
         self._lock = threading.Lock()
-        self._topics, self.skipped = plan_topics(metadata)
-        self._strict_keyframes = strict_keyframes
-        self._start_times = episode_start_times(
-            metadata.episodes, metadata.fps, utc_start_time, episode_gap_s
-        )
-        self._info = (metadata.root / "meta" / "info.json").read_bytes()
-        self._frames = FrameReader(
-            columns=[
-                feature.key
-                for topic in self._topics
-                if topic.kind != "video"
-                for feature in topic.features
-            ],
-            optional_columns=["timestamp", "task_index"],
-        )
-
         self._context = Context()
-        self._channels: dict[str, Any] = {}
+        settings = _Settings(self._context, metadata.fps)
+        planned, self.skipped = plan_topics(metadata, _data_schema(metadata))
+        self._topics = [
+            kind(name, features, settings) for name, (kind, features) in planned.items()
+        ]
+        columns: dict[bool | None, list[str]] = {
+            True: [],
+            False: ["timestamp", "task_index"],
+            None: [],
+        }
         for topic in self._topics:
-            channel_metadata = {
-                "lerobot_features": ",".join(f.key for f in topic.features)
-            }
-            if topic.kind == "video":
-                self._channels[topic.name] = CompressedVideoChannel(
-                    topic.name, metadata=channel_metadata, context=self._context
+            columns[topic.required] += topic.columns
+        self._frames = FrameReader(columns[True], optional_columns=columns[False])
+        self._video_topics = [
+            topic for topic in self._topics if isinstance(topic, _VideoTopic)
+        ]
+        for topic in self._video_topics:
+            if topic.feature.is_depth_map:
+                warnings.warn(
+                    f"{topic.feature.key} is a depth map. Its frames are written as they "
+                    "are, as LeRobot's 12-bit quantized codes, so Foxglove shows the codes "
+                    "rather than depth.",
+                    DepthMapWarning,
+                    stacklevel=2,
                 )
-            elif topic.kind == "image":
-                self._channels[topic.name] = CompressedImageChannel(
-                    topic.name, metadata=channel_metadata, context=self._context
-                )
-            else:
-                self._channels[topic.name] = Channel(
-                    topic.name,
-                    schema=SCALARS_SCHEMA if topic.kind == "scalars" else TEXT_SCHEMA,
-                    message_encoding="json",
-                    metadata=channel_metadata,
-                    context=self._context,
-                )
+        self._info = (metadata.root / "meta" / "info.json").read_bytes()
+        stats_path = metadata.root / "meta" / "stats.json"
+        self._stats = stats_path.read_bytes() if stats_path.exists() else None
+        self._episode_stats = EpisodeStatsReader(metadata)
         self._task_channel = Channel(
             TASK_TOPIC,
             schema=TASK_SCHEMA,
@@ -315,7 +438,7 @@ class EpisodeWriter:
             context=self._context,
         )
 
-    def write(self, episode: Episode, output_dir: str | Path) -> WrittenEpisode:
+    def write(self, episode: Episode, output_dir: str | Path) -> Path:
         """Write an episode to ``output_dir/episode_<index>.mcap``, with the index padded to
         six digits.
 
@@ -325,9 +448,9 @@ class EpisodeWriter:
 
         :param episode: The episode, one of the metadata's ``episodes``.
         :param output_dir: The directory to write to. It has to exist.
+        :returns: The file's path.
         :raises FileNotFoundError: If one of the episode's files is missing.
-        :raises UnsupportedVideoError: If one of the episode's videos can't be written.
-        :raises KeyframeError: If one of the episode's videos can't start on a keyframe.
+        :raises UnsupportedVideoError: If one of the episode's videos can't be read.
         :raises ValueError: If the episode's frames don't match the dataset's metadata.
         """
         path = Path(output_dir) / f"episode_{episode.index:06d}.mcap"
@@ -337,28 +460,36 @@ class EpisodeWriter:
                 with open_mcap(
                     partial, allow_overwrite=True, context=self._context
                 ) as writer:
-                    preroll_frames, b_frame_videos = self._write(episode, writer)
+                    videos = self._write(episode, writer)
             except BaseException:
                 partial.unlink(missing_ok=True)
                 raise
             partial.replace(path)
-        for key in b_frame_videos:
-            warnings.warn(
-                f"{key} has B-frames, which Foxglove can't play back. Its frames are "
-                "written as they are, in decode order. To view it, re-encode it "
-                "without B-frames, e.g. with ffmpeg's -bf 0.",
-                BFrameWarning,
-                stacklevel=2,
-            )
-        return WrittenEpisode(
-            path=path, preroll_frames=preroll_frames, b_frame_videos=b_frame_videos
-        )
+        for video in videos:
+            if video.has_b_frames:
+                warnings.warn(
+                    f"{video.key} has B-frames, which Foxglove can't play back. Its frames "
+                    "are written as they are, in decode order. To view it, re-encode it "
+                    "without B-frames, e.g. with ffmpeg's -bf 0.",
+                    BFrameWarning,
+                    stacklevel=2,
+                )
+            if video.codec not in COMPRESSED_VIDEO_FORMATS:
+                warnings.warn(
+                    f"{video.key} is {video.codec} video, which foxglove.CompressedVideo "
+                    "can't hold. Its frames are written as lerobot.VideoPacket messages, "
+                    "which Foxglove can't play back.",
+                    UnsupportedCodecWarning,
+                    stacklevel=2,
+                )
+        return path
 
-    def _write(
-        self, episode: Episode, writer: MCAPWriter
-    ) -> tuple[dict[str, int], tuple[str, ...]]:
+    def _write(self, episode: Episode, writer: MCAPWriter) -> list[_WrittenVideo]:
         fps = self._metadata.fps
-        start_ns = self._start_times[episode.index]
+        # Time zero, or late enough that none of the episode's video frames is before it.
+        start_ns = -min(
+            [0, *(topic.earliest_ns(episode) for topic in self._video_topics)]
+        )
         frames = self._frames.read(episode)
         if "timestamp" in frames.column_names:
             offsets = frames["timestamp"].to_pylist()
@@ -369,38 +500,30 @@ class EpisodeWriter:
         ]
 
         writer.write_metadata("lerobot", self._metadata_record(episode))
-        writer.attach(
-            log_time=start_ns,
-            create_time=start_ns,
-            name="meta/info.json",
-            media_type="application/json",
-            data=self._info,
-        )
+        episode_stats = self._episode_stats.read(episode.index)
+        attachments = {
+            "meta/info.json": self._info,
+            "meta/stats.json": self._stats,
+            "episode_stats.json": (
+                None
+                if episode_stats is None
+                else json.dumps(_json_value(episode_stats)).encode()
+            ),
+        }
+        for name, data in attachments.items():
+            if data is not None:
+                writer.attach(
+                    log_time=start_ns,
+                    create_time=start_ns,
+                    name=name,
+                    media_type="application/json",
+                    data=data,
+                )
         self._write_tasks(episode, frames, log_times, start_ns)
 
-        preroll_frames: dict[str, int] = {}
-        b_frame_videos: list[str] = []
-        for topic in self._topics:
-            channel = self._channels[topic.name]
-            if topic.kind == "video":
-                feature = topic.features[0]
-                frames_early, has_b_frames = self._write_video(
-                    episode, feature, channel, start_ns
-                )
-                if frames_early:
-                    preroll_frames[feature.key] = frames_early
-                if has_b_frames:
-                    b_frame_videos.append(feature.key)
-            elif topic.kind == "image":
-                self._write_images(topic.features[0], channel, frames, log_times)
-            elif topic.kind == "scalars":
-                _write_scalars(topic.features, channel, frames, log_times)
-            else:
-                for value, log_time in zip(
-                    frames[topic.features[0].key].to_pylist(), log_times
-                ):
-                    channel.log({"value": value}, log_time=log_time)
-        return preroll_frames, tuple(b_frame_videos)
+        episode_frames = _Frames(episode, frames, log_times, start_ns)
+        written = [topic.write(episode_frames) for topic in self._topics]
+        return [video for video in written if video is not None]
 
     def _metadata_record(self, episode: Episode) -> dict[str, str]:
         metadata = {
@@ -437,84 +560,37 @@ class EpisodeWriter:
                 log_time=log_time,
             )
 
-    def _write_video(
-        self,
-        episode: Episode,
-        feature: Feature,
-        channel: CompressedVideoChannel,
-        start_ns: int,
-    ) -> tuple[int, bool]:
-        segment = episode.videos.get(feature.key)
-        if segment is None:
-            raise ValueError(f"no video for {feature.key}")
 
-        fps = self._metadata.fps
-        frames_early = 0
-        has_b_frames = False
-        for packet in read_episode_video(
-            segment, fps, strict_keyframes=self._strict_keyframes
-        ):
-            shown = start_ns + offset_ns_snapped_to_frames(packet.offset_s, fps)
-            decoded = start_ns + offset_ns_snapped_to_frames(
-                packet.decode_offset_s, fps
-            )
-            channel.log(
-                CompressedVideo(
-                    timestamp=_timestamp(shown),
-                    frame_id=feature.key,
-                    data=packet.data,
-                    format=packet.format,
-                ),
-                log_time=decoded,
-            )
-            frames_early += packet.is_preroll
-            has_b_frames = has_b_frames or packet.is_b_frame
-        return frames_early, has_b_frames
-
-    def _write_images(
-        self,
-        feature: Feature,
-        channel: CompressedImageChannel,
-        frames: pa.Table,
-        log_times: list[int],
-    ) -> None:
-        for value, log_time in zip(frames[feature.key].to_pylist(), log_times):
-            data = _image_bytes(value)
-            channel.log(
-                CompressedImage(
-                    timestamp=_timestamp(log_time),
-                    frame_id=feature.key,
-                    data=data,
-                    format=_image_format(feature, data),
-                ),
-                log_time=log_time,
-            )
+def _data_schema(metadata: DatasetMetadata) -> pa.Schema | None:
+    for episode in metadata.episodes:
+        if episode.data_path.exists():
+            return pq.read_schema(episode.data_path)
+    return None
 
 
-def _write_scalars(
-    features: tuple[Feature, ...],
-    channel: Channel,
-    frames: pa.Table,
-    log_times: list[int],
-) -> None:
-    columns = [
-        (feature.key, scalar_labels(feature), frames[feature.key].to_pylist())
-        for feature in features
-    ]
-    for row, log_time in enumerate(log_times):
-        scalars: list[dict[str, Any]] = []
-        for key, labels, values in columns:
-            elements = _flatten(values[row])
-            if len(elements) != len(labels):
-                raise ValueError(
-                    f"{key}: frame {row} has {len(elements)} values, but the "
-                    f"feature's shape has {len(labels)}"
-                )
-            scalars.extend(
-                {"label": label, "value": _number(element)}
-                for label, element in zip(labels, elements)
-            )
-        channel.log({"scalars": scalars}, log_time=log_time)
+def _json_value(value: Any) -> Any:
+    if value is None or isinstance(value, (bool, int, str)):
+        return value
+    if isinstance(value, float):
+        return _finite(value)
+    if isinstance(value, (bytes, bytearray)):
+        return _base64(value)
+    if isinstance(value, dict):
+        return {str(key): _json_value(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_value(item) for item in value]
+    return str(value)
+
+
+def _feature_topic(key: str) -> str:
+    return "/" + key.replace(".", "/")
+
+
+def _without_prefix(key: str, prefixes: tuple[str, ...]) -> str:
+    for prefix in prefixes:
+        if key.startswith(prefix):
+            return key[len(prefix) :]
+    return key
 
 
 def _flatten(value: Any) -> list[Any]:
@@ -524,14 +600,24 @@ def _flatten(value: Any) -> list[Any]:
 
 
 def _number(value: Any) -> float | None:
-    if value is None:
-        return None
-    number = float(value)
+    return None if value is None else _finite(float(value))
+
+
+def _finite(number: float) -> float | None:
     return number if math.isfinite(number) else None
 
 
-def _timestamp(log_time: int) -> Timestamp:
-    return Timestamp(sec=log_time // NS_PER_SEC, nsec=log_time % NS_PER_SEC)
+def _base64(data: bytes | bytearray) -> str:
+    return base64.b64encode(data).decode()
+
+
+def _timestamp_fields(time_ns: int) -> dict[str, int]:
+    sec, nsec = divmod(time_ns, NS_PER_SEC)
+    return {"sec": sec, "nsec": nsec}
+
+
+def _timestamp(time_ns: int) -> Timestamp:
+    return Timestamp(**_timestamp_fields(time_ns))
 
 
 def _image_bytes(value: Any) -> bytes:

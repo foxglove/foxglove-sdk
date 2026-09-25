@@ -37,7 +37,7 @@ work with converted episodes too.
      - Schema
    * - video feature, e.g. ``observation.images.front``
      - ``/observation/images/front``
-     - ``foxglove.CompressedVideo``
+     - ``foxglove.CompressedVideo``, or ``lerobot.VideoPacket`` for other codecs
    * - image feature, e.g. ``observation.image``
      - ``/observation/images/image``
      - ``foxglove.CompressedImage``
@@ -53,12 +53,15 @@ work with converted episodes too.
    * - other numeric features, e.g. ``observation.velocity``
      - ``/observation/velocity``
      - ``lerobot.Scalars``
-   * - string features
+   * - any other feature, e.g. a string, ``language_events`` or a numeric feature of varying
+       length
      - named after the feature
-     - ``lerobot.Text``
+     - ``lerobot.Value``
    * - the frame's task
      - ``/task``, whenever it changes
      - ``lerobot.Task``
+
+A feature named ``task`` goes to ``/task_feature`` instead, so it doesn't mix with ``/task``.
 
 A ``lerobot.Scalars`` message holds a ``scalars`` list of ``{label, value}`` pairs. The labels
 are the feature's ``names`` from ``meta/info.json`` when they give one name per element.
@@ -66,21 +69,29 @@ Otherwise they're the feature's name and an index, like ``state_0``, or just the
 ``reward``, for a feature with one element. Plotting ``/observation/state.scalars[:]`` draws
 one series per joint, named after it.
 
+A ``lerobot.Value`` message holds the frame's value as JSON, in ``value``. Numbers, strings,
+lists and objects are kept as they are, NaN and infinity become ``null``, and binary data is
+written as a base64 string.
+
 Each file also has:
 
 - a metadata record named ``lerobot``, with the dataset's name, codebase version, robot type,
   frame rate and episode count, and the episode's index, length and tasks
 - the dataset's ``meta/info.json`` as an attachment, so that each file carries the full feature
   definitions
+- the dataset's ``meta/stats.json``, if it has one, as an attachment
+- the episode's statistics as an ``episode_stats.json`` attachment, as ``{feature: {stat:
+  value}}``, from ``meta/episodes_stats.jsonl`` in v2.1 or the ``stats/*`` columns of
+  ``meta/episodes`` in v3.0
 
 Time
 ----
 
-LeRobot doesn't record when data was captured: every episode's timestamps start at zero.
-:class:`~foxglove.lerobot.EpisodeWriter` lays the episodes end to end, in index order, on a
-timeline starting at ``start_time``. The timeline only depends on the dataset, so converting it
-again reproduces the same time ranges, as long as ``start_time`` and ``episode_gap_s`` stay the
-same.
+LeRobot doesn't record when data was captured: every episode's timestamps start at zero. So
+every file starts at time zero too, 1970-01-01T00:00:00Z, the earliest time an MCAP file can
+hold, and its log times are the episode's own timestamps. An episode whose video has frames from
+before its start, back to the keyframe decoding starts from, starts just late enough that the
+earliest of them is at time zero.
 
 Timestamps within LeRobot's tolerance of the frame grid are snapped to it, so a frame's video
 and data share a log time.
@@ -101,27 +112,33 @@ decodes. Episodes recorded with LeRobot start on a keyframe, so this is rare.
 Videos with B-frames store their frames out of display order. They're written as they are,
 in decode order, with each frame's ``timestamp`` set to the time it's shown, so reading the
 file in log time order decodes them. An episode also gets any frames from just outside it that
-its frames depend on. These videos are listed in the ``b_frame_videos`` of the
-:class:`~foxglove.lerobot.WrittenEpisode` that :meth:`~foxglove.lerobot.EpisodeWriter.write`
-returns, and ``write`` warns about them with :class:`~foxglove.lerobot.BFrameWarning`.
-Foxglove can't play them back. To view them, re-encode them without B-frames first, e.g. with
+its frames depend on. :meth:`~foxglove.lerobot.EpisodeWriter.write` warns about these videos
+with :class:`~foxglove.lerobot.BFrameWarning`. Foxglove can't play them back. To view them, re-encode them without B-frames first, e.g. with
 ffmpeg's ``-bf 0``.
+
+Videos in codecs other than AV1, H.264, H.265 and VP9, such as MPEG-4 Part 2, don't fit
+``foxglove.CompressedVideo``. Their frames are written as they are, as ``lerobot.VideoPacket``
+messages on the same topic, with ``timestamp`` and ``frame_id`` as in
+``foxglove.CompressedVideo``, the codec's FFmpeg name in ``codec``, the frame in ``data``, and on
+keyframes the codec's configuration from the mp4 in ``extradata``, both base64-encoded. ``write``
+warns about these videos with :class:`~foxglove.lerobot.UnsupportedCodecWarning`. Foxglove can't
+play them back.
 
 Limitations
 -----------
 
-- Only the time within an episode is real. Episode start times are made up, see `Time`_.
-- Depth map videos (``video.is_depth_map``) are skipped. LeRobot stores them as quantized 12-bit
-  HEVC, which would need decoding and dequantizing into ``foxglove.RawImage`` frames.
-- ``language`` features, LeRobot's language annotations, are skipped.
-- Numeric features with a variable-length dimension, ``null`` in their shape, are skipped.
-- A feature named ``task`` is skipped, since its topic, ``/task``, holds the frame's task.
+- Only the time within an episode is real. Every episode starts at 1970-01-01T00:00:00Z, see
+  `Time`_.
+- Depth map videos are written as they are, with a :class:`~foxglove.lerobot.DepthMapWarning`.
+  LeRobot stores them as 12-bit codes quantized from depth, so Foxglove shows the codes rather
+  than depth. Showing depth would need decoding and dequantizing them into ``foxglove.RawImage``
+  frames.
+- Features the data files have no column for are skipped, such as a custom video dtype stored
+  only as mp4 files.
 - Image features have to embed their images in the data files, as LeRobot does. Images stored
   only as file paths are rejected.
-- Videos with B-frames are written, but Foxglove can't play them back, see `Video`_. Codecs
-  other than AV1, H.264, H.265 and VP9 are rejected.
-- Dataset and episode statistics (``meta/stats.json``, ``meta/episodes_stats.jsonl``, and the
-  ``stats/*`` columns in v3.0) aren't written.
+- Videos with B-frames, and videos in codecs other than AV1, H.264, H.265 and VP9, are written,
+  but Foxglove can't play them back, see `Video`_.
 - LeRobot datasets have no camera calibration or transform tree, so there's no
   ``foxglove.CameraCalibration`` or ``/tf`` to write. Joint values come without the URDF joint
   names or units that driving a robot model with ``foxglove.JointStates`` would need.
@@ -138,8 +155,6 @@ API
 .. autoclass:: foxglove.lerobot.EpisodeWriter
    :members: write
 
-.. autoclass:: foxglove.lerobot.WrittenEpisode
-
 .. autoclass:: foxglove.lerobot.DatasetMetadata
    :members: version, fps, robot_type
 
@@ -153,6 +168,8 @@ API
 
 .. autoexception:: foxglove.lerobot.UnsupportedVideoError
 
-.. autoexception:: foxglove.lerobot.KeyframeError
-
 .. autoexception:: foxglove.lerobot.BFrameWarning
+
+.. autoexception:: foxglove.lerobot.DepthMapWarning
+
+.. autoexception:: foxglove.lerobot.UnsupportedCodecWarning

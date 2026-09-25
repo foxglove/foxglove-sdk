@@ -1,3 +1,4 @@
+import base64
 import importlib
 import json
 import math
@@ -5,7 +6,6 @@ import sys
 from collections.abc import Callable, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -16,10 +16,10 @@ import pytest
 from av.video.codeccontext import VideoCodecContext
 from av.video.stream import VideoStream
 from foxglove.lerobot import (
-    DEFAULT_START_TIME,
     BFrameWarning,
+    DepthMapWarning,
     EpisodeWriter,
-    KeyframeError,
+    UnsupportedCodecWarning,
     UnsupportedDatasetError,
     UnsupportedVideoError,
     load_metadata,
@@ -36,7 +36,7 @@ TASKS = ["pick up the cube", "put the cube down"]
 CODEC_OPTIONS = {"libsvtav1": {"preset": "12"}, "libx264": {"bf": "0"}}
 SVT_LOG_ERRORS_ONLY = "1"
 
-START_NS = int(DEFAULT_START_TIME.timestamp()) * 1_000_000_000
+START_NS = 0
 FRAME_NS = 100_000_000
 
 
@@ -383,13 +383,11 @@ def read_mcap(path: Path) -> Recording:
     return recording
 
 
-def convert(root: Path, output: Path, **options: Any) -> list[Recording]:
+def convert(root: Path, output: Path) -> list[Recording]:
     metadata = load_metadata(root)
-    writer = EpisodeWriter(metadata, **options)
+    writer = EpisodeWriter(metadata)
     output.mkdir(exist_ok=True)
-    return [
-        read_mcap(writer.write(episode, output).path) for episode in metadata.episodes
-    ]
+    return [read_mcap(writer.write(episode, output)) for episode in metadata.episodes]
 
 
 def decodes_standalone(video: Image) -> bool:
@@ -452,8 +450,8 @@ def test_accepts_string_paths(v2_dataset: Path, tmp_path: Path) -> None:
 
     written = EpisodeWriter(metadata).write(metadata.episodes[0], str(tmp_path))
 
-    assert written.path == tmp_path / "episode_000000.mcap"
-    assert len(read_mcap(written.path).messages["/observation/state"]) == 6
+    assert written == tmp_path / "episode_000000.mcap"
+    assert len(read_mcap(written).messages["/observation/state"]) == 6
 
 
 def test_writes_episodes_from_several_threads_into_separate_files(
@@ -468,10 +466,8 @@ def test_writes_episodes_from_several_threads_into_separate_files(
         )
 
     assert [
-        len(read_mcap(episode.path).messages["/observation/state"])
-        for episode in written
+        len(read_mcap(path).messages["/observation/state"]) for path in written
     ] == [6, 4]
-    assert all(episode.preroll_frames == {} for episode in written)
 
 
 def test_metadata_and_episodes_are_hashable(v3_dataset: Path) -> None:
@@ -502,15 +498,14 @@ def test_labels_scalars_with_feature_names(v3_dataset: Path, tmp_path: Path) -> 
     }
 
 
-def test_lays_episodes_end_to_end(dataset_root: Path, tmp_path: Path) -> None:
-    first, second = convert(dataset_root, tmp_path, episode_gap_s=2.0)
+def test_starts_every_episode_at_time_zero(dataset_root: Path, tmp_path: Path) -> None:
+    first, second = convert(dataset_root, tmp_path)
 
     assert first.log_times("/observation/state") == [
-        START_NS + frame * FRAME_NS for frame in range(6)
+        frame * FRAME_NS for frame in range(6)
     ]
-    second_start = START_NS + 6 * FRAME_NS + 2_000_000_000
     assert second.log_times("/observation/state") == [
-        second_start + frame * FRAME_NS for frame in range(4)
+        frame * FRAME_NS for frame in range(4)
     ]
 
 
@@ -532,19 +527,14 @@ def test_starts_an_episode_between_keyframes_at_the_previous_keyframe(
 ) -> None:
     metadata = load_metadata(make_dataset("v3.0", gop=4))
 
-    written = EpisodeWriter(metadata).write(metadata.episodes[1], tmp_path)
-    recording = read_mcap(written.path)
+    recording = read_mcap(EpisodeWriter(metadata).write(metadata.episodes[1], tmp_path))
     start = recording.log_times("/observation/state")[0]
-    assert written.preroll_frames == {CAMERA: 2}
-    assert written.b_frame_videos == ()
+
+    assert start == 2 * FRAME_NS
     assert [t - start for t in recording.log_times(VIDEO_TOPIC)] == [
         frame * FRAME_NS for frame in range(-2, 4)
     ]
     assert decodes_standalone(recording.messages[VIDEO_TOPIC][0][1])
-
-    strict = EpisodeWriter(metadata, strict_keyframes=True)
-    with pytest.raises(KeyframeError):
-        strict.write(metadata.episodes[1], tmp_path)
 
 
 @pytest.mark.parametrize("version", ["v2.1", "v3.0"])
@@ -564,12 +554,11 @@ def test_writes_b_frames_in_decode_order_with_their_display_times(
     for episode in metadata.episodes:
         with pytest.warns(BFrameWarning, match=CAMERA):
             written = writer.write(episode, tmp_path)
-        recording = read_mcap(written.path)
+        recording = read_mcap(written)
         videos = [video for _, video in recording.messages[VIDEO_TOPIC]]
         display_times = [video.timestamp_ns for video in videos]
         levels = decoded_levels(videos)
 
-        assert written.b_frame_videos == (CAMERA,)
         assert display_times != sorted(display_times)
         assert sorted(display_times) == recording.log_times("/observation/state")
         assert len(levels) == episode.length
@@ -591,8 +580,8 @@ def test_keeps_the_frames_an_episodes_b_frames_depend_on(
 
     writer = EpisodeWriter(metadata)
     first, second = (writer.write(episode, tmp_path) for episode in metadata.episodes)
-    first_videos = [video for _, video in read_mcap(first.path).messages[VIDEO_TOPIC]]
-    recording = read_mcap(second.path)
+    first_videos = [video for _, video in read_mcap(first).messages[VIDEO_TOPIC]]
+    recording = read_mcap(second)
     second_videos = [video for _, video in recording.messages[VIDEO_TOPIC]]
     second_start = recording.log_times("/observation/state")[0]
 
@@ -600,7 +589,6 @@ def test_keeps_the_frames_an_episodes_b_frames_depend_on(
         frame * FRAME_NS for frame in range(7)
     ]
     assert len(decoded_levels(first_videos)) == 7
-    assert second.preroll_frames == {}
     assert sorted(video.timestamp_ns - second_start for video in second_videos) == [
         frame * FRAME_NS for frame in range(4)
     ]
@@ -622,19 +610,49 @@ def test_starts_an_open_gop_episode_at_a_keyframe_shown_before_it(
         )
     )
 
-    written = EpisodeWriter(metadata).write(metadata.episodes[1], tmp_path)
-    videos = [video for _, video in read_mcap(written.path).messages[VIDEO_TOPIC]]
+    recording = read_mcap(EpisodeWriter(metadata).write(metadata.episodes[1], tmp_path))
+    messages = recording.messages[VIDEO_TOPIC]
+    videos = [video for _, video in messages]
+    start = recording.log_times("/observation/state")[0]
 
-    assert written.preroll_frames == {CAMERA: 4}
+    assert sum(video.timestamp_ns < start for video in videos) == 4
+    assert (
+        min(t for log_time, video in messages for t in (log_time, video.timestamp_ns))
+        == 0
+    )
     assert len(decoded_levels(videos)) == 12
 
 
-def test_rejects_unsupported_codecs_without_leaving_a_file_behind(
+def test_writes_videos_in_other_codecs_as_video_packets(
     make_dataset: Callable[..., Path], tmp_path: Path
 ) -> None:
     metadata = load_metadata(make_dataset("v2.1", codec="mpeg4"))
 
-    with pytest.raises(UnsupportedVideoError, match="mpeg4"):
+    with pytest.warns(UnsupportedCodecWarning, match="mpeg4"):
+        written = EpisodeWriter(metadata).write(metadata.episodes[0], tmp_path)
+    recording = read_mcap(written)
+
+    assert recording.schemas[VIDEO_TOPIC] == "lerobot.VideoPacket"
+    assert recording.log_times(VIDEO_TOPIC) == recording.log_times("/observation/state")
+    packets = [packet for _, packet in recording.messages[VIDEO_TOPIC]]
+    assert {packet["codec"] for packet in packets} == {"mpeg4"}
+    codec = av.CodecContext.create("mpeg4", "r")
+    codec.extradata = base64.b64decode(packets[0]["extradata"])
+    frames = [
+        frame
+        for packet in packets
+        for frame in codec.decode(av.Packet(base64.b64decode(packet["data"])))
+    ]
+    assert len(frames + codec.decode(None)) == 6
+
+
+def test_leaves_no_file_behind_when_an_episode_fails(
+    v2_dataset: Path, tmp_path: Path
+) -> None:
+    metadata = load_metadata(v2_dataset)
+    metadata.episodes[0].videos[CAMERA].path.unlink()
+
+    with pytest.raises(FileNotFoundError):
         EpisodeWriter(metadata).write(metadata.episodes[0], tmp_path)
     assert list(tmp_path.glob("episode_*")) == []
 
@@ -738,15 +756,9 @@ def test_writes_non_finite_values_as_null(v2_dataset: Path, tmp_path: Path) -> N
     assert [scalar["value"] for scalar in state["scalars"]] == [None, None]
 
 
-def test_skips_features_it_cannot_convert(v2_dataset: Path) -> None:
+def test_skips_features_the_data_files_have_no_column_for(v2_dataset: Path) -> None:
     info_path = v2_dataset / "meta" / "info.json"
     info = json.loads(info_path.read_text())
-    info["features"]["observation.images.depth"] = {
-        "dtype": "video",
-        "shape": [48, 64, 1],
-        "names": ["height", "width", "channels"],
-        "info": {"video.is_depth_map": True},
-    }
     info["features"]["language_events"] = {
         "dtype": "language",
         "shape": [1],
@@ -762,29 +774,158 @@ def test_skips_features_it_cannot_convert(v2_dataset: Path) -> None:
     writer = EpisodeWriter(load_metadata(v2_dataset))
 
     assert [feature.key for feature, _ in writer.skipped] == [
-        "observation.images.depth",
         "language_events",
         "observation.task_info",
     ]
 
 
-@pytest.mark.parametrize("dtype", ["string", "int64"])
-def test_skips_a_task_feature_instead_of_writing_a_second_task_topic(
-    v2_dataset: Path, tmp_path: Path, dtype: str
+@pytest.mark.parametrize(
+    "flag",
+    [
+        {"info": {"is_depth_map": True}},
+        {"info": {"video.is_depth_map": True}},
+        {"video_info": {"video.is_depth_map": True}},
+    ],
+)
+def test_writes_depth_map_videos_and_warns_that_they_hold_quantized_codes(
+    v2_dataset: Path, tmp_path: Path, flag: dict[str, Any]
 ) -> None:
     info_path = v2_dataset / "meta" / "info.json"
     info = json.loads(info_path.read_text())
-    info["features"]["task"] = {"dtype": dtype, "shape": [1], "names": None}
+    info["features"][CAMERA].update(flag)
     info_path.write_text(json.dumps(info))
     metadata = load_metadata(v2_dataset)
 
-    writer = EpisodeWriter(metadata)
-    recording = read_mcap(writer.write(metadata.episodes[0], tmp_path).path)
+    with pytest.warns(DepthMapWarning, match=CAMERA):
+        writer = EpisodeWriter(metadata)
+    recording = read_mcap(writer.write(metadata.episodes[0], tmp_path))
 
-    assert [feature.key for feature, _ in writer.skipped] == ["task"]
+    assert writer.skipped == []
+    assert len(recording.messages[VIDEO_TOPIC]) == 6
+
+
+def _add_columns(v2_dataset: Path, features: dict[str, Any], columns: pa.Table) -> None:
+    info_path = v2_dataset / "meta" / "info.json"
+    info = json.loads(info_path.read_text())
+    info["features"].update(features)
+    info_path.write_text(json.dumps(info))
+    data_path = v2_dataset / "data" / "chunk-000" / "episode_000000.parquet"
+    frames = pq.read_table(data_path)
+    for name in columns.column_names:
+        frames = frames.append_column(name, columns[name])
+    pq.write_table(frames, data_path)
+
+
+@pytest.mark.parametrize(
+    ("dtype", "values", "message"),
+    [
+        ("string", ["pick up the cube"] * 6, {"value": "pick up the cube"}),
+        ("int64", [0] * 6, {"scalars": [{"label": "task", "value": 0.0}]}),
+    ],
+)
+def test_writes_a_task_feature_to_its_own_topic(
+    v2_dataset: Path, tmp_path: Path, dtype: str, values: list[Any], message: Any
+) -> None:
+    _add_columns(
+        v2_dataset,
+        {"task": {"dtype": dtype, "shape": [1], "names": None}},
+        pa.table({"task": values}),
+    )
+    metadata = load_metadata(v2_dataset)
+
+    writer = EpisodeWriter(metadata)
+    recording = read_mcap(writer.write(metadata.episodes[0], tmp_path))
+
+    assert writer.skipped == []
     assert recording.messages["/task"] == [
         (START_NS, {"task": "pick up the cube", "task_index": 0})
     ]
+    assert recording.messages["/task_feature"][0] == (START_NS, message)
+
+
+def test_writes_features_without_a_topic_of_their_own_as_json_values(
+    v2_dataset: Path, tmp_path: Path
+) -> None:
+    _add_columns(
+        v2_dataset,
+        {
+            "language_events": {"dtype": "language", "shape": [1], "names": None},
+            "observation.contacts": {
+                "dtype": "float32",
+                "shape": [None],
+                "names": None,
+            },
+            "observation.blob": {"dtype": "binary", "shape": [1], "names": None},
+        },
+        pa.table(
+            {
+                "language_events": [
+                    [{"role": "user", "content": f"step {frame}"}] for frame in range(6)
+                ],
+                "observation.contacts": pa.array(
+                    [[0.5] * frame + [math.nan] for frame in range(6)],
+                    pa.list_(pa.float32()),
+                ),
+                "observation.blob": pa.array(
+                    [bytes([frame]) for frame in range(6)], pa.binary()
+                ),
+            }
+        ),
+    )
+    metadata = load_metadata(v2_dataset)
+
+    writer = EpisodeWriter(metadata)
+    recording = read_mcap(writer.write(metadata.episodes[0], tmp_path))
+
+    assert writer.skipped == []
+    assert recording.schemas["/language_events"] == "lerobot.Value"
+    assert recording.messages["/language_events"][2] == (
+        START_NS + 2 * FRAME_NS,
+        {"value": [{"role": "user", "content": "step 2"}]},
+    )
+    contacts = [
+        message["value"] for _, message in recording.messages["/observation/contacts"]
+    ]
+    assert contacts[:2] == [[None], [0.5, None]]
+    blobs = [message["value"] for _, message in recording.messages["/observation/blob"]]
+    assert blobs[1] == base64.b64encode(b"\x01").decode()
+
+
+@pytest.mark.parametrize("version", ["v2.1", "v3.0"])
+def test_attaches_the_dataset_and_episode_statistics(
+    make_dataset: Callable[..., Path], tmp_path: Path, version: str
+) -> None:
+    root = make_dataset(version)
+    (root / "meta" / "stats.json").write_text(json.dumps({"action": {"mean": [1, 2]}}))
+    stats = [
+        {"observation.state": {"max": [5.0, math.nan], "count": [length]}}
+        for length in (6, 4)
+    ]
+    if version == "v3.0":
+        path = root / "meta" / "episodes" / "chunk-000" / "file-000.parquet"
+        table = pq.read_table(path)
+        for stat in ("max", "count"):
+            table = table.append_column(
+                f"stats/observation.state/{stat}",
+                pa.array([episode["observation.state"][stat] for episode in stats]),
+            )
+        pq.write_table(table, path)
+    else:
+        (root / "meta" / "episodes_stats.jsonl").write_text(
+            "".join(
+                json.dumps({"episode_index": index, "stats": episode}) + "\n"
+                for index, episode in enumerate(stats)
+            )
+        )
+    metadata = load_metadata(root)
+
+    written = EpisodeWriter(metadata).write(metadata.episodes[1], tmp_path)
+    attachments = read_mcap(written).attachments
+
+    assert attachments["meta/stats.json"] == (root / "meta" / "stats.json").read_bytes()
+    assert json.loads(attachments["episode_stats.json"]) == {
+        "observation.state": {"max": [5.0, None], "count": [4]}
+    }
 
 
 @pytest.mark.parametrize("version", ["v2.1", "v3.0"])
@@ -814,43 +955,6 @@ def test_names_the_feature_whose_values_do_not_match_its_shape(
 
     with pytest.raises(ValueError, match="observation.state"):
         convert(v2_dataset, tmp_path)
-
-
-def test_takes_start_times_without_a_time_zone_as_utc(
-    v2_dataset: Path, tmp_path: Path
-) -> None:
-    first, _ = convert(v2_dataset, tmp_path, start_time=datetime(2021, 6, 1, 12))
-
-    expected = datetime(2021, 6, 1, 12, tzinfo=timezone.utc)
-    assert first.log_times("/observation/state")[0] == int(expected.timestamp()) * (
-        1_000_000_000
-    )
-
-
-@pytest.mark.parametrize(
-    "start_time",
-    [
-        datetime(1969, 12, 31, 23, 59, 59, tzinfo=timezone.utc),
-        datetime(1970, 1, 1, 0, 30, tzinfo=timezone(timedelta(hours=1))),
-        datetime(2100, 1, 1, tzinfo=timezone.utc),
-    ],
-)
-def test_rejects_start_times_outside_1970_to_2100(
-    v2_dataset: Path, start_time: datetime
-) -> None:
-    metadata = load_metadata(v2_dataset)
-
-    with pytest.raises(ValueError, match="start time"):
-        EpisodeWriter(metadata, start_time=start_time)
-    EpisodeWriter(metadata, start_time=datetime(1970, 1, 1, tzinfo=timezone.utc))
-
-
-@pytest.mark.parametrize("episode_gap_s", [-1.0, math.inf, math.nan])
-def test_rejects_episode_gaps_that_are_negative_or_not_finite(
-    v2_dataset: Path, episode_gap_s: float
-) -> None:
-    with pytest.raises(ValueError, match="episode gap"):
-        EpisodeWriter(load_metadata(v2_dataset), episode_gap_s=episode_gap_s)
 
 
 def test_rejects_datasets_it_cannot_read(tmp_path: Path) -> None:
