@@ -22,9 +22,6 @@ video is copied into the MCAP files without re-encoding.
    for episode in metadata.episodes:
        writer.write(episode, output_dir)
 
-For a command-line converter, see the `lerobot-to-mcap example
-<https://github.com/foxglove/foxglove-sdk/tree/main/python/foxglove-sdk-examples/lerobot-to-mcap>`__.
-
 Topics
 ------
 
