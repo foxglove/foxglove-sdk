@@ -1,0 +1,106 @@
+{
+  "configById": {
+    "3D!so101": {
+      "cameraState": {
+        "distance": 1.1,
+        "perspective": true,
+        "phi": 65,
+        "target": [
+          0,
+          0,
+          0
+        ],
+        "targetOffset": [
+          -0.12,
+          0.02,
+          0
+        ],
+        "targetOrientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "thetaOffset": 130,
+        "fovy": 45,
+        "near": 0.5,
+        "far": 5000
+      },
+      "followMode": "follow-none",
+      "followTf": "base_link",
+      "scene": {
+        "syncCamera": false,
+        "transforms": {
+          "editable": true,
+          "showLabel": false,
+          "enablePreloading": true,
+          "visible": false
+        },
+        "enableStats": false,
+        "meshUpAxis": "z_up"
+      },
+      "topics": {},
+      "layers": {
+        "grid": {
+          "visible": true,
+          "frameLocked": true,
+          "label": "Grid",
+          "instanceId": "grid-so101",
+          "layerId": "foxglove.Grid",
+          "size": 10,
+          "divisions": 10,
+          "lineWidth": 1,
+          "color": "#248eff",
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        },
+        "urdf-so101": {
+          "displayMode": "auto",
+          "fallbackColor": "#ffffff",
+          "showAxis": false,
+          "axisScale": 1,
+          "showOutlines": true,
+          "opacity": 1,
+          "visible": true,
+          "frameLocked": true,
+          "instanceId": "urdf-so101",
+          "label": "SO-101 URDF",
+          "layerId": "foxglove.Urdf",
+          "sourceType": "url",
+          "url": "https://raw.githubusercontent.com/TheRobotStudio/SO-ARM100/refs/heads/main/Simulation/SO101/so101_new_calib.urdf",
+          "filePath": "",
+          "parameter": "",
+          "topic": "",
+          "framePrefix": "",
+          "controlMode": "jointStates",
+          "jointStatesTopic": "/joint_states",
+          "order": 2
+        }
+      },
+      "publish": {
+        "type": "point",
+        "poseTopic": "/move_base_simple/goal",
+        "pointTopic": "/clicked_point",
+        "poseEstimateTopic": "/initialpose",
+        "poseEstimateXDeviation": 0.5,
+        "poseEstimateYDeviation": 0.5,
+        "poseEstimateThetaDeviation": 0.26179939
+      },
+      "imageMode": {}
+    }
+  },
+  "globalVariables": {},
+  "userNodes": {},
+  "playbackConfig": {
+    "speed": 1
+  },
+  "layout": "3D!so101"
+}
