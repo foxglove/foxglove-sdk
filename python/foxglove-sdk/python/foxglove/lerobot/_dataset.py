@@ -1,0 +1,439 @@
+import json
+import math
+from collections import Counter
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any
+
+import pyarrow as pa
+import pyarrow.compute as pc
+import pyarrow.parquet as pq
+
+SUPPORTED_VERSIONS = ("v2.0", "v2.1", "v3.0")
+
+INDEX_COLUMNS = frozenset(
+    {"timestamp", "frame_index", "episode_index", "index", "task_index"}
+)
+
+VIDEO_COLUMNS = ("chunk_index", "file_index", "from_timestamp", "to_timestamp")
+
+
+class UnsupportedDatasetError(Exception):
+    """The directory doesn't hold a LeRobot dataset in a supported format."""
+
+
+@dataclass(frozen=True)
+class Feature:
+    """A feature from the dataset's ``meta/info.json``.
+
+    :param key: The feature's key, such as ``observation.state``.
+    :param dtype: The feature's dtype, such as ``float32`` or ``video``.
+    :param shape: The feature's shape. A dimension is None if its length varies from frame to
+        frame.
+    :param names: One name per element, or None if the dataset doesn't give exactly one.
+    :param is_depth_map: Whether the feature is a depth map video.
+    """
+
+    key: str
+    dtype: str
+    shape: tuple[int | None, ...]
+    names: tuple[str, ...] | None
+    is_depth_map: bool
+
+
+@dataclass(frozen=True)
+class VideoSegment:
+    """The part of an mp4 that holds one episode's video.
+
+    :param path: The mp4's path.
+    :param start_s: The episode's start in the mp4, in seconds.
+    :param end_s: The episode's end in the mp4, in seconds.
+    """
+
+    path: Path
+    start_s: float
+    end_s: float
+
+
+@dataclass(frozen=True)
+class Episode:
+    """An episode of a dataset.
+
+    :param index: The episode's index.
+    :param length: The episode's number of frames.
+    :param tasks: The episode's tasks.
+    :param data_path: The parquet file that holds the episode's frames.
+    :param videos: The episode's video for each video feature, by feature key.
+    """
+
+    index: int
+    length: int
+    tasks: tuple[str, ...]
+    data_path: Path
+    videos: dict[str, VideoSegment] = field(hash=False)
+
+
+@dataclass(frozen=True)
+class DatasetMetadata:
+    """A LeRobot dataset's metadata, from its ``meta`` directory. Use :func:`load_metadata`
+    to load it.
+
+    :param root: The dataset's root directory.
+    :param info: The contents of ``meta/info.json``.
+    :param features: The dataset's features.
+    :param episodes: The dataset's episodes, in index order.
+    :param tasks: The dataset's tasks, by task index.
+    """
+
+    root: Path
+    info: dict[str, Any] = field(hash=False)
+    features: tuple[Feature, ...]
+    episodes: tuple[Episode, ...]
+    tasks: dict[int, str] = field(hash=False)
+
+    @property
+    def version(self) -> str:
+        """The dataset's codebase version, such as ``v3.0``."""
+        return str(self.info["codebase_version"])
+
+    @property
+    def fps(self) -> float:
+        """The dataset's frame rate."""
+        return float(self.info["fps"])
+
+    @property
+    def robot_type(self) -> str | None:
+        """The dataset's robot type, if it has one."""
+        robot_type = self.info.get("robot_type")
+        return None if robot_type is None else str(robot_type)
+
+
+def load_metadata(root: str | Path) -> DatasetMetadata:
+    """Load the metadata of a LeRobot dataset in the v2.0, v2.1 or v3.0 format.
+
+    Frames and videos are read later, one episode at a time, by :class:`EpisodeWriter`.
+
+    :param root: The dataset's root directory, the one holding ``meta/``, ``data/`` and
+        ``videos/``.
+    :raises UnsupportedDatasetError: If the directory doesn't hold a dataset in a
+        supported format, or its metadata lists an episode more than once.
+    """
+    root_path = Path(root)
+    info_path = root_path / "meta" / "info.json"
+    if not info_path.exists():
+        if (root_path / "meta_data").exists():
+            raise UnsupportedDatasetError(
+                f"{root_path} is a LeRobot v1.x dataset, which predates the documented format. "
+                "Convert it to v2.0 with LeRobot's v1 to v2 conversion script first."
+            )
+        raise UnsupportedDatasetError(f"{root_path} has no meta/info.json")
+
+    info = json.loads(info_path.read_text(encoding="utf-8"))
+    version = info.get("codebase_version")
+    if version not in SUPPORTED_VERSIONS:
+        raise UnsupportedDatasetError(
+            f"codebase_version {version!r} is not supported "
+            f"(supported: {', '.join(SUPPORTED_VERSIONS)})"
+        )
+
+    features = tuple(
+        Feature(
+            key=key,
+            dtype=spec["dtype"],
+            shape=tuple(spec.get("shape") or ()),
+            names=_names(spec),
+            is_depth_map=_is_depth_map(spec),
+        )
+        for key, spec in info["features"].items()
+    )
+    video_keys = [feature.key for feature in features if feature.dtype == "video"]
+    if version == "v3.0":
+        episodes = _episodes_v3(root_path, info, video_keys)
+    else:
+        episodes = _episodes_v2(root_path, info, video_keys)
+    repeated = sorted(
+        index
+        for index, count in Counter(episode.index for episode in episodes).items()
+        if count > 1
+    )
+    if repeated:
+        listed = ", ".join(map(str, repeated[:5])) + (
+            ", ..." if len(repeated) > 5 else ""
+        )
+        raise UnsupportedDatasetError(
+            f"{root_path}'s meta/episodes lists episode(s) {listed} more than once"
+        )
+
+    return DatasetMetadata(
+        root=root_path,
+        info=info,
+        features=features,
+        episodes=episodes,
+        tasks=_tasks(root_path),
+    )
+
+
+def _is_depth_map(spec: dict[str, Any]) -> bool:
+    info = spec.get("info") or {}
+    video_info = spec.get("video_info") or {}
+    return bool(
+        info.get("is_depth_map")
+        or info.get("video.is_depth_map")
+        or video_info.get("video.is_depth_map")
+    )
+
+
+def _names(spec: dict[str, Any]) -> tuple[str, ...] | None:
+    names = spec.get("names")
+    labels: list[str] | None = None
+    if isinstance(names, dict):
+        groups = list(names.values())
+        if groups and all(isinstance(group, list) for group in groups):
+            labels = [str(name) for group in groups for name in group]
+        elif groups and all(
+            isinstance(index, int) and not isinstance(index, bool) for index in groups
+        ):
+            labels = [str(name) for name in sorted(names, key=names.__getitem__)]
+    elif isinstance(names, list):
+        labels = [str(name) for name in names]
+
+    shape = spec.get("shape") or ()
+    if (
+        labels is None
+        or not all(isinstance(size, int) for size in shape)
+        or len(labels) != math.prod(shape)
+    ):
+        return None
+    return tuple(labels)
+
+
+def _read_jsonl(path: Path) -> list[dict[str, Any]]:
+    with path.open(encoding="utf-8") as lines:
+        return [json.loads(line) for line in lines if line.strip()]
+
+
+def _episodes_v2(
+    root: Path, info: dict[str, Any], video_keys: list[str]
+) -> tuple[Episode, ...]:
+    path = root / "meta" / "episodes.jsonl"
+    if not path.exists():
+        raise UnsupportedDatasetError(f"{root} has no meta/episodes.jsonl")
+
+    fps = float(info["fps"])
+    chunks_size = int(info.get("chunks_size", 1000))
+    episodes = []
+    for entry in _read_jsonl(path):
+        index = int(entry["episode_index"])
+        length = int(entry["length"])
+        chunk = index // chunks_size
+        episodes.append(
+            Episode(
+                index=index,
+                length=length,
+                tasks=tuple(entry.get("tasks") or ()),
+                data_path=root
+                / info["data_path"].format(episode_chunk=chunk, episode_index=index),
+                videos={
+                    key: VideoSegment(
+                        path=root
+                        / info["video_path"].format(
+                            episode_chunk=chunk, video_key=key, episode_index=index
+                        ),
+                        start_s=0.0,
+                        end_s=length / fps,
+                    )
+                    for key in video_keys
+                },
+            )
+        )
+    return tuple(sorted(episodes, key=lambda episode: episode.index))
+
+
+def _episodes_v3(
+    root: Path, info: dict[str, Any], video_keys: list[str]
+) -> tuple[Episode, ...]:
+    paths = sorted((root / "meta" / "episodes").rglob("*.parquet"))
+    if not paths:
+        raise UnsupportedDatasetError(f"{root} has no meta/episodes/*.parquet")
+
+    wanted = [
+        "episode_index",
+        "length",
+        "tasks",
+        "data/chunk_index",
+        "data/file_index",
+        *(f"videos/{key}/{column}" for key in video_keys for column in VIDEO_COLUMNS),
+    ]
+    episodes = []
+    for path in paths:
+        available = set(pq.read_schema(path).names)
+        table = pq.read_table(
+            path, columns=[name for name in wanted if name in available]
+        )
+        for row in table.to_pylist():
+            videos = {}
+            for key in video_keys:
+                prefix = f"videos/{key}/"
+                if row.get(prefix + "file_index") is None:
+                    continue
+                videos[key] = VideoSegment(
+                    path=root
+                    / info["video_path"].format(
+                        video_key=key,
+                        chunk_index=int(row[prefix + "chunk_index"]),
+                        file_index=int(row[prefix + "file_index"]),
+                    ),
+                    start_s=float(row[prefix + "from_timestamp"]),
+                    end_s=float(row[prefix + "to_timestamp"]),
+                )
+            episodes.append(
+                Episode(
+                    index=int(row["episode_index"]),
+                    length=int(row["length"]),
+                    tasks=tuple(row.get("tasks") or ()),
+                    data_path=root
+                    / info["data_path"].format(
+                        chunk_index=int(row["data/chunk_index"]),
+                        file_index=int(row["data/file_index"]),
+                    ),
+                    videos=videos,
+                )
+            )
+    return tuple(sorted(episodes, key=lambda episode: episode.index))
+
+
+def _tasks(root: Path) -> dict[int, str]:
+    jsonl = root / "meta" / "tasks.jsonl"
+    if jsonl.exists():
+        return {int(row["task_index"]): str(row["task"]) for row in _read_jsonl(jsonl)}
+
+    parquet = root / "meta" / "tasks.parquet"
+    if not parquet.exists():
+        return {}
+    column = _task_column(parquet)
+    table = pq.read_table(parquet, columns=["task_index", column])
+    return {
+        int(index): str(task)
+        for index, task in zip(
+            table["task_index"].to_pylist(), table[column].to_pylist()
+        )
+    }
+
+
+def _task_column(path: Path) -> str:
+    schema = pq.read_schema(path)
+    if "task" in schema.names:
+        return "task"
+    # LeRobot before v0.5.0 wrote the task strings as an unnamed pandas index.
+    index_columns = (schema.pandas_metadata or {}).get("index_columns", [])
+    names = [
+        name for name in index_columns if isinstance(name, str) and name in schema.names
+    ]
+    if len(names) != 1:
+        raise UnsupportedDatasetError(f"{path} has no task column")
+    return names[0]
+
+
+class FrameReader:
+    def __init__(self, columns: list[str], optional_columns: list[str]) -> None:
+        self._columns = columns
+        self._optional_columns = optional_columns
+        self._path: Path | None = None
+        self._table: pa.Table | None = None
+
+    def read(self, episode: Episode) -> pa.Table:
+        if self._table is None or episode.data_path != self._path:
+            self._table = self._read_file(episode.data_path)
+            self._path = episode.data_path
+
+        frames = self._table.filter(
+            pc.equal(self._table["episode_index"], episode.index)
+        )
+        if frames.num_rows != episode.length:
+            raise ValueError(
+                f"{episode.data_path.name} holds {frames.num_rows} frames for the "
+                f"episode, but meta/episodes gives a length of {episode.length}"
+            )
+        return frames
+
+    def _read_file(self, path: Path) -> pa.Table:
+        if not path.exists():
+            raise FileNotFoundError(f"missing data file {path}")
+        available = set(pq.read_schema(path).names)
+        missing = [
+            name for name in ["episode_index", *self._columns] if name not in available
+        ]
+        if missing:
+            raise ValueError(f"{path} has no column(s) {', '.join(missing)}")
+        optional = [name for name in self._optional_columns if name in available]
+        columns = list(dict.fromkeys(["episode_index", *self._columns, *optional]))
+        return pq.read_table(path, columns=columns)
+
+
+class EpisodeStatsReader:
+    """Reads an episode's statistics, from ``meta/episodes_stats.jsonl`` in v2.1 or the
+    ``stats/*`` columns of ``meta/episodes`` in v3.0, as ``{feature: {stat: value}}``.
+    """
+
+    def __init__(self, metadata: DatasetMetadata) -> None:
+        self._root = metadata.root
+        self._is_v3 = metadata.version == "v3.0"
+        self._offsets: dict[int, int] | None = None
+        self._paths: dict[int, Path] | None = None
+        self._path: Path | None = None
+        self._table: pa.Table | None = None
+
+    def read(self, index: int) -> dict[str, Any] | None:
+        if self._is_v3:
+            if self._paths is None:
+                self._paths = self._index_v3()
+            path = self._paths.get(index)
+            return None if path is None else self._read_v3(path, index)
+        if self._offsets is None:
+            self._offsets = self._index_v2()
+        offset = self._offsets.get(index)
+        if offset is None:
+            return None
+        with (self._root / "meta" / "episodes_stats.jsonl").open("rb") as lines:
+            lines.seek(offset)
+            stats: dict[str, Any] = json.loads(lines.readline())["stats"]
+            return stats
+
+    def _index_v2(self) -> dict[int, int]:
+        path = self._root / "meta" / "episodes_stats.jsonl"
+        offsets: dict[int, int] = {}
+        if not path.exists():
+            return offsets
+        offset = 0
+        with path.open("rb") as lines:
+            for line in lines:
+                if line.strip():
+                    offsets[int(json.loads(line)["episode_index"])] = offset
+                offset += len(line)
+        return offsets
+
+    def _index_v3(self) -> dict[int, Path]:
+        paths: dict[int, Path] = {}
+        for path in sorted((self._root / "meta" / "episodes").rglob("*.parquet")):
+            if any(name.startswith("stats/") for name in pq.read_schema(path).names):
+                indexes = pq.read_table(path, columns=["episode_index"])[
+                    "episode_index"
+                ]
+                paths.update(dict.fromkeys(map(int, indexes.to_pylist()), path))
+        return paths
+
+    def _read_v3(self, path: Path, index: int) -> dict[str, Any]:
+        if self._table is None or path != self._path:
+            names = pq.read_schema(path).names
+            columns = ["episode_index", *(n for n in names if n.startswith("stats/"))]
+            self._table = pq.read_table(path, columns=columns)
+            self._path = path
+        (row,) = self._table.filter(
+            pc.equal(self._table["episode_index"], index)
+        ).to_pylist()
+        stats: dict[str, dict[str, Any]] = {}
+        for name, value in row.items():
+            if name != "episode_index":
+                feature, _, stat = name.removeprefix("stats/").rpartition("/")
+                stats.setdefault(feature, {})[stat] = value
+        return stats
