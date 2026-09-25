@@ -40,14 +40,14 @@ test-python:
 	uv --directory python/foxglove-sdk sync --all-extras
 	MATURIN_PEP517_ARGS="$(MATURIN_PEP517_ARGS)" uv --directory python/foxglove-sdk pip install --editable '.[notebook]'
 	uv --directory python/foxglove-sdk run mypy .
-	FOXGLOVE_TEST_REQUIRE_REMOTE_ACCESS="$(FOXGLOVE_TEST_REQUIRE_REMOTE_ACCESS)" uv --directory python/foxglove-sdk run pytest
+	FOXGLOVE_TEST_REQUIRE_REMOTE_ACCESS="$(FOXGLOVE_TEST_REQUIRE_REMOTE_ACCESS)" RAY_ENABLE_UV_RUN_RUNTIME_ENV=0 uv --directory python/foxglove-sdk run pytest
 
 .PHONY: benchmark-python
 benchmark-python:
 	uv --directory python/foxglove-sdk lock --check
 	uv --directory python/foxglove-sdk sync --all-extras
 	MATURIN_PEP517_ARGS="$(MATURIN_PEP517_ARGS)" uv --directory python/foxglove-sdk pip install --editable '.[notebook]'
-	uv --directory python/foxglove-sdk run pytest --with-benchmarks
+	RAY_ENABLE_UV_RUN_RUNTIME_ENV=0 uv --directory python/foxglove-sdk run pytest --with-benchmarks
 
 .PHONY: docs-python
 docs-python:
