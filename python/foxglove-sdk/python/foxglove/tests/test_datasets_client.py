@@ -47,6 +47,7 @@ def test_real_client_pagination_filtering_and_incremental_mcap(
         stamp = "2026-01-01T00:00:00Z"
         payload: dict[str, Any]
         if url.endswith("/episodes"):
+            assert kwargs["params"]["limit"] == 2000
             cursor = kwargs["params"].get("cursor")
             payload = {
                 "episodes": [

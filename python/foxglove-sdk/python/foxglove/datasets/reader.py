@@ -5,15 +5,10 @@ from __future__ import annotations
 from collections.abc import Callable, Generator, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
+from types import MappingProxyType
 from typing import Any, Protocol
 
-
-class _MessageIterator(Protocol):
-    def __iter__(self) -> Iterator[Any]: ...
-
-    def __next__(self) -> Any: ...
-
-    def close(self) -> None: ...
+_EPISODE_PAGE_SIZE = 2000
 
 
 class _Page(Protocol):
@@ -26,12 +21,12 @@ class _Client(Protocol):
     ) -> Mapping[str, Any]: ...
 
     def get_dataset_version_episodes(
-        self, *, dataset_id: str, version_number: int
+        self, *, dataset_id: str, version_number: int, limit: int
     ) -> _Page: ...
 
     def iter_messages(
         self, *, episode_id: str, topics: list[str]
-    ) -> _MessageIterator: ...
+    ) -> Generator[Any, None, None]: ...
 
 
 ClientFactory = Callable[[], _Client]
@@ -61,7 +56,7 @@ class EpisodeReader:
         self._episode = episode
         self._topics = topics
         self._client = client
-        self._streams: list[_MessageIterator] = []
+        self._streams: list[Generator[Any, None, None]] = []
         self._closed = False
 
     @property
@@ -82,7 +77,7 @@ class EpisodeReader:
     @property
     def metadata(self) -> Mapping[str, Any]:
         """Customer-defined episode metadata."""
-        return self._episode.metadata
+        return MappingProxyType(self._episode.metadata)
 
     def iter_messages(self) -> Generator[Any, None, None]:
         """Stream the selected topics in log-time order without buffering the episode.
@@ -153,22 +148,13 @@ def _plan(
 ) -> _Plan:
     if not dataset_id:
         raise ValueError("dataset_id must be nonempty")
-    if isinstance(version, bool) or not isinstance(version, int) or version < 1:
+    if version < 1:
         raise ValueError("version must be a positive integer")
-    if (
-        isinstance(topics, (str, bytes))
-        or not isinstance(topics, Sequence)
-        or not topics
-        or any(not isinstance(topic, str) or not topic for topic in topics)
-    ):
-        raise ValueError("topics must be a nonempty sequence of nonempty topic names")
     selected_topics = tuple(dict.fromkeys(topics))
+    # An empty topic list would read every topic.
+    if isinstance(topics, str) or not selected_topics:
+        raise ValueError("topics must be a nonempty sequence of topic names")
     client = client_factory()
-    if not hasattr(client, "get_dataset_version"):
-        raise RuntimeError(
-            "Dataset loading requires foxglove-client>=0.20.0. "
-            "Upgrade your client installation."
-        )
     info = client.get_dataset_version(dataset_id=dataset_id, version_number=version)
     if info["committed_at"] is None:
         raise ValueError("Dataset version must be committed")
@@ -176,7 +162,7 @@ def _plan(
         raise ValueError("Dataset version contains missing recordings")
     episodes = []
     page = client.get_dataset_version_episodes(
-        dataset_id=dataset_id, version_number=version
+        dataset_id=dataset_id, version_number=version, limit=_EPISODE_PAGE_SIZE
     )
     for entry in page.auto_paging_iter():
         episode = entry["episode"]

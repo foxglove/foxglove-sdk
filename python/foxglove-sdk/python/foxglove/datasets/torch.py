@@ -58,13 +58,7 @@ def read_dataset(
         resolved_world_size = distributed.get_world_size() if active else 1
     else:
         resolved_rank, resolved_world_size = rank, world_size
-    if (
-        isinstance(resolved_rank, bool)
-        or isinstance(resolved_world_size, bool)
-        or not isinstance(resolved_rank, int)
-        or not isinstance(resolved_world_size, int)
-        or not 0 <= resolved_rank < resolved_world_size
-    ):
+    if not 0 <= resolved_rank < resolved_world_size:
         raise ValueError("Require world_size > 0 and 0 <= rank < world_size")
     return _TorchDataset(
         _plan(dataset_id, version, topics, client_factory),

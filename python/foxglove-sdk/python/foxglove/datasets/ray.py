@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-import inspect
 from collections.abc import Generator, Sequence
 from contextlib import closing
 from dataclasses import replace
 from functools import partial
 from itertools import islice
-from typing import Any
+from typing import TYPE_CHECKING
 
 import pyarrow as pa
 import ray.data
@@ -18,14 +17,21 @@ from ray.data.datasource import Datasource, ReadTask
 
 from .reader import ClientFactory, ReadEpisode, _Plan, _plan
 
+if TYPE_CHECKING:
+    from ray.data._internal.block_builder import BlockBuilder
+
 _BLOCK_BYTES = 8 * 1024 * 1024
 _BLOCK_ROWS = 256
+
+
+def _new_builder() -> BlockBuilder:
+    return BlockAccessor.for_block(pa.table({})).builder()
 
 
 def _read_blocks(
     plan: _Plan, read_episode: ReadEpisode, row_limit: int | None, block_bytes: int
 ) -> Generator[Block, None, None]:
-    builder = BlockAccessor.for_block(pa.table({})).builder()
+    builder = _new_builder()
     with closing(plan.read(plan.episodes, read_episode)) as samples:
         for sample in islice(samples, row_limit):
             builder.add(sample)
@@ -34,7 +40,7 @@ def _read_blocks(
                 or builder.get_estimated_memory_usage() >= block_bytes
             ):
                 yield builder.build()
-                builder = BlockAccessor.for_block(pa.table({})).builder()
+                builder = _new_builder()
         if builder.num_rows():
             yield builder.build()
 
@@ -61,18 +67,10 @@ class _Datasource(Datasource):
         count = max(1, min(parallelism, len(self._plan.episodes)))
         tasks = []
         for index in range(count):
+            # Serialize only this task's episodes, not the whole plan.
             worker_plan = replace(
                 self._plan, episodes=self._plan.episodes[index::count]
             )
-            # Older supported Ray releases also require a schema argument.
-            metadata_args: dict[str, Any] = {
-                "num_rows": None,
-                "size_bytes": None,
-                "input_files": None,
-                "exec_stats": None,
-            }
-            if "schema" in inspect.signature(BlockMetadata).parameters:
-                metadata_args["schema"] = None
             tasks.append(
                 ReadTask(
                     partial(
@@ -82,7 +80,12 @@ class _Datasource(Datasource):
                         per_task_row_limit,
                         block_bytes,
                     ),
-                    BlockMetadata(**metadata_args),
+                    BlockMetadata(
+                        num_rows=None,
+                        size_bytes=None,
+                        input_files=None,
+                        exec_stats=None,
+                    ),
                 )
             )
         return tasks
@@ -109,12 +112,6 @@ def read_dataset(
     Ray can prefetch beyond the current consumer demand. Read task retries rerun
     callbacks, so callbacks should not perform external side effects.
     """
-    if concurrency is not None and (
-        isinstance(concurrency, bool)
-        or not isinstance(concurrency, int)
-        or concurrency < 1
-    ):
-        raise ValueError("concurrency must be a positive integer")
     return ray.data.read_datasource(
         _Datasource(_plan(dataset_id, version, topics, client_factory), read_episode),
         concurrency=concurrency,
