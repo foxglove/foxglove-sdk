@@ -40,6 +40,16 @@ dev = [
 [tool.uv]
 package = false
 
+# Resolve torch from the CPU-only index for development and CI. This does not affect
+# the published package metadata.
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
 [build-system]
 requires = ["maturin>=1.14.1,<2.0"]
 # Custom build backend for building frontend assets. See custom_build.py.
