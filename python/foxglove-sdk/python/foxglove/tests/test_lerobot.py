@@ -6,6 +6,7 @@ import sys
 from collections.abc import Callable, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -899,6 +900,12 @@ def test_writes_features_without_a_topic_of_their_own_as_json_values(
                 "shape": [None, 2],
                 "names": None,
             },
+            "observation.label": {"dtype": "category", "shape": [1], "names": None},
+            "observation.captured_at": {
+                "dtype": "timestamp",
+                "shape": [1],
+                "names": None,
+            },
         },
         pa.table(
             {
@@ -915,6 +922,11 @@ def test_writes_features_without_a_topic_of_their_own_as_json_values(
                 "observation.points": pa.array(
                     [[[0.0, 1.0]] * frame for frame in range(6)],
                     pa.list_(pa.list_(pa.float32())),
+                ),
+                "observation.label": pa.array(["near", "far"] * 3).dictionary_encode(),
+                "observation.captured_at": pa.array(
+                    [datetime(2024, 1, 1, 0, 0, frame) for frame in range(6)],
+                    pa.timestamp("s"),
                 ),
             }
         ),
@@ -938,6 +950,10 @@ def test_writes_features_without_a_topic_of_their_own_as_json_values(
     assert blobs[1] == base64.b64encode(b"\x01").decode()
     _, points = recording.messages["/observation/points"][2]
     assert json.loads(points["value"]) == [[0.0, 1.0], [0.0, 1.0]]
+    _, label = recording.messages["/observation/label"][1]
+    assert label == {"value": "far"}
+    _, captured_at = recording.messages["/observation/captured_at"][2]
+    assert captured_at == {"value": "2024-01-01 00:00:02"}
 
 
 @pytest.mark.parametrize("version", ["v2.1", "v3.0"])

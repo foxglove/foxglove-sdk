@@ -66,11 +66,7 @@ TASK_SCHEMA = {
     },
 }
 
-VALUE_SCHEMA = {
-    "type": "object",
-    "title": "lerobot.Value",
-    "properties": {"value": {"type": "string"}},
-}
+VALUE_SCHEMA = {"type": "object", "title": "lerobot.Value"}
 
 VIDEO_PACKET_SCHEMA = {
     "type": "object",
@@ -137,7 +133,7 @@ class _Topic:
     Channels are made when first used, so a file only lists the ones it has messages on.
     """
 
-    schema: dict[str, Any] = VALUE_SCHEMA
+    schema: dict[str, Any]
 
     def __init__(
         self, name: str, features: tuple[Feature, ...], settings: _Settings
@@ -643,6 +639,16 @@ def _json_schema(arrow_type: pa.DataType) -> dict[str, Any] | None:
                 return None
             properties[arrow_field.name] = field_schema
         return {"type": "object", "properties": properties}
+    if pa.types.is_dictionary(arrow_type):
+        return _json_schema(arrow_type.value_type)
+    if (
+        pa.types.is_timestamp(arrow_type)
+        or pa.types.is_date(arrow_type)
+        or pa.types.is_time(arrow_type)
+        or pa.types.is_duration(arrow_type)
+        or pa.types.is_decimal(arrow_type)
+    ):
+        return {"type": "string"}
     return None
 
 
