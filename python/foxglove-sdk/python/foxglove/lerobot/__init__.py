@@ -21,9 +21,7 @@ try:
         UnsupportedCodecWarning,
         UnsupportedVideoError,
     )
-    from ._writer import (
-        EpisodeWriter,
-    )
+    from ._writer import EpisodeWriter, SkippedFeatureWarning
 except ModuleNotFoundError as err:
     if err.name not in ("av", "pyarrow"):
         raise
@@ -39,6 +37,7 @@ __all__ = [
     "Episode",
     "EpisodeWriter",
     "Feature",
+    "SkippedFeatureWarning",
     "UnsupportedCodecWarning",
     "UnsupportedDatasetError",
     "UnsupportedVideoError",

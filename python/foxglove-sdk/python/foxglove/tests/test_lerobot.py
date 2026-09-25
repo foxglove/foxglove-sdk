@@ -20,6 +20,7 @@ from foxglove.lerobot import (
     BFrameWarning,
     DepthMapWarning,
     EpisodeWriter,
+    SkippedFeatureWarning,
     UnsupportedCodecWarning,
     UnsupportedDatasetError,
     UnsupportedVideoError,
@@ -778,6 +779,17 @@ def test_writes_non_finite_values_as_null(v2_dataset: Path, tmp_path: Path) -> N
     assert [scalar["value"] for scalar in state["scalars"]] == [None, None]
 
 
+def test_names_a_hub_snapshot_by_its_repo_id(tmp_path: Path) -> None:
+    root = write_dataset(
+        tmp_path / "datasets--lerobot--pusht" / "snapshots" / "3f2a9c", "v2.1"
+    )
+    metadata = load_metadata(root)
+
+    recording = read_mcap(EpisodeWriter(metadata).write(metadata.episodes[0], tmp_path))
+
+    assert recording.metadata["lerobot"]["dataset"] == "lerobot/pusht"
+
+
 def test_skips_features_the_data_files_have_no_column_for(
     v2_dataset: Path, tmp_path: Path
 ) -> None:
@@ -806,7 +818,10 @@ def test_skips_features_the_data_files_have_no_column_for(
     info_path.write_text(json.dumps(info))
     metadata = load_metadata(v2_dataset)
 
-    writer = EpisodeWriter(metadata)
+    with pytest.warns(
+        SkippedFeatureWarning, match="data files have no column"
+    ) as warned:
+        writer = EpisodeWriter(metadata)
     recording = read_mcap(writer.write(metadata.episodes[0], tmp_path))
 
     assert [feature.key for feature, _ in writer.skipped] == [
@@ -815,6 +830,7 @@ def test_skips_features_the_data_files_have_no_column_for(
         "observation.images.wrist",
         "observation.effort",
     ]
+    assert len(warned) == 4
     assert len(recording.messages["/observation/state"]) == 6
 
 

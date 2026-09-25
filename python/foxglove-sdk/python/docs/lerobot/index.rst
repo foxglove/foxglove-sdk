@@ -78,7 +78,8 @@ can't describe, such as lists of lists and maps, are written as JSON text in a s
 Each file also has:
 
 - a metadata record named ``lerobot``, with the dataset's name, codebase version, robot type,
-  frame rate and episode count, and the episode's index, length and tasks
+  frame rate and episode count, and the episode's index, length and tasks. The name is the
+  dataset folder's, or the repo ID for a Hugging Face Hub snapshot, like ``lerobot/pusht``
 - the dataset's ``meta/info.json`` as an attachment, so that each file carries the full feature
   definitions
 - the dataset's ``meta/stats.json``, if it has one, as an attachment
@@ -135,8 +136,9 @@ Limitations
   LeRobot stores them as 12-bit codes quantized from depth, so Foxglove shows the codes rather
   than depth. Showing depth would need decoding and dequantizing them into ``foxglove.RawImage``
   frames.
-- Features the data files have no column for are skipped, such as a custom video dtype stored
-  only as mp4 files.
+- Features the data files have no column for are skipped, with a
+  :class:`~foxglove.lerobot.SkippedFeatureWarning`, such as a custom video dtype stored only as
+  mp4 files.
 - Image features have to embed their images in the data files, as LeRobot does. Images stored
   only as file paths are rejected.
 - Videos with B-frames, and videos in codecs other than AV1, H.264, H.265 and VP9, are written,
@@ -175,3 +177,5 @@ API
 .. autoexception:: foxglove.lerobot.DepthMapWarning
 
 .. autoexception:: foxglove.lerobot.UnsupportedCodecWarning
+
+.. autoexception:: foxglove.lerobot.SkippedFeatureWarning

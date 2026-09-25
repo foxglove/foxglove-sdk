@@ -101,6 +101,12 @@ NUMERIC_DTYPES = frozenset(
 )
 
 
+class SkippedFeatureWarning(UserWarning):
+    """A feature isn't written, because the data files have no column for it.
+    :attr:`EpisodeWriter.skipped` lists each skipped feature with the reason.
+    """
+
+
 @dataclass(frozen=True)
 class _WrittenVideo:
     key: str
@@ -427,7 +433,8 @@ class EpisodeWriter:
     .. py:attribute:: skipped
        :type: list[tuple[Feature, str]]
 
-       The features that aren't converted, each with the reason.
+       The features that aren't converted, each with the reason. The writer warns about each
+       with :class:`SkippedFeatureWarning`.
     """
 
     def __init__(self, metadata: DatasetMetadata) -> None:
@@ -437,6 +444,12 @@ class EpisodeWriter:
         data_schema = _data_schema(metadata)
         settings = _Settings(self._context, metadata.fps, data_schema)
         planned, self.skipped = plan_topics(metadata, data_schema)
+        for feature, reason in self.skipped:
+            warnings.warn(
+                f"{feature.key} is skipped: {reason}.",
+                SkippedFeatureWarning,
+                stacklevel=2,
+            )
         self._topics = [
             kind(name, features, settings) for name, (kind, features) in planned.items()
         ]
@@ -480,7 +493,8 @@ class EpisodeWriter:
         six digits.
 
         The file is written under a temporary name and renamed once it's complete, so a
-        failed or interrupted write doesn't leave a partial file behind. For each video with
+        failed or interrupted write doesn't leave a partial file behind. An existing file at
+        that path is replaced. For each video with
         B-frames, which Foxglove can't play back, it warns with :class:`BFrameWarning`, and
         for each video in a codec ``foxglove.CompressedVideo`` can't hold, with
         :class:`UnsupportedCodecWarning`.
@@ -566,7 +580,7 @@ class EpisodeWriter:
 
     def _metadata_record(self, episode: Episode) -> dict[str, str]:
         metadata = {
-            "dataset": self._metadata.root.name,
+            "dataset": _dataset_name(self._metadata.root),
             "codebase_version": self._metadata.version,
             "fps": str(self._metadata.info["fps"]),
             "episode_index": str(episode.index),
@@ -598,6 +612,15 @@ class EpisodeWriter:
                 },
                 log_time=log_time,
             )
+
+
+def _dataset_name(root: Path) -> str:
+    path = root.resolve()
+    if path.parent.name == "snapshots" and path.parent.parent.name.startswith(
+        "datasets--"
+    ):
+        return path.parent.parent.name.removeprefix("datasets--").replace("--", "/")
+    return path.name
 
 
 def _data_schema(metadata: DatasetMetadata) -> pa.Schema | None:
