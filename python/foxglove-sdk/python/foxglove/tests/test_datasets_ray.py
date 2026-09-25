@@ -81,6 +81,16 @@ def test_read_task_cancellation_closes_message_stream() -> None:
     assert client.closed == ["a"]
 
 
+def test_unlimited_target_max_block_size() -> None:
+    from foxglove.datasets.ray import _Datasource
+    from ray.data.context import DataContext
+
+    context = DataContext.get_current().copy()
+    context.target_max_block_size = None
+    source = _Datasource(_plan("dataset", 7, ["/camera"], Client), many_samples)
+    assert len(source.get_read_tasks(2, data_context=context)) == 2
+
+
 def test_byte_target_flushes_before_row_limit() -> None:
     import numpy as np
     from foxglove.datasets.ray import _read_blocks

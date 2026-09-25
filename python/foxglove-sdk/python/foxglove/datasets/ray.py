@@ -56,7 +56,8 @@ class _Datasource(Datasource):
         if not self._plan.episodes:
             return []
         context = data_context or DataContext.get_current()
-        block_bytes = min(_BLOCK_BYTES, context.target_max_block_size)
+        limit = context.target_max_block_size
+        block_bytes = _BLOCK_BYTES if limit is None else min(_BLOCK_BYTES, limit)
         count = max(1, min(parallelism, len(self._plan.episodes)))
         tasks = []
         for index in range(count):
