@@ -66,7 +66,7 @@ impl TryFrom<Ros2PointCloud2> for PointCloud {
             is_bigendian: cloud.is_bigendian,
             point_step: cloud.point_step,
             row_step: cloud.row_step,
-            data: cloud.data,
+            data: cloud.data.into(),
         };
         Ok(cloud.try_into()?)
     }

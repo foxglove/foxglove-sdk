@@ -4,6 +4,7 @@
 //! so the wire-specific decoders ([`super::ros1`], [`super::ros2`]) each produce a
 //! [`PointCloud2`] and share the layout validation and conversion here.
 
+use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 
 use crate::messages::{PackedElementField, PointCloud, Timestamp, packed_element_field};
@@ -132,7 +133,7 @@ pub(crate) struct PointCloud2 {
     pub(crate) is_bigendian: bool,
     pub(crate) point_step: u32,
     pub(crate) row_step: u32,
-    pub(crate) data: Vec<u8>,
+    pub(crate) data: Bytes,
 }
 
 impl TryFrom<PointCloud2> for PointCloud {
@@ -211,7 +212,7 @@ impl TryFrom<PointCloud2> for PointCloud {
                 let start = row * row_step;
                 packed.extend_from_slice(&cloud.data[start..start + packed_row_len]);
             }
-            packed
+            Bytes::from(packed)
         } else {
             // `row_step` is deliberately not consulted here: unorganized (height <= 1)
             // publishers commonly leave it 0 or otherwise meaningless, so the declared
@@ -241,7 +242,7 @@ impl TryFrom<PointCloud2> for PointCloud {
             pose: None,
             point_stride: cloud.point_step,
             fields,
-            data: data.into(),
+            data,
         })
     }
 }
@@ -284,7 +285,7 @@ pub(crate) mod tests {
             is_bigendian: false,
             point_step: 12,
             row_step: 12 * points.len() as u32,
-            data: cloud_data(points),
+            data: cloud_data(points).into(),
         }
     }
 
@@ -374,7 +375,7 @@ pub(crate) mod tests {
         cloud.height = 2;
         cloud.width = 2;
         cloud.row_step = padded_row_step;
-        cloud.data = data;
+        cloud.data = data.into();
 
         let converted = PointCloud::try_from(cloud).unwrap();
         let mut expected = row.clone();
@@ -393,7 +394,7 @@ pub(crate) mod tests {
 
         let mut cloud = make_cloud(&points);
         cloud.row_step = 12 * 2 + 8;
-        cloud.data = data;
+        cloud.data = data.into();
 
         let converted = PointCloud::try_from(cloud).unwrap();
         assert_eq!(converted.data, cloud_data(&points));
@@ -417,7 +418,7 @@ pub(crate) mod tests {
         // the declared dimensions rather than delivering phantom points.
         let points = [[1.0f32, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]];
         let mut cloud = make_cloud(&points[..2]);
-        cloud.data = cloud_data(&points);
+        cloud.data = cloud_data(&points).into();
 
         let converted = PointCloud::try_from(cloud).unwrap();
         assert_eq!(converted.data, cloud_data(&points[..2]));
@@ -461,7 +462,7 @@ pub(crate) mod tests {
     fn test_rejects_data_shorter_than_declared_dimensions() {
         let points = [[1.0f32, 2.0, 3.0], [4.0, 5.0, 6.0]];
         let mut cloud = make_cloud(&points);
-        cloud.data = cloud_data(&points[..1]);
+        cloud.data = cloud_data(&points[..1]).into();
 
         assert!(matches!(
             PointCloud::try_from(cloud),

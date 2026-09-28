@@ -417,7 +417,7 @@ mod tests {
 
         let buf = build_point_cloud(&TestCloud::default());
         let compressed_bytes = transcode_point_cloud_message(
-            &buf,
+            &buf.into(),
             PointCloudInputSchema::FoxgloveFlatbuffer,
             &crate::remote_access::PointCloudCompression::default(),
         )

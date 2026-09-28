@@ -1,6 +1,6 @@
 //! ROS 1 `sensor_msgs/PointCloud2` decoder for point-cloud compression.
 
-use bytes::Buf;
+use bytes::{Buf, Bytes};
 
 use crate::messages::PointCloud;
 use crate::remote_access::point_cloud_transcode::point_cloud2::{
@@ -20,12 +20,15 @@ pub(crate) enum Ros1PointCloudError {
 }
 
 /// Decodes a ROS 1 `sensor_msgs/PointCloud2` message into a `foxglove.PointCloud`.
-pub(crate) fn decode_point_cloud(msg: &[u8]) -> Result<PointCloud, Ros1PointCloudError> {
+pub(crate) fn decode_point_cloud(msg: &Bytes) -> Result<PointCloud, Ros1PointCloudError> {
     Ok(decode_point_cloud2(msg)?.try_into()?)
 }
 
 /// Reads a ROS 1 `sensor_msgs/PointCloud2` message.
-fn decode_point_cloud2(mut msg: &[u8]) -> Result<PointCloud2, Ros1WireError> {
+///
+/// The returned cloud's `data` shares `buf`'s allocation rather than copying it.
+fn decode_point_cloud2(buf: &Bytes) -> Result<PointCloud2, Ros1WireError> {
+    let mut msg: &[u8] = buf;
     let header = msg.try_get_ros1_header()?;
     let height = msg.try_get_u32_le()?;
     let width = msg.try_get_u32_le()?;
@@ -48,7 +51,7 @@ fn decode_point_cloud2(mut msg: &[u8]) -> Result<PointCloud2, Ros1WireError> {
     let is_bigendian = msg.try_get_u8()? != 0;
     let point_step = msg.try_get_u32_le()?;
     let row_step = msg.try_get_u32_le()?;
-    let data = msg.try_get_ros1_bytes()?.to_vec();
+    let data = buf.slice_ref(msg.try_get_ros1_bytes()?);
     // `is_dense` is advisory and deliberately not consulted; see `PointCloud2`.
     let _is_dense = msg.try_get_u8()?;
     Ok(PointCloud2 {
@@ -103,7 +106,7 @@ pub(crate) mod tests {
     #[test]
     fn test_roundtrips_point_cloud2() {
         let cloud = make_cloud(&[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
-        let decoded = decode_point_cloud2(&encode_point_cloud2(&cloud)).unwrap();
+        let decoded = decode_point_cloud2(&encode_point_cloud2(&cloud).into()).unwrap();
         assert_eq!(decoded, cloud);
     }
 
@@ -158,16 +161,28 @@ pub(crate) mod tests {
             is_bigendian: false,
             point_step: 16,
             row_step: 32,
-            data,
+            data: data.into(),
         };
-        assert_eq!(decode_point_cloud2(encoded).unwrap(), expected);
+        assert_eq!(
+            decode_point_cloud2(&Bytes::from_static(encoded)).unwrap(),
+            expected
+        );
+    }
+
+    #[test]
+    fn test_decoded_data_shares_message_buffer() {
+        let encoded = Bytes::from(encode_point_cloud2(&make_cloud(&[[1.0, 2.0, 3.0]])));
+        let decoded = decode_point_cloud2(&encoded).unwrap();
+        let data = decoded.data.as_ptr_range();
+        let msg = encoded.as_ptr_range();
+        assert!(msg.start <= data.start && data.end <= msg.end);
     }
 
     #[test]
     fn test_decodes_and_converts_point_cloud2() {
         let points = [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]];
         let encoded = encode_point_cloud2(&make_cloud(&points));
-        let cloud = decode_point_cloud(&encoded).unwrap();
+        let cloud = decode_point_cloud(&encoded.into()).unwrap();
 
         assert_eq!(cloud.timestamp, Some(Timestamp::new(12, 34)));
         assert_eq!(cloud.frame_id, "lidar");
@@ -178,12 +193,12 @@ pub(crate) mod tests {
 
     #[test]
     fn test_rejects_truncated_message() {
-        let encoded = encode_point_cloud2(&make_cloud(&[[1.0, 2.0, 3.0]]));
+        let encoded = Bytes::from(encode_point_cloud2(&make_cloud(&[[1.0, 2.0, 3.0]])));
         // Every proper prefix is missing at least the trailing `is_dense` byte.
         for len in 0..encoded.len() {
             assert!(
                 matches!(
-                    decode_point_cloud(&encoded[..len]),
+                    decode_point_cloud(&encoded.slice(..len)),
                     Err(Ros1PointCloudError::Wire(
                         Ros1WireError::UnexpectedEof { .. }
                     ))
@@ -200,7 +215,7 @@ pub(crate) mod tests {
         let offset = 12 + 4 + "lidar".len() + 8;
         encoded[offset..offset + 4].copy_from_slice(&u32::MAX.to_le_bytes());
         assert!(matches!(
-            decode_point_cloud(&encoded),
+            decode_point_cloud(&encoded.into()),
             Err(Ros1PointCloudError::Wire(
                 Ros1WireError::UnexpectedEof { .. }
             ))
@@ -214,7 +229,7 @@ pub(crate) mod tests {
         encoded[4..8].copy_from_slice(&u32::MAX.to_le_bytes());
         encoded[8..12].copy_from_slice(&1_000_000_000u32.to_le_bytes());
         assert!(matches!(
-            decode_point_cloud(&encoded),
+            decode_point_cloud(&encoded.into()),
             Err(Ros1PointCloudError::Wire(Ros1WireError::InvalidTimestamp))
         ));
     }
@@ -224,7 +239,7 @@ pub(crate) mod tests {
         let mut cloud = make_cloud(&[[1.0, 2.0, 3.0]]);
         cloud.is_bigendian = true;
         assert!(matches!(
-            decode_point_cloud(&encode_point_cloud2(&cloud)),
+            decode_point_cloud(&encode_point_cloud2(&cloud).into()),
             Err(Ros1PointCloudError::Layout(PointCloud2Error::BigEndian))
         ));
     }

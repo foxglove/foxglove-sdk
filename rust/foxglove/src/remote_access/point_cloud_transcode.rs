@@ -81,12 +81,12 @@ pub(crate) fn point_cloud_input_schema(channel: &RawChannel) -> Option<PointClou
 /// Transcodes a serialized point cloud message into a serialized
 /// `foxglove.CompressedPointCloud` message.
 pub(crate) fn transcode_point_cloud_message(
-    msg: &[u8],
+    msg: &Bytes,
     input_schema: PointCloudInputSchema,
     options: &PointCloudCompression,
 ) -> Result<Bytes, TranscodeError> {
     let mut cloud = match input_schema {
-        PointCloudInputSchema::FoxgloveProtobuf => <PointCloud as Decode>::decode(msg)?,
+        PointCloudInputSchema::FoxgloveProtobuf => <PointCloud as Decode>::decode(msg.clone())?,
         PointCloudInputSchema::FoxgloveJson => serde_json::from_slice::<PointCloud>(msg)?,
         PointCloudInputSchema::FoxgloveFlatbuffer => flatbuffer::decode_point_cloud(msg)?,
         PointCloudInputSchema::Ros2PointCloud2 => ros2::decode_point_cloud(msg)?,
@@ -544,7 +544,7 @@ mod tests {
         .to_string();
 
         let transcoded = transcode_point_cloud_message(
-            json.as_bytes(),
+            &json.into(),
             PointCloudInputSchema::FoxgloveJson,
             &PointCloudCompression::default(),
         )
@@ -627,7 +627,7 @@ mod tests {
 
         let encoded = cdr_cloud(&[[1.0, 2.0, 3.0]], 1, true);
         let transcoded = transcode_point_cloud_message(
-            &encoded,
+            &encoded.into(),
             PointCloudInputSchema::Ros2PointCloud2,
             &PointCloudCompression::default(),
         )
@@ -647,7 +647,7 @@ mod tests {
 
         let encoded = encode_point_cloud2(&make_cloud(&[[1.0, 2.0, 3.0]]));
         let transcoded = transcode_point_cloud_message(
-            &encoded,
+            &encoded.into(),
             PointCloudInputSchema::Ros1PointCloud2,
             &PointCloudCompression::default(),
         )
@@ -678,7 +678,7 @@ mod tests {
             false,
         );
         let transcoded = transcode_point_cloud_message(
-            &encoded,
+            &encoded.into(),
             PointCloudInputSchema::Ros2PointCloud2,
             &PointCloudCompression::default(),
         )
@@ -758,14 +758,22 @@ mod tests {
 
         let mut buf = Vec::new();
         stamped_cloud(8).encode(&mut buf).unwrap();
-        transcode_point_cloud_message(&buf, PointCloudInputSchema::FoxgloveProtobuf, &options)
-            .unwrap();
+        transcode_point_cloud_message(
+            &buf.into(),
+            PointCloudInputSchema::FoxgloveProtobuf,
+            &options,
+        )
+        .unwrap();
 
         // Empty clouds fold to lossless regardless of fields and must round-trip.
         let mut buf = Vec::new();
         stamped_cloud(0).encode(&mut buf).unwrap();
-        transcode_point_cloud_message(&buf, PointCloudInputSchema::FoxgloveProtobuf, &options)
-            .unwrap();
+        transcode_point_cloud_message(
+            &buf.into(),
+            PointCloudInputSchema::FoxgloveProtobuf,
+            &options,
+        )
+        .unwrap();
     }
 
     /// A float32 xyz cloud from raw points.
@@ -928,7 +936,7 @@ mod tests {
         let mut buf = Vec::new();
         make(&[1.0, f32::NAN, 3.0]).encode(&mut buf).unwrap();
         transcode_point_cloud_message(
-            &buf,
+            &buf.into(),
             PointCloudInputSchema::FoxgloveProtobuf,
             &PointCloudCompression::default(),
         )
@@ -944,7 +952,7 @@ mod tests {
         let mut buf = Vec::new();
         cloud.encode(&mut buf).unwrap();
         transcode_point_cloud_message(
-            &buf,
+            &buf.into(),
             PointCloudInputSchema::FoxgloveProtobuf,
             &PointCloudCompression::default(),
         )
@@ -992,7 +1000,7 @@ mod tests {
         cloud.encode(&mut buf).unwrap();
 
         let transcoded = transcode_point_cloud_message(
-            &buf,
+            &buf.into(),
             PointCloudInputSchema::FoxgloveProtobuf,
             &PointCloudCompression::default(),
         )
@@ -1201,7 +1209,7 @@ mod tests {
         let mut buf = Vec::new();
         cloud.encode(&mut buf).unwrap();
         transcode_point_cloud_message(
-            &buf,
+            &buf.into(),
             PointCloudInputSchema::FoxgloveProtobuf,
             &PointCloudCompression::default(),
         )
@@ -1272,7 +1280,7 @@ mod tests {
         cloud.encode(&mut buf).unwrap();
 
         let transcoded = transcode_point_cloud_message(
-            &buf,
+            &buf.into(),
             PointCloudInputSchema::FoxgloveProtobuf,
             &PointCloudCompression::default(),
         )
@@ -1323,7 +1331,7 @@ mod tests {
         let encoded = cdr::serialize::<_, _, cdr::CdrLe>(&cloud, cdr::Infinite).unwrap();
 
         let transcoded = transcode_point_cloud_message(
-            &encoded,
+            &encoded.into(),
             PointCloudInputSchema::Ros2PointCloud2,
             &PointCloudCompression::default(),
         )
@@ -1343,14 +1351,22 @@ mod tests {
         let cloud = xyz_cloud(&[[1.0, 2.0, 3.0], [f32::NAN, f32::NAN, f32::NAN]]);
         let mut buf = Vec::new();
         cloud.encode(&mut buf).unwrap();
-        transcode_point_cloud_message(&buf, PointCloudInputSchema::FoxgloveProtobuf, &options)
-            .unwrap();
+        transcode_point_cloud_message(
+            &buf.into(),
+            PointCloudInputSchema::FoxgloveProtobuf,
+            &options,
+        )
+        .unwrap();
 
         let cloud = xyz_cloud(&[[f32::NAN, f32::NAN, f32::NAN]]);
         let mut buf = Vec::new();
         cloud.encode(&mut buf).unwrap();
-        transcode_point_cloud_message(&buf, PointCloudInputSchema::FoxgloveProtobuf, &options)
-            .unwrap();
+        transcode_point_cloud_message(
+            &buf.into(),
+            PointCloudInputSchema::FoxgloveProtobuf,
+            &options,
+        )
+        .unwrap();
     }
 
     #[test]
