@@ -6,7 +6,13 @@ from collections.abc import Callable, Generator, Iterable, Iterator, Mapping, Se
 from dataclasses import dataclass
 from datetime import datetime
 from types import MappingProxyType
-from typing import Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol, TypeVar
+
+if TYPE_CHECKING:
+    from mcap.decoder import DecoderFactory
+    from mcap.records import Channel, Message, Schema
+
+_T = TypeVar("_T")
 
 _EPISODE_PAGE_SIZE = 2000
 
@@ -25,12 +31,15 @@ class _Client(Protocol):
     ) -> _Page: ...
 
     def iter_messages(
-        self, *, episode_id: str, topics: list[str]
-    ) -> Generator[Any, None, None]: ...
+        self,
+        *,
+        episode_id: str,
+        topics: list[str],
+        decoder_factories: list[DecoderFactory] | None = None,
+    ) -> Generator[tuple[Schema | None, Channel, Message, Any], None, None]: ...
 
 
 ClientFactory = Callable[[], _Client]
-ReadEpisode = Callable[["EpisodeReader"], Iterable[dict[str, Any]]]
 
 
 @dataclass(frozen=True)
@@ -44,10 +53,11 @@ class _Episode:
 class EpisodeReader:
     """An episode scoped to the topics selected by ``read_dataset``.
 
-    Instances are supplied to the customer's ``read_episode`` callback and remain
+    Instances are supplied to the user's ``read_episode`` callback and remain
     usable only until that callback's iterator finishes or is closed. Message tuples
-    are the client's ``(schema, channel, message, decoded_message)`` values. Configure
-    custom client decoders in the worker's client factory when needed.
+    are the client's ``(schema, channel, message, decoded_message)`` values. Create
+    custom message decoders inside the callback and pass them to :meth:`iter_messages`.
+    Media decoding (such as H.264 to images) is a separate processing step.
     """
 
     def __init__(
@@ -56,7 +66,9 @@ class EpisodeReader:
         self._episode = episode
         self._topics = topics
         self._client = client
-        self._streams: list[Generator[Any, None, None]] = []
+        self._streams: list[
+            Generator[tuple[Schema | None, Channel, Message, Any], None, None]
+        ] = []
         self._closed = False
 
     @property
@@ -76,20 +88,38 @@ class EpisodeReader:
 
     @property
     def metadata(self) -> Mapping[str, Any]:
-        """Customer-defined episode metadata."""
+        """User-defined episode metadata."""
         return MappingProxyType(self._episode.metadata)
 
-    def iter_messages(self) -> Generator[Any, None, None]:
+    def iter_messages(
+        self, *, decoder_factories: Sequence[DecoderFactory] | None = None
+    ) -> Generator[tuple[Schema | None, Channel, Message, Any], None, None]:
         """Stream the selected topics in log-time order without buffering the episode.
 
         Each invocation opens a new stream on first iteration. Repeated invocations
         redownload data. Active streams are closed when the callback ends.
+        Message context and stream order are preserved for stateful processing.
+
+        :param decoder_factories: MCAP decoder factories used for message
+            deserialization. ``None`` uses the client's default decoders; an explicit
+            list replaces them. Construct factories inside the callback so their
+            state stays local to the worker and episode. This does not decode media
+            payloads into images or read data preceding the episode's time window.
+        :returns: Tuples of schema (possibly ``None``), channel, raw MCAP message,
+            and decoded message payload.
         """
         if self._closed:
             raise RuntimeError("Episode reader is closed")
-        stream = self._client.iter_messages(
-            episode_id=self.id, topics=list(self._topics)
-        )
+        if decoder_factories is None:
+            stream = self._client.iter_messages(
+                episode_id=self.id, topics=list(self._topics)
+            )
+        else:
+            stream = self._client.iter_messages(
+                episode_id=self.id,
+                topics=list(self._topics),
+                decoder_factories=list(decoder_factories),
+            )
         self._streams.append(stream)
         try:
             yield from stream
@@ -103,6 +133,9 @@ class EpisodeReader:
             stream.close()
 
 
+ReadEpisode = Callable[[EpisodeReader], Iterable[_T]]
+
+
 @dataclass(frozen=True)
 class _Plan:
     dataset_id: str
@@ -112,8 +145,8 @@ class _Plan:
     client_factory: ClientFactory
 
     def read(
-        self, episodes: Sequence[_Episode], read_episode: ReadEpisode
-    ) -> Generator[dict[str, Any], None, None]:
+        self, episodes: Sequence[_Episode], read_episode: ReadEpisode[_T]
+    ) -> Generator[_T, None, None]:
         if not episodes:
             return
         client = self.client_factory()
@@ -123,8 +156,6 @@ class _Plan:
             try:
                 samples = iter(read_episode(reader))
                 for sample in samples:
-                    if not isinstance(sample, dict):
-                        raise TypeError("read_episode must yield dictionaries")
                     yield sample
             except Exception as error:
                 raise RuntimeError(

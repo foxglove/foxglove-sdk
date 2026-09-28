@@ -1,3 +1,4 @@
+import json
 from collections.abc import Generator, Iterator
 from datetime import datetime, timezone
 from typing import Any
@@ -5,6 +6,7 @@ from typing import Any
 import pytest
 from foxglove.datasets import EpisodeReader
 from foxglove.datasets.reader import _plan
+from mcap.records import Channel, Message, Schema
 
 
 class Page:
@@ -41,19 +43,37 @@ class Client:
         return Page()
 
     def iter_messages(
-        self, *, episode_id: str, topics: list[str]
-    ) -> Generator[Any, None, None]:
+        self, *, episode_id: str, topics: list[str], **kwargs: Any
+    ) -> Generator[tuple[Schema | None, Channel, Message, Any], None, None]:
+        assert kwargs == {}
         self.calls.append((episode_id, topics))
         try:
-            yield episode_id
+            yield (
+                Schema(id=1, data=b"{}", encoding="jsonschema", name="Episode"),
+                Channel(
+                    id=1,
+                    schema_id=1,
+                    topic=topics[0],
+                    message_encoding="json",
+                    metadata={},
+                ),
+                Message(
+                    channel_id=1,
+                    log_time=0,
+                    publish_time=0,
+                    sequence=0,
+                    data=json.dumps(episode_id).encode(),
+                ),
+                episode_id,
+            )
             raise AssertionError("Read past the requested sample")
         finally:
             self.closed.append(episode_id)
 
 
 def samples(episode: EpisodeReader) -> Iterator[dict[str, Any]]:
-    for message in episode.iter_messages():
-        yield {"id": message}
+    for _schema, _channel, _message, decoded in episode.iter_messages():
+        yield {"id": decoded}
 
 
 def test_metadata_only_plan_and_lazy_topic_filtered_reads() -> None:
@@ -75,7 +95,7 @@ def test_callback_can_stop_early_and_retain_message_iterator() -> None:
     def first(episode: EpisodeReader) -> Iterator[dict[str, Any]]:
         messages = episode.iter_messages()
         retained.append(messages)
-        yield {"id": next(messages), "label": episode.metadata["label"]}
+        yield {"id": next(messages)[3], "label": episode.metadata["label"]}
 
     plan = _plan("dataset", 7, ["/camera"], lambda: client)
     assert list(plan.read(plan.episodes, first)) == [
@@ -181,3 +201,39 @@ def test_empty_plan_does_not_create_worker_client(
     plan = _plan("dataset", 7, ["/camera"], factory)
     assert list(plan.read(plan.episodes, samples)) == []
     assert len(created) == 1
+
+
+@pytest.mark.parametrize("cancel", [False, True])
+def test_callback_cleanup_runs_before_episode_streams_close(cancel: bool) -> None:
+    client = Client()
+    events = []
+    readers = []
+    retained = []
+
+    def read_episode(episode: EpisodeReader) -> Iterator[tuple[str, str]]:
+        readers.append(episode)
+        messages = episode.iter_messages()
+        retained.append(messages)
+        next(messages)
+        try:
+            yield (episode.id, episode.metadata["label"])
+        finally:
+            assert episode.id not in client.closed
+            events.append(episode.id)
+
+    plan = _plan("dataset", 7, ["/camera"], lambda: client)
+    stream = plan.read(plan.episodes, read_episode)
+    if cancel:
+        assert next(stream) == ("a", "a")
+        stream.close()
+        expected = ["a"]
+    else:
+        assert list(stream) == [(name, name) for name in ("a", "b", "c", "d")]
+        expected = ["a", "b", "c", "d"]
+    assert events == expected
+    assert client.closed == expected
+    for reader in readers:
+        with pytest.raises(RuntimeError, match="Episode reader is closed"):
+            next(reader.iter_messages())
+    for messages in retained:
+        assert list(messages) == []

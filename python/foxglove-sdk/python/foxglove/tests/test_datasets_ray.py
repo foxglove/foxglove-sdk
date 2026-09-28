@@ -1,3 +1,4 @@
+import os
 from collections.abc import Generator, Iterator
 from typing import Any
 
@@ -7,6 +8,9 @@ from foxglove.datasets.reader import _plan
 
 from .test_datasets import Client
 
+# Use the current test environment, including the locally installed editable SDK,
+# instead of having Ray recreate it with uv for each worker.
+os.environ.setdefault("RAY_ENABLE_UV_RUN_RUNTIME_ENV", "0")
 ray = pytest.importorskip("ray")
 
 
@@ -29,6 +33,7 @@ def test_incremental_blocks_and_sample_row_limit() -> None:
     from ray.data.block import BlockAccessor
 
     source = _Datasource(_plan("dataset", 7, ["/camera"], Client), many_samples)
+    assert source.get_name() == "Foxglove"
     tasks = source.get_read_tasks(2, per_task_row_limit=300)
     assert len(tasks) == 2
     for task in tasks:
@@ -66,12 +71,16 @@ def test_read_task_cancellation_closes_message_stream() -> None:
     from foxglove.datasets.ray import _Datasource
 
     client = Client()
+    closed = []
 
     def expand(episode: EpisodeReader) -> Iterator[dict[str, Any]]:
         messages = episode.iter_messages()
-        name = next(messages)
-        for index in range(1000):
-            yield {"id": name, "index": index}
+        name = next(messages)[3]
+        try:
+            for index in range(1000):
+                yield {"id": name, "index": index}
+        finally:
+            closed.append(episode.id)
 
     source = _Datasource(_plan("dataset", 7, ["/camera"], lambda: client), expand)
     blocks = iter(source.get_read_tasks(1)[0]())
@@ -79,6 +88,7 @@ def test_read_task_cancellation_closes_message_stream() -> None:
     next(blocks)
     blocks.close()
     assert client.closed == ["a"]
+    assert closed == ["a"]
 
 
 def test_unlimited_target_max_block_size() -> None:
@@ -119,3 +129,31 @@ def test_native_ray_execution() -> None:
         concurrency=2,
     )
     assert dataset.count() == 4000
+
+
+@pytest.mark.parametrize("sample", [(1, 2), 1, None])
+def test_non_dictionary_rows_fail_with_episode_context_and_close_streams(
+    sample: Any,
+) -> None:
+    from foxglove.datasets.ray import _Datasource
+
+    client = Client()
+    closed = []
+
+    def invalid(episode: EpisodeReader) -> Iterator[Any]:
+        messages = episode.iter_messages()
+        next(messages)
+        try:
+            yield sample
+        finally:
+            closed.append(episode.id)
+
+    source = _Datasource(_plan("dataset", 7, ["/camera"], lambda: client), invalid)
+    with pytest.raises(
+        RuntimeError, match="episode a.*dataset dataset version 7"
+    ) as error:
+        list(source.get_read_tasks(1)[0]())
+    assert isinstance(error.value.__cause__, TypeError)
+    assert str(error.value.__cause__) == "Ray read_episode must yield dictionaries"
+    assert closed == ["a"]
+    assert client.closed == ["a"]

@@ -1,6 +1,6 @@
 import io
 import json
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from typing import Any
 
 import pytest
@@ -10,17 +10,39 @@ from foxglove.datasets.reader import _plan
 client_module = pytest.importorskip("foxglove.client")
 
 
+@pytest.mark.parametrize("custom_decoding", [False, True])
 def test_real_client_pagination_filtering_and_incremental_mcap(
     monkeypatch: pytest.MonkeyPatch,
+    custom_decoding: bool,
 ) -> None:
     import requests
+    from mcap.decoder import DecoderFactory
+    from mcap.records import Schema
     from mcap.writer import CompressionType, Writer
+
+    decoded_values = []
+
+    class CustomDecoderFactory(DecoderFactory):
+        def decoder_for(
+            self, message_encoding: str, schema: Schema | None
+        ) -> Callable[[bytes], Any] | None:
+            assert message_encoding == "custom"
+            assert schema is not None and schema.name == "Measurement"
+
+            def decode(data: bytes) -> dict[str, Any]:
+                payload = json.loads(data)
+                decoded_values.append(payload["value"])
+                return {"value": payload["value"] + 10}
+
+            return decode
 
     output = io.BytesIO()
     writer = Writer(output, chunk_size=1, compression=CompressionType.NONE)
     writer.start()
     schema = writer.register_schema("Measurement", "jsonschema", b"{}")
-    channel = writer.register_channel("/camera", "json", schema)
+    channel = writer.register_channel(
+        "/camera", "custom" if custom_decoding else "json", schema
+    )
     for index in range(100):
         writer.add_message(channel, index, json.dumps({"value": index}).encode(), index)
     writer.finish()
@@ -93,11 +115,22 @@ def test_real_client_pagination_filtering_and_incremental_mcap(
     assert opened == []
 
     def samples(episode: EpisodeReader) -> Iterator[dict[str, Any]]:
-        for _schema, _channel, _message, decoded in episode.iter_messages():
+        decoders = [CustomDecoderFactory()] if custom_decoding else None
+        for schema, channel, message, decoded in episode.iter_messages(
+            decoder_factories=decoders
+        ):
+            assert schema is not None and schema.name == "Measurement"
+            assert channel.topic == "/camera"
+            assert message.log_time == message.publish_time
+            assert json.loads(message.data)["value"] == message.log_time
             yield decoded
 
     stream = plan.read(plan.episodes, samples)
-    assert next(stream) == {"value": 0}
+    offset = 10 if custom_decoding else 0
+    assert [next(stream) for _ in range(3)] == [
+        {"value": index + offset} for index in range(3)
+    ]
+    assert decoded_values == ([0, 1, 2] if custom_decoding else [])
     assert opened[0].tell() < len(data)
     stream.close()
     assert opened[0].closed

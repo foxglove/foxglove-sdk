@@ -7,7 +7,7 @@ from contextlib import closing
 from dataclasses import replace
 from functools import partial
 from itertools import islice
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pyarrow as pa
 import ray.data
@@ -15,7 +15,7 @@ from ray.data.block import Block, BlockAccessor, BlockMetadata
 from ray.data.context import DataContext
 from ray.data.datasource import Datasource, ReadTask
 
-from .reader import ClientFactory, ReadEpisode, _Plan, _plan
+from .reader import ClientFactory, EpisodeReader, ReadEpisode, _Plan, _plan
 
 if TYPE_CHECKING:
     from ray.data._internal.block_builder import BlockBuilder
@@ -28,11 +28,31 @@ def _new_builder() -> BlockBuilder:
     return BlockAccessor.for_block(pa.table({})).builder()
 
 
+def _read_rows(
+    read_episode: ReadEpisode[dict[str, Any]], episode: EpisodeReader
+) -> Generator[dict[str, Any], None, None]:
+    samples = iter(read_episode(episode))
+    try:
+        for sample in samples:
+            if not isinstance(sample, dict):
+                raise TypeError("Ray read_episode must yield dictionaries")
+            yield sample
+    finally:
+        close = getattr(samples, "close", None)
+        if close is not None:
+            close()
+
+
 def _read_blocks(
-    plan: _Plan, read_episode: ReadEpisode, row_limit: int | None, block_bytes: int
+    plan: _Plan,
+    read_episode: ReadEpisode[dict[str, Any]],
+    row_limit: int | None,
+    block_bytes: int,
 ) -> Generator[Block, None, None]:
     builder = _new_builder()
-    with closing(plan.read(plan.episodes, read_episode)) as samples:
+    with closing(
+        plan.read(plan.episodes, partial(_read_rows, read_episode))
+    ) as samples:
         for sample in islice(samples, row_limit):
             builder.add(sample)
             if (
@@ -46,9 +66,12 @@ def _read_blocks(
 
 
 class _Datasource(Datasource):
-    def __init__(self, plan: _Plan, read_episode: ReadEpisode) -> None:
+    def __init__(self, plan: _Plan, read_episode: ReadEpisode[dict[str, Any]]) -> None:
         self._plan = plan
         self._read_episode = read_episode
+
+    def get_name(self) -> str:
+        return "Foxglove"
 
     def estimate_inmemory_data_size(self) -> None:
         return None
@@ -96,7 +119,7 @@ def read_dataset(
     *,
     version: int,
     topics: Sequence[str],
-    read_episode: ReadEpisode,
+    read_episode: ReadEpisode[dict[str, Any]],
     client_factory: ClientFactory,
     concurrency: int | None = None,
 ) -> ray.data.Dataset:
