@@ -5,7 +5,12 @@ import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import { Runner } from "./Runner";
 
 self.MonacoEnvironment = {
-  getWorker(_workerId, _label) {
+  // Only the core editor worker is supported; the playground has no models for languages that
+  // need their own worker (TypeScript, JSON, CSS, HTML).
+  getWorker(_workerId, label) {
+    if (label !== "editorWorkerService") {
+      throw new Error(`Unsupported monaco worker: ${label}`);
+    }
     return new Worker(new URL("monaco-editor/editor/editor.worker", import.meta.url), {
       type: "module",
     });

@@ -7,7 +7,6 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { version as pyodideVersion } from "pyodide";
 import reactRefreshTypescript from "react-refresh-typescript";
-import type ts from "typescript";
 import webpack, { Compiler, Configuration } from "webpack";
 
 const thisDirname = path.dirname(fileURLToPath(import.meta.url));
@@ -50,17 +49,6 @@ export default (_env: unknown, argv: WebpackArgv): Configuration => {
                 noUnusedLocals: !allowUnusedVariables,
                 noUnusedParameters: !allowUnusedVariables,
               },
-              // ts-loader passes each file's CommonJS/ESM format to module resolution, which tsc
-              // omits under `moduleResolution: bundler`. Without this, dual-format packages like
-              // @mui/material resolve to separate CJS and ESM typings, and our theme augmentation
-              // only applies to one of them.
-              resolveModuleName: (
-                moduleName: string,
-                containingFile: string,
-                compilerOptions: ts.CompilerOptions,
-                host: ts.ModuleResolutionHost,
-                parentResolver: typeof ts.resolveModuleName,
-              ) => parentResolver(moduleName, containingFile, compilerOptions, host),
             },
           },
         },

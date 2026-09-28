@@ -9,6 +9,7 @@ import { tss } from "tss-react/mui";
 
 import { Editor, EditorInterface } from "./Editor";
 import { Runner } from "./Runner";
+import { fontMonospace } from "./ThemeProvider";
 import { getUrlState, setUrlState, UrlState } from "./urlState";
 
 import "./Playground.css";
@@ -52,7 +53,7 @@ const useStyles = tss.create(({ theme }) => ({
   },
   toastMonospace: {
     maxWidth: "none",
-    fontFamily: theme.typography.fontMonospace,
+    fontFamily: fontMonospace,
     overflow: "hidden",
     div: {
       whiteSpace: "pre-wrap",
