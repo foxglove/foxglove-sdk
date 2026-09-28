@@ -102,8 +102,9 @@ NUMERIC_DTYPES = frozenset(
 
 
 class SkippedFeatureWarning(UserWarning):
-    """A feature isn't written, because the data files have no column for it.
-    :attr:`EpisodeWriter.skipped` lists each skipped feature with the reason.
+    """A feature isn't written, because the data files have no column for it, or it's a depth
+    map stored as TIFF images. :attr:`EpisodeWriter.skipped` lists each skipped feature with the
+    reason.
     """
 
 
@@ -235,6 +236,7 @@ class _ValueTopic(_Topic):
         return self._json_channel(
             {
                 **VALUE_SCHEMA,
+                "title": f"{VALUE_SCHEMA['title']}/{self.feature.key}",
                 "properties": {"value": self._value_schema or {"type": "string"}},
             }
         )
@@ -356,6 +358,15 @@ def plan_topics(
         if feature.dtype == "video":
             kind, name = _VideoTopic, camera_topic(feature.key)
         elif feature.dtype == "image":
+            if feature.is_depth_map:
+                skipped.append(
+                    (
+                        feature,
+                        "LeRobot stores depth map images as TIFF, which "
+                        "foxglove.CompressedImage can't hold",
+                    )
+                )
+                continue
             kind, name = _ImageTopic, camera_topic(feature.key)
         elif feature.dtype in NUMERIC_DTYPES and all(
             isinstance(size, int) for size in feature.shape
@@ -631,6 +642,10 @@ def _data_schema(metadata: DatasetMetadata) -> pa.Schema | None:
 
 
 def _json_schema(arrow_type: pa.DataType) -> dict[str, Any] | None:
+    if isinstance(arrow_type, pa.BaseExtensionType):
+        return _json_schema(arrow_type.storage_type)
+    if pa.types.is_null(arrow_type):
+        return {"type": "string"}
     if pa.types.is_boolean(arrow_type):
         return {"type": "boolean"}
     if pa.types.is_integer(arrow_type):

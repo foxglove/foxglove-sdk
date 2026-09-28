@@ -31,7 +31,7 @@ class Feature:
     :param shape: The feature's shape. A dimension is None if its length varies from frame to
         frame.
     :param names: One name per element, or None if the dataset doesn't give exactly one.
-    :param is_depth_map: Whether the feature is a depth map video.
+    :param is_depth_map: Whether the feature is a depth map, as video or images.
     """
 
     key: str

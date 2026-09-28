@@ -27,6 +27,7 @@ from foxglove.lerobot import (
     load_metadata,
 )
 from foxglove.lerobot._video import _with_sequence_header
+from foxglove.lerobot._writer import _json_schema
 from mcap.reader import make_reader
 
 FPS = 10
@@ -926,7 +927,8 @@ def test_writes_features_without_a_topic_of_their_own_as_json_values(
         pa.table(
             {
                 "language_events": [
-                    [{"role": "user", "content": f"step {frame}"}] for frame in range(6)
+                    [{"role": "user", "content": f"step {frame}", "camera": None}]
+                    for frame in range(6)
                 ],
                 "observation.contacts": pa.array(
                     [[0.5] * frame + [math.nan] for frame in range(6)],
@@ -953,10 +955,14 @@ def test_writes_features_without_a_topic_of_their_own_as_json_values(
     recording = read_mcap(writer.write(metadata.episodes[0], tmp_path))
 
     assert writer.skipped == []
-    assert recording.schemas["/language_events"] == "lerobot.Value"
+    assert recording.schemas["/language_events"] == "lerobot.Value/language_events"
+    assert (
+        recording.schemas["/observation/contacts"]
+        == "lerobot.Value/observation.contacts"
+    )
     assert recording.messages["/language_events"][2] == (
         START_NS + 2 * FRAME_NS,
-        {"value": [{"role": "user", "content": "step 2"}]},
+        {"value": [{"role": "user", "content": "step 2", "camera": None}]},
     )
     contacts = [
         message["value"] for _, message in recording.messages["/observation/contacts"]
@@ -970,6 +976,70 @@ def test_writes_features_without_a_topic_of_their_own_as_json_values(
     assert label == {"value": "far"}
     _, captured_at = recording.messages["/observation/captured_at"][2]
     assert captured_at == {"value": "2024-01-01 00:00:02"}
+
+
+class _JsonText(pa.ExtensionType):
+    def __init__(self) -> None:
+        super().__init__(pa.string(), "foxglove.test.json")
+
+    def __arrow_ext_serialize__(self) -> bytes:
+        return b""
+
+    @classmethod
+    def __arrow_ext_deserialize__(
+        cls, storage_type: pa.DataType, serialized: bytes
+    ) -> "_JsonText":
+        return cls()
+
+
+def test_describes_null_fields_and_extension_types_by_what_they_hold() -> None:
+    row = pa.struct([("camera", pa.null()), ("tool_calls", pa.list_(_JsonText()))])
+
+    assert _json_schema(pa.list_(row)) == {
+        "type": "array",
+        "items": {
+            "type": "object",
+            "properties": {
+                "camera": {"type": "string"},
+                "tool_calls": {"type": "array", "items": {"type": "string"}},
+            },
+        },
+    }
+
+
+def test_skips_depth_map_images_since_lerobot_stores_them_as_tiff(
+    v2_dataset: Path, tmp_path: Path
+) -> None:
+    _add_columns(
+        v2_dataset,
+        {
+            "observation.images.depth": {
+                "dtype": "image",
+                "shape": [HEIGHT, WIDTH, 1],
+                "names": ["height", "width", "channels"],
+                "info": {"is_depth_map": True},
+            }
+        },
+        pa.table(
+            {
+                "observation.images.depth": [
+                    {"bytes": b"II*\x00" + bytes(8), "path": None}
+                ]
+                * 6
+            }
+        ),
+    )
+    metadata = load_metadata(v2_dataset)
+
+    with pytest.warns(SkippedFeatureWarning, match="depth map images as TIFF"):
+        writer = EpisodeWriter(metadata)
+    recording = read_mcap(writer.write(metadata.episodes[0], tmp_path))
+
+    assert [feature.key for feature, _ in writer.skipped] == [
+        "observation.images.depth"
+    ]
+    assert "/observation/images/depth" not in recording.messages
+    assert len(recording.messages["/observation/state"]) == 6
 
 
 @pytest.mark.parametrize("version", ["v2.1", "v3.0"])
