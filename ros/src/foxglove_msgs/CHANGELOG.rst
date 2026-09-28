@@ -2,6 +2,10 @@
 Changelog for package foxglove_msgs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+3.6.0 (2026-09-28)
+------------------
+* Document G.711 formats for RawAudio and G.726 formats for CompressedAudio
+
 3.5.0 (2026-08-25)
 ------------------
 * Version bump for foxglove_bridge 3.5.0 release
