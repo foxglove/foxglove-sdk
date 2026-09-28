@@ -1,6 +1,6 @@
 //! ROS 1 message decoder.
 
-use crate::messages::Timestamp;
+use crate::ros1::{Ros1BufExt, Ros1Header, Ros1WireError};
 use bytes::Buf;
 
 use super::{
@@ -11,89 +11,19 @@ use super::{
 /// An error that occurs while decoding a ROS 1 message.
 #[derive(Debug, thiserror::Error)]
 pub enum Ros1DecodeError {
-    /// Expected more bytes than are present in the buffer.
-    #[error("expected {want} more bytes, but only have {avail}")]
-    UnexpectedEof {
-        /// Number of bytes needed.
-        want: usize,
-        /// Number of bytes remaining in buffer.
-        avail: usize,
-    },
-    /// Invalid UTF-8 string.
-    #[error("ros1 string is not valid utf-8")]
-    InvalidUtf8(#[from] std::str::Utf8Error),
+    /// Failed to parse the ROS 1 message
+    #[error(transparent)]
+    Wire(#[from] Ros1WireError),
     /// Unknown raw image encoding.
     #[error(transparent)]
     UnknownEncoding(#[from] UnknownEncodingError),
     /// Unknown compression codec.
     #[error(transparent)]
     UnknownCompression(#[from] UnknownCompressionError),
-    /// The timestamp cannot be represented (excess nanoseconds overflow the seconds field).
-    #[error("timestamp out of range")]
-    InvalidTimestamp,
 }
 impl From<bytes::TryGetError> for Ros1DecodeError {
     fn from(e: bytes::TryGetError) -> Self {
-        Ros1DecodeError::UnexpectedEof {
-            want: e.requested,
-            avail: e.available,
-        }
-    }
-}
-
-trait Ros1BufExt<'a>: Buf {
-    /// Reads a counted byte buffer from a ROS 1 message.
-    fn try_get_ros1_bytes(&mut self) -> Result<&'a [u8], Ros1DecodeError>;
-
-    /// Reads a counted string from a ROS 1 message.
-    fn try_get_ros1_str(&mut self) -> Result<&'a str, Ros1DecodeError> {
-        let bytes = self.try_get_ros1_bytes()?;
-        let str = std::str::from_utf8(bytes)?;
-        Ok(str)
-    }
-
-    /// Reads a ROS 1 header message.
-    fn try_get_ros1_header(&mut self) -> Result<Ros1Header<'a>, Ros1DecodeError> {
-        let seq = self.try_get_u32_le()?;
-        let sec = self.try_get_u32_le()?;
-        let nsec = self.try_get_u32_le()?;
-        let frame_id = self.try_get_ros1_str()?;
-        Ok(Ros1Header {
-            seq,
-            sec,
-            nsec,
-            frame_id,
-        })
-    }
-}
-impl<'a> Ros1BufExt<'a> for &'a [u8] {
-    fn try_get_ros1_bytes(&mut self) -> Result<&'a [u8], Ros1DecodeError> {
-        let len = self.try_get_u32_le()? as usize;
-        if self.remaining() < len {
-            return Err(Ros1DecodeError::UnexpectedEof {
-                want: len,
-                avail: self.remaining(),
-            });
-        }
-        let bytes = &self[..len];
-        self.advance(len);
-        Ok(bytes)
-    }
-}
-
-/// A ROS 1 `std_msgs/Header` message.
-#[derive(Debug, PartialEq, Eq)]
-struct Ros1Header<'a> {
-    #[allow(dead_code)]
-    seq: u32,
-    sec: u32,
-    nsec: u32,
-    frame_id: &'a str,
-}
-impl Ros1Header<'_> {
-    /// Returns the header timestamp, rejecting values that overflow the seconds field.
-    fn timestamp(&self) -> Result<Timestamp, Ros1DecodeError> {
-        Timestamp::new_checked(self.sec, self.nsec).ok_or(Ros1DecodeError::InvalidTimestamp)
+        Ros1WireError::from(e).into()
     }
 }
 
@@ -273,6 +203,9 @@ mod tests {
             data: &[0],
         };
         let err = ImageMessage::try_from(image).unwrap_err();
-        assert!(matches!(err, Ros1DecodeError::InvalidTimestamp));
+        assert!(matches!(
+            err,
+            Ros1DecodeError::Wire(Ros1WireError::InvalidTimestamp)
+        ));
     }
 }
