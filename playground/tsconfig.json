@@ -4,6 +4,7 @@
     "declaration": false,
     "declarationMap": false,
     "jsx": "react-jsx",
-    "lib": ["es2022", "DOM"]
+    "lib": ["es2022", "DOM"],
+    "moduleResolution": "bundler"
   }
 }

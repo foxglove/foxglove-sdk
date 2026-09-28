@@ -4,6 +4,14 @@ import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 
 import { Runner } from "./Runner";
 
+self.MonacoEnvironment = {
+  getWorker(_workerId, _label) {
+    return new Worker(new URL("monaco-editor/editor/editor.worker", import.meta.url), {
+      type: "module",
+    });
+  },
+};
+
 type EditorProps = {
   initialValue?: string;
   // eslint-disable-next-line react/no-unused-prop-types

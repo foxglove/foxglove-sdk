@@ -3034,6 +3034,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/trusted-types@npm:^2.0.7":
+  version: 2.0.7
+  resolution: "@types/trusted-types@npm:2.0.7"
+  checksum: 10c0/4c4855f10de7c6c135e0d32ce462419d8abbbc33713b31d294596c0cc34ae1fa6112a2f9da729c8f7a20707782b0d69da3b1f8df6645b0366d08825ca1522e0c
+  languageName: node
+  linkType: hard
+
 "@types/ws@npm:^8.5.10":
   version: 8.18.1
   resolution: "@types/ws@npm:8.18.1"
@@ -4196,13 +4203,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"big.js@npm:^5.2.2":
-  version: 5.2.2
-  resolution: "big.js@npm:5.2.2"
-  checksum: 10c0/230520f1ff920b2d2ce3e372d77a33faa4fa60d802fe01ca4ffbc321ee06023fe9a741ac02793ee778040a16b7e497f7d60c504d1c402b8fdab6f03bb785a25f
-  languageName: node
-  linkType: hard
-
 "binary-extensions@npm:^2.0.0":
   version: 2.3.0
   resolution: "binary-extensions@npm:2.3.0"
@@ -5086,10 +5086,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"dompurify@npm:3.1.7":
-  version: 3.1.7
-  resolution: "dompurify@npm:3.1.7"
-  checksum: 10c0/fcceef2e9f824d712a056fa699b0538f3337f5cf00ccb7227bdc7eba5463823e15d9aecc00a2fd81c726b28a71e7b09f0eb8a2fde1021c40e35f12dc67b66394
+"dompurify@npm:3.4.15":
+  version: 3.4.15
+  resolution: "dompurify@npm:3.4.15"
+  dependencies:
+    "@types/trusted-types": "npm:^2.0.7"
+  dependenciesMeta:
+    "@types/trusted-types":
+      optional: true
+  checksum: 10c0/406b5f0f9c9dcbc80016367d33e73585b6a6f440815228d7e9cbe8abe71058183b1f4cb4207b79b8473637de4a106fc055eb6da271ef9db353d29679b891ecbc
   languageName: node
   linkType: hard
 
@@ -5167,13 +5172,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"emojis-list@npm:^3.0.0":
-  version: 3.0.0
-  resolution: "emojis-list@npm:3.0.0"
-  checksum: 10c0/7dc4394b7b910444910ad64b812392159a21e1a7ecc637c775a440227dcb4f80eff7fe61f4453a7d7603fa23d23d30cc93fe9e4b5ed985b88d6441cd4a35117b
-  languageName: node
-  linkType: hard
-
 "encodeurl@npm:~2.0.0":
   version: 2.0.0
   resolution: "encodeurl@npm:2.0.0"
@@ -5187,16 +5185,6 @@ __metadata:
   dependencies:
     iconv-lite: "npm:^0.6.2"
   checksum: 10c0/36d938712ff00fe1f4bac88b43bcffb5930c1efa57bbcdca9d67e1d9d6c57cfb1200fb01efe0f3109b2ce99b231f90779532814a81370a1bd3274a0f58585039
-  languageName: node
-  linkType: hard
-
-"enhanced-resolve@npm:^5.0.0":
-  version: 5.18.3
-  resolution: "enhanced-resolve@npm:5.18.3"
-  dependencies:
-    graceful-fs: "npm:^4.2.4"
-    tapable: "npm:^2.2.0"
-  checksum: 10c0/d413c23c2d494e4c1c9c9ac7d60b812083dc6d446699ed495e69c920988af0a3c66bf3f8d0e7a45cb1686c2d4c1df9f4e7352d973f5b56fe63d8d711dd0ccc54
   languageName: node
   linkType: hard
 
@@ -7902,7 +7890,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"json5@npm:^2.1.2, json5@npm:^2.2.3":
+"json5@npm:^2.2.3":
   version: 2.2.3
   resolution: "json5@npm:2.2.3"
   bin:
@@ -7970,17 +7958,6 @@ __metadata:
   version: 1.2.4
   resolution: "lines-and-columns@npm:1.2.4"
   checksum: 10c0/3da6ee62d4cd9f03f5dc90b4df2540fb85b352081bee77fe4bbcd12c9000ead7f35e0a38b8d09a9bb99b13223446dd8689ff3c4959807620726d788701a83d2d
-  languageName: node
-  linkType: hard
-
-"loader-utils@npm:^2.0.2":
-  version: 2.0.4
-  resolution: "loader-utils@npm:2.0.4"
-  dependencies:
-    big.js: "npm:^5.2.2"
-    emojis-list: "npm:^3.0.0"
-    json5: "npm:^2.1.2"
-  checksum: 10c0/d5654a77f9d339ec2a03d88221a5a695f337bf71eb8dea031b3223420bb818964ba8ed0069145c19b095f6c8b8fd386e602a3fc7ca987042bd8bb1dcc90d7100
   languageName: node
   linkType: hard
 
@@ -8237,7 +8214,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"micromatch@npm:^4.0.0, micromatch@npm:^4.0.2, micromatch@npm:^4.0.8":
+"micromatch@npm:^4.0.2, micromatch@npm:^4.0.8":
   version: 4.0.8
   resolution: "micromatch@npm:4.0.8"
   dependencies:
@@ -8448,25 +8425,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"monaco-editor-webpack-plugin@npm:^7.1.0":
-  version: 7.1.0
-  resolution: "monaco-editor-webpack-plugin@npm:7.1.0"
+"monaco-editor@npm:^0.57.0":
+  version: 0.57.0
+  resolution: "monaco-editor@npm:0.57.0"
   dependencies:
-    loader-utils: "npm:^2.0.2"
-  peerDependencies:
-    monaco-editor: ">= 0.31.0"
-    webpack: ^4.5.0 || 5.x
-  checksum: 10c0/a0536473bb4469f2f0f11d8a0a317733716535153a3ed7fb26b561997a08bf3946355fdb12ac331a0f220d01fb786226b60070598f83c0dc430ecde4b149b052
-  languageName: node
-  linkType: hard
-
-"monaco-editor@npm:^0.54.0":
-  version: 0.54.0
-  resolution: "monaco-editor@npm:0.54.0"
-  dependencies:
-    dompurify: "npm:3.1.7"
+    dompurify: "npm:3.4.15"
     marked: "npm:14.0.0"
-  checksum: 10c0/40198c0bac873d10804a89c991c014088943b23625d68149cb38fc52c3438c896803f645a36a6f75e0d961c87e8726073cb504e2427fc33850e0b034ff6229ee
+  checksum: 10c0/21a088dbd49cfdd27538d1c4af37bd26832866348ee673d2b43924cdf58d3e89daaafff19e94731758fa2cc81a00402f81968062867cbc5a98e010f1a84460d2
   languageName: node
   linkType: hard
 
@@ -8990,17 +8955,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"picomatch@npm:^4.0.0, picomatch@npm:^4.0.3, picomatch@npm:^4.0.4":
+  version: 4.0.7
+  resolution: "picomatch@npm:4.0.7"
+  checksum: 10c0/beb6ae02c43ae44e84883b90830196d9046b1726ead292adcf7f57945e0bb0d992d68563d87e03b484b6f3c9a5c6defda7523477f047d7f0e663f126cc01787f
+  languageName: node
+  linkType: hard
+
 "picomatch@npm:^4.0.2":
   version: 4.0.4
   resolution: "picomatch@npm:4.0.4"
   checksum: 10c0/e2c6023372cc7b5764719a5ffb9da0f8e781212fa7ca4bd0562db929df8e117460f00dff3cb7509dacfc06b86de924b247f504d0ce1806a37fac4633081466b0
-  languageName: node
-  linkType: hard
-
-"picomatch@npm:^4.0.3, picomatch@npm:^4.0.4":
-  version: 4.0.7
-  resolution: "picomatch@npm:4.0.7"
-  checksum: 10c0/beb6ae02c43ae44e84883b90830196d9046b1726ead292adcf7f57945e0bb0d992d68563d87e03b484b6f3c9a5c6defda7523477f047d7f0e663f126cc01787f
   languageName: node
   linkType: hard
 
@@ -9063,8 +9028,7 @@ __metadata:
     eventemitter3: "npm:^5.0.1"
     globals: "npm:17.12.0"
     html-webpack-plugin: "npm:^5.6.4"
-    monaco-editor: "npm:^0.54.0"
-    monaco-editor-webpack-plugin: "npm:^7.1.0"
+    monaco-editor: "npm:^0.57.0"
     pyodide: "npm:314.0.6"
     react: "npm:19.3.0"
     react-dom: "npm:19.3.0"
@@ -9819,7 +9783,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"semver@npm:^7.3.4, semver@npm:^7.3.5, semver@npm:^7.5.4, semver@npm:^7.6.0, semver@npm:^7.7.1, semver@npm:^7.7.2":
+"semver@npm:^7.3.5, semver@npm:^7.5.4, semver@npm:^7.6.0, semver@npm:^7.7.1, semver@npm:^7.7.2":
   version: 7.7.2
   resolution: "semver@npm:7.7.2"
   bin:
@@ -10435,7 +10399,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"tapable@npm:^2.0.0, tapable@npm:^2.2.0":
+"tapable@npm:^2.0.0":
   version: 2.2.3
   resolution: "tapable@npm:2.2.3"
   checksum: 10c0/e57fd8e2d756c317f8726a1bec8f2c904bc42e37fcbd4a78211daeab89f42c734b6a20e61774321f47be9a421da628a0c78b62d36c5ed186f4d5232d09ae15f2
@@ -10637,18 +10601,20 @@ __metadata:
   linkType: hard
 
 "ts-loader@npm:^9.5.4":
-  version: 9.5.4
-  resolution: "ts-loader@npm:9.5.4"
+  version: 9.6.2
+  resolution: "ts-loader@npm:9.6.2"
   dependencies:
     chalk: "npm:^4.1.0"
-    enhanced-resolve: "npm:^5.0.0"
-    micromatch: "npm:^4.0.0"
-    semver: "npm:^7.3.4"
+    picomatch: "npm:^4.0.0"
     source-map: "npm:^0.7.4"
   peerDependencies:
+    loader-utils: "*"
     typescript: "*"
-    webpack: ^5.0.0
-  checksum: 10c0/f0982404b43628c335d3b3a60ac3f1738385da7b97c3f04cb5ad2ebad791597be39b25c8a4e158a66173f9bd9f5aa72e285b046b0573e4beed8ecd032d418e4d
+    webpack: ^4.0.0 || ^5.0.0
+  peerDependenciesMeta:
+    loader-utils:
+      optional: true
+  checksum: 10c0/6102336ee598124249e07cce6bb3d4ee0586f962697b7388d1957296a2c7d5164b95757797db237bdb7b8f0c5a52d2f22ca5013d3337823d8e9e0e731ce03c67
   languageName: node
   linkType: hard
 
