@@ -11,41 +11,19 @@ use super::{
 /// An error that occurs while decoding a ROS 1 message.
 #[derive(Debug, thiserror::Error)]
 pub enum Ros1DecodeError {
-    /// Expected more bytes than are present in the buffer.
-    #[error("expected {want} more bytes, but only have {avail}")]
-    UnexpectedEof {
-        /// Number of bytes needed.
-        want: usize,
-        /// Number of bytes remaining in buffer.
-        avail: usize,
-    },
-    /// Invalid UTF-8 string.
-    #[error("ros1 string is not valid utf-8")]
-    InvalidUtf8(#[from] std::str::Utf8Error),
+    /// Failed to parse the ROS 1 message
+    #[error(transparent)]
+    Wire(#[from] Ros1WireError),
     /// Unknown raw image encoding.
     #[error(transparent)]
     UnknownEncoding(#[from] UnknownEncodingError),
     /// Unknown compression codec.
     #[error(transparent)]
     UnknownCompression(#[from] UnknownCompressionError),
-    /// The timestamp cannot be represented (excess nanoseconds overflow the seconds field).
-    #[error("timestamp out of range")]
-    InvalidTimestamp,
 }
 impl From<bytes::TryGetError> for Ros1DecodeError {
     fn from(e: bytes::TryGetError) -> Self {
         Ros1WireError::from(e).into()
-    }
-}
-impl From<Ros1WireError> for Ros1DecodeError {
-    fn from(e: Ros1WireError) -> Self {
-        match e {
-            Ros1WireError::UnexpectedEof { want, avail } => {
-                Ros1DecodeError::UnexpectedEof { want, avail }
-            }
-            Ros1WireError::InvalidUtf8(e) => Ros1DecodeError::InvalidUtf8(e),
-            Ros1WireError::InvalidTimestamp => Ros1DecodeError::InvalidTimestamp,
-        }
     }
 }
 
@@ -225,6 +203,9 @@ mod tests {
             data: &[0],
         };
         let err = ImageMessage::try_from(image).unwrap_err();
-        assert!(matches!(err, Ros1DecodeError::InvalidTimestamp));
+        assert!(matches!(
+            err,
+            Ros1DecodeError::Wire(Ros1WireError::InvalidTimestamp)
+        ));
     }
 }
