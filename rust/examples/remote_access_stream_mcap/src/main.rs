@@ -10,10 +10,10 @@ use std::{
 };
 
 use anyhow::{Context, Result, anyhow};
-use clap::Parser;
+use clap::{Parser, ValueEnum};
 use foxglove::{
     ChannelBuilder, RawChannel, Schema,
-    draco::{DracoEncodeOptions, MAX_QUANTIZATION_BITS},
+    draco::{DracoEncodeOptions, DracoMethod, MAX_QUANTIZATION_BITS},
     remote_access::{Gateway, PointCloudCompression},
 };
 use mcap::Summary;
@@ -37,7 +37,21 @@ struct Args {
     /// messages but coarser values.
     #[arg(long, default_value_t = 12,
           value_parser = clap::value_parser!(u8).range(1..=MAX_QUANTIZATION_BITS as i64))]
-    quantization_bits: u8,
+    point_cloud_quantization_bits: u8,
+
+    /// Point cloud compression method.
+    #[arg(long, value_enum, default_value_t = PointCloudCompressionArg::KdTree)]
+    point_cloud_compression: PointCloudCompressionArg,
+}
+
+#[derive(Clone, Copy, ValueEnum)]
+enum PointCloudCompressionArg {
+    /// Deliver point clouds unmodified.
+    None,
+    /// Draco kd-tree encoding.
+    KdTree,
+    /// Draco sequential encoding.
+    Sequential,
 }
 
 #[tokio::main]
@@ -47,16 +61,24 @@ async fn main() -> Result<()> {
 
     let args = Args::parse();
 
-    let pcc_opts = PointCloudCompression::Draco(
-        DracoEncodeOptions::builder()
-            .quantization_bits(args.quantization_bits)
-            .build()
-            .expect("clap validates the range"),
-    );
+    let pcc_method = match args.point_cloud_compression {
+        PointCloudCompressionArg::None => None,
+        PointCloudCompressionArg::KdTree => Some(DracoMethod::KdTree),
+        PointCloudCompressionArg::Sequential => Some(DracoMethod::Sequential),
+    };
+    let pcc_opts = pcc_method.map(|method| {
+        PointCloudCompression::Draco(
+            DracoEncodeOptions::builder()
+                .quantization_bits(args.point_cloud_quantization_bits)
+                .method(method)
+                .build()
+                .expect("clap validates the range"),
+        )
+    });
 
     let handle = Gateway::new()
         .max_data_track_message_size(args.max_data_track_message_size)
-        .point_cloud_compression_fn(move |_| Some(pcc_opts))
+        .point_cloud_compression_fn(move |_| pcc_opts)
         .start()
         .expect("Failed to start remote access gateway");
 
