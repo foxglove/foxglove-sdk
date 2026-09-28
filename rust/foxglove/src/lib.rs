@@ -462,7 +462,7 @@ mod img2yuv;
 // wire helpers even if the video pipeline is ever carved out of remote access.
 #[cfg(any(feature = "img2yuv-ros1", feature = "remote-access"))]
 mod ros1;
-#[cfg(any(feature = "img2yuv-core", feature = "remote-access"))]
+#[cfg(any(feature = "img2yuv-ros2", feature = "remote-access"))]
 mod ros2;
 
 #[cfg(feature = "remote-access")]
