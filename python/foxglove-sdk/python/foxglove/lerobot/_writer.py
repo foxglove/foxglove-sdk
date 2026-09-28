@@ -102,9 +102,9 @@ NUMERIC_DTYPES = frozenset(
 
 
 class SkippedFeatureWarning(UserWarning):
-    """A feature isn't written, because the data files have no column for it, or it's a depth
-    map stored as TIFF images. :attr:`EpisodeWriter.skipped` lists each skipped feature with the
-    reason.
+    """A feature isn't written, because the data files have no column for it, or its images are
+    in a format ``foxglove.CompressedImage`` can't hold, such as the TIFF LeRobot stores depth
+    map images in. :attr:`EpisodeWriter.skipped` lists each skipped feature with the reason.
     """
 
 
@@ -358,14 +358,9 @@ def plan_topics(
         if feature.dtype == "video":
             kind, name = _VideoTopic, camera_topic(feature.key)
         elif feature.dtype == "image":
-            if feature.is_depth_map:
-                skipped.append(
-                    (
-                        feature,
-                        "LeRobot stores depth map images as TIFF, which "
-                        "foxglove.CompressedImage can't hold",
-                    )
-                )
+            unsupported = _unsupported_image_format(metadata, feature.key)
+            if unsupported is not None:
+                skipped.append((feature, unsupported))
                 continue
             kind, name = _ImageTopic, camera_topic(feature.key)
         elif feature.dtype in NUMERIC_DTYPES and all(
@@ -643,6 +638,8 @@ def _data_schema(metadata: DatasetMetadata) -> pa.Schema | None:
 
 def _json_schema(arrow_type: pa.DataType) -> dict[str, Any] | None:
     if isinstance(arrow_type, pa.BaseExtensionType):
+        if arrow_type.extension_name != "arrow.json":
+            return None
         return _json_schema(arrow_type.storage_type)
     if pa.types.is_null(arrow_type):
         return {"type": "string"}
@@ -751,10 +748,44 @@ def _image_bytes(value: Any) -> bytes:
 
 
 def _image_format(feature: Feature, data: bytes) -> str:
+    image_format = _compressed_image_format(data)
+    if image_format is None:
+        raise ValueError(f"{feature.key}: image isn't PNG, JPEG or WebP")
+    return image_format
+
+
+def _compressed_image_format(data: bytes) -> str | None:
     if data.startswith(b"\x89PNG\r\n\x1a\n"):
         return "png"
     if data.startswith(b"\xff\xd8\xff"):
         return "jpeg"
     if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
         return "webp"
-    raise ValueError(f"{feature.key}: image isn't PNG, JPEG or WebP")
+    return None
+
+
+def _unsupported_image_format(metadata: DatasetMetadata, key: str) -> str | None:
+    data = _first_image(metadata, key)
+    if data is None or _compressed_image_format(data) is not None:
+        return None
+    if data[:4] in (b"II*\x00", b"MM\x00*"):
+        return "its images are TIFF, which foxglove.CompressedImage can't hold"
+    return "its images aren't PNG, JPEG or WebP, which foxglove.CompressedImage needs"
+
+
+def _first_image(metadata: DatasetMetadata, key: str) -> bytes | None:
+    for episode in metadata.episodes:
+        if not episode.data_path.exists():
+            continue
+        with pq.ParquetFile(episode.data_path) as parquet:
+            if key not in parquet.schema_arrow.names:
+                return None
+            for batch in parquet.iter_batches(batch_size=64, columns=[key]):
+                for value in batch.column(0).to_pylist():
+                    if value is not None:
+                        try:
+                            return _image_bytes(value)
+                        except ValueError:
+                            return None
+        return None
+    return None

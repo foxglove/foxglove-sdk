@@ -978,9 +978,9 @@ def test_writes_features_without_a_topic_of_their_own_as_json_values(
     assert captured_at == {"value": "2024-01-01 00:00:02"}
 
 
-class _JsonText(pa.ExtensionType):
+class _Tagged(pa.ExtensionType):
     def __init__(self) -> None:
-        super().__init__(pa.string(), "foxglove.test.json")
+        super().__init__(pa.string(), "foxglove.test.tagged")
 
     def __arrow_ext_serialize__(self) -> bytes:
         return b""
@@ -988,50 +988,61 @@ class _JsonText(pa.ExtensionType):
     @classmethod
     def __arrow_ext_deserialize__(
         cls, storage_type: pa.DataType, serialized: bytes
-    ) -> "_JsonText":
+    ) -> "_Tagged":
         return cls()
 
 
-def test_describes_null_fields_and_extension_types_by_what_they_hold() -> None:
-    row = pa.struct([("camera", pa.null()), ("tool_calls", pa.list_(_JsonText()))])
+def test_describes_null_fields_as_strings() -> None:
+    row = pa.struct([("role", pa.string()), ("camera", pa.null())])
 
     assert _json_schema(pa.list_(row)) == {
         "type": "array",
         "items": {
             "type": "object",
-            "properties": {
-                "camera": {"type": "string"},
-                "tool_calls": {"type": "array", "items": {"type": "string"}},
-            },
+            "properties": {"role": {"type": "string"}, "camera": {"type": "string"}},
         },
     }
 
 
-def test_skips_depth_map_images_since_lerobot_stores_them_as_tiff(
+@pytest.mark.skipif(not hasattr(pa, "json_"), reason="needs pyarrow's JSON type")
+def test_describes_json_values_as_strings() -> None:
+    assert _json_schema(pa.list_(pa.json_())) == {
+        "type": "array",
+        "items": {"type": "string"},
+    }
+
+
+def test_leaves_other_extension_types_to_json_text() -> None:
+    assert _json_schema(pa.struct([("tag", _Tagged())])) is None
+
+
+def test_skips_image_features_stored_as_tiff_but_writes_png_depth_maps(
     v2_dataset: Path, tmp_path: Path
 ) -> None:
+    depth = {
+        "dtype": "image",
+        "shape": [HEIGHT, WIDTH, 1],
+        "names": ["height", "width", "channels"],
+        "info": {"is_depth_map": True},
+    }
     _add_columns(
         v2_dataset,
-        {
-            "observation.images.depth": {
-                "dtype": "image",
-                "shape": [HEIGHT, WIDTH, 1],
-                "names": ["height", "width", "channels"],
-                "info": {"is_depth_map": True},
-            }
-        },
+        {"observation.images.depth": depth, "observation.images.depth_png": depth},
         pa.table(
             {
                 "observation.images.depth": [
                     {"bytes": b"II*\x00" + bytes(8), "path": None}
                 ]
-                * 6
+                * 6,
+                "observation.images.depth_png": [
+                    {"bytes": _encode_png(frame), "path": None} for frame in range(6)
+                ],
             }
         ),
     )
     metadata = load_metadata(v2_dataset)
 
-    with pytest.warns(SkippedFeatureWarning, match="depth map images as TIFF"):
+    with pytest.warns(SkippedFeatureWarning, match="its images are TIFF"):
         writer = EpisodeWriter(metadata)
     recording = read_mcap(writer.write(metadata.episodes[0], tmp_path))
 
@@ -1039,7 +1050,7 @@ def test_skips_depth_map_images_since_lerobot_stores_them_as_tiff(
         "observation.images.depth"
     ]
     assert "/observation/images/depth" not in recording.messages
-    assert len(recording.messages["/observation/state"]) == 6
+    assert len(recording.messages["/observation/images/depth_png"]) == 6
 
 
 @pytest.mark.parametrize("version", ["v2.1", "v3.0"])

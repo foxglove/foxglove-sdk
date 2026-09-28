@@ -74,9 +74,8 @@ lists and objects are kept as they are, NaN and infinity become ``null``, and bi
 written as a base64 string. Dates, times, durations and decimals are written as strings. The
 schema gives the value's type, from the data files' column, so each topic's schema has its own
 name, like ``lerobot.Value/language_events``. A field that's always null is described as a
-string, and an Arrow extension type, such as JSON, by the type it's stored as. Values Foxglove's
-JSON schemas can't describe, such as lists of lists and maps, are written as JSON text in a
-string.
+string, and Arrow's JSON type as a string. Values Foxglove's JSON schemas can't describe, such
+as lists of lists, maps and other extension types, are written as JSON text in a string.
 
 Each file also has:
 
@@ -139,8 +138,9 @@ Limitations
   LeRobot stores them as 12-bit codes quantized from depth, so Foxglove shows the codes rather
   than depth. Showing depth would need decoding and dequantizing them into ``foxglove.RawImage``
   frames.
-- Depth map images are skipped, with a :class:`~foxglove.lerobot.SkippedFeatureWarning`.
-  LeRobot stores them as TIFF, which ``foxglove.CompressedImage`` can't hold.
+- Image features whose images aren't PNG, JPEG or WebP are skipped, with a
+  :class:`~foxglove.lerobot.SkippedFeatureWarning`, since ``foxglove.CompressedImage`` can't
+  hold them. That includes depth map images, which LeRobot stores as TIFF.
 - Features the data files have no column for are skipped, with a
   :class:`~foxglove.lerobot.SkippedFeatureWarning`, such as a custom video dtype stored only as
   mp4 files.
