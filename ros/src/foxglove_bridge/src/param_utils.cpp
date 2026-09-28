@@ -350,6 +350,19 @@ void declareParameters(rclcpp::Node* node) {
   node->declare_parameter(PARAM_POINT_CLOUD_COMPRESSION_QUANTIZATION_BITS,
                           DEFAULT_POINT_CLOUD_COMPRESSION_QUANTIZATION_BITS,
                           pointCloudCompressionQuantizationBitsDescription);
+
+  auto pointCloudCompressionMethodDescription = rcl_interfaces::msg::ParameterDescriptor{};
+  pointCloudCompressionMethodDescription.name = PARAM_POINT_CLOUD_COMPRESSION_METHOD;
+  pointCloudCompressionMethodDescription.type =
+    rcl_interfaces::msg::ParameterType::PARAMETER_STRING;
+  pointCloudCompressionMethodDescription.description =
+    "Draco encoding method for point clouds that are transparently compressed over remote "
+    "access: 'kd-tree' (the default) for the best compression ratio, or 'sequential' to "
+    "preserve point order and encode float64 fields losslessly, at a lower compression ratio.";
+  pointCloudCompressionMethodDescription.read_only = true;
+  node->declare_parameter(PARAM_POINT_CLOUD_COMPRESSION_METHOD,
+                          DEFAULT_POINT_CLOUD_COMPRESSION_METHOD,
+                          pointCloudCompressionMethodDescription);
 }
 
 std::vector<std::regex> parseRegexStrings(rclcpp::Node* node,

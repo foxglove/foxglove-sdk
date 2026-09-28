@@ -44,6 +44,7 @@ constexpr char PARAM_POINT_CLOUD_COMPRESSION_TOPIC_DENYLIST[] =
   "point_cloud_compression_topic_denylist";
 constexpr char PARAM_POINT_CLOUD_COMPRESSION_QUANTIZATION_BITS[] =
   "point_cloud_compression_quantization_bits";
+constexpr char PARAM_POINT_CLOUD_COMPRESSION_METHOD[] = "point_cloud_compression_method";
 
 constexpr int64_t DEFAULT_PORT = 8765;
 constexpr char DEFAULT_ADDRESS[] = "0.0.0.0";
@@ -57,6 +58,8 @@ constexpr int64_t DEFAULT_MAX_DATA_TRACK_MESSAGE_SIZE = 102400;
 constexpr char DEFAULT_VIDEO_TRANSCODE_TOPIC_DENYLIST[] = ".*/compressedDepth";
 // Matches the SDK's default Draco setting.
 constexpr int64_t DEFAULT_POINT_CLOUD_COMPRESSION_QUANTIZATION_BITS = 12;
+// Matches the SDK's default Draco method.
+constexpr char DEFAULT_POINT_CLOUD_COMPRESSION_METHOD[] = "kd-tree";
 
 void declareParameters(rclcpp::Node* node);
 

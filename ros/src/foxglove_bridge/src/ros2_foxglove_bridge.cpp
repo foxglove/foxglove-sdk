@@ -76,6 +76,21 @@ inline std::optional<foxglove::VideoEncoderBackend> parseVideoEncoderBackend(std
   }
   return std::nullopt;
 }
+
+// Parses a Draco point cloud encoding method name (case-insensitively), accepting "kd_tree" and
+// "kdtree" as spellings of "kd-tree". Returns std::nullopt for an unrecognized value so the
+// caller can warn and leave the SDK default in place.
+inline std::optional<foxglove::DracoMethod> parseDracoMethod(std::string value) {
+  std::transform(value.begin(), value.end(), value.begin(), [](unsigned char c) {
+    return static_cast<char>(std::tolower(c));
+  });
+  if (value == "kd-tree" || value == "kd_tree" || value == "kdtree") {
+    return foxglove::DracoMethod::KdTree;
+  } else if (value == "sequential") {
+    return foxglove::DracoMethod::Sequential;
+  }
+  return std::nullopt;
+}
 #endif
 
 inline std::vector<std::byte> readFile(const std::string& filepath) {
@@ -403,6 +418,15 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
     // In range by declaration: the parameter descriptor constrains it to 1..30.
     _pointCloudCompressionQuantizationBits = static_cast<uint8_t>(
       this->get_parameter(PARAM_POINT_CLOUD_COMPRESSION_QUANTIZATION_BITS).as_int());
+    const auto pointCloudCompressionMethod =
+      this->get_parameter(PARAM_POINT_CLOUD_COMPRESSION_METHOD).as_string();
+    if (const auto method = parseDracoMethod(pointCloudCompressionMethod)) {
+      _pointCloudCompressionMethod = *method;
+    } else {
+      RCLCPP_WARN(this->get_logger(),
+                  "Ignoring invalid %s value \"%s\"; expected one of: kd-tree, sequential",
+                  PARAM_POINT_CLOUD_COMPRESSION_METHOD, pointCloudCompressionMethod.c_str());
+    }
     gatewayOptions.point_cloud_compression =
       std::bind(&FoxgloveBridge::selectRemoteAccessPointCloudCompression, this, _1);
 
@@ -1656,7 +1680,8 @@ foxglove::PointCloudCompression FoxgloveBridge::selectRemoteAccessPointCloudComp
   const foxglove::ChannelDescriptor& channel) {
   const std::string topic(channel.topic());
   if (!matchesRegex(topic, _pointCloudCompressionTopicDenyPatterns)) {
-    return foxglove::PointCloudCompression::withDraco({_pointCloudCompressionQuantizationBits});
+    return foxglove::PointCloudCompression::withDraco(
+      {_pointCloudCompressionQuantizationBits, _pointCloudCompressionMethod});
   }
   RCLCPP_INFO(this->get_logger(), "Delivering topic \"%s\" unmodified (no point cloud compression)",
               topic.c_str());
