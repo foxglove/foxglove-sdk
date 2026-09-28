@@ -1053,6 +1053,34 @@ def test_skips_image_features_stored_as_tiff_but_writes_png_depth_maps(
     assert len(recording.messages["/observation/images/depth_png"]) == 6
 
 
+def test_checks_later_files_for_the_image_format_when_the_first_has_no_images(
+    v2_dataset: Path, tmp_path: Path
+) -> None:
+    key = "observation.images.depth"
+    info_path = v2_dataset / "meta" / "info.json"
+    info = json.loads(info_path.read_text())
+    info["features"][key] = {
+        "dtype": "image",
+        "shape": [HEIGHT, WIDTH, 1],
+        "names": ["height", "width", "channels"],
+    }
+    info_path.write_text(json.dumps(info))
+    image_type = pa.struct([("bytes", pa.binary()), ("path", pa.string())])
+    tiff = {"bytes": b"II*\x00" + bytes(8), "path": None}
+    for episode, images in enumerate([[None] * 6, [tiff] * 4]):
+        path = v2_dataset / "data" / "chunk-000" / f"episode_{episode:06d}.parquet"
+        frames = pq.read_table(path)
+        pq.write_table(frames.append_column(key, pa.array(images, image_type)), path)
+    metadata = load_metadata(v2_dataset)
+
+    with pytest.warns(SkippedFeatureWarning, match="its images are TIFF"):
+        writer = EpisodeWriter(metadata)
+    recording = read_mcap(writer.write(metadata.episodes[1], tmp_path))
+
+    assert [feature.key for feature, _ in writer.skipped] == [key]
+    assert "/observation/images/depth" not in recording.messages
+
+
 @pytest.mark.parametrize("version", ["v2.1", "v3.0"])
 def test_attaches_the_dataset_and_episode_statistics(
     make_dataset: Callable[..., Path], tmp_path: Path, version: str

@@ -774,12 +774,12 @@ def _unsupported_image_format(metadata: DatasetMetadata, key: str) -> str | None
 
 
 def _first_image(metadata: DatasetMetadata, key: str) -> bytes | None:
-    for episode in metadata.episodes:
-        if not episode.data_path.exists():
+    for path in dict.fromkeys(episode.data_path for episode in metadata.episodes):
+        if not path.exists():
             continue
-        with pq.ParquetFile(episode.data_path) as parquet:
+        with pq.ParquetFile(path) as parquet:
             if key not in parquet.schema_arrow.names:
-                return None
+                continue
             for batch in parquet.iter_batches(batch_size=64, columns=[key]):
                 for value in batch.column(0).to_pylist():
                     if value is not None:
@@ -787,5 +787,4 @@ def _first_image(metadata: DatasetMetadata, key: str) -> bytes | None:
                             return _image_bytes(value)
                         except ValueError:
                             return None
-        return None
     return None
