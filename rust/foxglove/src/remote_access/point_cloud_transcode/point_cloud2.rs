@@ -144,17 +144,18 @@ impl TryFrom<PointCloud2> for PointCloud {
         }
 
         let mut fields = Vec::with_capacity(cloud.fields.len());
-        for field in &cloud.fields {
+        for field in cloud.fields {
             if field.count != 1 {
                 return Err(PointCloud2Error::UnsupportedFieldCount {
-                    name: field.name.clone(),
+                    name: field.name,
                     count: field.count,
                 });
             }
+            let r#type = field.numeric_type()? as i32;
             fields.push(PackedElementField {
-                name: field.name.clone(),
+                name: field.name,
                 offset: field.offset,
-                r#type: field.numeric_type()? as i32,
+                r#type,
             });
         }
 
