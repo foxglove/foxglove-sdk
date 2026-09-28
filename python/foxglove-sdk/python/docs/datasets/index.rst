@@ -92,9 +92,9 @@ message bytes into Protobuf, ROS, JSON, or other message objects. Decoding a med
 payload such as H.264 into frames is not included. A media decoder can be created in
 ``read_episode`` and kept per episode and video stream so it consumes messages in
 order. The callback owns that decoder and must release it with a context manager or
-``try``/``finally``. Episodes may begin between keyframes, and this reader does not
-fetch pre-roll before the episode boundary, so arbitrary episode boundaries are not
-yet guaranteed to be independently decodable.
+``try``/``finally``. This reader does not fetch pre-roll before the episode
+boundary. Episodes may begin between keyframes, and decoding their video frames may
+require earlier keyframes and codec initialization data outside the episode.
 
 Behavior and limits
 -------------------

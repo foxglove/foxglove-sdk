@@ -3,26 +3,26 @@
 from __future__ import annotations
 
 from collections.abc import Iterator, Sequence
-from typing import Generic, TypeVar
+from typing import TypeVar
 
 import torch.distributed as distributed
 from torch.utils.data import IterableDataset, get_worker_info
 
 from .reader import ClientFactory, ReadEpisode, _Plan, _plan
 
-T = TypeVar("T")
+_T = TypeVar("_T")
 
 
-class _TorchDataset(IterableDataset[T], Generic[T]):
+class _TorchDataset(IterableDataset[_T]):
     def __init__(
-        self, plan: _Plan, read_episode: ReadEpisode[T], rank: int, world_size: int
+        self, plan: _Plan, read_episode: ReadEpisode[_T], rank: int, world_size: int
     ) -> None:
         self._plan = plan
         self._read_episode = read_episode
         self._rank = rank
         self._world_size = world_size
 
-    def __iter__(self) -> Iterator[T]:
+    def __iter__(self) -> Iterator[_T]:
         # Partition ranks first, so ranks can use different numbers of loader workers.
         episodes = self._plan.episodes[self._rank :: self._world_size]
         worker = get_worker_info()
@@ -36,11 +36,11 @@ def read_dataset(
     *,
     version: int,
     topics: Sequence[str],
-    read_episode: ReadEpisode[T],
+    read_episode: ReadEpisode[_T],
     client_factory: ClientFactory,
     rank: int | None = None,
     world_size: int | None = None,
-) -> IterableDataset[T]:
+) -> IterableDataset[_T]:
     """Plan a topic-filtered dataset; download messages only during iteration.
 
     ``read_episode`` yields samples, such as tensors, tuples, or dictionaries.

@@ -35,7 +35,10 @@ def _read_rows(
     try:
         for sample in samples:
             if not isinstance(sample, dict):
-                raise TypeError("Ray read_episode must yield dictionaries")
+                raise TypeError(
+                    "Ray read_episode must yield dictionaries, "
+                    f"got {type(sample).__name__}"
+                )
             yield sample
     finally:
         close = getattr(samples, "close", None)

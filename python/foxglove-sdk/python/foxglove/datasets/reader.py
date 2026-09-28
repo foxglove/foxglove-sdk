@@ -110,16 +110,13 @@ class EpisodeReader:
         """
         if self._closed:
             raise RuntimeError("Episode reader is closed")
-        if decoder_factories is None:
-            stream = self._client.iter_messages(
-                episode_id=self.id, topics=list(self._topics)
-            )
-        else:
-            stream = self._client.iter_messages(
-                episode_id=self.id,
-                topics=list(self._topics),
-                decoder_factories=list(decoder_factories),
-            )
+        stream = self._client.iter_messages(
+            episode_id=self.id,
+            topics=list(self._topics),
+            decoder_factories=(
+                None if decoder_factories is None else list(decoder_factories)
+            ),
+        )
         self._streams.append(stream)
         try:
             yield from stream

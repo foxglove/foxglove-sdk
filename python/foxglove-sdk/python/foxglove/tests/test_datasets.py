@@ -6,6 +6,7 @@ from typing import Any
 import pytest
 from foxglove.datasets import EpisodeReader
 from foxglove.datasets.reader import _plan
+from mcap.decoder import DecoderFactory
 from mcap.records import Channel, Message, Schema
 
 
@@ -43,9 +44,13 @@ class Client:
         return Page()
 
     def iter_messages(
-        self, *, episode_id: str, topics: list[str], **kwargs: Any
+        self,
+        *,
+        episode_id: str,
+        topics: list[str],
+        decoder_factories: list[DecoderFactory] | None = None,
     ) -> Generator[tuple[Schema | None, Channel, Message, Any], None, None]:
-        assert kwargs == {}
+        assert decoder_factories is None
         self.calls.append((episode_id, topics))
         try:
             yield (

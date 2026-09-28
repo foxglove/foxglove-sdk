@@ -154,6 +154,8 @@ def test_non_dictionary_rows_fail_with_episode_context_and_close_streams(
     ) as error:
         list(source.get_read_tasks(1)[0]())
     assert isinstance(error.value.__cause__, TypeError)
-    assert str(error.value.__cause__) == "Ray read_episode must yield dictionaries"
+    assert str(error.value.__cause__) == (
+        f"Ray read_episode must yield dictionaries, got {type(sample).__name__}"
+    )
     assert closed == ["a"]
     assert client.closed == ["a"]
