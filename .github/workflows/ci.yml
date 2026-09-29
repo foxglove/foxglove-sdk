@@ -197,7 +197,7 @@ jobs:
         with:
           python-version: "3.10"
 
-      - uses: astral-sh/setup-uv@v10.1.0
+      - uses: astral-sh/setup-uv@v10.2.0
 
       # `yarn generate` runs clang-format over the generated C++, so this job writes the formatting
       # that the C/C++ lint job then checks. Without an explicit install it would use the runner

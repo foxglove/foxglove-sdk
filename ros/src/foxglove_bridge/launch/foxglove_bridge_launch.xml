@@ -33,6 +33,7 @@
        with InvalidParameterValueException). Same idiom as best_effort_qos_topic_whitelist. -->
   <arg name="point_cloud_compression_topic_denylist" default="['(?!)']" />
   <arg name="point_cloud_compression_quantization_bits" default="12" />
+  <arg name="point_cloud_compression_method" default="kd-tree" />
 
   <node pkg="foxglove_bridge" exec="foxglove_bridge">
     <param name="port"                            value="$(var port)" />
@@ -66,5 +67,6 @@
     <param name="video_transcode_topic_denylist" value="$(var video_transcode_topic_denylist)" />
     <param name="point_cloud_compression_topic_denylist" value="$(var point_cloud_compression_topic_denylist)" />
     <param name="point_cloud_compression_quantization_bits" value="$(var point_cloud_compression_quantization_bits)" />
+    <param name="point_cloud_compression_method" value="$(var point_cloud_compression_method)" />
   </node>
 </launch>

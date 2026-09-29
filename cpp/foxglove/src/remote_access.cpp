@@ -23,6 +23,12 @@ static_assert(
   DracoEncodeOptions::kMaxQuantizationBits == FOXGLOVE_DRACO_MAX_QUANTIZATION_BITS,
   "kMaxQuantizationBits must match the C constant"
 );
+// The method is passed to C by static_cast, so the two enums must agree value for value.
+static_assert(
+  static_cast<uint8_t>(DracoMethod::KdTree) == FOXGLOVE_DRACO_METHOD_KD_TREE &&
+    static_cast<uint8_t>(DracoMethod::Sequential) == FOXGLOVE_DRACO_METHOD_SEQUENTIAL,
+  "DracoMethod values must match the C constants"
+);
 
 namespace {
 
@@ -136,6 +142,7 @@ foxglove_point_cloud_compression forwardPointCloudCompression(
     auto compression = (*policy)(cpp_channel);
     c_compression.mode = static_cast<foxglove_point_cloud_compression_mode>(compression.mode);
     c_compression.draco.quantization_bits = compression.draco.quantization_bits;
+    c_compression.draco.method = static_cast<foxglove_draco_method>(compression.draco.method);
   } catch (const std::exception& exc) {
     warn() << "Point-cloud compression policy failed: " << exc.what();
   }

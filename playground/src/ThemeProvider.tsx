@@ -1,15 +1,6 @@
 import { PaletteOptions, ThemeProvider as MuiThemeProvider, createTheme } from "@mui/material";
 import { useLayoutEffect, useMemo, useState } from "react";
 
-declare module "@mui/material/styles" {
-  interface TypographyVariants {
-    fontMonospace: string;
-  }
-  interface TypographyVariantsOptions {
-    fontMonospace: string;
-  }
-}
-
 export const fontSansSerif = "'Inter'";
 export const fontMonospace = "'IBM Plex Mono'";
 
@@ -105,7 +96,6 @@ export function ThemeProvider(props: React.PropsWithChildren): React.JSX.Element
       createTheme({
         palette: isDark ? darkPalette : lightPalette,
         typography: {
-          fontMonospace,
           fontFamily: fontSansSerif,
           fontSize: 12,
           button: {
