@@ -331,6 +331,9 @@
 //! rustflags = ["-C", "link-arg=-ObjC"]
 //! ```
 //!
+//! Cargo ignores this setting when `RUSTFLAGS` is set. In that case, emit
+//! `cargo:rustc-link-arg=-ObjC` from your crate's build script.
+//!
 //! #### NVENC hardware acceleration
 //!
 //! When available, NVIDIA NVENC is used to accelerate H.264 video encoding for the remote
