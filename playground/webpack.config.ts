@@ -2,7 +2,6 @@ import ReactRefreshPlugin from "@pmmmwh/react-refresh-webpack-plugin";
 import { PyodidePlugin } from "@pyodide/webpack-plugin";
 import CopyWebpackPlugin from "copy-webpack-plugin";
 import HtmlWebpackPlugin from "html-webpack-plugin";
-import MonacoWebpackPlugin from "monaco-editor-webpack-plugin";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -104,7 +103,6 @@ export default (_env: unknown, argv: WebpackArgv): Configuration => {
 `,
       }),
       new PyodidePlugin(),
-      new MonacoWebpackPlugin(),
       isDev &&
         new ReactRefreshPlugin({
           // Don't duplicate webpack dev server overlay
