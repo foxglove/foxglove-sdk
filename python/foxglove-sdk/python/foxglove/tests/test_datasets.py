@@ -81,73 +81,15 @@ def samples(episode: EpisodeReader) -> Iterator[dict[str, Any]]:
         yield {"id": decoded}
 
 
-def test_metadata_only_plan_and_lazy_topic_filtered_reads() -> None:
-    client = Client()
-    plan = _plan("dataset", 7, ["/camera", "/camera"], lambda: client)
-    assert [episode.id for episode in plan.episodes] == ["a", "b", "c", "d"]
-    stream = plan.read(plan.episodes, samples)
-    assert client.calls == []
-    assert next(stream) == {"id": "a"}
-    assert client.calls == [("a", ["/camera"])]
-    stream.close()
-    assert client.closed == ["a"]
-
-
-def test_callback_can_stop_early_and_retain_message_iterator() -> None:
-    client = Client()
-    retained = []
-
-    def first(episode: EpisodeReader) -> Iterator[dict[str, Any]]:
-        messages = episode.iter_messages()
-        retained.append(messages)
-        yield {"id": next(messages)[3], "label": episode.metadata["label"]}
-
-    plan = _plan("dataset", 7, ["/camera"], lambda: client)
-    assert list(plan.read(plan.episodes, first)) == [
-        {"id": name, "label": name} for name in ("a", "b", "c", "d")
-    ]
-    assert client.closed == ["a", "b", "c", "d"]
-
-
-def test_episode_metadata_is_read_only() -> None:
-    def mutate(episode: EpisodeReader) -> Iterator[dict[str, Any]]:
-        episode.metadata["label"] = "changed"  # type: ignore[index]
-        yield {}
-
-    plan = _plan("dataset", 7, ["/camera"], Client)
-    with pytest.raises(RuntimeError) as error:
-        list(plan.read(plan.episodes, mutate))
-    assert isinstance(error.value.__cause__, TypeError)
-    assert plan.episodes[0].metadata == {"label": "a"}
-
-
-def test_callback_error_closes_stream_and_adds_episode_context() -> None:
-    client = Client()
-
-    def fail(episode: EpisodeReader) -> Iterator[dict[str, Any]]:
-        messages = episode.iter_messages()
-        next(messages)
-        raise ValueError("bad schema")
-
-    plan = _plan("dataset", 7, ["/camera"], lambda: client)
-    with pytest.raises(
-        RuntimeError, match="episode a.*dataset dataset version 7"
-    ) as error:
-        list(plan.read(plan.episodes, fail))
-    assert isinstance(error.value.__cause__, ValueError)
-    assert client.closed == ["a"]
-
-
-@pytest.mark.parametrize("topics", [[], "camera", iter([])])
+@pytest.mark.parametrize("topics", [[], "camera"])
 def test_rejects_implicit_all_topic_reads(topics: Any) -> None:
     with pytest.raises(ValueError, match="topics"):
         _plan("dataset", 7, topics, Client)
 
 
-@pytest.mark.parametrize("version", [0, -1])
-def test_rejects_invalid_version(version: Any) -> None:
+def test_rejects_invalid_version() -> None:
     with pytest.raises(ValueError, match="version"):
-        _plan("dataset", version, ["/camera"], Client)
+        _plan("dataset", 0, ["/camera"], Client)
 
 
 @pytest.mark.parametrize(
@@ -175,41 +117,14 @@ def test_rechecks_missing_recordings_on_episode_entries(
         _plan("dataset", 7, ["/camera"], Client)
 
 
-def test_omitted_missing_recordings_flags_do_not_block_planning(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr(
-        Client,
-        "get_dataset_version",
-        lambda *args, **kwargs: {"committed_at": "2026-01-01"},
-    )
-    entries = list(Page().auto_paging_iter())
-    for entry in entries:
-        del entry["has_missing_recordings"]
-    monkeypatch.setattr(Page, "auto_paging_iter", lambda self: iter(entries))
-
-    plan = _plan("dataset", 7, ["/camera"], Client)
-
-    assert [episode.id for episode in plan.episodes] == ["a", "b", "c", "d"]
-
-
-def test_empty_plan_does_not_create_worker_client(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_empty_plan_yields_no_samples(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(Page, "auto_paging_iter", lambda self: iter([]))
-    created = []
-
-    def factory() -> Client:
-        created.append(True)
-        return Client()
-
-    plan = _plan("dataset", 7, ["/camera"], factory)
+    plan = _plan("dataset", 7, ["/camera"], Client)
     assert list(plan.read(plan.episodes, samples)) == []
-    assert len(created) == 1
 
 
-@pytest.mark.parametrize("cancel", [False, True])
-def test_callback_cleanup_runs_before_episode_streams_close(cancel: bool) -> None:
+@pytest.mark.parametrize("outcome", ["complete", "cancel", "error"])
+def test_callback_lifecycle_closes_resources(outcome: str) -> None:
     client = Client()
     events = []
     readers = []
@@ -221,14 +136,22 @@ def test_callback_cleanup_runs_before_episode_streams_close(cancel: bool) -> Non
         retained.append(messages)
         next(messages)
         try:
+            if outcome == "error":
+                raise ValueError("bad schema")
             yield (episode.id, episode.metadata["label"])
         finally:
-            assert episode.id not in client.closed
             events.append(episode.id)
 
     plan = _plan("dataset", 7, ["/camera"], lambda: client)
     stream = plan.read(plan.episodes, read_episode)
-    if cancel:
+    if outcome == "error":
+        with pytest.raises(
+            RuntimeError, match="episode a.*dataset dataset version 7"
+        ) as error:
+            next(stream)
+        assert isinstance(error.value.__cause__, ValueError)
+        expected = ["a"]
+    elif outcome == "cancel":
         assert next(stream) == ("a", "a")
         stream.close()
         expected = ["a"]

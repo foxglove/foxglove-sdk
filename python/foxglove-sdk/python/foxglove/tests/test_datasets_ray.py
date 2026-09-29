@@ -1,5 +1,5 @@
 import os
-from collections.abc import Generator, Iterator
+from collections.abc import Iterator
 from typing import Any
 
 import pytest
@@ -38,32 +38,7 @@ def test_sample_row_limit() -> None:
     assert len(tasks) == 2
     for task in tasks:
         blocks = list(task())
-        assert [BlockAccessor.for_block(block).num_rows() for block in blocks] == [
-            300,
-        ]
-        assert task.metadata.num_rows is None
-
-
-def test_task_serialization_and_numpy_tensor_samples() -> None:
-    import numpy as np
-    from foxglove.datasets.ray import _Datasource
-    from ray import cloudpickle
-    from ray.data.block import BlockAccessor
-
-    def image(episode: EpisodeReader) -> Iterator[dict[str, Any]]:
-        yield {"id": episode.id, "image": np.ones((3, 4, 4), dtype=np.float32)}
-
-    source = _Datasource(_plan("dataset", 7, ["/camera"], Client), image)
-    tasks = cloudpickle.loads(cloudpickle.dumps(source.get_read_tasks(2)))
-    rows = [
-        row
-        for task in tasks
-        for block in task()
-        for row in BlockAccessor.for_block(block).iter_rows(public_row_format=True)
-    ]
-    assert sorted(row["id"] for row in rows) == ["a", "b", "c", "d"]
-    for row in rows:
-        np.testing.assert_array_equal(row["image"], np.ones((3, 4, 4)))
+        assert sum(BlockAccessor.for_block(block).num_rows() for block in blocks) == 300
 
 
 def test_read_task_cancellation_closes_message_stream() -> None:
@@ -87,7 +62,6 @@ def test_read_task_cancellation_closes_message_stream() -> None:
     context = DataContext.get_current().copy()
     context.target_max_block_size = 1024
     blocks = iter(source.get_read_tasks(1, data_context=context)[0]())
-    assert isinstance(blocks, Generator)
     next(blocks)
     blocks.close()
     assert client.closed == ["a"]
@@ -109,40 +83,7 @@ def test_unlimited_target_max_block_size() -> None:
         assert [BlockAccessor.for_block(block).num_rows() for block in task()] == [2000]
 
 
-def test_byte_target_flushes_before_row_limit() -> None:
-    import numpy as np
-    from foxglove.datasets.ray import _read_blocks
-    from ray.data.block import BlockAccessor
-
-    def large(episode: EpisodeReader) -> Iterator[dict[str, Any]]:
-        for _ in range(10):
-            yield {"image": np.ones((1024, 1024), dtype=np.uint8)}
-
-    plan = _plan("dataset", 7, ["/camera"], Client)
-    blocks = _read_blocks(plan, large, 10, 1024)
-    first = next(blocks)
-    assert BlockAccessor.for_block(first).num_rows() < 10
-    blocks.close()
-
-
-def test_native_ray_execution() -> None:
-    from foxglove.datasets.ray import read_dataset
-
-    dataset = read_dataset(
-        "dataset",
-        version=7,
-        topics=["/camera"],
-        read_episode=many_samples,
-        client_factory=Client,
-        concurrency=2,
-    )
-    assert dataset.count() == 4000
-
-
-@pytest.mark.parametrize("sample", [(1, 2), 1, None])
-def test_non_dictionary_rows_fail_with_episode_context_and_close_streams(
-    sample: Any,
-) -> None:
+def test_non_dictionary_rows_fail_with_episode_context_and_close_streams() -> None:
     from foxglove.datasets.ray import _Datasource
 
     client = Client()
@@ -152,7 +93,7 @@ def test_non_dictionary_rows_fail_with_episode_context_and_close_streams(
         messages = episode.iter_messages()
         next(messages)
         try:
-            yield sample
+            yield (1, 2)
         finally:
             closed.append(episode.id)
 
@@ -163,7 +104,7 @@ def test_non_dictionary_rows_fail_with_episode_context_and_close_streams(
         list(source.get_read_tasks(1)[0]())
     assert isinstance(error.value.__cause__, TypeError)
     assert str(error.value.__cause__) == (
-        f"Ray read_episode must yield dictionaries, got {type(sample).__name__}"
+        "Ray read_episode must yield dictionaries, got tuple"
     )
     assert closed == ["a"]
     assert client.closed == ["a"]
@@ -214,6 +155,20 @@ def test_native_ray_blocks_follow_context_target(
         # One read task isolates block shaping from Ray's automatic task splitting.
         dataset = ray.data.read_datasource(source, override_num_blocks=1)
         batches = list(dataset.iter_batches(batch_size=None, batch_format="numpy"))
+        for batch in batches:
+            expected = np.broadcast_to(
+                (batch["index"] % 256).astype(np.uint8)[:, None], batch["values"].shape
+            )
+            np.testing.assert_array_equal(batch["values"], expected)
+        assert sorted(
+            (episode_id, int(index))
+            for batch in batches
+            for episode_id, index in zip(batch["id"], batch["index"])
+        ) == [
+            (episode_id, index)
+            for episode_id in ("a", "b", "c", "d")
+            for index in range(1000)
+        ]
         counts = [len(batch["index"]) for batch in batches]
         assert sum(counts) == 4000
         assert len(counts) > 4

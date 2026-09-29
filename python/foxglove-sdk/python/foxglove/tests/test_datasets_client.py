@@ -71,12 +71,12 @@ def test_real_client_pagination_filtering_and_incremental_mcap(
         if url.endswith("/episodes"):
             assert kwargs["params"]["limit"] == 2000
             cursor = kwargs["params"].get("cursor")
+            assert cursor in (None, "second")
             payload = {
                 "episodes": [
                     {
                         "addedAt": stamp,
                         "addedInVersion": 7,
-                        "hasMissingRecordings": False,
                         "episode": {
                             "id": "b" if cursor else "a",
                             "projectId": "project",
@@ -103,15 +103,20 @@ def test_real_client_pagination_filtering_and_incremental_mcap(
                 "episodeCount": 2,
                 "addedEpisodeCount": 2,
                 "removedEpisodeCount": 0,
-                "hasMissingRecordings": False,
             }
         response._content = json.dumps(payload).encode()
         return response
 
     monkeypatch.setattr(requests.Session, "request", request)
-    plan = _plan("dataset", 7, ["/camera"], lambda: client_module.Client(token="test"))
+    plan = _plan(
+        "dataset", 7, ["/camera", "/camera"], lambda: client_module.Client(token="test")
+    )
     assert [episode.id for episode in plan.episodes] == ["a", "b"]
-    assert len(calls) == 3
+    episode_requests = [kwargs for _, url, kwargs in calls if url.endswith("/episodes")]
+    assert [request["params"].get("cursor") for request in episode_requests] == [
+        None,
+        "second",
+    ]
     assert opened == []
 
     def samples(episode: EpisodeReader) -> Iterator[dict[str, Any]]:
@@ -134,4 +139,3 @@ def test_real_client_pagination_filtering_and_incremental_mcap(
     assert opened[0].tell() < len(data)
     stream.close()
     assert opened[0].closed
-    assert len(calls) == 5

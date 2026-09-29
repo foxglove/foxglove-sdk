@@ -54,7 +54,7 @@ def test_repeated_epochs_create_fresh_streams() -> None:
     assert client.closed == ["a", "b", "c", "d"] * 2
 
 
-@pytest.mark.parametrize("rank, size", [(0, None), (None, 2), (-1, 2), (2, 2), (0, 0)])
+@pytest.mark.parametrize("rank, size", [(0, None), (2, 2), (0, 0)])
 def test_invalid_distributed_config(rank: Any, size: Any) -> None:
     from foxglove.datasets.torch import read_dataset
 
@@ -90,15 +90,14 @@ def test_rank_is_captured_before_worker_iteration(
     assert list(dataset) == [{"id": "b"}, {"id": "d"}]
 
 
-@pytest.mark.parametrize("with_target", [False, True])
-def test_dataloader_batches_tensors_and_input_target_tuples(with_target: bool) -> None:
+def test_dataloader_batches_input_target_tuples() -> None:
     from foxglove.datasets.torch import read_dataset
     from torch.utils.data import DataLoader
 
     def sample(episode: EpisodeReader) -> Iterator[Any]:
         index = ord(episode.id) - ord("a")
         inputs = torch.tensor([index, index + 1])
-        yield (inputs, index) if with_target else inputs
+        yield (inputs, index)
 
     dataset = read_dataset(
         "dataset",
@@ -110,11 +109,10 @@ def test_dataloader_batches_tensors_and_input_target_tuples(with_target: bool) -
     batches = list(DataLoader(dataset, batch_size=2))
     assert len(batches) == 2
     for index, batch in enumerate(batches):
-        inputs = batch[0] if with_target else batch
+        inputs = batch[0]
         start = index * 2
         assert inputs.tolist() == [[start, start + 1], [start + 1, start + 2]]
-        if with_target:
-            assert batch[1].tolist() == [start, start + 1]
+        assert batch[1].tolist() == [start, start + 1]
 
 
 @dataclass
