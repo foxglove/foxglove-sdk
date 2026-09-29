@@ -43,7 +43,7 @@ tracing-test = "0.2.5"
 insta = { version = "1.42.2", features = ["json"] }
 livekit = { version = "0.9.3", features = ["rustls-tls-native-roots", "tokio"] }
 livekit-api = { version = "0.8", default-features = false, features = ["access-token"] }
-libwebrtc = { version = "0.3.37" }
+libwebrtc = { version = "0.3.50" }
 
 [workspace.lints.clippy]
 assigning_clones = "warn"
