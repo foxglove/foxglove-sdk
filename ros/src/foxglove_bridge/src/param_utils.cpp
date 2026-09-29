@@ -358,7 +358,8 @@ void declareParameters(rclcpp::Node* node) {
   pointCloudCompressionMethodDescription.description =
     "Draco encoding method for point clouds that are transparently compressed over remote "
     "access: 'kd-tree' (the default) for the best compression ratio, or 'sequential' to "
-    "preserve point order and encode float64 fields losslessly, at a lower compression ratio.";
+    "preserve point order, at a lower compression ratio. Float64 fields are narrowed to float32 "
+    "under both methods.";
   pointCloudCompressionMethodDescription.read_only = true;
   node->declare_parameter(PARAM_POINT_CLOUD_COMPRESSION_METHOD,
                           DEFAULT_POINT_CLOUD_COMPRESSION_METHOD,

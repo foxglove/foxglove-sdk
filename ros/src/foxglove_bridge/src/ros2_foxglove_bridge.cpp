@@ -77,14 +77,13 @@ inline std::optional<foxglove::VideoEncoderBackend> parseVideoEncoderBackend(std
   return std::nullopt;
 }
 
-// Parses a Draco point cloud encoding method name (case-insensitively), accepting "kd_tree" and
-// "kdtree" as spellings of "kd-tree". Returns std::nullopt for an unrecognized value so the
-// caller can warn and leave the SDK default in place.
+// Parses a Draco point cloud encoding method name (case-insensitively). Returns std::nullopt
+// for an unrecognized value so the caller can warn and leave the SDK default in place.
 inline std::optional<foxglove::DracoMethod> parseDracoMethod(std::string value) {
   std::transform(value.begin(), value.end(), value.begin(), [](unsigned char c) {
     return static_cast<char>(std::tolower(c));
   });
-  if (value == "kd-tree" || value == "kd_tree" || value == "kdtree") {
+  if (value == "kd-tree") {
     return foxglove::DracoMethod::KdTree;
   } else if (value == "sequential") {
     return foxglove::DracoMethod::Sequential;
