@@ -320,6 +320,17 @@
 //! clang, the build fails in the `webrtc-sys` build script with an error that names the compiler
 //! it found.
 //!
+//! On macOS, binaries that enable `remote-access` must be linked with `-ObjC`, because the
+//! prebuilt WebRTC library defines Objective-C category methods that the linker otherwise drops.
+//! Without it, the binary aborts at startup with an `unrecognized selector` exception. Cargo does
+//! not forward a dependency's linker arguments to your binary, so add the flag to your project's
+//! `.cargo/config.toml`:
+//!
+//! ```toml
+//! [target.'cfg(target_os = "macos")']
+//! rustflags = ["-C", "link-arg=-ObjC"]
+//! ```
+//!
 //! #### NVENC hardware acceleration
 //!
 //! When available, NVIDIA NVENC is used to accelerate H.264 video encoding for the remote
