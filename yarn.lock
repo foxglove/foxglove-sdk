@@ -1068,10 +1068,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@foxglove/message-definition@npm:^0.3.1":
-  version: 0.3.1
-  resolution: "@foxglove/message-definition@npm:0.3.1"
-  checksum: 10c0/521fadfadcdb9bbde7d28908e429b93a387ded524f8abeb361f27ae5a6f36b8d5dc29cf23dbf0791cc366de59c48dc03aede861faa59df1c64d030b6c659981a
+"@foxglove/message-definition@npm:0.5.0":
+  version: 0.5.0
+  resolution: "@foxglove/message-definition@npm:0.5.0"
+  checksum: 10c0/a6562326e1b59a8f8d6ff3e60145d487e5136fb4e67fb588b7cbc4d1d7e969fd0f6d1eadcef97f52ecd9326c684e7bfdb465c7d3adc22896a7a84981a5a1a891
   languageName: node
   linkType: hard
 
@@ -1096,23 +1096,23 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@foxglove/rosmsg-msgs-common@npm:^3.2.2":
-  version: 3.2.2
-  resolution: "@foxglove/rosmsg-msgs-common@npm:3.2.2"
+"@foxglove/rosmsg-msgs-common@npm:^3.3.0":
+  version: 3.3.0
+  resolution: "@foxglove/rosmsg-msgs-common@npm:3.3.0"
   dependencies:
-    "@foxglove/message-definition": "npm:^0.3.1"
-    "@foxglove/rosmsg": "npm:^5.0.4"
-  checksum: 10c0/d1c1e44eadfd61ac651555c4c174535f09834fe1ca61e8117c5ac47932bfd76fd889008b33ed75dc829a2cf034d3d4c6e3c914835aaea76e5cf58f48041eae46
+    "@foxglove/message-definition": "npm:0.5.0"
+    "@foxglove/rosmsg": "npm:^5.0.5"
+  checksum: 10c0/12f420ed213247bc4904d451baa32530f37025acb0a9e44977c33ded82c9d3f15093b8ac6c4ccda9ef3acda0bb61431d5e36ee3e6a2954fea9ed6783424ff1fb
   languageName: node
   linkType: hard
 
-"@foxglove/rosmsg@npm:^5.0.0, @foxglove/rosmsg@npm:^5.0.4":
-  version: 5.0.4
-  resolution: "@foxglove/rosmsg@npm:5.0.4"
+"@foxglove/rosmsg@npm:^5.0.5":
+  version: 5.0.5
+  resolution: "@foxglove/rosmsg@npm:5.0.5"
   dependencies:
-    "@foxglove/message-definition": "npm:^0.3.1"
+    "@foxglove/message-definition": "npm:0.5.0"
     md5-typescript: "npm:^1.0.5"
-  checksum: 10c0/27651394a2471a88b5d8668ccc8e72592548a49afe0b4a19aa617019a37d7bf5dd49018e2b510e4e8aa778c21e25ca4873e7900613be8d6994a771fab439d929
+  checksum: 10c0/be54349eede72317bf42f7b5706804fdc7152d6e0af43ad1e9f0ee4b5a2f92f6a218453e4f9c22fd1571ad0528bd7d0be80f6f2640fbcdb53778422b4372fc1a
   languageName: node
   linkType: hard
 
@@ -1120,7 +1120,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@foxglove/schemas@workspace:typescript/schemas"
   dependencies:
-    "@foxglove/rosmsg-msgs-common": "npm:^3.2.2"
+    "@foxglove/message-definition": "npm:0.5.0"
+    "@foxglove/rosmsg-msgs-common": "npm:^3.3.0"
     rimraf: "npm:^6.0.1"
     tslib: "npm:^2"
     typescript: "npm:5.9.3"
@@ -3034,6 +3035,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/trusted-types@npm:^2.0.7":
+  version: 2.0.7
+  resolution: "@types/trusted-types@npm:2.0.7"
+  checksum: 10c0/4c4855f10de7c6c135e0d32ce462419d8abbbc33713b31d294596c0cc34ae1fa6112a2f9da729c8f7a20707782b0d69da3b1f8df6645b0366d08825ca1522e0c
+  languageName: node
+  linkType: hard
+
 "@types/ws@npm:^8.5.10":
   version: 8.18.1
   resolution: "@types/ws@npm:8.18.1"
@@ -4196,13 +4204,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"big.js@npm:^5.2.2":
-  version: 5.2.2
-  resolution: "big.js@npm:5.2.2"
-  checksum: 10c0/230520f1ff920b2d2ce3e372d77a33faa4fa60d802fe01ca4ffbc321ee06023fe9a741ac02793ee778040a16b7e497f7d60c504d1c402b8fdab6f03bb785a25f
-  languageName: node
-  linkType: hard
-
 "binary-extensions@npm:^2.0.0":
   version: 2.3.0
   resolution: "binary-extensions@npm:2.3.0"
@@ -5086,10 +5087,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"dompurify@npm:3.1.7":
-  version: 3.1.7
-  resolution: "dompurify@npm:3.1.7"
-  checksum: 10c0/fcceef2e9f824d712a056fa699b0538f3337f5cf00ccb7227bdc7eba5463823e15d9aecc00a2fd81c726b28a71e7b09f0eb8a2fde1021c40e35f12dc67b66394
+"dompurify@npm:3.4.15":
+  version: 3.4.15
+  resolution: "dompurify@npm:3.4.15"
+  dependencies:
+    "@types/trusted-types": "npm:^2.0.7"
+  dependenciesMeta:
+    "@types/trusted-types":
+      optional: true
+  checksum: 10c0/406b5f0f9c9dcbc80016367d33e73585b6a6f440815228d7e9cbe8abe71058183b1f4cb4207b79b8473637de4a106fc055eb6da271ef9db353d29679b891ecbc
   languageName: node
   linkType: hard
 
@@ -5164,13 +5170,6 @@ __metadata:
   version: 9.2.2
   resolution: "emoji-regex@npm:9.2.2"
   checksum: 10c0/af014e759a72064cf66e6e694a7fc6b0ed3d8db680427b021a89727689671cefe9d04151b2cad51dbaf85d5ba790d061cd167f1cf32eb7b281f6368b3c181639
-  languageName: node
-  linkType: hard
-
-"emojis-list@npm:^3.0.0":
-  version: 3.0.0
-  resolution: "emojis-list@npm:3.0.0"
-  checksum: 10c0/7dc4394b7b910444910ad64b812392159a21e1a7ecc637c775a440227dcb4f80eff7fe61f4453a7d7603fa23d23d30cc93fe9e4b5ed985b88d6441cd4a35117b
   languageName: node
   linkType: hard
 
@@ -6180,7 +6179,7 @@ __metadata:
   dependencies:
     "@foxglove/eslint-plugin": "npm:2.1.0"
     "@foxglove/omgidl-parser": "npm:^0.2.0"
-    "@foxglove/rosmsg": "npm:^5.0.0"
+    "@foxglove/rosmsg": "npm:^5.0.5"
     "@foxglove/tsconfig": "npm:2.0.0"
     "@types/glob": "npm:^8.1.0"
     "@types/jest": "npm:30.0.0"
@@ -6864,9 +6863,9 @@ __metadata:
   linkType: hard
 
 "ip-address@npm:^10.1.1":
-  version: 10.4.0
-  resolution: "ip-address@npm:10.4.0"
-  checksum: 10c0/d7b0bd2624fd861afbae6e49036a9b56f9506eaff7ff38592b7b4492dd5c272b53f5356dc8cc019e318acf29a96c90a3d1af1df761960267d23efa96858270fa
+  version: 10.7.2
+  resolution: "ip-address@npm:10.7.2"
+  checksum: 10c0/290b9c63289b2a89a442dac19eff88d919e65cd41d1a720fa963be736e126f3b0cf4f88f6056b06abbf4a95300dc9ce5362a773e012ef30e0400074d175b9d31
   languageName: node
   linkType: hard
 
@@ -7902,7 +7901,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"json5@npm:^2.1.2, json5@npm:^2.2.3":
+"json5@npm:^2.2.3":
   version: 2.2.3
   resolution: "json5@npm:2.2.3"
   bin:
@@ -7970,17 +7969,6 @@ __metadata:
   version: 1.2.4
   resolution: "lines-and-columns@npm:1.2.4"
   checksum: 10c0/3da6ee62d4cd9f03f5dc90b4df2540fb85b352081bee77fe4bbcd12c9000ead7f35e0a38b8d09a9bb99b13223446dd8689ff3c4959807620726d788701a83d2d
-  languageName: node
-  linkType: hard
-
-"loader-utils@npm:^2.0.2":
-  version: 2.0.4
-  resolution: "loader-utils@npm:2.0.4"
-  dependencies:
-    big.js: "npm:^5.2.2"
-    emojis-list: "npm:^3.0.0"
-    json5: "npm:^2.1.2"
-  checksum: 10c0/d5654a77f9d339ec2a03d88221a5a695f337bf71eb8dea031b3223420bb818964ba8ed0069145c19b095f6c8b8fd386e602a3fc7ca987042bd8bb1dcc90d7100
   languageName: node
   linkType: hard
 
@@ -8448,25 +8436,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"monaco-editor-webpack-plugin@npm:^7.1.0":
-  version: 7.1.0
-  resolution: "monaco-editor-webpack-plugin@npm:7.1.0"
+"monaco-editor@npm:^0.57.0":
+  version: 0.57.0
+  resolution: "monaco-editor@npm:0.57.0"
   dependencies:
-    loader-utils: "npm:^2.0.2"
-  peerDependencies:
-    monaco-editor: ">= 0.31.0"
-    webpack: ^4.5.0 || 5.x
-  checksum: 10c0/a0536473bb4469f2f0f11d8a0a317733716535153a3ed7fb26b561997a08bf3946355fdb12ac331a0f220d01fb786226b60070598f83c0dc430ecde4b149b052
-  languageName: node
-  linkType: hard
-
-"monaco-editor@npm:^0.54.0":
-  version: 0.54.0
-  resolution: "monaco-editor@npm:0.54.0"
-  dependencies:
-    dompurify: "npm:3.1.7"
+    dompurify: "npm:3.4.15"
     marked: "npm:14.0.0"
-  checksum: 10c0/40198c0bac873d10804a89c991c014088943b23625d68149cb38fc52c3438c896803f645a36a6f75e0d961c87e8726073cb504e2427fc33850e0b034ff6229ee
+  checksum: 10c0/21a088dbd49cfdd27538d1c4af37bd26832866348ee673d2b43924cdf58d3e89daaafff19e94731758fa2cc81a00402f81968062867cbc5a98e010f1a84460d2
   languageName: node
   linkType: hard
 
@@ -9063,8 +9039,7 @@ __metadata:
     eventemitter3: "npm:^5.0.1"
     globals: "npm:17.12.0"
     html-webpack-plugin: "npm:^5.6.4"
-    monaco-editor: "npm:^0.54.0"
-    monaco-editor-webpack-plugin: "npm:^7.1.0"
+    monaco-editor: "npm:^0.57.0"
     pyodide: "npm:314.0.6"
     react: "npm:19.3.0"
     react-dom: "npm:19.3.0"

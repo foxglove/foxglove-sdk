@@ -139,6 +139,7 @@ private:
   std::vector<std::regex> _pointCloudCompressionTopicDenyPatterns;
   uint8_t _pointCloudCompressionQuantizationBits =
     DEFAULT_POINT_CLOUD_COMPRESSION_QUANTIZATION_BITS;
+  foxglove::DracoMethod _pointCloudCompressionMethod = foxglove::DracoMethod::KdTree;
 #endif
   std::shared_ptr<ParameterInterface> _paramInterface;
   rclcpp::CallbackGroup::SharedPtr _subscriptionCallbackGroup;

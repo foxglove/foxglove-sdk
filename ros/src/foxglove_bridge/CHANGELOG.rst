@@ -2,6 +2,12 @@
 Changelog for package foxglove_bridge
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+3.6.0 (2026-09-28)
+------------------
+* Add ``point_cloud_compression_method`` parameter to select the encoding method for remote access point cloud compression
+* Fix an issue where the remote access gateway could stay connected to a room indefinitely after the last viewer disconnected
+* Update Foxglove SDK version to 0.28.0
+
 3.5.0 (2026-08-25)
 ------------------
 * Transparently compress point cloud topics using draco when using remote access, with an opt-out facility
