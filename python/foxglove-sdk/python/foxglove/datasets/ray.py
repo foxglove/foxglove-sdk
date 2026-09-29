@@ -20,9 +20,6 @@ from .reader import ClientFactory, EpisodeReader, ReadEpisode, _Plan, _plan
 if TYPE_CHECKING:
     from ray.data._internal.block_builder import BlockBuilder
 
-_BLOCK_BYTES = 8 * 1024 * 1024
-_BLOCK_ROWS = 256
-
 
 def _new_builder() -> BlockBuilder:
     return BlockAccessor.for_block(pa.table({})).builder()
@@ -50,7 +47,7 @@ def _read_blocks(
     plan: _Plan,
     read_episode: ReadEpisode[dict[str, Any]],
     row_limit: int | None,
-    block_bytes: int,
+    block_bytes: int | None,
 ) -> Generator[Block, None, None]:
     builder = _new_builder()
     with closing(
@@ -59,13 +56,31 @@ def _read_blocks(
         for sample in islice(samples, row_limit):
             builder.add(sample)
             if (
-                builder.num_rows() >= _BLOCK_ROWS
-                or builder.get_estimated_memory_usage() >= block_bytes
+                block_bytes is not None
+                and builder.get_estimated_memory_usage() >= block_bytes
             ):
                 yield builder.build()
                 builder = _new_builder()
         if builder.num_rows():
             yield builder.build()
+
+
+def _make_read_task(
+    plan: _Plan,
+    read_episode: ReadEpisode[dict[str, Any]],
+    row_limit: int | None,
+    block_bytes: int | None,
+) -> ReadTask:
+    # Ray uses the callable's name when warning about large serialized tasks.
+    def read_blocks() -> Generator[Block, None, None]:
+        return _read_blocks(plan, read_episode, row_limit, block_bytes)
+
+    return ReadTask(
+        read_blocks,
+        BlockMetadata(
+            num_rows=None, size_bytes=None, input_files=None, exec_stats=None
+        ),
+    )
 
 
 class _Datasource(Datasource):
@@ -88,8 +103,6 @@ class _Datasource(Datasource):
         if not self._plan.episodes:
             return []
         context = data_context or DataContext.get_current()
-        limit = context.target_max_block_size
-        block_bytes = _BLOCK_BYTES if limit is None else min(_BLOCK_BYTES, limit)
         count = max(1, min(parallelism, len(self._plan.episodes)))
         tasks = []
         for index in range(count):
@@ -98,20 +111,11 @@ class _Datasource(Datasource):
                 self._plan, episodes=self._plan.episodes[index::count]
             )
             tasks.append(
-                ReadTask(
-                    partial(
-                        _read_blocks,
-                        worker_plan,
-                        self._read_episode,
-                        per_task_row_limit,
-                        block_bytes,
-                    ),
-                    BlockMetadata(
-                        num_rows=None,
-                        size_bytes=None,
-                        input_files=None,
-                        exec_stats=None,
-                    ),
+                _make_read_task(
+                    worker_plan,
+                    self._read_episode,
+                    per_task_row_limit,
+                    context.target_max_block_size,
                 )
             )
         return tasks
@@ -133,9 +137,11 @@ def read_dataset(
     and their dependencies available on every worker. Use consistent column types
     containing scalars, NumPy arrays, or other Arrow-compatible values.
 
-    ``concurrency`` caps concurrent read tasks. Output blocks target at most 256
-    samples or 8 MiB of estimated data (a single sample can exceed that size).
-    Ray can prefetch beyond the current consumer demand. Read task retries rerun
+    ``concurrency`` caps concurrent read tasks. Block construction follows Ray's
+    ``DataContext.target_max_block_size``. Ray can combine blocks and buffer multiple
+    episodes before delivering output. This target is not a memory ceiling: large
+    samples, prefetching, and concurrent tasks can exceed it. Setting it to ``None``
+    allows an entire task to be buffered. Read task retries rerun
     callbacks, so callbacks should not perform external side effects.
     """
     return ray.data.read_datasource(

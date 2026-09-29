@@ -102,9 +102,11 @@ Behavior and limits
 * The version must be committed. Missing recordings and callback failures raise
   errors; they are not silently skipped. Message-read errors include episode context.
 * Topics must be explicit and nonempty; they are filtered by the server.
-* The SDK does not buffer entire episodes. Ray blocks target 256 samples or 8 MiB
-  of estimated data, whichever comes first. A single large sample can exceed this.
-  User callbacks can still allocate unbounded memory themselves.
+* MCAP messages are read incrementally. Ray block construction follows
+  ``DataContext.target_max_block_size``; Ray can combine blocks and buffer multiple
+  episodes before delivering output. This is a size target, not a memory ceiling:
+  large samples, prefetching, concurrent tasks, and user callbacks can exceed it.
+  Setting the target to ``None`` allows an entire task to be buffered.
 * Network/MCAP buffering and framework prefetch read ahead. Cancellation closes
   active streams when generators are closed, but cannot undo already transferred data.
 * New iterations may redownload data. There is no SDK cache or sample-level index.
