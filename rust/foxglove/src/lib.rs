@@ -311,6 +311,15 @@
 //! # }
 //! ```
 //!
+//! #### Build requirements
+//!
+//! On Linux, the `remote-access` feature requires clang 21 or later to build. The WebRTC
+//! bindings compile against the copy of libc++ bundled with the prebuilt WebRTC library, which
+//! only supports recent versions of clang. Set `CC=clang CXX=clang++` with clang 21 on `PATH`; on
+//! Ubuntu, clang 21 is available from [apt.llvm.org](https://apt.llvm.org). With GCC or an older
+//! clang, the build fails in the `webrtc-sys` build script with an error that names the compiler
+//! it found.
+//!
 //! #### NVENC hardware acceleration
 //!
 //! When available, NVIDIA NVENC is used to accelerate H.264 video encoding for the remote

@@ -217,6 +217,11 @@ jobs:
             # manylinux_2_28 is AlmaLinux 8, whose AppStream provides clang 21.
             before-script: |
               yum install -y libva-devel yum-utils clang
+              clang_major=$(clang -dumpversion | cut -d. -f1)
+              if [ "$clang_major" -lt 21 ]; then
+                echo "webrtc-sys requires clang >= 21, found $(clang -dumpversion)"
+                exit 1
+              fi
               export CC=clang CXX=clang++
               arch=$(uname -m)
               case "$arch" in
@@ -241,6 +246,11 @@ jobs:
             # manylinux_2_28 is AlmaLinux 8, whose AppStream provides clang 21.
             before-script: |
               yum install -y libva-devel yum-utils clang
+              clang_major=$(clang -dumpversion | cut -d. -f1)
+              if [ "$clang_major" -lt 21 ]; then
+                echo "webrtc-sys requires clang >= 21, found $(clang -dumpversion)"
+                exit 1
+              fi
               export CC=clang CXX=clang++
               arch=$(uname -m)
               case "$arch" in

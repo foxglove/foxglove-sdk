@@ -83,7 +83,9 @@ The remote access shared library embeds the prebuilt LiveKit/WebRTC native libra
 | Windows x86_64  | MSVC         | MSVC STL   | `/MT` (static) | Your project must also use `/MT` |
 | Windows aarch64 | MSVC         | MSVC STL   | `/MT` (static) | Your project must also use `/MT` |
 
-**Not supported:** `/MD` (dynamic CRT) on Windows. Clang with libc++ (`-stdlib=libc++`) on Linux is not tested.
+**Not supported:** `/MD` (dynamic CRT) on Windows.
+
+**Not tested:** Clang with libc++ (`-stdlib=libc++`) on Linux.
 
 ### Building locally
 
