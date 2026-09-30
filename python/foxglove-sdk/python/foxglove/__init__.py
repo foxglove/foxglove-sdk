@@ -11,7 +11,11 @@ import atexit
 import logging
 import sys
 from collections.abc import Callable
+from pkgutil import extend_path
 from typing import TYPE_CHECKING, TypeAlias, Union
+
+# The API client contributes foxglove.client from a separate distribution.
+__path__ = extend_path(__path__, __name__)
 
 from . import _foxglove_py as _foxglove
 
