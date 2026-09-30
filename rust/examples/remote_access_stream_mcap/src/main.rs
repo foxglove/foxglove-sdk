@@ -10,8 +10,12 @@ use std::{
 };
 
 use anyhow::{Context, Result, anyhow};
-use clap::Parser;
-use foxglove::{ChannelBuilder, RawChannel, Schema, remote_access::Gateway};
+use clap::{Parser, ValueEnum};
+use foxglove::{
+    ChannelBuilder, RawChannel, Schema,
+    draco::{DracoEncodeOptions, DracoMethod, MAX_QUANTIZATION_BITS},
+    remote_access::{Gateway, PointCloudCompression},
+};
 use mcap::Summary;
 use mcap::sans_io::indexed_reader::{IndexedReadEvent, IndexedReader, IndexedReaderOptions};
 use mcap::sans_io::summary_reader::{SummaryReadEvent, SummaryReader};
@@ -21,6 +25,33 @@ struct Args {
     /// Path to an MCAP file to play back in a loop.
     #[arg(long)]
     file: PathBuf,
+
+    /// The maximum size in bytes of a single message published to a lossy channel's data track.
+    ///
+    /// Larger messages are dropped, with a throttled warning. Must be at least 1200 bytes (one
+    /// WebRTC data-channel packet).
+    #[arg(long, default_value_t = 100 * 1024)]
+    max_data_track_message_size: usize,
+
+    /// Quantization bits for point cloud compression, between 1 and 30. Fewer bits produce smaller
+    /// messages but coarser values.
+    #[arg(long, default_value_t = 12,
+          value_parser = clap::value_parser!(u8).range(1..=MAX_QUANTIZATION_BITS as i64))]
+    point_cloud_quantization_bits: u8,
+
+    /// Point cloud compression method.
+    #[arg(long, value_enum, default_value_t = PointCloudCompressionArg::KdTree)]
+    point_cloud_compression: PointCloudCompressionArg,
+}
+
+#[derive(Clone, Copy, ValueEnum)]
+enum PointCloudCompressionArg {
+    /// Deliver point clouds unmodified.
+    None,
+    /// Draco kd-tree encoding.
+    KdTree,
+    /// Draco sequential encoding.
+    Sequential,
 }
 
 #[tokio::main]
@@ -30,7 +61,24 @@ async fn main() -> Result<()> {
 
     let args = Args::parse();
 
+    let pcc_method = match args.point_cloud_compression {
+        PointCloudCompressionArg::None => None,
+        PointCloudCompressionArg::KdTree => Some(DracoMethod::KdTree),
+        PointCloudCompressionArg::Sequential => Some(DracoMethod::Sequential),
+    };
+    let pcc_opts = pcc_method.map(|method| {
+        PointCloudCompression::Draco(
+            DracoEncodeOptions::builder()
+                .quantization_bits(args.point_cloud_quantization_bits)
+                .method(method)
+                .build()
+                .expect("clap validates the range"),
+        )
+    });
+
     let handle = Gateway::new()
+        .max_data_track_message_size(args.max_data_track_message_size)
+        .point_cloud_compression_fn(move |_| pcc_opts)
         .start()
         .expect("Failed to start remote access gateway");
 

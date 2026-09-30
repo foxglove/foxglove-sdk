@@ -17,13 +17,56 @@ use crate::remote_common::{
 };
 use crate::sink_channel_filter::{PyChannelDescriptor, PySinkChannelFilter};
 
+/// Draco point-cloud encoding method.
+///
+/// Quantization applies to positions and every float32 field under both methods, and
+/// integer fields are copied losslessly under both; the methods differ in point order and
+/// compression ratio.
+#[pyclass(
+    from_py_object,
+    name = "DracoMethod",
+    module = "foxglove.remote_access",
+    eq,
+    eq_int
+)]
+#[derive(Clone, Copy, PartialEq)]
+pub enum PyDracoMethod {
+    /// kd-tree encoding: the best compression ratios, but points are reordered. This is
+    /// the default.
+    KdTree,
+    /// Sequential encoding: preserves point order, at a lower compression ratio.
+    Sequential,
+}
+
+#[pymethods]
+impl PyDracoMethod {
+    #[getter]
+    fn name(&self) -> &'static str {
+        match self {
+            Self::KdTree => "KdTree",
+            Self::Sequential => "Sequential",
+        }
+    }
+
+    #[getter]
+    fn value(&self) -> i32 {
+        match self {
+            Self::KdTree => 0,
+            Self::Sequential => 1,
+        }
+    }
+}
+
 /// Options for Draco point-cloud encoding.
 ///
-/// :param quantization_bits: Quantization bits for the position attribute; must be
+/// :param quantization_bits: Quantization bits for positions and float32 fields; must be
 ///     between 1 and 30 inclusive, or a :py:exc:`ValueError` is raised. To disable
 ///     compression for a channel, return ``False`` from the ``point_cloud_compression``
 ///     policy rather than passing ``0``. Defaults to 12.
 /// :type quantization_bits: int
+/// :param method: The encoding method. Defaults to
+///     :py:attr:`~foxglove.remote_access.DracoMethod.KdTree`.
+/// :type method: :py:class:`~foxglove.remote_access.DracoMethod`
 #[pyclass(
     from_py_object,
     name = "DracoEncodeOptions",
@@ -33,22 +76,27 @@ use crate::sink_channel_filter::{PyChannelDescriptor, PySinkChannelFilter};
 pub struct PyDracoEncodeOptions {
     #[pyo3(get)]
     pub quantization_bits: u8,
+    #[pyo3(get)]
+    pub method: PyDracoMethod,
 }
 
 #[pymethods]
 impl PyDracoEncodeOptions {
     #[new]
-    #[pyo3(signature = (*, quantization_bits=12))]
-    fn new(quantization_bits: u8) -> PyResult<Self> {
+    #[pyo3(signature = (*, quantization_bits=12, method=PyDracoMethod::KdTree))]
+    fn new(quantization_bits: u8, method: PyDracoMethod) -> PyResult<Self> {
         // Validate here so the options are valid by construction, mirroring the core
         // `DracoEncodeOptions` invariant: whatever options a caller holds are valid.
-        // `quantization_bits` is read-only for the same reason.
+        // The fields are read-only for the same reason.
         if quantization_bits == 0 || quantization_bits > foxglove::draco::MAX_QUANTIZATION_BITS {
             return Err(pyo3::exceptions::PyValueError::new_err(
                 invalid_bits_message(quantization_bits),
             ));
         }
-        Ok(Self { quantization_bits })
+        Ok(Self {
+            quantization_bits,
+            method,
+        })
     }
 }
 
@@ -71,11 +119,19 @@ fn invalid_bits_message(bits: u8) -> String {
 
 impl From<PyDracoEncodeOptions> for foxglove::draco::DracoEncodeOptions {
     fn from(value: PyDracoEncodeOptions) -> Self {
-        // Infallible: `quantization_bits` is validated in `__new__`, the field is read-only,
-        // the class is final (not subclassable), and pyo3's `from_py_object` extracts
-        // nominally (it clones a real instance rather than duck-typing fields), so the only
-        // way to obtain a `PyDracoEncodeOptions` is through the validating constructor.
-        Self::with_quantization_bits(value.quantization_bits)
+        // Infallible: `quantization_bits` is validated in `__new__`, the fields are
+        // read-only, the class is final (not subclassable), and pyo3's `from_py_object`
+        // extracts nominally (it clones a real instance rather than duck-typing fields), so
+        // the only way to obtain a `PyDracoEncodeOptions` is through the validating
+        // constructor.
+        let method = match value.method {
+            PyDracoMethod::KdTree => foxglove::draco::DracoMethod::KdTree,
+            PyDracoMethod::Sequential => foxglove::draco::DracoMethod::Sequential,
+        };
+        Self::builder()
+            .quantization_bits(value.quantization_bits)
+            .method(method)
+            .build()
             .expect("quantization_bits is validated in PyDracoEncodeOptions::new")
     }
 }
@@ -893,6 +949,7 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<PyReliability>()?;
     module.add_class::<PyQosProfile>()?;
     module.add_class::<PyDracoEncodeOptions>()?;
+    module.add_class::<PyDracoMethod>()?;
 
     let py = parent_module.py();
     py.import("sys")?

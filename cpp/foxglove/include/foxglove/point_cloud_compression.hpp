@@ -15,28 +15,43 @@ enum class PointCloudCompressionMode : uint8_t {
   Draco = 2,
 };
 
+/// @brief Draco point-cloud encoding method.
+///
+/// Quantization applies to positions and every float32 field under both methods, and
+/// integer fields are copied losslessly under both; the methods differ in point order and
+/// compression ratio.
+enum class DracoMethod : uint8_t {
+  /// kd-tree encoding: the best compression ratios, but points are reordered. This is the
+  /// default (0).
+  KdTree = 0,
+  /// Sequential encoding: preserves point order, at a lower compression ratio.
+  Sequential = 1,
+};
+
 /// @brief Options for Draco point-cloud encoding.
 struct DracoEncodeOptions {
   /// @brief The maximum supported value for @ref quantization_bits.
   static constexpr uint8_t kMaxQuantizationBits = 30;
 
-  /// @brief Quantization bits for the position attribute; must be between 1 and
+  /// @brief Quantization bits for positions and float32 fields; must be between 1 and
   /// @ref kMaxQuantizationBits (30) inclusive. Out-of-range values are repaired, with a
   /// logged warning naming the channel: values above the maximum (which the reference
   /// Draco decoder rejects) are clamped to it, and `0` (lossless) provides no size
   /// reduction over the raw point cloud, so the channel is delivered unmodified — use
   /// @ref PointCloudCompressionMode::Disabled to do that without the warning.
   uint8_t quantization_bits = 12;
+  /// @brief The encoding method.
+  DracoMethod method = DracoMethod::KdTree;
 };
 
 /// @brief Transparent point-cloud compression for a single channel, returned by the
 /// per-channel policy callback on the gateway options.
 ///
-/// When compression is enabled, channels carrying a supported point-cloud schema —
-/// currently protobuf-, JSON-, or FlatBuffer-encoded `foxglove.PointCloud`, or CDR-encoded
-/// `sensor_msgs/msg/PointCloud2` — are advertised with the protobuf-encoded
-/// `foxglove.CompressedPointCloud` schema, and each logged point cloud
-/// is compressed in a background task (off the logging hot path) before delivery. If
+/// When compression is enabled, channels carrying a supported point-cloud schema
+/// (currently protobuf-, JSON-, or FlatBuffer-encoded `foxglove.PointCloud`, CDR-encoded
+/// ROS 2 `sensor_msgs/msg/PointCloud2`, or ROS 1 `sensor_msgs/PointCloud2`) are advertised
+/// with the protobuf-encoded `foxglove.CompressedPointCloud` schema, and each logged point
+/// cloud is compressed in a background task (off the logging hot path) before delivery. If
 /// compression falls behind the log rate, the oldest queued message is dropped.
 /// Channels classified as Reliable skip compression and deliver the raw point cloud on
 /// the control bytestream.
@@ -66,7 +81,8 @@ struct PointCloudCompression {
   /// @brief Compress with Draco using the given settings.
   ///
   /// Sets @ref mode and @ref draco together so they cannot get out of sync. For example:
-  /// `return PointCloudCompression::withDraco({8});`
+  /// `return PointCloudCompression::withDraco({8});`, or
+  /// `return PointCloudCompression::withDraco({8, DracoMethod::Sequential});`
   static PointCloudCompression withDraco(DracoEncodeOptions options) {
     return {PointCloudCompressionMode::Draco, options};
   }

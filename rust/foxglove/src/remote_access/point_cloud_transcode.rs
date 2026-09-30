@@ -1,13 +1,15 @@
 //! Transparent point-cloud transcoding for the remote-access sink.
 //!
-//! Detects channels carrying point-cloud messages — protobuf-, JSON-, or
-//! FlatBuffer-encoded `foxglove.PointCloud`, or CDR-encoded ROS 2
-//! `sensor_msgs/msg/PointCloud2` — rewrites their advertisement to the
-//! `foxglove.CompressedPointCloud` schema, and transcodes individual messages using the
-//! Draco mechanism in [`crate::draco`]. Every input format is decoded to a
-//! `foxglove.PointCloud` before Draco encoding.
+//! Detects channels carrying point-cloud messages (protobuf-, JSON-, or
+//! FlatBuffer-encoded `foxglove.PointCloud`, CDR-encoded ROS 2
+//! `sensor_msgs/msg/PointCloud2`, or ROS 1 `sensor_msgs/PointCloud2`), rewrites their
+//! advertisement to the `foxglove.CompressedPointCloud` schema, and transcodes individual
+//! messages using the Draco mechanism in [`crate::draco`]. Every input format is decoded to
+//! a `foxglove.PointCloud` before Draco encoding.
 
 mod flatbuffer;
+mod point_cloud2;
+mod ros1;
 mod ros2;
 
 use bytes::Bytes;
@@ -25,8 +27,10 @@ use crate::{Decode, RawChannel};
 pub(crate) enum TranscodeError {
     #[error("failed to decode PointCloud message: {0}")]
     Decode(#[from] prost::DecodeError),
-    #[error("failed to decode PointCloud2 message: {0}")]
+    #[error("failed to decode ROS 2 PointCloud2 message: {0}")]
     Ros2(#[from] ros2::Ros2PointCloudError),
+    #[error("failed to decode ROS 1 PointCloud2 message: {0}")]
+    Ros1(#[from] ros1::Ros1PointCloudError),
     #[error("failed to decode JSON PointCloud message: {0}")]
     Json(#[from] serde_json::Error),
     #[error("failed to decode FlatBuffer PointCloud message: {0}")]
@@ -50,6 +54,8 @@ pub(crate) enum PointCloudInputSchema {
     FoxgloveFlatbuffer,
     /// ROS 2 `sensor_msgs/msg/PointCloud2` with cdr encoding.
     Ros2PointCloud2,
+    /// ROS 1 `sensor_msgs/PointCloud2` with ros1 encoding.
+    Ros1PointCloud2,
 }
 
 /// Maps a channel's message encoding and schema name to a point-cloud input format.
@@ -59,6 +65,7 @@ fn detect_point_cloud_schema(encoding: &str, schema_name: &str) -> Option<PointC
         ("json", "foxglove.PointCloud") => Some(PointCloudInputSchema::FoxgloveJson),
         ("flatbuffer", "foxglove.PointCloud") => Some(PointCloudInputSchema::FoxgloveFlatbuffer),
         ("cdr", "sensor_msgs/msg/PointCloud2") => Some(PointCloudInputSchema::Ros2PointCloud2),
+        ("ros1", "sensor_msgs/PointCloud2") => Some(PointCloudInputSchema::Ros1PointCloud2),
         _ => None,
     }
 }
@@ -74,15 +81,16 @@ pub(crate) fn point_cloud_input_schema(channel: &RawChannel) -> Option<PointClou
 /// Transcodes a serialized point cloud message into a serialized
 /// `foxglove.CompressedPointCloud` message.
 pub(crate) fn transcode_point_cloud_message(
-    msg: &[u8],
+    msg: &Bytes,
     input_schema: PointCloudInputSchema,
     options: &PointCloudCompression,
 ) -> Result<Bytes, TranscodeError> {
     let mut cloud = match input_schema {
-        PointCloudInputSchema::FoxgloveProtobuf => <PointCloud as Decode>::decode(msg)?,
+        PointCloudInputSchema::FoxgloveProtobuf => <PointCloud as Decode>::decode(msg.clone())?,
         PointCloudInputSchema::FoxgloveJson => serde_json::from_slice::<PointCloud>(msg)?,
         PointCloudInputSchema::FoxgloveFlatbuffer => flatbuffer::decode_point_cloud(msg)?,
-        PointCloudInputSchema::Ros2PointCloud2 => ros2::Ros2PointCloud2::decode(msg)?.try_into()?,
+        PointCloudInputSchema::Ros2PointCloud2 => ros2::decode_point_cloud(msg)?,
+        PointCloudInputSchema::Ros1PointCloud2 => ros1::decode_point_cloud(msg)?,
     };
     // The conditioning passes and Draco encoding run on the converted cloud, so every
     // input format gets the same treatment as native ones.
@@ -212,7 +220,7 @@ fn field_size(numeric_type: i32) -> Option<usize> {
 ///
 /// PCL's `PointXYZRGB` convention declares the `rgb`/`rgba` field float32 while packing
 /// `(a << 24) | (r << 16) | (g << 8) | b` into the bits — integer data masquerading as
-/// denormal floats. The kd-tree encoder quantizes every float32 attribute, and quantizing
+/// denormal floats. The encoder quantizes every float32 attribute, and quantizing
 /// a range of denormals collapses nearly every color in the cloud to a single wrong
 /// value; integer attributes are copied losslessly instead, so flipping the declared type
 /// preserves the packed bits exactly. Only the declared type changes — both types are
@@ -238,14 +246,16 @@ fn reinterpret_packed_color_fields(cloud: &mut PointCloud) {
 
 /// Narrows float64 fields to float32 so the cloud can be quantized.
 ///
-/// The kd-tree encoder cannot quantize float64 attributes, and clouds carrying one not
-/// on the drop list (doubles from PCL pipelines, vendor fields under nonstandard names)
-/// still occur — without this pass they cannot be delivered at all: compression fails,
-/// and delivered raw they exceed the data-track message limit. Compression is lossy by
-/// design, and positions were already narrowed to float32 by the encoder, so narrowing
-/// the remaining float64 fields is in keeping: values retain float32's ~7 significant
-/// digits, and a value whose magnitude overflows float32 becomes non-finite, dropping
-/// that point in [`drop_non_finite_points`] (which runs after).
+/// The default kd-tree encoder cannot encode float64 attributes, and clouds carrying one
+/// not on the drop list (doubles from PCL pipelines, vendor fields under nonstandard
+/// names) still occur — without this pass they cannot be delivered at all: compression
+/// fails, and delivered raw they exceed the data-track message limit. Compression is
+/// lossy by design, and positions were already narrowed to float32 by the encoder, so
+/// narrowing the remaining float64 fields is in keeping: values retain float32's ~7
+/// significant digits, and a value whose magnitude overflows float32 becomes non-finite,
+/// dropping that point in [`drop_non_finite_points`] (which runs after). Sequential
+/// encoding could carry float64 raw, but eight uncompressed bytes per point defeats the
+/// compression, so narrowing applies under either method.
 ///
 /// Narrowing halves each float64 field, so the buffer is repacked: every field is
 /// assigned a new offset in declaration order and the stride becomes the sum of the field
@@ -326,11 +336,10 @@ fn narrow_float64_fields(cloud: &mut PointCloud) {
 /// Publishers commonly pad invalid returns with NaN — RGBD cameras and rotating lidars
 /// mark non-returns this way — but the Draco quantizer derives each attribute's range
 /// from its min/max and errors on any non-finite value, which would fail (and drop) the
-/// whole cloud. Every float32 field is quantized under kd-tree encoding, so this applies
-/// to positions and attributes (intensity, per-point stamps, ...) alike; dropping just
-/// the poisoned points delivers the valid ones instead. Values are judged after the same
-/// f64-to-f32 narrowing the encoder applies, so a float64 value that only overflows f32
-/// is dropped too.
+/// whole cloud. Every float32 field is quantized, so this applies to positions and
+/// attributes (intensity, per-point stamps, ...) alike; dropping just the poisoned points
+/// delivers the valid ones instead. Values are judged after the same f64-to-f32 narrowing
+/// the encoder applies, so a float64 value that only overflows f32 is dropped too.
 ///
 /// Layout problems (zero or misaligned stride, fields past the stride) are left for the
 /// encoder, which reports them precisely; this pass only filters clouds it can read.
@@ -458,6 +467,34 @@ mod tests {
     }
 
     #[test]
+    fn test_detects_ros1_point_cloud2() {
+        let ch = make_channel(
+            "ros1",
+            Some(Schema::new("sensor_msgs/PointCloud2", "ros1msg", b"")),
+        );
+        assert_eq!(
+            point_cloud_input_schema(&ch),
+            Some(PointCloudInputSchema::Ros1PointCloud2)
+        );
+    }
+
+    #[test]
+    fn test_ignores_mismatched_ros_encoding_and_schema_name() {
+        // ROS 1 and ROS 2 name the type differently; each name is only valid with its
+        // own message encoding.
+        let ch = make_channel(
+            "ros1",
+            Some(Schema::new("sensor_msgs/msg/PointCloud2", "ros2msg", b"")),
+        );
+        assert_eq!(point_cloud_input_schema(&ch), None);
+        let ch = make_channel(
+            "cdr",
+            Some(Schema::new("sensor_msgs/PointCloud2", "ros1msg", b"")),
+        );
+        assert_eq!(point_cloud_input_schema(&ch), None);
+    }
+
+    #[test]
     fn test_detects_flatbuffer_point_cloud() {
         let ch = make_channel(
             "flatbuffer",
@@ -507,7 +544,7 @@ mod tests {
         .to_string();
 
         let transcoded = transcode_point_cloud_message(
-            json.as_bytes(),
+            &json.into(),
             PointCloudInputSchema::FoxgloveJson,
             &PointCloudCompression::default(),
         )
@@ -590,8 +627,28 @@ mod tests {
 
         let encoded = cdr_cloud(&[[1.0, 2.0, 3.0]], 1, true);
         let transcoded = transcode_point_cloud_message(
-            &encoded,
+            &encoded.into(),
             PointCloudInputSchema::Ros2PointCloud2,
+            &PointCloudCompression::default(),
+        )
+        .unwrap();
+        let compressed =
+            <crate::messages::CompressedPointCloud as Decode>::decode(transcoded.as_ref()).unwrap();
+        assert_eq!(compressed.format, "draco");
+        assert_eq!(compressed.frame_id, "lidar");
+        assert!(!compressed.data.is_empty());
+    }
+
+    #[test]
+    fn test_transcodes_ros1_point_cloud2_to_compressed_point_cloud() {
+        use super::point_cloud2::tests::make_cloud;
+        use super::ros1::tests::encode_point_cloud2;
+        use crate::Decode;
+
+        let encoded = encode_point_cloud2(&make_cloud(&[[1.0, 2.0, 3.0]]));
+        let transcoded = transcode_point_cloud_message(
+            &encoded.into(),
+            PointCloudInputSchema::Ros1PointCloud2,
             &PointCloudCompression::default(),
         )
         .unwrap();
@@ -621,7 +678,7 @@ mod tests {
             false,
         );
         let transcoded = transcode_point_cloud_message(
-            &encoded,
+            &encoded.into(),
             PointCloudInputSchema::Ros2PointCloud2,
             &PointCloudCompression::default(),
         )
@@ -694,21 +751,29 @@ mod tests {
     #[test]
     fn test_transcodes_float64_fields() {
         // Clouds with float64 fields not on the drop list (like this `stamp`) still
-        // occur, and the kd-tree encoder cannot quantize them; narrowing lets them
+        // occur, and the default kd-tree encoder cannot encode them; narrowing lets them
         // through. Previously these were rejected with UnquantizableField, making the
         // channel undeliverable.
         let options = PointCloudCompression::default();
 
         let mut buf = Vec::new();
         stamped_cloud(8).encode(&mut buf).unwrap();
-        transcode_point_cloud_message(&buf, PointCloudInputSchema::FoxgloveProtobuf, &options)
-            .unwrap();
+        transcode_point_cloud_message(
+            &buf.into(),
+            PointCloudInputSchema::FoxgloveProtobuf,
+            &options,
+        )
+        .unwrap();
 
         // Empty clouds fold to lossless regardless of fields and must round-trip.
         let mut buf = Vec::new();
         stamped_cloud(0).encode(&mut buf).unwrap();
-        transcode_point_cloud_message(&buf, PointCloudInputSchema::FoxgloveProtobuf, &options)
-            .unwrap();
+        transcode_point_cloud_message(
+            &buf.into(),
+            PointCloudInputSchema::FoxgloveProtobuf,
+            &options,
+        )
+        .unwrap();
     }
 
     /// A float32 xyz cloud from raw points.
@@ -871,7 +936,7 @@ mod tests {
         let mut buf = Vec::new();
         make(&[1.0, f32::NAN, 3.0]).encode(&mut buf).unwrap();
         transcode_point_cloud_message(
-            &buf,
+            &buf.into(),
             PointCloudInputSchema::FoxgloveProtobuf,
             &PointCloudCompression::default(),
         )
@@ -887,7 +952,7 @@ mod tests {
         let mut buf = Vec::new();
         cloud.encode(&mut buf).unwrap();
         transcode_point_cloud_message(
-            &buf,
+            &buf.into(),
             PointCloudInputSchema::FoxgloveProtobuf,
             &PointCloudCompression::default(),
         )
@@ -935,7 +1000,7 @@ mod tests {
         cloud.encode(&mut buf).unwrap();
 
         let transcoded = transcode_point_cloud_message(
-            &buf,
+            &buf.into(),
             PointCloudInputSchema::FoxgloveProtobuf,
             &PointCloudCompression::default(),
         )
@@ -1144,7 +1209,7 @@ mod tests {
         let mut buf = Vec::new();
         cloud.encode(&mut buf).unwrap();
         transcode_point_cloud_message(
-            &buf,
+            &buf.into(),
             PointCloudInputSchema::FoxgloveProtobuf,
             &PointCloudCompression::default(),
         )
@@ -1215,7 +1280,7 @@ mod tests {
         cloud.encode(&mut buf).unwrap();
 
         let transcoded = transcode_point_cloud_message(
-            &buf,
+            &buf.into(),
             PointCloudInputSchema::FoxgloveProtobuf,
             &PointCloudCompression::default(),
         )
@@ -1266,7 +1331,7 @@ mod tests {
         let encoded = cdr::serialize::<_, _, cdr::CdrLe>(&cloud, cdr::Infinite).unwrap();
 
         let transcoded = transcode_point_cloud_message(
-            &encoded,
+            &encoded.into(),
             PointCloudInputSchema::Ros2PointCloud2,
             &PointCloudCompression::default(),
         )
@@ -1286,14 +1351,22 @@ mod tests {
         let cloud = xyz_cloud(&[[1.0, 2.0, 3.0], [f32::NAN, f32::NAN, f32::NAN]]);
         let mut buf = Vec::new();
         cloud.encode(&mut buf).unwrap();
-        transcode_point_cloud_message(&buf, PointCloudInputSchema::FoxgloveProtobuf, &options)
-            .unwrap();
+        transcode_point_cloud_message(
+            &buf.into(),
+            PointCloudInputSchema::FoxgloveProtobuf,
+            &options,
+        )
+        .unwrap();
 
         let cloud = xyz_cloud(&[[f32::NAN, f32::NAN, f32::NAN]]);
         let mut buf = Vec::new();
         cloud.encode(&mut buf).unwrap();
-        transcode_point_cloud_message(&buf, PointCloudInputSchema::FoxgloveProtobuf, &options)
-            .unwrap();
+        transcode_point_cloud_message(
+            &buf.into(),
+            PointCloudInputSchema::FoxgloveProtobuf,
+            &options,
+        )
+        .unwrap();
     }
 
     #[test]

@@ -9,7 +9,7 @@ if(POLICY CMP0024)
   set(CMAKE_POLICY_DEFAULT_CMP0024 NEW)
 endif()
 
-project(foxglove_bridge LANGUAGES CXX VERSION 3.5.0)
+project(foxglove_bridge LANGUAGES CXX VERSION 3.6.0)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -89,14 +89,14 @@ endif()
 # to point at a `make build-cpp-dist`-produced `cpp/dist` tree — the
 # ros/Makefile's FOXGLOVE_CPP_SDK_DIR variable does this for you (see
 # ros/README.md).
-set(FOXGLOVE_SDK_VERSION "0.27.0")
+set(FOXGLOVE_SDK_VERSION "0.28.0")
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
   set(FOXGLOVE_SDK_PLATFORM "aarch64-unknown-linux-gnu")
-  set(FOXGLOVE_SDK_SHA "d919d6e6358de1ac5ecca268ffeb9d4be3886d4820831b378053e2ed5d8345a2")
+  set(FOXGLOVE_SDK_SHA "9c6efdf3bbc491be3fc5f33a6e2467469786ccb3465554c793a59ee2676c9b57")
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
   set(FOXGLOVE_SDK_PLATFORM "x86_64-unknown-linux-gnu")
-  set(FOXGLOVE_SDK_SHA "4790dad26adaced1a5f81530ed406bab7b60aa202a868eb78cfc04976b9ce6d7")
+  set(FOXGLOVE_SDK_SHA "1a0d8e03a885f01ae7cfb08dc9076090ba2cf8a15b7f46dda11451e2e2758978")
 else()
   message(FATAL_ERROR "Unsupported platform/architecture combination: ${CMAKE_SYSTEM_PROCESSOR}-${CMAKE_SYSTEM_NAME}")
 endif()

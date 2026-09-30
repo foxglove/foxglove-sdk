@@ -13,6 +13,17 @@ from foxglove import (
     StatusLevel,
 )
 
+class DracoMethod(Enum):
+    """
+    Draco point-cloud encoding method.
+    """
+
+    KdTree = ...
+    """kd-tree encoding: the best compression ratios, but points are reordered. This is the default."""
+
+    Sequential = ...
+    """Sequential encoding: preserves point order, at a lower compression ratio."""
+
 class DracoEncodeOptions:
     """
     Options for Draco point-cloud encoding.
@@ -20,10 +31,13 @@ class DracoEncodeOptions:
 
     @property
     def quantization_bits(self) -> int: ...
+    @property
+    def method(self) -> DracoMethod: ...
     def __init__(
         self,
         *,
         quantization_bits: int = 12,
+        method: DracoMethod = DracoMethod.KdTree,
     ) -> None: ...
 
 class Reliability(Enum):

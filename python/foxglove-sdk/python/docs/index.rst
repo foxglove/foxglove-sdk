@@ -131,4 +131,5 @@ Table of contents
    examples
    api/index
    notebook/index
+   datasets/index
    lerobot/index

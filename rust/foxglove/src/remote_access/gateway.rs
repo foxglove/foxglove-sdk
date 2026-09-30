@@ -507,9 +507,9 @@ impl Gateway {
     /// - Fields named `rgb` or `rgba` declared float32 — PCL's packed-color convention —
     ///   are reinterpreted as uint32: quantizing the packed bits as a float would
     ///   destroy the colors, while integer attributes are copied losslessly.
-    /// - Float64 fields are narrowed to float32 (the kd-tree encoder cannot quantize
-    ///   them, and positions are narrowed regardless), keeping about seven significant
-    ///   digits.
+    /// - Float64 fields are narrowed to float32 (the default kd-tree encoder cannot
+    ///   encode them, and positions are narrowed regardless), keeping about seven
+    ///   significant digits.
     /// - Points containing a non-finite (NaN or infinite) value in any float field —
     ///   including a float64 value that overflows float32 — are removed: publishers
     ///   commonly pad invalid returns with NaN, and the quantizer rejects non-finite
