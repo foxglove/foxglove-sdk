@@ -1,6 +1,7 @@
 import io
 import json
 from collections.abc import Callable, Iterator
+from datetime import timedelta
 from typing import Any
 
 import pytest
@@ -11,9 +12,11 @@ client_module = pytest.importorskip("foxglove.client")
 
 
 @pytest.mark.parametrize("custom_decoding", [False, True])
+@pytest.mark.parametrize("pre_roll", [timedelta(0), timedelta(seconds=5)])
 def test_real_client_pagination_filtering_and_incremental_mcap(
     monkeypatch: pytest.MonkeyPatch,
     custom_decoding: bool,
+    pre_roll: timedelta,
 ) -> None:
     import requests
     from mcap.decoder import DecoderFactory
@@ -93,6 +96,17 @@ def test_real_client_pagination_filtering_and_incremental_mcap(
         elif url.endswith("/data/stream"):
             assert kwargs["json"]["topics"] == ["/camera"]
             assert kwargs["json"]["episodeId"] == "a"
+            if pre_roll:
+                from datetime import datetime, timezone
+
+                assert datetime.fromisoformat(kwargs["json"]["start"]) == datetime(
+                    2025, 12, 31, 23, 59, 55, tzinfo=timezone.utc
+                )
+                assert datetime.fromisoformat(kwargs["json"]["end"]) == datetime(
+                    2026, 1, 1, tzinfo=timezone.utc
+                )
+            else:
+                assert "start" not in kwargs["json"] and "end" not in kwargs["json"]
             payload = {"link": "https://signed.example/data"}
         else:
             assert url.endswith("/datasets/dataset/versions/7")
@@ -122,7 +136,7 @@ def test_real_client_pagination_filtering_and_incremental_mcap(
     def samples(episode: EpisodeReader) -> Iterator[dict[str, Any]]:
         decoders = [CustomDecoderFactory()] if custom_decoding else None
         for schema, channel, message, decoded in episode.iter_messages(
-            decoder_factories=decoders
+            decoder_factories=decoders, pre_roll=pre_roll
         ):
             assert schema is not None and schema.name == "Measurement"
             assert channel.topic == "/camera"

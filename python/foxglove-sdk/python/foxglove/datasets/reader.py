@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Generator, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, Protocol, TypeVar
 
@@ -36,6 +36,8 @@ class _Client(Protocol):
         episode_id: str,
         topics: list[str],
         decoder_factories: list[DecoderFactory] | None = None,
+        start: datetime | None = None,
+        end: datetime | None = None,
     ) -> Generator[tuple[Schema | None, Channel, Message, Any], None, None]: ...
 
 
@@ -92,7 +94,10 @@ class EpisodeReader:
         return MappingProxyType(self._episode.metadata)
 
     def iter_messages(
-        self, *, decoder_factories: Sequence[DecoderFactory] | None = None
+        self,
+        *,
+        decoder_factories: Sequence[DecoderFactory] | None = None,
+        pre_roll: timedelta = timedelta(0),
     ) -> Generator[tuple[Schema | None, Channel, Message, Any], None, None]:
         """Stream the selected topics in log-time order without buffering the episode.
 
@@ -104,18 +109,30 @@ class EpisodeReader:
             deserialization. ``None`` uses the client's default decoders; an explicit
             list replaces them. Construct factories inside the callback so their
             state stays local to the worker and episode. This does not decode media
-            payloads into images or read data preceding the episode's time window.
+            payloads into images.
+        :param pre_roll: Additional history to request before the episode start,
+            for stateful media decoding. Must be nonnegative. Only recordings
+            attached to the episode are searched; history may be unavailable.
+            Consumers must exclude pre-roll messages from their training samples.
         :returns: Tuples of schema (possibly ``None``), channel, raw MCAP message,
             and decoded message payload.
         """
         if self._closed:
             raise RuntimeError("Episode reader is closed")
+        if pre_roll < timedelta(0):
+            raise ValueError("pre_roll must be nonnegative")
+        time_range = (
+            {"start": self.start_time - pre_roll, "end": self.end_time}
+            if pre_roll
+            else {}
+        )
         stream = self._client.iter_messages(
             episode_id=self.id,
             topics=list(self._topics),
             decoder_factories=(
                 None if decoder_factories is None else list(decoder_factories)
             ),
+            **time_range,
         )
         self._streams.append(stream)
         try:

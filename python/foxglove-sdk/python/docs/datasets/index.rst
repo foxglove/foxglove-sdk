@@ -79,6 +79,103 @@ as ``(schema, channel, message, decoded_message)`` tuples.
 
 See ``python/foxglove-sdk-examples/dataset-training`` for a complete example.
 
+H.264 video
+-----------
+
+Install the optional CPU video decoder together with your framework:
+
+.. code-block:: bash
+
+   pip install 'foxglove-sdk[video,torch]'  # or [video,ray]
+   pip install mcap-protobuf-support      # for Protobuf recordings
+
+``decode_h264`` consumes the deserialized messages from an episode and produces RGB
+NumPy arrays (uint8, ``[H, W, 3]``), with the original capture, log, and publish times
+in integer nanoseconds. Its state belongs to one callback invocation and is independent
+for each MCAP channel. The same callback works with either adapter:
+
+.. code-block:: python
+
+   import os
+   from datetime import timedelta
+   from foxglove.client import Client
+   from foxglove.datasets.video import decode_h264
+
+   def make_client():
+       return Client(token=os.environ["FOXGLOVE_API_TOKEN"])
+
+   def read_video_episode(episode):
+       messages = episode.iter_messages(pre_roll=timedelta(seconds=5))
+       with decode_h264(
+           messages,
+           start_time=episode.start_time,
+           end_time=episode.end_time,
+       ) as frames:
+           for frame in frames:
+               yield {
+                   "image": frame.image,
+                   "timestamp_ns": frame.timestamp_ns,
+                   "log_time_ns": frame.log_time_ns,
+                   "topic": frame.topic,
+               }
+
+   if __name__ == "__main__":
+       from foxglove.datasets.torch import read_dataset
+       from torch.utils.data import DataLoader
+
+       dataset = read_dataset(
+           "ds_123", version=7, topics=["camera_h264"],
+           read_episode=read_video_episode, client_factory=make_client,
+       )
+       for batch in DataLoader(dataset, batch_size=16, num_workers=2):
+           print(batch["image"].shape)  # [N, H, W, 3]
+
+For Ray, import ``read_dataset`` from ``foxglove.datasets.ray`` with the same arguments
+and consume ``dataset.iter_batches(batch_size=16)``. Install dependencies on every worker.
+For a PyTorch-only callback, ``foxglove.datasets.torch.to_image_tensor(frame)`` returns a
+contiguous uint8 CPU tensor in ``[C, H, W]`` order. Normalize, resize, and transfer to a
+training device in your own pipeline. Images must have compatible shapes for stacking
+in a batch; separate or resize cameras with different resolutions.
+
+Episode boundaries and pre-roll
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A delta frame depends on earlier frames. ``pre_roll`` expands the download start time
+while retaining the episode's original boundaries. Only recordings attached to the episode
+are searched. The example's five seconds is a configurable history budget, not a guarantee
+that a usable keyframe exists. If necessary, increase it or attach the recording containing
+the required history to the episode and commit a new dataset version.
+
+The decoder ignores undecodable pre-roll before the first IDR keyframe with SPS/PPS,
+decodes subsequent pre-roll to initialize state, and emits only frames whose MCAP log
+times fall inside the inclusive episode window. It raises ``VideoDecodeError`` if an
+in-window message lacks initialization history, rather than dropping training frames until
+the next keyframe. Capture timestamps are preserved separately and do not determine
+window membership. Duplicate timestamps remain distinct frames.
+
+Always feed every video message in order; sample frames only after decoding. Decoder
+buffering can delay output, so consume the iterator to exhaustion to receive flushed
+frames and validate completeness. The ``with`` block releases decoder resources and closes
+the input stream even on failure or an early exit. Frames remain ordered within each
+channel; output from different channels is not guaranteed to be globally time-sorted.
+
+Supported formats
+^^^^^^^^^^^^^^^^^
+
+* ``foxglove.CompressedVideo`` with ``format="h264"`` and Annex B payloads.
+* One complete encoded image per message, with SPS and PPS accompanying the initial
+  IDR keyframe. B-frames, fragmented images, and multiple images per message are unsupported.
+* Deserialized Foxglove JSON (base64 data and ``sec``/``nsec`` timestamps), Protobuf,
+  and ROS 1/2 ``foxglove_msgs/CompressedVideo`` messages. Install the corresponding MCAP
+  decoder separately. Other schemas are ignored; other video codecs raise an error.
+* CPU decoding through PyAV 16 / FFmpeg and RGB conversion through NumPy. Hardware
+  acceleration is not currently exposed. No framework is required by the shared helper.
+
+The helper also accepts ``iter_decoded_messages()`` from a local MCAP reader, using
+explicit start/end datetimes and including the required preceding messages. Channel
+identifiers must refer to one logical stream; do not concatenate unrelated MCAP sources
+or filter away dependent video packets before decoding.
+
 API reference
 -------------
 
@@ -97,3 +194,15 @@ Episode reader
 
 .. autoclass:: foxglove.datasets.EpisodeReader
    :members:
+
+Video decoding
+^^^^^^^^^^^^^^
+
+.. autofunction:: foxglove.datasets.video.decode_h264
+
+.. autoclass:: foxglove.datasets.video.VideoFrame
+   :members:
+
+.. autoexception:: foxglove.datasets.video.VideoDecodeError
+
+.. autofunction:: foxglove.datasets.torch.to_image_tensor

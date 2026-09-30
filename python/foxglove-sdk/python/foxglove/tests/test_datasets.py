@@ -1,6 +1,6 @@
 import json
 from collections.abc import Generator, Iterator
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import pytest
@@ -30,6 +30,7 @@ class Client:
     def __init__(self) -> None:
         self.calls: list[tuple[str, list[str]]] = []
         self.closed: list[str] = []
+        self.time_ranges: list[tuple[datetime | None, datetime | None]] = []
 
     def get_dataset_version(
         self, *, dataset_id: str, version_number: int
@@ -49,9 +50,12 @@ class Client:
         episode_id: str,
         topics: list[str],
         decoder_factories: list[DecoderFactory] | None = None,
+        start: datetime | None = None,
+        end: datetime | None = None,
     ) -> Generator[tuple[Schema | None, Channel, Message, Any], None, None]:
         assert decoder_factories is None
         self.calls.append((episode_id, topics))
+        self.time_ranges.append((start, end))
         try:
             yield (
                 Schema(id=1, data=b"{}", encoding="jsonschema", name="Episode"),
@@ -79,6 +83,38 @@ class Client:
 def samples(episode: EpisodeReader) -> Iterator[dict[str, Any]]:
     for _schema, _channel, _message, decoded in episode.iter_messages():
         yield {"id": decoded}
+
+
+@pytest.mark.parametrize("seconds", [0, 5])
+def test_preroll_expands_request_without_changing_episode_window(seconds: int) -> None:
+    client = Client()
+    plan = _plan("dataset", 7, ["/camera"], lambda: client)
+    episode = plan.episodes[0]
+    reader = EpisodeReader(episode, plan.topics, client)
+    stream = reader.iter_messages(pre_roll=timedelta(seconds=seconds))
+    next(stream)
+    stream.close()
+    assert client.time_ranges == [
+        (
+            (episode.start_time - timedelta(seconds=seconds), episode.end_time)
+            if seconds
+            else (None, None)
+        )
+    ]
+    assert (reader.start_time, reader.end_time) == (
+        episode.start_time,
+        episode.end_time,
+    )
+    assert client.closed == [episode.id]
+
+
+def test_rejects_negative_preroll_before_downloading() -> None:
+    client = Client()
+    plan = _plan("dataset", 7, ["/camera"], lambda: client)
+    reader = EpisodeReader(plan.episodes[0], plan.topics, client)
+    with pytest.raises(ValueError, match="nonnegative"):
+        next(reader.iter_messages(pre_roll=timedelta(seconds=-1)))
+    assert not client.calls
 
 
 @pytest.mark.parametrize("topics", [[], "camera"])

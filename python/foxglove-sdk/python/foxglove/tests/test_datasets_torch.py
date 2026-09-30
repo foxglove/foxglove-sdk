@@ -147,3 +147,36 @@ def test_custom_sample_types_with_worker_collation() -> None:
         multiprocessing_context="spawn",
     )
     assert list(loader) == [["a", "b"], ["c", "d"]]
+
+
+def test_video_callback_in_spawned_workers_and_tensor_conversion() -> None:
+    pytest.importorskip("av")
+    from foxglove.datasets.torch import read_dataset, to_image_tensor
+    from torch.utils.data import DataLoader
+
+    from .test_datasets_video import VideoClient, decode, messages, video_samples
+
+    dataset = read_dataset(
+        "dataset",
+        version=7,
+        topics=["/camera"],
+        read_episode=video_samples,
+        client_factory=VideoClient,
+    )
+    loader = DataLoader(
+        dataset, batch_size=None, num_workers=2, multiprocessing_context="spawn"
+    )
+    rows = list(loader)
+    expected = decode(messages())
+    assert len(rows) == 32
+    for episode_id in ("a", "b", "c", "d"):
+        selected = [row for row in rows if row["episode_id"] == episode_id]
+        assert len(selected) == 8
+        for actual, frame in zip(selected, expected):
+            assert actual["timestamp_ns"] == frame.timestamp_ns
+            assert actual["log_time_ns"] == frame.log_time_ns
+            assert torch.equal(actual["image"], torch.from_numpy(frame.image))
+    tensor = to_image_tensor(expected[0])
+    assert tensor.shape == (3, 32, 48)
+    assert tensor.dtype == torch.uint8 and tensor.is_contiguous()
+    assert torch.equal(tensor, torch.from_numpy(expected[0].image).permute(2, 0, 1))

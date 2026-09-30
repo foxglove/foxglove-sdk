@@ -175,3 +175,33 @@ def test_native_ray_blocks_follow_context_target(
         row_counts.append(counts)
     assert max(row_counts[0]) < max(row_counts[1])
     assert len(row_counts[0]) > len(row_counts[1])
+
+
+def test_video_callback_in_ray_workers() -> None:
+    pytest.importorskip("av")
+    import numpy as np
+    from foxglove.datasets.ray import read_dataset
+
+    from .test_datasets_video import VideoClient, decode, messages, video_samples
+
+    dataset = read_dataset(
+        "dataset",
+        version=7,
+        topics=["/camera"],
+        read_episode=video_samples,
+        client_factory=VideoClient,
+        concurrency=2,
+    )
+    rows = list(dataset.iter_rows())
+    expected = decode(messages())
+    assert len(rows) == 32
+    for episode_id in ("a", "b", "c", "d"):
+        selected = sorted(
+            (row for row in rows if row["episode_id"] == episode_id),
+            key=lambda row: row["log_time_ns"],
+        )
+        assert len(selected) == 8
+        for actual, frame in zip(selected, expected):
+            assert actual["timestamp_ns"] == frame.timestamp_ns
+            assert actual["log_time_ns"] == frame.log_time_ns
+            np.testing.assert_array_equal(actual["image"], frame.image)
