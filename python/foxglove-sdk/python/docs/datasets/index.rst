@@ -4,6 +4,12 @@ Dataset loading for ML
 Load a Foxglove dataset version into PyTorch or Ray Data. Choose the topics to read and define how
 to convert each episode into training samples.
 
+.. warning::
+
+   The PyTorch and Ray Data APIs are experimental and unstable. They may change
+   in backward-incompatible ways as we continue development and incorporate user
+   feedback.
+
 Installation
 ------------
 
