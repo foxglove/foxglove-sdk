@@ -117,13 +117,24 @@ Important limits:
   no B-frames, and an initial IDR keyframe containing SPS/PPS.
 * Decoding needs earlier frames. The default five-second ``lookback`` searches only
   recordings attached to the episode. Missing history raises ``VideoDecodeError``;
-  increase it with ``lookback=timedelta(seconds=10)`` or attach the missing recording.
+  increase the lookback or attach the missing recording.
   Only frames within the episode's inclusive MCAP log-time window are emitted.
-* Non-video messages are discarded. Read other sensors separately with
+* Without ``topic``, non-video messages are discarded. An explicit non-video
+  ``topic`` raises ``VideoDecodeError``. Read other sensors separately with
   ``episode.iter_messages(topics=["/joint_states"])``.
 * Resize images as needed before batching. ``to_image_tensor(sample)`` from
   ``foxglove.datasets.torch`` converts to uint8 ``[C, H, W]``; normalization and
   device placement remain up to your training code.
+
+To request ten seconds of history, pass ``read_episode=read_video`` to
+``read_dataset`` using this callback, which also works with spawned workers:
+
+.. code-block:: python
+
+   from datetime import timedelta
+   from functools import partial
+
+   read_video = partial(decode_h264, lookback=timedelta(seconds=10))
 
 Consume the iterator fully to receive buffered frames. The episode closes streams
 automatically, including on errors or early termination.
