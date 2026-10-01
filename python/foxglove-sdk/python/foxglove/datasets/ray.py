@@ -1,4 +1,7 @@
-"""Load committed datasets with Ray Data; requires ``foxglove-sdk[ray]``."""
+"""Load committed datasets with Ray Data; requires ``foxglove-sdk[ray]``.
+
+These APIs are experimental and unstable and may change in backward-incompatible ways.
+"""
 
 from __future__ import annotations
 
@@ -131,6 +134,11 @@ def read_dataset(
     concurrency: int | None = None,
 ) -> ray.data.Dataset:
     """Return a native Ray dataset of callback-produced sample dictionaries.
+
+    .. warning::
+
+        This API is experimental and unstable. It may change in backward-incompatible
+        ways as we continue development and incorporate user feedback.
 
     Only episode metadata is fetched during planning. Workers stream selected
     topics and execute ``read_episode``. Factories and callbacks must be serializable
