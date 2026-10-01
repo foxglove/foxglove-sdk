@@ -91,10 +91,20 @@ API reference
 PyTorch
 ^^^^^^^
 
+.. warning::
+
+   This API is experimental and unstable. It may change in backward-incompatible
+   ways as we continue development and incorporate user feedback.
+
 .. autofunction:: foxglove.datasets.torch.read_dataset
 
 Ray Data
 ^^^^^^^^
+
+.. warning::
+
+   This API is experimental and unstable. It may change in backward-incompatible
+   ways as we continue development and incorporate user feedback.
 
 .. autofunction:: foxglove.datasets.ray.read_dataset
 
