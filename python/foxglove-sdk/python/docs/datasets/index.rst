@@ -89,9 +89,9 @@ Install the optional CPU video decoder together with your framework:
    pip install 'foxglove-sdk[video,torch]'  # or [video,ray]
    pip install mcap-protobuf-support      # for Protobuf recordings
 
-``decode_h264`` consumes the deserialized messages from an episode and produces RGB
-NumPy arrays (uint8, ``[H, W, 3]``), with the original capture, log, and publish times
-in integer nanoseconds. Its state belongs to one callback invocation and is independent
+``decode_h264(episode)`` yields sample dictionaries containing RGB NumPy arrays
+(uint8, ``[H, W, 3]``), topic/channel/frame identifiers, and the original capture, log,
+and publish times in integer nanoseconds. Its state belongs to one callback invocation and is independent
 for each MCAP channel. The same callback works with either adapter:
 
 .. code-block:: python
@@ -105,19 +105,7 @@ for each MCAP channel. The same callback works with either adapter:
        return Client(token=os.environ["FOXGLOVE_API_TOKEN"])
 
    def read_video_episode(episode):
-       messages = episode.iter_messages(pre_roll=timedelta(seconds=5))
-       with decode_h264(
-           messages,
-           start_time=episode.start_time,
-           end_time=episode.end_time,
-       ) as frames:
-           for frame in frames:
-               yield {
-                   "image": frame.image,
-                   "timestamp_ns": frame.timestamp_ns,
-                   "log_time_ns": frame.log_time_ns,
-                   "topic": frame.topic,
-               }
+       return decode_h264(episode)
 
    if __name__ == "__main__":
        from foxglove.datasets.torch import read_dataset
@@ -130,6 +118,31 @@ for each MCAP channel. The same callback works with either adapter:
        for batch in DataLoader(dataset, batch_size=16, num_workers=2):
            print(batch["image"].shape)  # [N, H, W, 3]
 
+You can also pass ``read_episode=decode_h264`` directly. The decoder infers the episode
+window and requests five seconds of preceding history by default. Override the history
+budget with ``decode_h264(episode, lookback=timedelta(seconds=10))``. For custom MCAP
+message deserialization, pass ``decoder_factories=[...]`` constructed inside the callback.
+
+For independent camera streams, select a topic on each call:
+
+.. code-block:: python
+
+   def read_video_episode(episode):
+       front = decode_h264(episode, topic="/camera/front")
+       wrist = decode_h264(episode, topic="/camera/wrist")
+       # Consume each iterator independently. This example emits unpaired frames.
+       yield from front
+       yield from wrist
+
+Include both topics in ``read_dataset(topics=[...])``. Each iterator opens a separate,
+server-filtered download on first iteration; it does not download the other camera's
+messages. Omitting ``topic`` opens one download covering all selected topics. Topic
+overrides must belong to the dataset's selected topics.
+
+Samples retain ``topic`` and ``timestamp_ns`` so users can later assemble camera features.
+This API does not synchronize cameras or yield paired samples; frame indices across
+cameras need not correspond. Do not use ``zip`` as a substitute for timestamp matching.
+
 For Ray, import ``read_dataset`` from ``foxglove.datasets.ray`` with the same arguments
 and consume ``dataset.iter_batches(batch_size=16)``. Install dependencies on every worker.
 For a PyTorch-only callback, ``foxglove.datasets.torch.to_image_tensor(frame)`` returns a
@@ -137,17 +150,17 @@ contiguous uint8 CPU tensor in ``[C, H, W]`` order. Normalize, resize, and trans
 training device in your own pipeline. Images must have compatible shapes for stacking
 in a batch; separate or resize cameras with different resolutions.
 
-Episode boundaries and pre-roll
+Episode boundaries and lookback
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-A delta frame depends on earlier frames. ``pre_roll`` expands the download start time
+A delta frame depends on earlier frames. ``lookback`` expands the download start time
 while retaining the episode's original boundaries. Only recordings attached to the episode
 are searched. The example's five seconds is a configurable history budget, not a guarantee
 that a usable keyframe exists. If necessary, increase it or attach the recording containing
 the required history to the episode and commit a new dataset version.
 
-The decoder ignores undecodable pre-roll before the first IDR keyframe with SPS/PPS,
-decodes subsequent pre-roll to initialize state, and emits only frames whose MCAP log
+The decoder ignores undecodable lookback before the first IDR keyframe with SPS/PPS,
+decodes subsequent lookback to initialize state, and emits only frames whose MCAP log
 times fall inside the inclusive episode window. It raises ``VideoDecodeError`` if an
 in-window message lacks initialization history, rather than dropping training frames until
 the next keyframe. Capture timestamps are preserved separately and do not determine
@@ -155,8 +168,9 @@ window membership. Duplicate timestamps remain distinct frames.
 
 Always feed every video message in order; sample frames only after decoding. Decoder
 buffering can delay output, so consume the iterator to exhaustion to receive flushed
-frames and validate completeness. The ``with`` block releases decoder resources and closes
-the input stream even on failure or an early exit. Frames remain ordered within each
+frames and validate completeness. The episode closes all decoder iterators and input streams when the callback ends,
+including on failure, cancellation, and partial consumption. To release an iterator
+earlier within a callback, call its ``close()`` method or use ``contextlib.closing``. Frames remain ordered within each
 channel; output from different channels is not guaranteed to be globally time-sorted.
 
 Supported formats
@@ -170,11 +184,6 @@ Supported formats
   decoder separately. Other schemas are ignored; other video codecs raise an error.
 * CPU decoding through PyAV 16 / FFmpeg and RGB conversion through NumPy. Hardware
   acceleration is not currently exposed. No framework is required by the shared helper.
-
-The helper also accepts ``iter_decoded_messages()`` from a local MCAP reader, using
-explicit start/end datetimes and including the required preceding messages. Channel
-identifiers must refer to one logical stream; do not concatenate unrelated MCAP sources
-or filter away dependent video packets before decoding.
 
 API reference
 -------------
@@ -199,9 +208,6 @@ Video decoding
 ^^^^^^^^^^^^^^
 
 .. autofunction:: foxglove.datasets.video.decode_h264
-
-.. autoclass:: foxglove.datasets.video.VideoFrame
-   :members:
 
 .. autoexception:: foxglove.datasets.video.VideoDecodeError
 

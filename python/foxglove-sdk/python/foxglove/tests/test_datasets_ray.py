@@ -205,3 +205,21 @@ def test_video_callback_in_ray_workers() -> None:
             assert actual["timestamp_ns"] == frame.timestamp_ns
             assert actual["log_time_ns"] == frame.log_time_ns
             np.testing.assert_array_equal(actual["image"], frame.image)
+
+
+def test_video_decoder_can_be_used_directly_as_callback() -> None:
+    pytest.importorskip("av")
+    from foxglove.datasets.ray import read_dataset
+    from foxglove.datasets.video import decode_h264
+
+    from .test_datasets_video import VideoClient
+
+    dataset = read_dataset(
+        "dataset",
+        version=7,
+        topics=["/camera"],
+        read_episode=decode_h264,
+        client_factory=VideoClient,
+        concurrency=2,
+    )
+    assert len(list(dataset.iter_rows())) == 32

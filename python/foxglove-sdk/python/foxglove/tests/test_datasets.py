@@ -86,12 +86,12 @@ def samples(episode: EpisodeReader) -> Iterator[dict[str, Any]]:
 
 
 @pytest.mark.parametrize("seconds", [0, 5])
-def test_preroll_expands_request_without_changing_episode_window(seconds: int) -> None:
+def test_lookback_expands_request_without_changing_episode_window(seconds: int) -> None:
     client = Client()
     plan = _plan("dataset", 7, ["/camera"], lambda: client)
     episode = plan.episodes[0]
     reader = EpisodeReader(episode, plan.topics, client)
-    stream = reader.iter_messages(pre_roll=timedelta(seconds=seconds))
+    stream = reader.iter_messages(lookback=timedelta(seconds=seconds))
     next(stream)
     stream.close()
     assert client.time_ranges == [
@@ -108,12 +108,12 @@ def test_preroll_expands_request_without_changing_episode_window(seconds: int) -
     assert client.closed == [episode.id]
 
 
-def test_rejects_negative_preroll_before_downloading() -> None:
+def test_rejects_negative_lookback_before_downloading() -> None:
     client = Client()
     plan = _plan("dataset", 7, ["/camera"], lambda: client)
     reader = EpisodeReader(plan.episodes[0], plan.topics, client)
     with pytest.raises(ValueError, match="nonnegative"):
-        next(reader.iter_messages(pre_roll=timedelta(seconds=-1)))
+        next(reader.iter_messages(lookback=timedelta(seconds=-1)))
     assert not client.calls
 
 
@@ -201,3 +201,13 @@ def test_callback_lifecycle_closes_resources(outcome: str) -> None:
             next(reader.iter_messages())
     for messages in retained:
         assert list(messages) == []
+
+
+@pytest.mark.parametrize("topics", [[], "/camera", ["/outside"]])
+def test_reader_rejects_invalid_topic_subset(topics: Any) -> None:
+    client = Client()
+    plan = _plan("dataset", 7, ["/camera", "/other"], lambda: client)
+    reader = EpisodeReader(plan.episodes[0], plan.topics, client)
+    with pytest.raises(ValueError, match="topics"):
+        next(reader.iter_messages(topics=topics))
+    assert not client.calls

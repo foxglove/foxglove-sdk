@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Generator, Iterable, Iterator, Mapping, Sequence
+from contextlib import ExitStack
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from types import MappingProxyType
@@ -68,9 +69,7 @@ class EpisodeReader:
         self._episode = episode
         self._topics = topics
         self._client = client
-        self._streams: list[
-            Generator[tuple[Schema | None, Channel, Message, Any], None, None]
-        ] = []
+        self._streams: set[Generator[Any, None, None]] = set()
         self._closed = False
 
     @property
@@ -97,7 +96,8 @@ class EpisodeReader:
         self,
         *,
         decoder_factories: Sequence[DecoderFactory] | None = None,
-        pre_roll: timedelta = timedelta(0),
+        topics: Sequence[str] | None = None,
+        lookback: timedelta = timedelta(0),
     ) -> Generator[tuple[Schema | None, Channel, Message, Any], None, None]:
         """Stream the selected topics in log-time order without buffering the episode.
 
@@ -110,41 +110,66 @@ class EpisodeReader:
             list replaces them. Construct factories inside the callback so their
             state stays local to the worker and episode. This does not decode media
             payloads into images.
-        :param pre_roll: Additional history to request before the episode start,
+        :param topics: Optional nonempty subset of the dataset topics. Filtering
+            happens on the server; separate calls open separate downloads.
+        :param lookback: Additional history to request before the episode start,
             for stateful media decoding. Must be nonnegative. Only recordings
             attached to the episode are searched; history may be unavailable.
-            Consumers must exclude pre-roll messages from their training samples.
+            Consumers must exclude lookback messages from their training samples.
         :returns: Tuples of schema (possibly ``None``), channel, raw MCAP message,
             and decoded message payload.
         """
         if self._closed:
             raise RuntimeError("Episode reader is closed")
-        if pre_roll < timedelta(0):
-            raise ValueError("pre_roll must be nonnegative")
+        if lookback < timedelta(0):
+            raise ValueError("lookback must be nonnegative")
+        selected_topics = (
+            self._topics if topics is None else tuple(dict.fromkeys(topics))
+        )
+        if isinstance(topics, str) or not selected_topics:
+            raise ValueError("topics must be a nonempty sequence of topic names")
+        if not set(selected_topics).issubset(self._topics):
+            raise ValueError("topics must be a subset of the dataset topics")
         time_range = (
-            {"start": self.start_time - pre_roll, "end": self.end_time}
-            if pre_roll
+            {"start": self.start_time - lookback, "end": self.end_time}
+            if lookback
             else {}
         )
         stream = self._client.iter_messages(
             episode_id=self.id,
-            topics=list(self._topics),
+            topics=list(selected_topics),
             decoder_factories=(
                 None if decoder_factories is None else list(decoder_factories)
             ),
             **time_range,
         )
-        self._streams.append(stream)
-        try:
-            yield from stream
-        finally:
+        yield from self._manage(stream)
+
+    def _manage(self, stream: Generator[_T, None, None]) -> Generator[_T, None, None]:
+        """Keep a processing iterator alive only for this episode callback."""
+        if self._closed:
             stream.close()
-            self._streams.remove(stream)
+            raise RuntimeError("Episode reader is closed")
+
+        def managed() -> Generator[_T, None, None]:
+            try:
+                yield from stream
+            finally:
+                self._streams.discard(result)
+                stream.close()
+
+        result = managed()
+        self._streams.add(result)
+        return result
 
     def _close(self) -> None:
         self._closed = True
-        for stream in self._streams:
-            stream.close()
+        # Closing a processing iterator can also close its managed input stream.
+        # Snapshot the set and attempt every close even if one raises.
+        with ExitStack() as cleanup:
+            for stream in tuple(self._streams):
+                cleanup.callback(stream.close)
+            self._streams.clear()
 
 
 ReadEpisode = Callable[[EpisodeReader], Iterable[_T]]

@@ -176,7 +176,35 @@ def test_video_callback_in_spawned_workers_and_tensor_conversion() -> None:
             assert actual["timestamp_ns"] == frame.timestamp_ns
             assert actual["log_time_ns"] == frame.log_time_ns
             assert torch.equal(actual["image"], torch.from_numpy(frame.image))
-    tensor = to_image_tensor(expected[0])
+    frame = expected[0]
+    tensor = to_image_tensor(
+        dict(
+            image=frame.image,
+            topic=frame.topic,
+            channel_id=frame.channel_id,
+            timestamp_ns=frame.timestamp_ns,
+            log_time_ns=frame.log_time_ns,
+            publish_time_ns=frame.publish_time_ns,
+            frame_id=frame.frame_id,
+        )
+    )
     assert tensor.shape == (3, 32, 48)
     assert tensor.dtype == torch.uint8 and tensor.is_contiguous()
     assert torch.equal(tensor, torch.from_numpy(expected[0].image).permute(2, 0, 1))
+
+
+def test_video_decoder_can_be_used_directly_as_callback() -> None:
+    pytest.importorskip("av")
+    from foxglove.datasets.torch import read_dataset
+    from foxglove.datasets.video import decode_h264
+
+    from .test_datasets_video import VideoClient
+
+    dataset = read_dataset(
+        "dataset",
+        version=7,
+        topics=["/camera"],
+        read_episode=decode_h264,
+        client_factory=VideoClient,
+    )
+    assert len(list(dataset)) == 32

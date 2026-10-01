@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator, Sequence
-from typing import TYPE_CHECKING, TypeVar
+from collections.abc import Iterator, Mapping, Sequence
+from typing import Any, TypeVar
 
 import torch.distributed as distributed
 from torch import Tensor, from_numpy
@@ -11,19 +11,16 @@ from torch.utils.data import IterableDataset, get_worker_info
 
 from .reader import ClientFactory, ReadEpisode, _Plan, _plan
 
-if TYPE_CHECKING:
-    from .video import VideoFrame
-
 _T = TypeVar("_T")
 
 
-def to_image_tensor(frame: VideoFrame) -> Tensor:
+def to_image_tensor(frame: Mapping[str, Any]) -> Tensor:
     """Convert a decoded RGB frame to a contiguous uint8 CPU tensor, ``[C, H, W]``.
 
     Values remain in [0, 255]; resizing, normalization, and device placement are
     left to the training pipeline. Requires ``foxglove-sdk[video,torch]``.
     """
-    return from_numpy(frame.image).permute(2, 0, 1).contiguous()
+    return from_numpy(frame["image"]).permute(2, 0, 1).contiguous()
 
 
 class _TorchDataset(IterableDataset[_T]):

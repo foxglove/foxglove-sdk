@@ -12,11 +12,11 @@ client_module = pytest.importorskip("foxglove.client")
 
 
 @pytest.mark.parametrize("custom_decoding", [False, True])
-@pytest.mark.parametrize("pre_roll", [timedelta(0), timedelta(seconds=5)])
+@pytest.mark.parametrize("lookback", [timedelta(0), timedelta(seconds=5)])
 def test_real_client_pagination_filtering_and_incremental_mcap(
     monkeypatch: pytest.MonkeyPatch,
     custom_decoding: bool,
-    pre_roll: timedelta,
+    lookback: timedelta,
 ) -> None:
     import requests
     from mcap.decoder import DecoderFactory
@@ -96,7 +96,7 @@ def test_real_client_pagination_filtering_and_incremental_mcap(
         elif url.endswith("/data/stream"):
             assert kwargs["json"]["topics"] == ["/camera"]
             assert kwargs["json"]["episodeId"] == "a"
-            if pre_roll:
+            if lookback:
                 from datetime import datetime, timezone
 
                 assert datetime.fromisoformat(kwargs["json"]["start"]) == datetime(
@@ -123,7 +123,10 @@ def test_real_client_pagination_filtering_and_incremental_mcap(
 
     monkeypatch.setattr(requests.Session, "request", request)
     plan = _plan(
-        "dataset", 7, ["/camera", "/camera"], lambda: client_module.Client(token="test")
+        "dataset",
+        7,
+        ["/camera", "/camera", "/other"],
+        lambda: client_module.Client(token="test"),
     )
     assert [episode.id for episode in plan.episodes] == ["a", "b"]
     episode_requests = [kwargs for _, url, kwargs in calls if url.endswith("/episodes")]
@@ -136,7 +139,7 @@ def test_real_client_pagination_filtering_and_incremental_mcap(
     def samples(episode: EpisodeReader) -> Iterator[dict[str, Any]]:
         decoders = [CustomDecoderFactory()] if custom_decoding else None
         for schema, channel, message, decoded in episode.iter_messages(
-            decoder_factories=decoders, pre_roll=pre_roll
+            decoder_factories=decoders, lookback=lookback, topics=["/camera"]
         ):
             assert schema is not None and schema.name == "Measurement"
             assert channel.topic == "/camera"
