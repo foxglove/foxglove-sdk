@@ -213,7 +213,7 @@ impl PyMessageSchema {
 /// Parameters of other types (integer, bool, string, dict, arrays of these) leave
 /// :py:attr:`Parameter.type` set to ``None``.
 #[pyclass(
-    from_py_object,
+    skip_from_py_object,
     name = "ParameterType",
     module = "foxglove",
     eq,
@@ -230,6 +230,15 @@ pub enum PyParameterType {
     /// An array of floating-point values that can be represented as ``float64``s. Used to
     /// preserve the floating-point type for arrays of whole-valued numbers.
     Float64Array,
+}
+
+// PyO3's generated extraction clones Copy classes, triggering clone_on_copy.
+impl<'a, 'py> FromPyObject<'a, 'py> for PyParameterType {
+    type Error = pyo3::pyclass::PyClassGuardError<'a, 'py>;
+
+    fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
+        Ok(*obj.extract::<pyo3::PyClassGuard<'_, Self>>()?)
+    }
 }
 
 #[pymethods]
