@@ -2,6 +2,7 @@ import base64
 import json
 import re
 from collections.abc import Generator, Iterator
+from contextlib import closing
 from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -10,6 +11,7 @@ from typing import Any
 
 import pytest
 from foxglove.datasets import EpisodeReader
+from foxglove.datasets.reader import _Episode, _plan
 from mcap.decoder import DecoderFactory
 from mcap.records import Channel, Message, Schema
 
@@ -63,12 +65,13 @@ def messages(
 
 
 def decode(rows: list[MessageTuple], start: int = 0, end: int = 7) -> list[VideoSample]:
-    with _decode_h264_messages(
-        rows,
-        start_time=START + timedelta(seconds=start),
-        end_time=START + timedelta(seconds=end),
-    ) as frames:
-        return list(frames)
+    return list(
+        _decode_h264_messages(
+            rows,
+            start_time=START + timedelta(seconds=start),
+            end_time=START + timedelta(seconds=end),
+        )
+    )
 
 
 def test_decodes_interdependent_frames_and_preserves_duplicate_timestamps() -> None:
@@ -94,21 +97,14 @@ def _assert_full_decode(frames: list[VideoSample]) -> None:
         )
 
 
-def test_lookback_matches_full_decode_and_includes_both_boundaries() -> None:
-    full = decode(messages())
-    window = decode(messages(), start=2, end=5)
-    assert [f["log_time_ns"] for f in window] == [f["log_time_ns"] for f in full[2:6]]
-    for actual, expected in zip(window, full[2:6]):
-        np.testing.assert_array_equal(actual["image"], expected["image"])
-    assert len(decode(messages(), start=3, end=3)) == 1
-
-
-def test_lookback_can_start_between_keyframes() -> None:
-    window = decode(messages()[1:], start=5)
-    full = decode(messages())
-    assert len(window) == 3
-    for actual, expected in zip(window, full[5:]):
-        np.testing.assert_array_equal(actual["image"], expected["image"])
+@pytest.mark.parametrize("offset, start, end", [(0, 2, 5), (0, 3, 3), (1, 5, 7)])
+def test_lookback_matches_full_decode(offset: int, start: int, end: int) -> None:
+    window = decode(messages()[offset:], start=start, end=end)
+    expected = decode(messages())[start : end + 1]
+    assert len(window) == len(expected)
+    for actual, reference in zip(window, expected):
+        np.testing.assert_array_equal(actual["image"], reference["image"])
+        assert actual["log_time_ns"] == reference["log_time_ns"]
 
 
 def test_missing_history_errors_before_skipping_in_window_frames() -> None:
@@ -168,14 +164,9 @@ def test_delayed_frames_are_flushed_with_original_metadata(
     assert sum(flush_counts) > 0
 
 
-@pytest.mark.parametrize(
-    "outcome", ["complete", "cancel", "error", "decode_error", "consumer_error"]
-)
-def test_closes_source_and_decoder_even_if_iterator_is_retained(
-    monkeypatch: pytest.MonkeyPatch, outcome: str
-) -> None:
+@pytest.fixture
+def closed_decoders(monkeypatch: pytest.MonkeyPatch) -> list[_Decoder]:
     states = []
-    closed = []
     original = _Decoder.close
 
     def close(self: _Decoder) -> None:
@@ -183,6 +174,16 @@ def test_closes_source_and_decoder_even_if_iterator_is_retained(
         states.append(self)
 
     monkeypatch.setattr(_Decoder, "close", close)
+    return states
+
+
+@pytest.mark.parametrize(
+    "outcome", ["complete", "cancel", "error", "decode_error", "consumer_error"]
+)
+def test_closes_source_and_decoder_even_if_iterator_is_retained(
+    closed_decoders: list[_Decoder], outcome: str
+) -> None:
+    closed = []
 
     def source() -> Generator[MessageTuple, None, None]:
         try:
@@ -199,8 +200,10 @@ def test_closes_source_and_decoder_even_if_iterator_is_retained(
     retained_frames = []
 
     def consume() -> None:
-        with _decode_h264_messages(
-            retained, start_time=START, end_time=START + timedelta(seconds=7)
+        with closing(
+            _decode_h264_messages(
+                retained, start_time=START, end_time=START + timedelta(seconds=7)
+            )
         ) as frames:
             retained_frames.append(frames)
             if outcome in {"complete", "error", "decode_error"}:
@@ -219,7 +222,8 @@ def test_closes_source_and_decoder_even_if_iterator_is_retained(
     else:
         consume()
     assert closed == [True]
-    assert states and all(state.codec is None and not state.pending for state in states)
+    assert closed_decoders
+    assert all(state.codec is None and not state.pending for state in closed_decoders)
     assert list(retained_frames[0]) == []
 
 
@@ -250,12 +254,15 @@ def test_attribute_message_representations(representation: str) -> None:
     assert [f["timestamp_ns"] for f in decode(converted)] == [1700000000_123456789] * 8
 
 
-@pytest.mark.parametrize("payload", [b"bad", b"", b"\x00\x00\x01", b"\x00\x00\x01\x67"])
-def test_rejects_malformed_annex_b(payload: bytes) -> None:
-    rows = messages()
+@pytest.mark.parametrize("lookback", [False, True])
+@pytest.mark.parametrize(
+    "payload", [b"bad", b"", b"\x00\x00\x01", b"\x00\x00\x01\x67", "invalid base64!"]
+)
+def test_rejects_malformed_payloads(payload: bytes | str, lookback: bool) -> None:
+    rows = messages()[1:] if lookback else messages()
     rows[0][3]["data"] = payload
     with pytest.raises(VideoDecodeError, match="/camera"):
-        decode(rows)
+        decode(rows, start=5 if lookback else 0)
 
 
 def test_rejects_unsupported_codec_and_b_frames() -> None:
@@ -311,6 +318,16 @@ class VideoClient(Client):
             self.closed.append(episode_id)
 
 
+def video_reader(
+    *topics: str, start: int = 0, end: int = 7
+) -> tuple[EpisodeReader, VideoClient]:
+    client = VideoClient()
+    episode = _Episode(
+        "a", START + timedelta(seconds=start), START + timedelta(seconds=end), {}
+    )
+    return EpisodeReader(episode, topics or ("/camera",), client), client
+
+
 def video_samples(episode: EpisodeReader) -> Iterator[dict[str, Any]]:
     for frame in decode_h264(episode):
         yield {**frame, "episode_id": episode.id}
@@ -320,15 +337,7 @@ def test_rejects_invalid_window_and_naive_times() -> None:
     with pytest.raises(ValueError, match="at or before"):
         decode([], start=3, end=2)
     with pytest.raises(ValueError, match="timezone-aware"):
-        with _decode_h264_messages([], start_time=datetime(2026, 1, 1), end_time=START):
-            pass
-
-
-def test_invalid_bitstream_is_not_silently_concealed() -> None:
-    rows = messages()
-    rows[1][3]["data"] = b"\x00\x00\x00\x01\x61\x00"
-    with pytest.raises(VideoDecodeError, match="/camera"):
-        decode(rows)
+        list(_decode_h264_messages([], start_time=datetime(2026, 1, 1), end_time=START))
 
 
 def test_rejects_multiple_images_in_one_message() -> None:
@@ -341,16 +350,7 @@ def test_rejects_multiple_images_in_one_message() -> None:
 
 
 def test_episode_decode_infers_window_and_returns_complete_metadata() -> None:
-    from foxglove.datasets.reader import _plan
-
-    client = VideoClient()
-    plan = _plan("dataset", 7, ["/camera"], lambda: client)
-    episode = replace(
-        plan.episodes[0],
-        start_time=START + timedelta(seconds=2),
-        end_time=START + timedelta(seconds=5),
-    )
-    reader = EpisodeReader(episode, plan.topics, client)
+    reader, client = video_reader(start=2, end=5)
     frames = decode_h264(reader)
     assert client.calls == []
     rows = list(frames)
@@ -369,18 +369,15 @@ def test_episode_decode_infers_window_and_returns_complete_metadata() -> None:
         assert row["log_time_ns"] == expected["log_time_ns"]
         assert row["timestamp_ns"] == expected["timestamp_ns"]
     assert client.time_ranges == [
-        (episode.start_time - timedelta(seconds=5), episode.end_time)
+        (reader.start_time - timedelta(seconds=5), reader.end_time)
     ]
-    assert client.closed == [episode.id]
+    assert client.closed == [reader.id]
     assert not reader._streams
 
 
 def test_independent_topic_decoders_request_only_their_camera() -> None:
-    from foxglove.datasets.reader import _plan
-
-    client = VideoClient()
-    plan = _plan("dataset", 7, ["/camera/front", "/camera/wrist"], lambda: client)
-    reader = EpisodeReader(plan.episodes[0], plan.topics, client)
+    topics = ("/camera/front", "/camera/wrist")
+    reader, client = video_reader(*topics)
     front = decode_h264(reader, topic="/camera/front", lookback=timedelta(seconds=2))
     wrist = decode_h264(reader, topic="/camera/wrist", lookback=timedelta(seconds=8))
     assert client.calls == []
@@ -400,21 +397,11 @@ def test_independent_topic_decoders_request_only_their_camera() -> None:
 
 @pytest.mark.parametrize("outcome", ["complete", "cancel", "error"])
 def test_episode_owns_partially_consumed_video_iterators(
-    monkeypatch: pytest.MonkeyPatch, outcome: str
+    closed_decoders: list[_Decoder], outcome: str
 ) -> None:
-    from foxglove.datasets.reader import _plan
-
     client = VideoClient()
     plan = _plan("dataset", 7, ["/camera/front", "/camera/wrist"], lambda: client)
     retained = []
-    states = []
-    original_close = _Decoder.close
-
-    def close(self: _Decoder) -> None:
-        original_close(self)
-        states.append(self)
-
-    monkeypatch.setattr(_Decoder, "close", close)
 
     def sample(episode: EpisodeReader) -> Iterator[dict[str, Any]]:
         front = decode_h264(episode, topic="/camera/front")
@@ -436,8 +423,8 @@ def test_episode_owns_partially_consumed_video_iterators(
         stream.close()
     else:
         assert list(stream) == [{"id": "a"}]
-    assert len(states) == 2
-    assert all(state.codec is None and not state.pending for state in states)
+    assert len(closed_decoders) == 2
+    assert all(state.codec is None and not state.pending for state in closed_decoders)
     assert client.closed == ["a", "a"]
     assert all(list(iterator) == [] for iterator in retained)
 
@@ -452,11 +439,7 @@ def test_episode_owns_partially_consumed_video_iterators(
 def test_episode_decoder_rejects_invalid_requests_before_downloading(
     topic: str, lookback: timedelta, match: str
 ) -> None:
-    from foxglove.datasets.reader import _plan
-
-    client = VideoClient()
-    plan = _plan("dataset", 7, ["/camera"], lambda: client)
-    reader = EpisodeReader(plan.episodes[0], plan.topics, client)
+    reader, client = video_reader()
     with pytest.raises(ValueError, match=match):
         list(decode_h264(reader, topic=topic, lookback=lookback))
     assert not client.calls
@@ -467,39 +450,27 @@ def test_episode_decoder_rejects_invalid_requests_before_downloading(
 
 
 def test_episode_decoder_reads_all_selected_topics_in_one_request() -> None:
-    from foxglove.datasets.reader import _plan
-
-    client = VideoClient()
-    plan = _plan("dataset", 7, ["/camera/front", "/camera/wrist"], lambda: client)
-    reader = EpisodeReader(plan.episodes[0], plan.topics, client)
+    topics = ("/camera/front", "/camera/wrist")
+    reader, client = video_reader(*topics)
     rows = list(decode_h264(reader, lookback=timedelta(0)))
     assert len(rows) == 16
-    assert {row["topic"] for row in rows} == set(plan.topics)
-    assert client.calls == [(reader.id, list(plan.topics))]
+    assert {row["topic"] for row in rows} == set(topics)
+    assert client.calls == [(reader.id, list(topics))]
     assert client.time_ranges == [(None, None)]
     assert not reader._streams
 
 
-@pytest.mark.parametrize("payload", [b"bad", "invalid base64!", b"\x00\x00\x01\x67"])
-def test_malformed_lookback_raises_before_initial_keyframe(
-    payload: bytes | str,
-) -> None:
-    rows = messages()[1:]
-    rows[0][3]["data"] = payload
-    with pytest.raises(VideoDecodeError, match="/camera"):
-        decode(rows, start=5)
-
-
-@pytest.mark.parametrize("initialized", [False, True])
+@pytest.mark.parametrize("initialized, start", [(False, 5), (True, 5), (True, 0)])
 def test_corrupt_lookback_slice_is_checked_only_after_initialization(
     initialized: bool,
+    start: int,
 ) -> None:
     rows = messages()
     # Valid Annex B framing and NAL header, but invalid slice data.
     rows[1][3]["data"] = b"\x00\x00\x00\x01\x61\x00"
     if initialized:
         with pytest.raises(VideoDecodeError, match="/camera"):
-            decode(rows, start=5)
+            decode(rows, start=start)
     else:
         window = decode(rows[1:], start=5)
         expected = decode(messages(), start=5)
@@ -515,8 +486,6 @@ def test_corrupt_lookback_slice_is_checked_only_after_initialization(
 def test_explicit_non_video_topic_raises_and_closes_stream(
     monkeypatch: pytest.MonkeyPatch, schema_name: str | None
 ) -> None:
-    from foxglove.datasets.reader import _plan
-
     closed = []
 
     def non_video(
@@ -535,9 +504,7 @@ def test_explicit_non_video_topic_raises_and_closes_stream(
             closed.append(True)
 
     monkeypatch.setattr(VideoClient, "iter_messages", non_video)
-    client = VideoClient()
-    plan = _plan("dataset", 7, ["/camera"], lambda: client)
-    reader = EpisodeReader(plan.episodes[0], plan.topics, client)
+    reader, client = video_reader()
     with pytest.raises(
         VideoDecodeError, match="/camera.*does not contain CompressedVideo"
     ):
@@ -564,10 +531,12 @@ def test_fractional_window_filters_nanosecond_message_times_exactly() -> None:
         (schema, channel, replace(message, log_time=START_NS + nanos), decoded)
         for (schema, channel, message, decoded), nanos in zip(rows, times)
     ]
-    with _decode_h264_messages(
-        shifted,
-        start_time=START + timedelta(milliseconds=1),
-        end_time=START + timedelta(milliseconds=2),
+    with closing(
+        _decode_h264_messages(
+            shifted,
+            start_time=START + timedelta(milliseconds=1),
+            end_time=START + timedelta(milliseconds=2),
+        )
     ) as frames:
         assert [frame["log_time_ns"] for frame in frames] == [
             START_NS + nanos for nanos in times[2:6]

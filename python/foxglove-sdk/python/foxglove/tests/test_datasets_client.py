@@ -1,7 +1,7 @@
 import io
 import json
 from collections.abc import Callable, Iterator
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import pytest
@@ -97,8 +97,6 @@ def test_real_client_pagination_filtering_and_incremental_mcap(
             assert kwargs["json"]["topics"] == ["/camera"]
             assert kwargs["json"]["episodeId"] == "a"
             if lookback:
-                from datetime import datetime, timezone
-
                 assert datetime.fromisoformat(kwargs["json"]["start"]) == datetime(
                     2025, 12, 31, 23, 59, 55, tzinfo=timezone.utc
                 )

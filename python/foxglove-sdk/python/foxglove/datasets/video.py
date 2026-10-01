@@ -5,7 +5,6 @@ from __future__ import annotations
 import base64
 import re
 from collections.abc import Generator, Iterable, Iterator, Mapping
-from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from fractions import Fraction
@@ -195,17 +194,22 @@ class _Decoder:
         self.pending.clear()
 
 
-def _decode(
-    messages: Iterator[_MessageTuple],
-    start: int,
-    end: int,
+def _decode_h264_messages(
+    messages: Iterable[_MessageTuple],
     *,
+    start_time: datetime,
+    end_time: datetime,
     require_video: bool = False,
 ) -> Generator[VideoSample, None, None]:
+    """Decode one ordered stream; close its input and per-channel state on exit."""
+    source = iter(messages)
     decoders: dict[int, _Decoder] = {}
     previous_time: int | None = None
     try:
-        for schema, channel, message, decoded in messages:
+        start, end = _nanoseconds(start_time), _nanoseconds(end_time)
+        if start > end:
+            raise ValueError("start_time must be at or before end_time")
+        for schema, channel, message, decoded in source:
             if previous_time is not None and message.log_time < previous_time:
                 raise VideoDecodeError("Messages must be supplied in log-time order")
             previous_time = message.log_time
@@ -249,57 +253,9 @@ def _decode(
     finally:
         for decoder in decoders.values():
             decoder.close()
-        decoders.clear()
-
-
-@contextmanager
-def _decode_h264_messages(
-    messages: Iterable[_MessageTuple],
-    *,
-    start_time: datetime,
-    end_time: datetime,
-    require_video: bool = False,
-) -> Iterator[Iterator[VideoSample]]:
-    """Decode ordered CompressedVideo messages into RGB frames using CPU PyAV.
-
-    Use as ``with _decode_h264_messages(...) as frames`` inside an episode callback. Each
-    invocation creates independent state per MCAP channel, in the consuming worker.
-    Non-video schemas are ignored; unsupported video codecs raise VideoDecodeError.
-    Protobuf, ROS 1/2, and Foxglove JSON message representations are accepted after
-    deserialization. H.264 must be Annex B, one image per message, without B-frames.
-    Initialization requires an IDR keyframe containing SPS and PPS NAL units.
-
-    :param messages: MCAP ``(schema, channel, message, decoded_message)`` tuples in
-        log-time/decode order from one source, including any necessary lookback.
-        Do not subsample packets before decoding or concatenate unrelated sources.
-    :param start_time: Inclusive log-time boundary for emitted images. Earlier
-        messages initialize the decoder but do not produce output samples.
-    :param end_time: Inclusive log-time boundary, matching the streaming API.
-        Both boundaries must be timezone-aware.
-    :returns: A context manager yielding a streaming iterator of VideoSample values.
-        Ordering is preserved per channel; buffered frames across channels are not
-        guaranteed to arrive in global timestamp order. Normal exhaustion flushes
-        delayed images. Context exit closes the iterator and input stream (if
-        closable), and releases decoder state, including on errors or cancellation.
-    :raises VideoDecodeError: Missing history, malformed/unsupported video, or
-        incomplete decoding. Consume to exhaustion to validate the entire window.
-    """
-    source = iter(messages)
-    frames = None
-    try:
-        start, end = _nanoseconds(start_time), _nanoseconds(end_time)
-        if start > end:
-            raise ValueError("start_time must be at or before end_time")
-        frames = _decode(source, start, end, require_video=require_video)
-        yield frames
-    finally:
-        try:
-            if frames is not None:
-                frames.close()
-        finally:
-            close = getattr(source, "close", None)
-            if close is not None:
-                close()
+        close = getattr(source, "close", None)
+        if close is not None:
+            close()
 
 
 def decode_h264(
@@ -309,48 +265,38 @@ def decode_h264(
     lookback: timedelta = timedelta(seconds=5),
     decoder_factories: Sequence[DecoderFactory] | None = None,
 ) -> Generator[VideoSample, None, None]:
-    """Stream decoded H.264 frames from an episode as sample dictionaries.
+    """Yield RGB frames from an episode. Requires ``foxglove-sdk[video]``.
 
-    Pass directly as ``read_episode=decode_h264``, return it from a callback, or
-    create independent iterators with ``decode_h264(episode, topic="/camera")``.
-    Each iterator opens its own download on first iteration, with server-side
-    topic filtering. Decoder state is local to each invocation and MCAP channel.
+    Use directly as ``read_episode=decode_h264`` with PyTorch or Ray, or call
+    inside an episode callback. Each invocation opens one download and maintains
+    independent decoder state per MCAP channel. The episode closes its iterators on exit;
+    call ``close()`` to release one earlier.
 
-    :param episode: Reader supplied to the dataset callback. Its inclusive log-time
-        window determines which images are emitted; earlier history only initializes
-        decoder state. The reader closes all iterators when the callback finishes,
-        fails, or is cancelled, even if some iterators are only partially consumed.
-    :param topic: One of the dataset's selected topics. None reads all selected
-        topics, ignoring non-video schemas. An explicit non-video topic raises
-        VideoDecodeError. Multiple camera outputs are not paired.
-    :param lookback: History to fetch before the episode, default five seconds.
-        Must be nonnegative. Only attached recordings are searched. Insufficient
-        initialization history raises VideoDecodeError; increase this budget or
-        attach the missing recording rather than dropping in-window frames.
-    :param decoder_factories: Optional MCAP message decoders, constructed in the
-        worker callback. None uses the client's defaults.
-    :returns: Dictionaries with ``image`` (contiguous RGB uint8 [H, W, 3]),
-        ``topic``, ``channel_id``, ``frame_id`` (coordinate frame identifier), and
-        ``timestamp_ns`` (capture), ``log_time_ns``, ``publish_time_ns`` (integer
-        nanoseconds since epoch). Supports CompressedVideo
-        H.264 Annex B, one image per message, no B-frames, with an initial IDR/SPS/PPS.
-        Output is ordered per channel, not globally across cameras. Consume to
-        exhaustion to receive delayed frames and validate completeness. For early
-        release inside a callback, call close() or use contextlib.closing().
+    :param episode: Supplies the inclusive MCAP log-time window for output frames.
+    :param topic: One selected dataset topic, or None for all selected topics.
+        Non-video schemas are ignored only when topic is None.
+    :param lookback: Nonnegative history budget, default five seconds. Searches
+        only attached recordings. Missing initialization history raises
+        VideoDecodeError. Pre-keyframe slice data is skipped without decoding.
+    :param decoder_factories: Optional MCAP deserializers created in the callback.
+        None uses the client's defaults.
+    :returns: VideoSample dictionaries, ordered per channel, without camera
+        synchronization. Consume to exhaustion to receive buffered frames.
+    :raises VideoDecodeError: Unsupported or invalid video, or incomplete decoding.
+        Supports CompressedVideo H.264 Annex B, one image per message, no B-frames,
+        with an initial IDR keyframe containing SPS/PPS.
     """
 
-    def samples() -> Generator[VideoSample, None, None]:
-        messages = episode.iter_messages(
-            topics=None if topic is None else [topic],
-            lookback=lookback,
-            decoder_factories=decoder_factories,
-        )
-        with _decode_h264_messages(
+    messages = episode.iter_messages(
+        topics=None if topic is None else [topic],
+        lookback=lookback,
+        decoder_factories=decoder_factories,
+    )
+    return episode._manage(
+        _decode_h264_messages(
             messages,
             start_time=episode.start_time,
             end_time=episode.end_time,
             require_video=topic is not None,
-        ) as frames:
-            yield from frames
-
-    return episode._manage(samples())
+        )
+    )

@@ -149,9 +149,11 @@ def test_custom_sample_types_with_worker_collation() -> None:
     assert list(loader) == [["a", "b"], ["c", "d"]]
 
 
-def test_video_callback_in_spawned_workers_and_tensor_conversion() -> None:
+@pytest.mark.parametrize("direct", [False, True])
+def test_video_callback_in_spawned_workers_and_tensor_conversion(direct: bool) -> None:
     pytest.importorskip("av")
     from foxglove.datasets.torch import read_dataset, to_image_tensor
+    from foxglove.datasets.video import decode_h264
     from torch.utils.data import DataLoader
 
     from .test_datasets_video import VideoClient, decode, messages, video_samples
@@ -160,7 +162,7 @@ def test_video_callback_in_spawned_workers_and_tensor_conversion() -> None:
         "dataset",
         version=7,
         topics=["/camera"],
-        read_episode=video_samples,
+        read_episode=decode_h264 if direct else video_samples,
         client_factory=VideoClient,
     )
     loader = DataLoader(
@@ -169,32 +171,17 @@ def test_video_callback_in_spawned_workers_and_tensor_conversion() -> None:
     rows = list(loader)
     expected = decode(messages())
     assert len(rows) == 32
-    for episode_id in ("a", "b", "c", "d"):
-        selected = [row for row in rows if row["episode_id"] == episode_id]
-        assert len(selected) == 8
-        for actual, frame in zip(selected, expected):
-            assert actual["timestamp_ns"] == frame["timestamp_ns"]
-            assert actual["log_time_ns"] == frame["log_time_ns"]
-            assert torch.equal(actual["image"], torch.from_numpy(frame["image"]))
+    if not direct:
+        assert sorted(row["episode_id"] for row in rows) == [
+            episode_id for episode_id in ("a", "b", "c", "d") for _ in range(8)
+        ]
+    ordered = sorted(rows, key=lambda row: row["log_time_ns"])
+    for actual, frame in zip(ordered, [frame for frame in expected for _ in range(4)]):
+        assert actual["timestamp_ns"] == frame["timestamp_ns"]
+        assert actual["log_time_ns"] == frame["log_time_ns"]
+        assert torch.equal(actual["image"], torch.from_numpy(frame["image"]))
     frame = expected[0]
     tensor = to_image_tensor(frame)
     assert tensor.shape == (3, 32, 48)
     assert tensor.dtype == torch.uint8 and tensor.is_contiguous()
     assert torch.equal(tensor, torch.from_numpy(expected[0]["image"]).permute(2, 0, 1))
-
-
-def test_video_decoder_can_be_used_directly_as_callback() -> None:
-    pytest.importorskip("av")
-    from foxglove.datasets.torch import read_dataset
-    from foxglove.datasets.video import decode_h264
-
-    from .test_datasets_video import VideoClient
-
-    dataset = read_dataset(
-        "dataset",
-        version=7,
-        topics=["/camera"],
-        read_episode=decode_h264,
-        client_factory=VideoClient,
-    )
-    assert len(list(dataset)) == 32
