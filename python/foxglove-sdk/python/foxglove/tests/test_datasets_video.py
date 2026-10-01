@@ -1,5 +1,6 @@
 import base64
 import json
+import re
 from collections.abc import Generator, Iterator
 from dataclasses import replace
 from datetime import datetime, timedelta, timezone
@@ -19,9 +20,9 @@ np = pytest.importorskip("numpy")
 
 from foxglove.datasets.video import (  # noqa: E402
     VideoDecodeError,
+    VideoSample,
     _decode_h264_messages,
     _Decoder,
-    _VideoFrame,
     decode_h264,
 )
 
@@ -61,7 +62,7 @@ def messages(
     return result
 
 
-def decode(rows: list[MessageTuple], start: int = 0, end: int = 7) -> list[_VideoFrame]:
+def decode(rows: list[MessageTuple], start: int = 0, end: int = 7) -> list[VideoSample]:
     with _decode_h264_messages(
         rows,
         start_time=START + timedelta(seconds=start),
@@ -71,19 +72,22 @@ def decode(rows: list[MessageTuple], start: int = 0, end: int = 7) -> list[_Vide
 
 
 def test_decodes_interdependent_frames_and_preserves_duplicate_timestamps() -> None:
-    frames = decode(messages())
+    _assert_full_decode(decode(messages()))
+
+
+def _assert_full_decode(frames: list[VideoSample]) -> None:
     assert len(frames) == 8
     for index, frame in enumerate(frames):
-        assert frame.image.shape == (32, 48, 3)
-        assert frame.image.dtype == np.uint8
-        assert frame.image.flags.c_contiguous and frame.image.flags.writeable
+        assert frame["image"].shape == (32, 48, 3)
+        assert frame["image"].dtype == np.uint8
+        assert frame["image"].flags.c_contiguous and frame["image"].flags.writeable
         np.testing.assert_allclose(
-            frame.image[0, 0], [40 + index * 15, 100, 180 - index * 10], atol=5
+            frame["image"][0, 0], [40 + index * 15, 100, 180 - index * 10], atol=5
         )
-        assert frame.timestamp_ns == 1700000000_123456789
-        assert frame.log_time_ns == START_NS + index * 1_000_000_000
-        assert frame.publish_time_ns == frame.log_time_ns - 123
-        assert (frame.channel_id, frame.topic, frame.frame_id) == (
+        assert frame["timestamp_ns"] == 1700000000_123456789
+        assert frame["log_time_ns"] == START_NS + index * 1_000_000_000
+        assert frame["publish_time_ns"] == frame["log_time_ns"] - 123
+        assert (frame["channel_id"], frame["topic"], frame["frame_id"]) == (
             1,
             "/camera",
             "camera-1",
@@ -93,9 +97,9 @@ def test_decodes_interdependent_frames_and_preserves_duplicate_timestamps() -> N
 def test_lookback_matches_full_decode_and_includes_both_boundaries() -> None:
     full = decode(messages())
     window = decode(messages(), start=2, end=5)
-    assert [f.log_time_ns for f in window] == [f.log_time_ns for f in full[2:6]]
+    assert [f["log_time_ns"] for f in window] == [f["log_time_ns"] for f in full[2:6]]
     for actual, expected in zip(window, full[2:6]):
-        np.testing.assert_array_equal(actual.image, expected.image)
+        np.testing.assert_array_equal(actual["image"], expected["image"])
     assert len(decode(messages(), start=3, end=3)) == 1
 
 
@@ -104,7 +108,7 @@ def test_lookback_can_start_between_keyframes() -> None:
     full = decode(messages())
     assert len(window) == 3
     for actual, expected in zip(window, full[5:]):
-        np.testing.assert_array_equal(actual.image, expected.image)
+        np.testing.assert_array_equal(actual["image"], expected["image"])
 
 
 def test_missing_history_errors_before_skipping_in_window_frames() -> None:
@@ -114,8 +118,6 @@ def test_missing_history_errors_before_skipping_in_window_frames() -> None:
 
 def test_keyframe_without_parameter_sets_is_not_accepted() -> None:
     rows = messages()
-    import re
-
     units = re.split(b"\x00\x00\x00?\x01", base64.b64decode(rows[0][3]["data"]))
     rows[0][3]["data"] = b"".join(
         b"\x00\x00\x00\x01" + unit for unit in units if unit and unit[0] & 31 == 5
@@ -132,10 +134,10 @@ def test_independent_state_for_interleaved_channels(same_topic: bool) -> None:
     frames = decode(interleaved)
     assert len(frames) == 16
     for channel_id in (1, 2):
-        selected = [frame for frame in frames if frame.channel_id == channel_id]
+        selected = [frame for frame in frames if frame["channel_id"] == channel_id]
         for actual, expected in zip(selected, decode(first)):
-            np.testing.assert_array_equal(actual.image, expected.image)
-        assert {f.frame_id for f in selected} == {f"camera-{channel_id}"}
+            np.testing.assert_array_equal(actual["image"], expected["image"])
+        assert {f["frame_id"] for f in selected} == {f"camera-{channel_id}"}
 
 
 def test_delayed_frames_are_flushed_with_original_metadata(
@@ -145,7 +147,7 @@ def test_delayed_frames_are_flushed_with_original_metadata(
 
     def delayed(
         self: _Decoder, message: Message, decoded: Any
-    ) -> Iterator[_VideoFrame]:
+    ) -> Iterator[VideoSample]:
         if self.codec is None:
             self.codec = av.CodecContext.create("h264", "r")
             self.codec.thread_count = 3
@@ -156,13 +158,13 @@ def test_delayed_frames_are_flushed_with_original_metadata(
     flush_counts = []
     original_flush = _Decoder.flush
 
-    def flush(self: _Decoder) -> Iterator[_VideoFrame]:
+    def flush(self: _Decoder) -> Iterator[VideoSample]:
         remaining = list(original_flush(self))
         flush_counts.append(len(remaining))
         yield from remaining
 
     monkeypatch.setattr(_Decoder, "flush", flush)
-    test_decodes_interdependent_frames_and_preserves_duplicate_timestamps()
+    _assert_full_decode(decode(messages()))
     assert sum(flush_counts) > 0
 
 
@@ -245,7 +247,7 @@ def test_attribute_message_representations(representation: str) -> None:
                 ),
             )
         )
-    assert [f.timestamp_ns for f in decode(converted)] == [1700000000_123456789] * 8
+    assert [f["timestamp_ns"] for f in decode(converted)] == [1700000000_123456789] * 8
 
 
 @pytest.mark.parametrize("payload", [b"bad", b"", b"\x00\x00\x01", b"\x00\x00\x01\x67"])
@@ -363,9 +365,9 @@ def test_episode_decode_infers_window_and_returns_complete_metadata() -> None:
         "frame_id",
     }
     for row, expected in zip(rows, decode(messages(), start=2, end=5)):
-        np.testing.assert_array_equal(row["image"], expected.image)
-        assert row["log_time_ns"] == expected.log_time_ns
-        assert row["timestamp_ns"] == expected.timestamp_ns
+        np.testing.assert_array_equal(row["image"], expected["image"])
+        assert row["log_time_ns"] == expected["log_time_ns"]
+        assert row["timestamp_ns"] == expected["timestamp_ns"]
     assert client.time_ranges == [
         (episode.start_time - timedelta(seconds=5), episode.end_time)
     ]
@@ -476,3 +478,78 @@ def test_episode_decoder_reads_all_selected_topics_in_one_request() -> None:
     assert client.calls == [(reader.id, list(plan.topics))]
     assert client.time_ranges == [(None, None)]
     assert not reader._streams
+
+
+@pytest.mark.parametrize("payload", [b"bad", "invalid base64!", b"\x00\x00\x01\x67"])
+def test_malformed_lookback_raises_before_initial_keyframe(
+    payload: bytes | str,
+) -> None:
+    rows = messages()[1:]
+    rows[0][3]["data"] = payload
+    with pytest.raises(VideoDecodeError, match="/camera"):
+        decode(rows, start=5)
+
+
+@pytest.mark.parametrize(
+    "schema_name", [None, "foxglove.CompressedImage", "JointState"]
+)
+def test_explicit_non_video_topic_raises_and_closes_stream(
+    monkeypatch: pytest.MonkeyPatch, schema_name: str | None
+) -> None:
+    from foxglove.datasets.reader import _plan
+
+    closed = []
+
+    def non_video(
+        self: VideoClient, **kwargs: Any
+    ) -> Generator[MessageTuple, None, None]:
+        schema, channel, message, decoded = messages()[0]
+        assert schema is not None
+        try:
+            yield (
+                None if schema_name is None else replace(schema, name=schema_name),
+                channel,
+                message,
+                decoded,
+            )
+        finally:
+            closed.append(True)
+
+    monkeypatch.setattr(VideoClient, "iter_messages", non_video)
+    client = VideoClient()
+    plan = _plan("dataset", 7, ["/camera"], lambda: client)
+    reader = EpisodeReader(plan.episodes[0], plan.topics, client)
+    with pytest.raises(
+        VideoDecodeError, match="/camera.*does not contain CompressedVideo"
+    ):
+        list(decode_h264(reader, topic="/camera"))
+    assert not reader._streams
+    assert list(decode_h264(reader)) == []
+    assert closed == [True, True]
+
+
+def test_fractional_window_filters_nanosecond_message_times_exactly() -> None:
+    rows = messages()
+    # Episode boundaries are datetimes; message timestamps retain nanosecond precision.
+    times = [
+        0,
+        999_999,
+        1_000_000,
+        1_000_001,
+        1_999_999,
+        2_000_000,
+        2_000_001,
+        3_000_000,
+    ]
+    shifted = [
+        (schema, channel, replace(message, log_time=START_NS + nanos), decoded)
+        for (schema, channel, message, decoded), nanos in zip(rows, times)
+    ]
+    with _decode_h264_messages(
+        shifted,
+        start_time=START + timedelta(milliseconds=1),
+        end_time=START + timedelta(milliseconds=2),
+    ) as frames:
+        assert [frame["log_time_ns"] for frame in frames] == [
+            START_NS + nanos for nanos in times[2:6]
+        ]

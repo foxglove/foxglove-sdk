@@ -155,16 +155,17 @@ Episode boundaries and lookback
 
 A delta frame depends on earlier frames. ``lookback`` expands the download start time
 while retaining the episode's original boundaries. Only recordings attached to the episode
-are searched. The example's five seconds is a configurable history budget, not a guarantee
+are searched. The default five seconds is a configurable history budget, not a guarantee
 that a usable keyframe exists. If necessary, increase it or attach the recording containing
 the required history to the episode and commit a new dataset version.
 
-The decoder ignores undecodable lookback before the first IDR keyframe with SPS/PPS,
+The decoder skips valid delta frames before the first IDR keyframe with SPS/PPS,
 decodes subsequent lookback to initialize state, and emits only frames whose MCAP log
 times fall inside the inclusive episode window. It raises ``VideoDecodeError`` if an
 in-window message lacks initialization history, rather than dropping training frames until
 the next keyframe. Capture timestamps are preserved separately and do not determine
-window membership. Duplicate timestamps remain distinct frames.
+window membership. Duplicate timestamps remain distinct frames. Malformed messages and
+unsupported codecs raise errors even during lookback; corrupt input is never silently ignored.
 
 Always feed every video message in order; sample frames only after decoding. Decoder
 buffering can delay output, so consume the iterator to exhaustion to receive flushed
@@ -181,9 +182,18 @@ Supported formats
   IDR keyframe. B-frames, fragmented images, and multiple images per message are unsupported.
 * Deserialized Foxglove JSON (base64 data and ``sec``/``nsec`` timestamps), Protobuf,
   and ROS 1/2 ``foxglove_msgs/CompressedVideo`` messages. Install the corresponding MCAP
-  decoder separately. Other schemas are ignored; other video codecs raise an error.
+  decoder separately. Other schemas are ignored when reading all selected topics;
+  an explicit non-video ``topic`` raises an error. Other video codecs raise an error.
 * CPU decoding through PyAV 16 / FFmpeg and RGB conversion through NumPy. Hardware
   acceleration is not currently exposed. No framework is required by the shared helper.
+
+When combining cameras with other sensors, read each camera with
+``decode_h264(episode, topic="/camera")`` and sensor messages with
+``episode.iter_messages(topics=["/joint_states"])``. These are separate downloads;
+your callback must match timestamps and assemble samples. Reading all selected topics
+with ``decode_h264(episode)`` also downloads and discards non-video messages, including
+their lookback history. Sharing a single download between video decoding and raw sensor
+processing is not supported by this helper.
 
 API reference
 -------------
@@ -208,6 +218,9 @@ Video decoding
 ^^^^^^^^^^^^^^
 
 .. autofunction:: foxglove.datasets.video.decode_h264
+
+.. autoclass:: foxglove.datasets.video.VideoSample
+   :members:
 
 .. autoexception:: foxglove.datasets.video.VideoDecodeError
 

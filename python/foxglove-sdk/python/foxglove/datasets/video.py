@@ -9,7 +9,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from fractions import Fraction
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypedDict
 
 import av
 import numpy as np
@@ -36,8 +36,7 @@ class VideoDecodeError(ValueError):
     """Video data cannot be decoded completely and safely."""
 
 
-@dataclass(frozen=True)
-class _VideoFrame:
+class VideoSample(TypedDict):
     """An RGB image and the metadata of its original compressed message.
 
     ``image`` is a writable, contiguous uint8 NumPy array of shape ``[H, W, 3]``.
@@ -99,7 +98,10 @@ def _nal_types(data: bytes) -> set[int]:
             raise VideoDecodeError("Invalid H.264 NAL unit")
         types.add(data[start.end()] & 0x1F)
     if not types.intersection({1, 5}):
-        raise VideoDecodeError("Each CompressedVideo message must contain one image")
+        raise VideoDecodeError(
+            "CompressedVideo message contains no H.264 image slice; "
+            "SPS/PPS must be in the same message as the keyframe"
+        )
     return types
 
 
@@ -120,7 +122,7 @@ class _Decoder:
         self.pending: dict[int, _Source] = {}
         self.sequence = 0
 
-    def decode(self, message: Message, decoded: Any) -> Iterator[_VideoFrame]:
+    def decode(self, message: Message, decoded: Any) -> Iterator[VideoSample]:
         if _field(decoded, "format") != "h264":
             raise VideoDecodeError("Only H.264 CompressedVideo messages are supported")
         payload = _field(decoded, "data")
@@ -161,7 +163,7 @@ class _Decoder:
             raise VideoDecodeError("B-frames are not supported by CompressedVideo")
         yield from self._frames(frames)
 
-    def _frames(self, frames: Iterable[av.VideoFrame]) -> Iterator[_VideoFrame]:
+    def _frames(self, frames: Iterable[av.VideoFrame]) -> Iterator[VideoSample]:
         for frame in frames:
             if frame.is_corrupt:
                 raise VideoDecodeError("Decoder returned a corrupt H.264 frame")
@@ -171,17 +173,17 @@ class _Decoder:
                 )
             source = self.pending.pop(frame.pts)
             if self.start <= source.log_time_ns <= self.end:
-                yield _VideoFrame(
-                    np.ascontiguousarray(frame.to_ndarray(format="rgb24")),
-                    self.channel.topic,
-                    self.channel.id,
-                    source.timestamp_ns,
-                    source.log_time_ns,
-                    source.publish_time_ns,
-                    source.frame_id,
+                yield VideoSample(
+                    image=np.ascontiguousarray(frame.to_ndarray(format="rgb24")),
+                    topic=self.channel.topic,
+                    channel_id=self.channel.id,
+                    timestamp_ns=source.timestamp_ns,
+                    log_time_ns=source.log_time_ns,
+                    publish_time_ns=source.publish_time_ns,
+                    frame_id=source.frame_id,
                 )
 
-    def flush(self) -> Iterator[_VideoFrame]:
+    def flush(self) -> Iterator[VideoSample]:
         if self.codec is not None:
             yield from self._frames(self.codec.decode(None))
             if self.pending:
@@ -194,8 +196,12 @@ class _Decoder:
 
 
 def _decode(
-    messages: Iterator[_MessageTuple], start: int, end: int
-) -> Generator[_VideoFrame, None, None]:
+    messages: Iterator[_MessageTuple],
+    start: int,
+    end: int,
+    *,
+    require_video: bool = False,
+) -> Generator[VideoSample, None, None]:
     decoders: dict[int, _Decoder] = {}
     previous_time: int | None = None
     try:
@@ -206,6 +212,10 @@ def _decode(
             if message.log_time > end:
                 break
             if schema is None or schema.name not in _VIDEO_SCHEMAS:
+                if require_video:
+                    raise VideoDecodeError(
+                        f"Topic {channel.topic!r} does not contain CompressedVideo messages"
+                    )
                 continue
             decoder = decoders.get(channel.id)
             if decoder is None:
@@ -244,8 +254,12 @@ def _decode(
 
 @contextmanager
 def _decode_h264_messages(
-    messages: Iterable[_MessageTuple], *, start_time: datetime, end_time: datetime
-) -> Iterator[Iterator[_VideoFrame]]:
+    messages: Iterable[_MessageTuple],
+    *,
+    start_time: datetime,
+    end_time: datetime,
+    require_video: bool = False,
+) -> Iterator[Iterator[VideoSample]]:
     """Decode ordered CompressedVideo messages into RGB frames using CPU PyAV.
 
     Use as ``with _decode_h264_messages(...) as frames`` inside an episode callback. Each
@@ -262,7 +276,7 @@ def _decode_h264_messages(
         messages initialize the decoder but do not produce output samples.
     :param end_time: Inclusive log-time boundary, matching the streaming API.
         Both boundaries must be timezone-aware.
-    :returns: A context manager yielding a streaming iterator of _VideoFrame values.
+    :returns: A context manager yielding a streaming iterator of VideoSample values.
         Ordering is preserved per channel; buffered frames across channels are not
         guaranteed to arrive in global timestamp order. Normal exhaustion flushes
         delayed images. Context exit closes the iterator and input stream (if
@@ -276,7 +290,7 @@ def _decode_h264_messages(
         start, end = _nanoseconds(start_time), _nanoseconds(end_time)
         if start > end:
             raise ValueError("start_time must be at or before end_time")
-        frames = _decode(source, start, end)
+        frames = _decode(source, start, end, require_video=require_video)
         yield frames
     finally:
         try:
@@ -294,7 +308,7 @@ def decode_h264(
     topic: str | None = None,
     lookback: timedelta = timedelta(seconds=5),
     decoder_factories: Sequence[DecoderFactory] | None = None,
-) -> Generator[dict[str, Any], None, None]:
+) -> Generator[VideoSample, None, None]:
     """Stream decoded H.264 frames from an episode as sample dictionaries.
 
     Pass directly as ``read_episode=decode_h264``, return it from a callback, or
@@ -307,7 +321,8 @@ def decode_h264(
         decoder state. The reader closes all iterators when the callback finishes,
         fails, or is cancelled, even if some iterators are only partially consumed.
     :param topic: One of the dataset's selected topics. None reads all selected
-        topics, ignoring non-video schemas. Multiple camera outputs are not paired.
+        topics, ignoring non-video schemas. An explicit non-video topic raises
+        VideoDecodeError. Multiple camera outputs are not paired.
     :param lookback: History to fetch before the episode, default five seconds.
         Must be nonnegative. Only attached recordings are searched. Insufficient
         initialization history raises VideoDecodeError; increase this budget or
@@ -324,24 +339,18 @@ def decode_h264(
         release inside a callback, call close() or use contextlib.closing().
     """
 
-    def samples() -> Generator[dict[str, Any], None, None]:
+    def samples() -> Generator[VideoSample, None, None]:
         messages = episode.iter_messages(
             topics=None if topic is None else [topic],
             lookback=lookback,
             decoder_factories=decoder_factories,
         )
         with _decode_h264_messages(
-            messages, start_time=episode.start_time, end_time=episode.end_time
+            messages,
+            start_time=episode.start_time,
+            end_time=episode.end_time,
+            require_video=topic is not None,
         ) as frames:
-            for frame in frames:
-                yield dict(
-                    image=frame.image,
-                    topic=frame.topic,
-                    channel_id=frame.channel_id,
-                    timestamp_ns=frame.timestamp_ns,
-                    log_time_ns=frame.log_time_ns,
-                    publish_time_ns=frame.publish_time_ns,
-                    frame_id=frame.frame_id,
-                )
+            yield from frames
 
     return episode._manage(samples())

@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator, Mapping, Sequence
-from typing import Any, TypeVar
+from collections.abc import Iterator, Sequence
+from typing import TYPE_CHECKING, TypeVar
 
 import torch.distributed as distributed
 from torch import Tensor, from_numpy
@@ -11,10 +11,13 @@ from torch.utils.data import IterableDataset, get_worker_info
 
 from .reader import ClientFactory, ReadEpisode, _Plan, _plan
 
+if TYPE_CHECKING:
+    from .video import VideoSample
+
 _T = TypeVar("_T")
 
 
-def to_image_tensor(frame: Mapping[str, Any]) -> Tensor:
+def to_image_tensor(frame: VideoSample) -> Tensor:
     """Convert a decoded RGB frame to a contiguous uint8 CPU tensor, ``[C, H, W]``.
 
     Values remain in [0, 255]; resizing, normalization, and device placement are

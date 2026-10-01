@@ -104,7 +104,7 @@ def test_non_dictionary_rows_fail_with_episode_context_and_close_streams() -> No
         list(source.get_read_tasks(1)[0]())
     assert isinstance(error.value.__cause__, TypeError)
     assert str(error.value.__cause__) == (
-        "Ray read_episode must yield dictionaries, got tuple"
+        "Ray read_episode must yield mappings, got tuple"
     )
     assert closed == ["a"]
     assert client.closed == ["a"]
@@ -202,9 +202,9 @@ def test_video_callback_in_ray_workers() -> None:
         )
         assert len(selected) == 8
         for actual, frame in zip(selected, expected):
-            assert actual["timestamp_ns"] == frame.timestamp_ns
-            assert actual["log_time_ns"] == frame.log_time_ns
-            np.testing.assert_array_equal(actual["image"], frame.image)
+            assert actual["timestamp_ns"] == frame["timestamp_ns"]
+            assert actual["log_time_ns"] == frame["log_time_ns"]
+            np.testing.assert_array_equal(actual["image"], frame["image"])
 
 
 def test_video_decoder_can_be_used_directly_as_callback() -> None:
@@ -223,3 +223,19 @@ def test_video_decoder_can_be_used_directly_as_callback() -> None:
         concurrency=2,
     )
     assert len(list(dataset.iter_rows())) == 32
+
+
+def test_ray_accepts_read_only_sample_mappings() -> None:
+    from types import MappingProxyType
+
+    from foxglove.datasets.ray import _read_rows
+    from foxglove.datasets.reader import EpisodeReader, _plan
+
+    client = Client()
+    plan = _plan("dataset", 7, ["/camera"], lambda: client)
+    reader = EpisodeReader(plan.episodes[0], plan.topics, client)
+    rows = list(
+        _read_rows(lambda episode: [MappingProxyType({"id": episode.id})], reader)
+    )
+    assert rows == [{"id": "a"}]
+    assert isinstance(rows[0], dict)
