@@ -6,8 +6,9 @@ to convert each episode into training samples.
 
 .. warning::
 
-   The PyTorch and Ray Data APIs are experimental and unstable. They may change
-   in backward-incompatible ways as we continue development and incorporate user
+   The ``foxglove.datasets`` APIs, including the PyTorch and Ray Data adapters
+   and ``EpisodeReader``, are experimental and unstable. They may change in
+   backward-incompatible ways as we continue development and incorporate user
    feedback.
 
 Installation
@@ -91,20 +92,10 @@ API reference
 PyTorch
 ^^^^^^^
 
-.. warning::
-
-   This API is experimental and unstable. It may change in backward-incompatible
-   ways as we continue development and incorporate user feedback.
-
 .. autofunction:: foxglove.datasets.torch.read_dataset
 
 Ray Data
 ^^^^^^^^
-
-.. warning::
-
-   This API is experimental and unstable. It may change in backward-incompatible
-   ways as we continue development and incorporate user feedback.
 
 .. autofunction:: foxglove.datasets.ray.read_dataset
 
