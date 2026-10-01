@@ -159,13 +159,15 @@ are searched. The default five seconds is a configurable history budget, not a g
 that a usable keyframe exists. If necessary, increase it or attach the recording containing
 the required history to the episode and commit a new dataset version.
 
-The decoder skips valid delta frames before the first IDR keyframe with SPS/PPS,
+The decoder skips lookback frames before the first IDR keyframe with SPS/PPS,
 decodes subsequent lookback to initialize state, and emits only frames whose MCAP log
 times fall inside the inclusive episode window. It raises ``VideoDecodeError`` if an
 in-window message lacks initialization history, rather than dropping training frames until
 the next keyframe. Capture timestamps are preserved separately and do not determine
-window membership. Duplicate timestamps remain distinct frames. Malformed messages and
-unsupported codecs raise errors even during lookback; corrupt input is never silently ignored.
+window membership. Duplicate timestamps remain distinct frames. Invalid base64,
+malformed NAL framing or headers, and unsupported codecs raise errors even during
+lookback. Slice data in frames skipped before initialization is not decoded or checked
+for corruption. Once initialized, decoding errors also raise during lookback.
 
 Always feed every video message in order; sample frames only after decoding. Decoder
 buffering can delay output, so consume the iterator to exhaustion to receive flushed

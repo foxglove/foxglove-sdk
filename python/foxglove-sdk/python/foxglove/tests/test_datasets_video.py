@@ -490,6 +490,25 @@ def test_malformed_lookback_raises_before_initial_keyframe(
         decode(rows, start=5)
 
 
+@pytest.mark.parametrize("initialized", [False, True])
+def test_corrupt_lookback_slice_is_checked_only_after_initialization(
+    initialized: bool,
+) -> None:
+    rows = messages()
+    # Valid Annex B framing and NAL header, but invalid slice data.
+    rows[1][3]["data"] = b"\x00\x00\x00\x01\x61\x00"
+    if initialized:
+        with pytest.raises(VideoDecodeError, match="/camera"):
+            decode(rows, start=5)
+    else:
+        window = decode(rows[1:], start=5)
+        expected = decode(messages(), start=5)
+        assert len(window) == len(expected) == 3
+        for actual, reference in zip(window, expected):
+            np.testing.assert_array_equal(actual["image"], reference["image"])
+            assert actual["log_time_ns"] == reference["log_time_ns"]
+
+
 @pytest.mark.parametrize(
     "schema_name", [None, "foxglove.CompressedImage", "JointState"]
 )
