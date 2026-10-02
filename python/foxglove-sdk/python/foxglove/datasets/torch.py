@@ -1,4 +1,7 @@
-"""Load committed datasets with PyTorch; requires ``foxglove-sdk[torch]``."""
+"""Load committed datasets with PyTorch; requires ``foxglove-sdk[torch]``.
+
+These APIs are experimental and unstable and may change in backward-incompatible ways.
+"""
 
 from __future__ import annotations
 
@@ -59,6 +62,11 @@ def read_dataset(
     world_size: int | None = None,
 ) -> IterableDataset[_T]:
     """Plan a topic-filtered dataset; download messages only during iteration.
+
+    .. warning::
+
+        This API is experimental and unstable. It may change in backward-incompatible
+        ways as we continue development and incorporate user feedback.
 
     ``read_episode`` yields samples, such as tensors, tuples, or dictionaries.
     Use DataLoader's ``collate_fn`` for custom sample types. ``client_factory``

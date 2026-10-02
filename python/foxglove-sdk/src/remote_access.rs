@@ -29,7 +29,7 @@ use crate::sink_channel_filter::{PyChannelDescriptor, PySinkChannelFilter};
     eq,
     eq_int
 )]
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub enum PyDracoMethod {
     /// kd-tree encoding: the best compression ratios, but points are reordered. This is
     /// the default.

@@ -56,6 +56,11 @@ class _Episode:
 class EpisodeReader:
     """An episode scoped to the topics selected by ``read_dataset``.
 
+    .. warning::
+
+        This API is experimental and unstable. It may change in backward-incompatible
+        ways as we continue development and incorporate user feedback.
+
     Instances are supplied to the user's ``read_episode`` callback and remain
     usable only until that callback's iterator finishes or is closed. Message tuples
     are the client's ``(schema, channel, message, decoded_message)`` values. Create
