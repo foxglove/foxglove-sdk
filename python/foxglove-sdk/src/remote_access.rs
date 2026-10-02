@@ -23,7 +23,7 @@ use crate::sink_channel_filter::{PyChannelDescriptor, PySinkChannelFilter};
 /// integer fields are copied losslessly under both; the methods differ in point order and
 /// compression ratio.
 #[pyclass(
-    skip_from_py_object,
+    from_py_object,
     name = "DracoMethod",
     module = "foxglove.remote_access",
     eq,
@@ -36,15 +36,6 @@ pub enum PyDracoMethod {
     KdTree,
     /// Sequential encoding: preserves point order, at a lower compression ratio.
     Sequential,
-}
-
-// PyO3's generated extraction clones Copy classes, triggering clone_on_copy.
-impl<'a, 'py> FromPyObject<'a, 'py> for PyDracoMethod {
-    type Error = pyo3::pyclass::PyClassGuardError<'a, 'py>;
-
-    fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
-        Ok(*obj.extract::<pyo3::PyClassGuard<'_, Self>>()?)
-    }
 }
 
 #[pymethods]
