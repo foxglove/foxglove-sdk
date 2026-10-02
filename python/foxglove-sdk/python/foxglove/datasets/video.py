@@ -1,4 +1,7 @@
-"""CPU H.264 decoding for dataset callbacks; requires ``foxglove-sdk[video]``."""
+"""CPU H.264 decoding for dataset callbacks; requires ``foxglove-sdk[video]``.
+
+These APIs are experimental and unstable and may change in backward-incompatible ways.
+"""
 
 from __future__ import annotations
 
@@ -38,6 +41,11 @@ class VideoDecodeError(ValueError):
 
 class VideoSample(TypedDict):
     """An RGB image and the metadata of its original compressed message.
+
+    .. warning::
+
+        This API is experimental and unstable. It may change in backward-incompatible
+        ways as we continue development and incorporate user feedback.
 
     ``image`` is a writable, contiguous uint8 NumPy array of shape ``[H, W, 3]``.
     All timestamps are integer nanoseconds since the Unix epoch. ``timestamp_ns``
@@ -288,6 +296,11 @@ def decode_h264(
     decoder_factories: Sequence[DecoderFactory] | None = None,
 ) -> Generator[VideoSample, None, None]:
     """Yield RGB frames from an episode. Requires ``foxglove-sdk[video]``.
+
+    .. warning::
+
+        This API is experimental and unstable. It may change in backward-incompatible
+        ways as we continue development and incorporate user feedback.
 
     Use directly as ``read_episode=decode_h264`` with PyTorch or Ray, or call
     inside an episode callback. Each invocation opens one download and maintains
