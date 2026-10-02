@@ -221,3 +221,22 @@ def test_image_tensor_accepts_arrays_tensors_and_loader_batches(
     assert actual.device == expected.device
     assert actual.is_contiguous()
     assert torch.equal(actual, expected)
+
+
+@pytest.mark.parametrize("shape", [(4, 5), (4, 5, 1), (4, 5, 4)])
+def test_image_tensor_rejects_invalid_layouts(shape: tuple[int, ...]) -> None:
+    from foxglove.datasets.torch import to_image_tensor
+
+    with pytest.raises(ValueError, match="channels-last RGB"):
+        to_image_tensor({"image": torch.zeros(shape)})
+
+
+@pytest.mark.parametrize("shape", [(4, 5, 3), (2, 4, 5, 3)])
+def test_image_tensor_rejects_converting_channels_first_twice(
+    shape: tuple[int, ...],
+) -> None:
+    from foxglove.datasets.torch import to_image_tensor
+
+    converted = to_image_tensor({"image": torch.zeros(shape)})
+    with pytest.raises(ValueError, match="channels-last RGB"):
+        to_image_tensor({"image": converted})

@@ -223,7 +223,10 @@ def test_closes_source_and_decoder_even_if_iterator_is_retained(
         consume()
     assert closed == [True]
     assert closed_decoders
-    assert all(state.codec is None and not state.pending for state in closed_decoders)
+    assert all(
+        state.codec is None and not state.pending and not state.history
+        for state in closed_decoders
+    )
     assert list(retained_frames[0]) == []
 
 
@@ -424,7 +427,10 @@ def test_episode_owns_partially_consumed_video_iterators(
     else:
         assert list(stream) == [{"id": "a"}]
     assert len(closed_decoders) == 2
-    assert all(state.codec is None and not state.pending for state in closed_decoders)
+    assert all(
+        state.codec is None and not state.pending and not state.history
+        for state in closed_decoders
+    )
     assert client.closed == ["a", "a"]
     assert all(list(iterator) == [] for iterator in retained)
 
@@ -460,24 +466,41 @@ def test_episode_decoder_reads_all_selected_topics_in_one_request() -> None:
     assert not reader._streams
 
 
-@pytest.mark.parametrize("initialized, start", [(False, 5), (True, 5), (True, 0)])
-def test_corrupt_lookback_slice_is_checked_only_after_initialization(
-    initialized: bool,
-    start: int,
-) -> None:
+@pytest.mark.parametrize("offset, start", [(0, 0), (0, 2), (0, 4), (0, 5), (1, 5)])
+def test_corrupt_slice_is_checked_only_when_needed(offset: int, start: int) -> None:
     rows = messages()
     # Valid Annex B framing and NAL header, but invalid slice data.
     rows[1][3]["data"] = b"\x00\x00\x00\x01\x61\x00"
-    if initialized:
+    if start < 4:
         with pytest.raises(VideoDecodeError, match="/camera"):
-            decode(rows, start=start)
+            decode(rows[offset:], start=start)
     else:
-        window = decode(rows[1:], start=5)
-        expected = decode(messages(), start=5)
-        assert len(window) == len(expected) == 3
+        window = decode(rows[offset:], start=start)
+        expected = decode(messages(), start=start)
+        assert len(window) == len(expected) == 8 - start
         for actual, reference in zip(window, expected):
             np.testing.assert_array_equal(actual["image"], reference["image"])
             assert actual["log_time_ns"] == reference["log_time_ns"]
+
+
+@pytest.mark.parametrize("start", [4, 5])
+def test_decodes_only_from_latest_lookback_keyframe(
+    monkeypatch: pytest.MonkeyPatch, start: int
+) -> None:
+    expected = decode(messages(), start=start)
+    decoded_times = []
+    original = _Decoder._decode_packet
+
+    def track(self: _Decoder, data: bytes, source: Any) -> Iterator[VideoSample]:
+        decoded_times.append(source.log_time_ns)
+        yield from original(self, data, source)
+
+    monkeypatch.setattr(_Decoder, "_decode_packet", track)
+    window = decode(messages(), start=start)
+    assert decoded_times == [START_NS + i * 1_000_000_000 for i in range(4, 8)]
+    assert len(window) == len(expected)
+    for actual, reference in zip(window, expected):
+        np.testing.assert_array_equal(actual["image"], reference["image"])
 
 
 @pytest.mark.parametrize(

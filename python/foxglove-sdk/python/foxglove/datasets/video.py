@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import re
+from collections import deque
 from collections.abc import Generator, Iterable, Iterator, Mapping
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -120,6 +121,7 @@ class _Decoder:
         self.codec: av.VideoCodecContext | None = None
         self.pending: dict[int, _Source] = {}
         self.sequence = 0
+        self.history: deque[tuple[bytes, _Source]] = deque()
 
     def decode(self, message: Message, decoded: Any) -> Iterator[VideoSample]:
         if _field(decoded, "format") != "h264":
@@ -131,19 +133,15 @@ class _Decoder:
             else bytes(payload)
         )
         types = _nal_types(data)
-        if self.codec is None:
-            if not {5, 7, 8}.issubset(types):
-                if message.log_time < self.start:
-                    return
-                raise VideoDecodeError(
-                    "Missing H.264 initialization history (IDR keyframe with SPS/PPS). "
-                    "Increase lookback or attach the recording containing the preceding "
-                    "keyframe to the episode; no in-window frames can be skipped."
-                )
-            self.codec = av.CodecContext.create("h264", "r")
-            self.codec.options = {"err_detect": "explode"}
-            # Dataset workers already provide parallelism; avoid CPU oversubscription.
-            self.codec.thread_count = 1
+        keyframe = {5, 7, 8}.issubset(types)
+        if self.codec is None and not keyframe and not self.history:
+            if message.log_time < self.start:
+                return
+            raise VideoDecodeError(
+                "Missing H.264 initialization history (IDR keyframe with SPS/PPS). "
+                "Increase lookback or attach the recording containing the preceding "
+                "keyframe to the episode; no in-window frames can be skipped."
+            )
 
         source = _Source(
             _timestamp(_field(decoded, "timestamp")),
@@ -151,6 +149,29 @@ class _Decoder:
             message.publish_time,
             _field(decoded, "frame_id"),
         )
+        if self.codec is None:
+            if keyframe:
+                self.history.clear()
+            if message.log_time < self.start:
+                self.history.append((data, source))
+                return
+            # Only the most recent self-contained keyframe and its successors matter.
+            while self.history:
+                history_data, history_source = self.history.popleft()
+                try:
+                    yield from self._decode_packet(history_data, history_source)
+                except (ValueError, av.FFmpegError) as error:
+                    raise VideoDecodeError(
+                        f"Lookback frame at log time {history_source.log_time_ns}: {error}"
+                    ) from error
+        yield from self._decode_packet(data, source)
+
+    def _decode_packet(self, data: bytes, source: _Source) -> Iterator[VideoSample]:
+        if self.codec is None:
+            self.codec = av.CodecContext.create("h264", "r")
+            self.codec.options = {"err_detect": "explode"}
+            # Dataset workers already provide parallelism; avoid CPU oversubscription.
+            self.codec.thread_count = 1
         packet = av.Packet(data)
         # Unique identities survive decoder buffering, even with duplicate capture times.
         packet.pts = packet.dts = self.sequence
@@ -192,6 +213,7 @@ class _Decoder:
         # PyAV releases AVCodecContext when its Python owner is released.
         self.codec = None
         self.pending.clear()
+        self.history.clear()
 
 
 def _decode_h264_messages(
@@ -277,14 +299,16 @@ def decode_h264(
         Non-video schemas are ignored only when topic is None.
     :param lookback: Nonnegative history budget, default five seconds. Searches
         only attached recordings. Missing initialization history raises
-        VideoDecodeError. Pre-keyframe slice data is skipped without decoding.
+        VideoDecodeError. Only history since the latest self-contained keyframe
+        is decoded; older slice data is not checked for corruption.
     :param decoder_factories: Optional MCAP deserializers created in the callback.
         None uses the client's defaults.
     :returns: VideoSample dictionaries, ordered per channel, without camera
         synchronization. Consume to exhaustion to receive buffered frames.
     :raises VideoDecodeError: Unsupported or invalid video, or incomplete decoding.
         Supports CompressedVideo H.264 Annex B, one image per message, no B-frames,
-        with an initial IDR keyframe containing SPS/PPS.
+        with an initial IDR keyframe containing SPS/PPS. Missing packets can cause
+        undetected corruption until the next keyframe.
     """
 
     messages = episode.iter_messages(

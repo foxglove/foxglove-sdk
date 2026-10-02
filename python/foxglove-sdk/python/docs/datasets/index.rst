@@ -117,15 +117,18 @@ Important limits:
 
 * CPU decoding of ``CompressedVideo`` H.264 Annex B only: one image per message,
   no B-frames, and an initial IDR keyframe containing SPS/PPS.
+* Missing video messages can cause undetected image corruption until the next
+  keyframe, even when decoding raises no error.
 * Decoding needs earlier frames. The default five-second ``lookback`` searches only
   recordings attached to the episode. Missing history raises ``VideoDecodeError``;
-  increase the lookback or attach the missing recording.
+  increase the lookback or attach the missing recording. Compressed history is
+  buffered and decoded only from the latest usable keyframe.
   Only frames within the episode's inclusive MCAP log-time window are emitted.
 * Without ``topic``, non-video messages are discarded. An explicit non-video
   ``topic`` raises ``VideoDecodeError``. Read other sensors separately with
   ``episode.iter_messages(topics=["/joint_states"])``.
 * Resize images as needed before batching. ``to_image_tensor(sample)`` from
-  ``foxglove.datasets.torch`` accepts NumPy images or tensors, including batches,
+  ``foxglove.datasets.torch`` accepts channels-last RGB NumPy images or tensors, including batches,
   and moves the color channels before height and width. Call it once, before or
   after DataLoader; it preserves dtype and device. Normalize and move to your
   training device as needed.
