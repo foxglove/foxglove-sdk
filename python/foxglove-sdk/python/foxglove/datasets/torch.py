@@ -5,15 +5,32 @@ These APIs are experimental and unstable and may change in backward-incompatible
 
 from __future__ import annotations
 
-from collections.abc import Iterator, Sequence
-from typing import TypeVar
+from collections.abc import Iterator, Mapping, Sequence
+from typing import Any, TypeVar
 
 import torch.distributed as distributed
+from torch import Tensor, as_tensor
 from torch.utils.data import IterableDataset, get_worker_info
 
 from .reader import ClientFactory, ReadEpisode, _Plan, _plan
 
 _T = TypeVar("_T")
+
+
+def to_image_tensor(frame: Mapping[str, Any]) -> Tensor:
+    """Convert channels-last images to a contiguous channels-first tensor.
+
+    Accepts a sample or batch whose ``image`` is a NumPy array or Tensor shaped
+    ``[..., H, W, 3]``; returns ``[..., 3, H, W]``. Preserves dtype and device.
+    Call once, either in the episode callback or after DataLoader. Resizing,
+    normalization, and device placement remain up to the training pipeline.
+    """
+    image = as_tensor(frame["image"])
+    if image.ndim < 3 or image.shape[-1] != 3:
+        raise ValueError(
+            f"Expected a channels-last RGB image [..., H, W, 3], got shape {tuple(image.shape)}"
+        )
+    return image.movedim(-1, -3).contiguous()
 
 
 class _TorchDataset(IterableDataset[_T]):

@@ -147,3 +147,96 @@ def test_custom_sample_types_with_worker_collation() -> None:
         multiprocessing_context="spawn",
     )
     assert list(loader) == [["a", "b"], ["c", "d"]]
+
+
+@pytest.mark.parametrize("direct", [False, True])
+def test_video_callback_in_spawned_workers_and_tensor_conversion(direct: bool) -> None:
+    pytest.importorskip("av")
+    from foxglove.datasets.torch import read_dataset, to_image_tensor
+    from foxglove.datasets.video import decode_h264
+    from torch.utils.data import DataLoader
+
+    from .test_datasets_video import VideoClient, decode, messages, video_samples
+
+    dataset = read_dataset(
+        "dataset",
+        version=7,
+        topics=["/camera"],
+        read_episode=decode_h264 if direct else video_samples,
+        client_factory=VideoClient,
+    )
+    loader = DataLoader(
+        dataset, batch_size=None, num_workers=2, multiprocessing_context="spawn"
+    )
+    rows = list(loader)
+    expected = decode(messages())
+    assert len(rows) == 32
+    if not direct:
+        assert sorted(row["episode_id"] for row in rows) == [
+            episode_id for episode_id in ("a", "b", "c", "d") for _ in range(8)
+        ]
+    ordered = sorted(rows, key=lambda row: row["log_time_ns"])
+    for actual, frame in zip(ordered, [frame for frame in expected for _ in range(4)]):
+        assert actual["timestamp_ns"] == frame["timestamp_ns"]
+        assert actual["log_time_ns"] == frame["log_time_ns"]
+        assert torch.equal(actual["image"], torch.from_numpy(frame["image"]))
+    frame = expected[0]
+    tensor = to_image_tensor(frame)
+    assert tensor.shape == (3, 32, 48)
+    assert tensor.dtype == torch.uint8 and tensor.is_contiguous()
+    assert torch.equal(tensor, torch.from_numpy(expected[0]["image"]).permute(2, 0, 1))
+
+
+@pytest.mark.parametrize("source", ["numpy", "tensor", "loader"])
+@pytest.mark.parametrize("batch_size", [None, 2])
+@pytest.mark.parametrize("dtype", ["uint8", "float32"])
+def test_image_tensor_accepts_arrays_tensors_and_loader_batches(
+    source: str, batch_size: int | None, dtype: str
+) -> None:
+    import numpy as np
+    from foxglove.datasets.torch import to_image_tensor
+    from torch.utils.data import DataLoader
+
+    images = np.arange(120).reshape(2, 4, 5, 3).astype(dtype)
+    original = images[0] if batch_size is None else images
+    if source == "loader":
+        frame = next(
+            iter(
+                DataLoader(
+                    [{"image": image} for image in images], batch_size=batch_size
+                )
+            )
+        )
+    else:
+        frame = {
+            "image": torch.from_numpy(original) if source == "tensor" else original
+        }
+    actual = to_image_tensor(frame)
+    expected = torch.stack(
+        [torch.from_numpy(original[..., channel]) for channel in range(3)],
+        dim=0 if batch_size is None else 1,
+    )
+    assert actual.shape == expected.shape
+    assert actual.dtype == expected.dtype
+    assert actual.device == expected.device
+    assert actual.is_contiguous()
+    assert torch.equal(actual, expected)
+
+
+@pytest.mark.parametrize("shape", [(4, 5), (4, 5, 1), (4, 5, 4)])
+def test_image_tensor_rejects_invalid_layouts(shape: tuple[int, ...]) -> None:
+    from foxglove.datasets.torch import to_image_tensor
+
+    with pytest.raises(ValueError, match="channels-last RGB"):
+        to_image_tensor({"image": torch.zeros(shape)})
+
+
+@pytest.mark.parametrize("shape", [(4, 5, 3), (2, 4, 5, 3)])
+def test_image_tensor_rejects_converting_channels_first_twice(
+    shape: tuple[int, ...],
+) -> None:
+    from foxglove.datasets.torch import to_image_tensor
+
+    converted = to_image_tensor({"image": torch.zeros(shape)})
+    with pytest.raises(ValueError, match="channels-last RGB"):
+        to_image_tensor({"image": converted})
