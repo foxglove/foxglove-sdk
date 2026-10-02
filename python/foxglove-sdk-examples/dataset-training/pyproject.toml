@@ -1,0 +1,8 @@
+[project]
+name = "dataset-training"
+version = "0.0.0"
+requires-python = ">=3.10"
+dependencies = ["foxglove-sdk[torch,ray]", "foxglove-client>=0.20.0", "numpy"]
+
+[tool.uv.sources]
+foxglove-sdk = { path = "../../foxglove-sdk" }
