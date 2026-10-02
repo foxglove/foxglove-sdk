@@ -86,12 +86,13 @@ Install ``foxglove-sdk[video,torch]`` or ``foxglove-sdk[video,ray]``, plus the
 MCAP decoder for your recording (see `Message formats`_).
 
 Pass ``decode_h264`` as the episode callback to decode every selected camera topic.
-Using ``make_client`` from above:
+Using ``make_client`` from above and equally sized camera images:
 
 .. code-block:: python
 
-   from foxglove.datasets.torch import read_dataset
+   from foxglove.datasets.torch import read_dataset, to_image_tensor
    from foxglove.datasets.video import decode_h264
+   from torch.utils.data import DataLoader
 
    if __name__ == "__main__":
        dataset = read_dataset(
@@ -99,8 +100,9 @@ Using ``make_client`` from above:
            topics=["/camera/front", "/camera/wrist"],
            read_episode=decode_h264, client_factory=make_client,
        )
-       for sample in dataset:
-           print(sample["topic"], sample["timestamp_ns"], sample["image"].shape)
+       for batch in DataLoader(dataset, batch_size=16, num_workers=2):
+           images = to_image_tensor(batch)  # [B, 3, H, W]
+           print(batch["topic"], images.shape)
 
 Each sample is one camera frame: an RGB uint8 NumPy array in ``[H, W, 3]`` order,
 its topic, and original timestamps in nanoseconds. Frames from different cameras
@@ -123,8 +125,10 @@ Important limits:
   ``topic`` raises ``VideoDecodeError``. Read other sensors separately with
   ``episode.iter_messages(topics=["/joint_states"])``.
 * Resize images as needed before batching. ``to_image_tensor(sample)`` from
-  ``foxglove.datasets.torch`` converts to uint8 ``[C, H, W]``; normalization and
-  device placement remain up to your training code.
+  ``foxglove.datasets.torch`` accepts NumPy images or tensors, including batches,
+  and moves the color channels before height and width. Call it once, before or
+  after DataLoader; it preserves dtype and device. Normalize and move to your
+  training device as needed.
 
 To request ten seconds of history, pass ``read_episode=read_video`` to
 ``read_dataset`` using this callback, which also works with spawned workers:

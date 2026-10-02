@@ -185,3 +185,39 @@ def test_video_callback_in_spawned_workers_and_tensor_conversion(direct: bool) -
     assert tensor.shape == (3, 32, 48)
     assert tensor.dtype == torch.uint8 and tensor.is_contiguous()
     assert torch.equal(tensor, torch.from_numpy(expected[0]["image"]).permute(2, 0, 1))
+
+
+@pytest.mark.parametrize("source", ["numpy", "tensor", "loader"])
+@pytest.mark.parametrize("batch_size", [None, 2])
+@pytest.mark.parametrize("dtype", ["uint8", "float32"])
+def test_image_tensor_accepts_arrays_tensors_and_loader_batches(
+    source: str, batch_size: int | None, dtype: str
+) -> None:
+    import numpy as np
+    from foxglove.datasets.torch import to_image_tensor
+    from torch.utils.data import DataLoader
+
+    images = np.arange(120).reshape(2, 4, 5, 3).astype(dtype)
+    original = images[0] if batch_size is None else images
+    if source == "loader":
+        frame = next(
+            iter(
+                DataLoader(
+                    [{"image": image} for image in images], batch_size=batch_size
+                )
+            )
+        )
+    else:
+        frame = {
+            "image": torch.from_numpy(original) if source == "tensor" else original
+        }
+    actual = to_image_tensor(frame)
+    expected = torch.stack(
+        [torch.from_numpy(original[..., channel]) for channel in range(3)],
+        dim=0 if batch_size is None else 1,
+    )
+    assert actual.shape == expected.shape
+    assert actual.dtype == expected.dtype
+    assert actual.device == expected.device
+    assert actual.is_contiguous()
+    assert torch.equal(actual, expected)
