@@ -265,7 +265,7 @@ mod
     return pyodide;
   }
 
-  async run(code: string, currentUrl: string): Promise<string | undefined> {
+  async run(code: string, currentUrl: string): Promise<string[]> {
     const pyodide = await this.#pyodide;
     await pyodide.loadPackagesFromImports(code);
     pyodide.runPython(
@@ -286,7 +286,7 @@ mod
       { globals: pyodide.toPy({ current_url: currentUrl }) },
     );
     pyodide.runPython(code);
-    return this.#getFileNames(pyodide)[0];
+    return this.#getFileNames(pyodide);
   }
 
   #getFileNames(pyodide: PyodideInterface): string[] {
@@ -294,9 +294,16 @@ mod
       // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       pyodide
         .runPython(
+          // Sort files by inode to return them in order of creation
           `
-            from glob import glob
-            glob("*.mcap", root_dir="/home/pyodide/playground")
+            from pathlib import Path
+            [
+              path.name
+              for path in sorted(
+                Path("/home/pyodide/playground").glob("*.mcap"),
+                key=lambda path: path.stat().st_ino,
+              )
+            ]
           `,
           // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           { globals: pyodide.toPy({}) },
@@ -306,16 +313,20 @@ mod
     );
   }
 
-  async readFile(): Promise<{ name: string; data: Uint8Array<ArrayBuffer> }> {
+  async readFiles(): Promise<{ name: string; data: Uint8Array<ArrayBuffer> }[]> {
     const pyodide = await this.#pyodide;
-    const filename = this.#getFileNames(pyodide)[0];
-    if (!filename) {
-      throw new Error("No .mcap file found");
+    const filenames = this.#getFileNames(pyodide);
+    if (filenames.length === 0) {
+      throw new Error("No .mcap files found");
     }
-    const data = pyodide.FS.readFile(`/home/pyodide/playground/${filename}`);
-    return Comlink.transfer({ name: filename, data: data as Uint8Array<ArrayBuffer> }, [
-      data.buffer,
-    ]);
+    const files = filenames.map((name) => ({
+      name,
+      data: pyodide.FS.readFile(`/home/pyodide/playground/${name}`) as Uint8Array<ArrayBuffer>,
+    }));
+    return Comlink.transfer(
+      files,
+      files.map((file) => file.data.buffer),
+    );
   }
 
   async getCompletionItems(
