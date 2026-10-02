@@ -149,8 +149,7 @@ export function Playground(): React.JSX.Element {
         setDataSource({
           type: "file",
           file: files.map(({ name, data }) => new File([data], name)),
-          // @ts-expect-error `mode` is not yet available in the published @foxglove/embed types
-          mode: files.length > 1 ? "compare" : undefined,
+          compare: files.length > 1,
         });
       } catch (err) {
         toast.error(`Run failed: ${String(err)}`);
