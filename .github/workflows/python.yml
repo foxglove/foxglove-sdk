@@ -23,6 +23,7 @@ jobs:
             wheels:
               - 'python/**'
               - '.github/workflows/python.yml'
+              - '.github/actions/**'
 
   lint:
     runs-on: ubuntu-latest
@@ -44,6 +45,8 @@ jobs:
 
       - name: Install common dependencies
         uses: ./.github/actions/common-deps
+
+      - uses: ./.github/actions/setup-clang
 
       - run: corepack enable
       - uses: actions/setup-node@v7
@@ -211,25 +214,23 @@ jobs:
             target: x86_64
             manylinux: "2_28"
             extra-args: --features pyo3/extension-module,remote-access,require-cuda
+            # manylinux_2_28 is AlmaLinux 8, whose AppStream provides clang 21.
             before-script: |
-              if command -v apt-get; then
-                apt-get update
-                apt-get install -y libva-dev nvidia-cuda-dev
-                ln -snf /usr /usr/local/cuda
-              elif command -v yum; then
-                yum install -y libva-devel yum-utils
-                arch=$(uname -m)
-                case "$arch" in
-                  aarch64) cuda_arch=sbsa ;;
-                  *) cuda_arch="$arch" ;;
-                esac
-                yum-config-manager --add-repo "https://developer.download.nvidia.com/compute/cuda/repos/rhel8/${cuda_arch}/cuda-rhel8.repo"
-                yum install -y cuda-cudart-devel-12-6 cuda-driver-devel-12-6
-                ln -snf /usr/local/cuda-12.6 /usr/local/cuda
-              else
-                echo "No supported package manager found"
+              yum install -y libva-devel yum-utils clang
+              clang_major=$(clang -dumpversion | cut -d. -f1)
+              if [ "$clang_major" -lt 21 ]; then
+                echo "webrtc-sys requires clang >= 21, found $(clang -dumpversion)"
                 exit 1
               fi
+              export CC=clang CXX=clang++
+              arch=$(uname -m)
+              case "$arch" in
+                aarch64) cuda_arch=sbsa ;;
+                *) cuda_arch="$arch" ;;
+              esac
+              yum-config-manager --add-repo "https://developer.download.nvidia.com/compute/cuda/repos/rhel8/${cuda_arch}/cuda-rhel8.repo"
+              yum install -y cuda-cudart-devel-12-6 cuda-driver-devel-12-6
+              ln -snf /usr/local/cuda-12.6 /usr/local/cuda
             artifact-suffix: "-2_28"
             test: true
             remote_access: true
@@ -242,25 +243,23 @@ jobs:
             target: aarch64
             manylinux: "2_28"
             extra-args: --features pyo3/extension-module,remote-access,require-cuda
+            # manylinux_2_28 is AlmaLinux 8, whose AppStream provides clang 21.
             before-script: |
-              if command -v apt-get; then
-                apt-get update
-                apt-get install -y libva-dev nvidia-cuda-dev
-                ln -snf /usr /usr/local/cuda
-              elif command -v yum; then
-                yum install -y libva-devel yum-utils
-                arch=$(uname -m)
-                case "$arch" in
-                  aarch64) cuda_arch=sbsa ;;
-                  *) cuda_arch="$arch" ;;
-                esac
-                yum-config-manager --add-repo "https://developer.download.nvidia.com/compute/cuda/repos/rhel8/${cuda_arch}/cuda-rhel8.repo"
-                yum install -y cuda-cudart-devel-12-6 cuda-driver-devel-12-6
-                ln -snf /usr/local/cuda-12.6 /usr/local/cuda
-              else
-                echo "No supported package manager found"
+              yum install -y libva-devel yum-utils clang
+              clang_major=$(clang -dumpversion | cut -d. -f1)
+              if [ "$clang_major" -lt 21 ]; then
+                echo "webrtc-sys requires clang >= 21, found $(clang -dumpversion)"
                 exit 1
               fi
+              export CC=clang CXX=clang++
+              arch=$(uname -m)
+              case "$arch" in
+                aarch64) cuda_arch=sbsa ;;
+                *) cuda_arch="$arch" ;;
+              esac
+              yum-config-manager --add-repo "https://developer.download.nvidia.com/compute/cuda/repos/rhel8/${cuda_arch}/cuda-rhel8.repo"
+              yum install -y cuda-cudart-devel-12-6 cuda-driver-devel-12-6
+              ln -snf /usr/local/cuda-12.6 /usr/local/cuda
             artifact-suffix: "-2_28"
             test: true
             remote_access: true

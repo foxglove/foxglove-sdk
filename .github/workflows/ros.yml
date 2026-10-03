@@ -26,6 +26,7 @@ jobs:
               - 'ros/**'
               - 'Dockerfile.ros'
               - '.github/workflows/ros.yml'
+              - '.github/actions/**'
 
   build-cpp-dist:
     needs: changes
@@ -40,9 +41,8 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             libglib2.0-dev libva-dev libwebsockets-dev \
             nvidia-cuda-dev
-          echo "CC=gcc" >> $GITHUB_ENV
-          echo "CXX=g++" >> $GITHUB_ENV
           echo "CUDA_HOME=/usr" >> $GITHUB_ENV
+      - uses: ./.github/actions/setup-clang
 
       - name: Build C++ SDK
         run: make -f Container.mk FOXGLOVE_REQUIRE_CUDA=ON build-cpp-dist
