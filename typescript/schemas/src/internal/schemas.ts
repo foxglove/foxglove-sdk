@@ -1716,7 +1716,7 @@ const LocationFix: FoxgloveMessageSchema = {
     {
       name: "altitude",
       type: { type: "primitive", name: "float64" },
-      description: "Altitude in meters",
+      description: "Altitude in meters above the WGS84 ellipsoid",
       protobufFieldNumber: 3,
     },
     {

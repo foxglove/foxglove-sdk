@@ -1891,7 +1891,7 @@ impl From<LinePrimitive> for foxglove::messages::LinePrimitive {
 /// :param frame_id: Frame for the sensor. Latitude and longitude readings are at the origin of the frame.
 /// :param latitude: Latitude in degrees
 /// :param longitude: Longitude in degrees
-/// :param altitude: Altitude in meters
+/// :param altitude: Altitude in meters above the WGS84 ellipsoid
 /// :param position_covariance: Position covariance (m^2) defined relative to a tangential plane through the reported position. The components are East, North, and Up (ENU), in row-major order.
 /// :param position_covariance_type: If `position_covariance` is available, `position_covariance_type` must be set to indicate the type of covariance.
 /// :param heading: Heading (yaw angle), in radians, measured clockwise from north

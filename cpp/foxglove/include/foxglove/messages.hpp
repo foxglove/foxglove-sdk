@@ -1418,7 +1418,7 @@ struct LocationFix {
   /// @brief Longitude in degrees
   double longitude = 0;
 
-  /// @brief Altitude in meters
+  /// @brief Altitude in meters above the WGS84 ellipsoid
   double altitude = 0;
 
   /// @brief Position covariance (m^2) defined relative to a tangential plane through the reported
