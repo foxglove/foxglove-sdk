@@ -42,6 +42,7 @@ export * from "./PositionCovarianceType";
 export * from "./Quaternion";
 export * from "./RawAudio";
 export * from "./RawImage";
+export * from "./RobotDescription";
 export * from "./SceneEntity";
 export * from "./SceneEntityDeletion";
 export * from "./SceneEntityDeletionType";

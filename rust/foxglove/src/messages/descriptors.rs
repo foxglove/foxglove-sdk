@@ -39,6 +39,7 @@ pub const POSE_IN_FRAME: &[u8] = include_bytes!("data/PoseInFrame.bin");
 pub const QUATERNION: &[u8] = include_bytes!("data/Quaternion.bin");
 pub const RAW_AUDIO: &[u8] = include_bytes!("data/RawAudio.bin");
 pub const RAW_IMAGE: &[u8] = include_bytes!("data/RawImage.bin");
+pub const ROBOT_DESCRIPTION: &[u8] = include_bytes!("data/RobotDescription.bin");
 pub const SCENE_ENTITY: &[u8] = include_bytes!("data/SceneEntity.bin");
 pub const SCENE_ENTITY_DELETION: &[u8] = include_bytes!("data/SceneEntityDeletion.bin");
 pub const SCENE_UPDATE: &[u8] = include_bytes!("data/SceneUpdate.bin");
