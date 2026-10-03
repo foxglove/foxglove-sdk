@@ -387,6 +387,9 @@ public:
 
     setBinaryMessageHandler([promise = std::move(promise), fulfilled, subscriptionId](
                               const uint8_t* data, size_t dataLength) {
+      if (static_cast<ServerBinaryOpcode>(data[0]) != ServerBinaryOpcode::MESSAGE_DATA) {
+        return;
+      }
       if (ReadUint32LE(data + 1) != subscriptionId) {
         return;
       }
