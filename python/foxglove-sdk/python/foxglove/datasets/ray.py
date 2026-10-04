@@ -5,7 +5,7 @@ These APIs are experimental and unstable and may change in backward-incompatible
 
 from __future__ import annotations
 
-from collections.abc import Generator, Sequence
+from collections.abc import Generator, Mapping, Sequence
 from contextlib import closing
 from dataclasses import replace
 from functools import partial
@@ -29,17 +29,17 @@ def _new_builder() -> BlockBuilder:
 
 
 def _read_rows(
-    read_episode: ReadEpisode[dict[str, Any]], episode: EpisodeReader
+    read_episode: ReadEpisode[Mapping[str, Any]], episode: EpisodeReader
 ) -> Generator[dict[str, Any], None, None]:
     samples = iter(read_episode(episode))
     try:
         for sample in samples:
-            if not isinstance(sample, dict):
+            if not isinstance(sample, Mapping):
                 raise TypeError(
-                    "Ray read_episode must yield dictionaries, "
+                    "Ray read_episode must yield mappings, "
                     f"got {type(sample).__name__}"
                 )
-            yield sample
+            yield dict(sample)
     finally:
         close = getattr(samples, "close", None)
         if close is not None:
@@ -48,7 +48,7 @@ def _read_rows(
 
 def _read_blocks(
     plan: _Plan,
-    read_episode: ReadEpisode[dict[str, Any]],
+    read_episode: ReadEpisode[Mapping[str, Any]],
     row_limit: int | None,
     block_bytes: int | None,
 ) -> Generator[Block, None, None]:
@@ -70,7 +70,7 @@ def _read_blocks(
 
 def _make_read_task(
     plan: _Plan,
-    read_episode: ReadEpisode[dict[str, Any]],
+    read_episode: ReadEpisode[Mapping[str, Any]],
     row_limit: int | None,
     block_bytes: int | None,
 ) -> ReadTask:
@@ -87,7 +87,9 @@ def _make_read_task(
 
 
 class _Datasource(Datasource):
-    def __init__(self, plan: _Plan, read_episode: ReadEpisode[dict[str, Any]]) -> None:
+    def __init__(
+        self, plan: _Plan, read_episode: ReadEpisode[Mapping[str, Any]]
+    ) -> None:
         self._plan = plan
         self._read_episode = read_episode
 
@@ -129,11 +131,13 @@ def read_dataset(
     *,
     version: int,
     topics: Sequence[str],
-    read_episode: ReadEpisode[dict[str, Any]],
+    read_episode: ReadEpisode[Mapping[str, Any]],
     client_factory: ClientFactory,
     concurrency: int | None = None,
 ) -> ray.data.Dataset:
-    """Return a native Ray dataset of callback-produced sample dictionaries.
+    """Return a native Ray dataset of callback-produced sample mappings.
+
+    Mappings (including TypedDict samples) are materialized as dictionaries for Ray.
 
     .. warning::
 
