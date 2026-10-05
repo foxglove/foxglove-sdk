@@ -205,15 +205,10 @@ jobs:
 
       - uses: astral-sh/setup-uv@v10.2.0
 
-      # `yarn generate` runs clang-format over the generated C++, so this job writes the formatting
-      # that the C/C++ lint job then checks. Without an explicit install it would use the runner
-      # image's default (18) and the two jobs would demand different wrapping.
-      #
-      # This installs from apt.llvm.org (via .github/actions/setup-clang), the same channel as the
-      # other two places clang-format is resolved (the C/C++ lint job and the Dockerfile). Using one
-      # channel is what keeps the job that writes the formatting and the job that checks it on the
-      # same build; two channels could sit at different 21.x patches at the same time.
+      # `yarn generate` runs clang-format over the generated C++, so explicitly
+      # install the same clang version as the C/C++ lint job.
       - uses: ./.github/actions/setup-clang
+
       - name: Install clang-format
         run: bash "$GITHUB_WORKSPACE/.github/scripts/apt-retry.sh" --no-install-recommends clang-format-21
 

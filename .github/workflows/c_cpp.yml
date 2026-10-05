@@ -98,6 +98,7 @@ jobs:
             staticlib_name: libfoxglove.a
             cdylib_name: libfoxglove.so
             compiler: gcc
+            cmake_args: -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
             skip_upload: true
             cross: false
             remote_access: true
@@ -115,6 +116,7 @@ jobs:
             staticlib_name: libfoxglove.a
             cdylib_name: libfoxglove.so
             compiler: gcc
+            cmake_args: -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
             skip_upload: true
             cross: false
             remote_access: true
@@ -230,14 +232,6 @@ jobs:
 
       - name: Ensure generated files are up to date
         run: git diff --exit-code
-
-      # The C++ wrapper only links the prebuilt libraries, so it can use a
-      # different compiler than the Rust build above.
-      - name: Use GCC for the C++ wrapper
-        if: matrix.compiler == 'gcc'
-        run: |
-          echo "CC=gcc" >> $GITHUB_ENV
-          echo "CXX=g++" >> $GITHUB_ENV
 
       # Build and test C++ using the pre-built Rust libraries.
       - name: Build C++ library
