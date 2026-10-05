@@ -1,6 +1,6 @@
 # SDK Playground
 
-https://foxglove-sdk-playground.pages.dev
+https://playground.foxglove.dev
 
 The SDK playground allows you to run Python code using the Foxglove SDK, and visualize the resulting data in Foxglove.
 

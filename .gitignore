@@ -10,11 +10,13 @@
 .virtualenvs/
 .uv_cache/
 .venv/
+.wrangler/
 .yarn/*
 !.yarn/patches
 *.py[cod]
 *.so
 *.tsbuildinfo
+/api-docs/dist/
 /python/*/dist/
 /python/foxglove-schemas-flatbuffer/foxglove_schemas_flatbuffer/*.bfbs
 /python/foxglove-schemas-flatbuffer/foxglove_schemas_flatbuffer/*.py

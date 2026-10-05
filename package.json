@@ -11,6 +11,7 @@
     "sockjs/uuid": "^11.1.1"
   },
   "workspaces": [
+    "api-docs",
     "typescript/*",
     "playground",
     "python/foxglove-sdk/notebook-frontend"

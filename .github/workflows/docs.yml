@@ -83,26 +83,29 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      deployments: write
     needs: [prepare-docs]
     environment:
       name: ${{ startsWith(github.ref, 'refs/tags/sdk/v') && 'foxglove-sdk-api-docs (Production)' || 'foxglove-sdk-api-docs (Preview)' }}
-      url: ${{ steps.deploy.outputs.deployment-url }}
+      url: ${{ steps.deploy.outputs.url }}
     steps:
+      - uses: actions/checkout@v7
+      - run: corepack enable
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: yarn
+      - run: yarn workspaces focus api-docs
       - name: Download docs
         uses: actions/download-artifact@v8
         with:
           name: docs
-          path: artifacts
-      - name: Deploy to CF Pages
+          path: api-docs/dist
+      - name: Deploy to Cloudflare Workers
         id: deploy
-        uses: cloudflare/wrangler-action@v4
+        uses: foxglove/cloudflare-action@v1
         with:
+          type: workers
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN_SDK_API_DOCS }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          packageManager: npm
-          wranglerVersion: "4.136.1"
-          command: >-
-            pages deploy artifacts
-            --project-name=foxglove-sdk-api-docs
-            --branch=${{ github.head_ref || 'main' }}
+          workingDirectory: api-docs
+          productionBranch: ${{ startsWith(github.ref, 'refs/tags/sdk/v') && github.ref_name || 'main' }}

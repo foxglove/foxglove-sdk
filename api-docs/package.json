@@ -1,0 +1,7 @@
+{
+  "name": "api-docs",
+  "private": true,
+  "devDependencies": {
+    "wrangler": "4.147.0"
+  }
+}
