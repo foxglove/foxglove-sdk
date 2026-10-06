@@ -17,6 +17,8 @@ jobs:
       - name: Install common dependencies
         uses: ./.github/actions/common-deps
 
+      - uses: ./.github/actions/setup-clang
+
       - uses: arduino/setup-protoc@v3
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
@@ -65,6 +67,8 @@ jobs:
       - name: Install common dependencies
         uses: ./.github/actions/common-deps
 
+      - uses: ./.github/actions/setup-clang
+
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: 1.88.0
@@ -78,6 +82,8 @@ jobs:
 
       - name: Install common dependencies
         uses: ./.github/actions/common-deps
+
+      - uses: ./.github/actions/setup-clang
 
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
@@ -199,20 +205,12 @@ jobs:
 
       - uses: astral-sh/setup-uv@v10.2.0
 
-      # `yarn generate` runs clang-format over the generated C++, so this job writes the formatting
-      # that the C/C++ lint job then checks. Without an explicit install it would use the runner
-      # image's default (18) and the two jobs would demand different wrapping.
-      #
-      # This installs from apt.llvm.org, the same channel as the other two places clang-format is
-      # resolved (.github/workflows/c_cpp.yml and the Dockerfile). Using one channel is what keeps
-      # the job that writes the formatting and the job that checks it on the same build; two
-      # channels could sit at different 21.x patches at the same time.
+      # `yarn generate` runs clang-format over the generated C++, so explicitly
+      # install the same clang version as the C/C++ lint job.
+      - uses: ./.github/actions/setup-clang
+
       - name: Install clang-format
-        run: |
-          curl https://apt.llvm.org/llvm.sh -fsS -o /tmp/llvm.sh
-          sudo bash /tmp/llvm.sh 21
-          bash "$GITHUB_WORKSPACE/.github/scripts/apt-retry.sh" --no-install-recommends clang-format-21
-          echo "/usr/lib/llvm-21/bin" >> $GITHUB_PATH
+        run: bash "$GITHUB_WORKSPACE/.github/scripts/apt-retry.sh" --no-install-recommends clang-format-21
 
       - name: Ensure generated files are up to date
         run: |

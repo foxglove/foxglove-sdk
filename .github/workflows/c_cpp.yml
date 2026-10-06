@@ -33,6 +33,7 @@ jobs:
               - 'c/**'
               - 'cpp/**'
               - '.github/workflows/c_cpp.yml'
+              - '.github/actions/**'
 
   lint:
     runs-on: ubuntu-latest
@@ -41,15 +42,12 @@ jobs:
         with:
           ref: ${{ inputs.ref }}
       - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - uses: ./.github/actions/setup-clang
       - run: |
-          # Ubuntu 24.04 only packages clang up to 20, so pull 21 from apt.llvm.org.
-          curl https://apt.llvm.org/llvm.sh -fsS -o /tmp/llvm.sh
-          sudo bash /tmp/llvm.sh 21
           bash "$GITHUB_WORKSPACE/.github/scripts/apt-retry.sh" --no-install-recommends \
             clang-format-21 clang-tidy-21 \
-            gcc g++ libglib2.0-dev libva-dev  \
+            libglib2.0-dev libva-dev  \
             libwebsockets-dev nlohmann-json3-dev
-          echo "/usr/lib/llvm-21/bin" >> $GITHUB_PATH
       - run: clang-format --version
       - run: clang-tidy --version
       - run: make lint
@@ -81,13 +79,28 @@ jobs:
             skip_upload: true
             cross: false
 
-          # Linux (remote access enabled). require_cuda is only set on the
-          # targets where webrtc-sys builds NVENC support and where this job
-          # installs nvidia-cuda-dev below.
+          # Linux (remote access enabled). The Rust library is always built with
+          # clang 21, which webrtc-sys requires. The C++ wrapper is built and
+          # tested with both GCC and clang: the GCC entries select the compiler
+          # via `cmake_args`, and `compiler` labels the job. Only the clang
+          # entries upload artifacts. require_cuda is only
+          # set on the targets where webrtc-sys builds NVENC support and where
+          # this job installs nvidia-cuda-dev below.
           - runner: ubuntu-22.04-arm
             target: aarch64-unknown-linux-gnu
             staticlib_name: libfoxglove.a
             cdylib_name: libfoxglove.so
+            compiler: clang
+            cross: false
+            remote_access: true
+            require_cuda: true
+          - runner: ubuntu-22.04-arm
+            target: aarch64-unknown-linux-gnu
+            staticlib_name: libfoxglove.a
+            cdylib_name: libfoxglove.so
+            compiler: gcc
+            cmake_args: -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
+            skip_upload: true
             cross: false
             remote_access: true
             require_cuda: true
@@ -95,6 +108,17 @@ jobs:
             target: x86_64-unknown-linux-gnu
             staticlib_name: libfoxglove.a
             cdylib_name: libfoxglove.so
+            compiler: clang
+            cross: false
+            remote_access: true
+            require_cuda: true
+          - runner: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            staticlib_name: libfoxglove.a
+            cdylib_name: libfoxglove.so
+            compiler: gcc
+            cmake_args: -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
+            skip_upload: true
             cross: false
             remote_access: true
             require_cuda: true
@@ -150,7 +174,7 @@ jobs:
             cdylib_name: libfoxglove.dylib
             cross: true
 
-    name: build (${{ matrix.target }}${{ matrix.remote_access && ', remote-access' || '' }}${{ matrix.compiler == 'clang' && ', clang' || ''}})
+    name: build (${{ matrix.target }}${{ matrix.remote_access && ', remote-access' || '' }}${{ matrix.compiler && format(', {0}', matrix.compiler) || '' }})
     runs-on: ${{ matrix.runner }}
 
     env:
@@ -177,14 +201,15 @@ jobs:
         if: matrix.remote_access && runner.os == 'Linux'
         run: |
           bash "$GITHUB_WORKSPACE/.github/scripts/apt-retry.sh" libglib2.0-dev libva-dev libwebsockets-dev
-          echo "CC=gcc" >> $GITHUB_ENV
-          echo "CXX=g++" >> $GITHUB_ENV
 
       - name: Install CUDA build dependencies
         if: matrix.require_cuda && runner.os == 'Linux'
         run: |
           bash "$GITHUB_WORKSPACE/.github/scripts/apt-retry.sh" nvidia-cuda-dev
           echo "CUDA_HOME=/usr" >> $GITHUB_ENV
+      - name: Install clang 21 for webrtc-sys (Linux remote access)
+        if: matrix.remote_access && runner.os == 'Linux'
+        uses: ./.github/actions/setup-clang
       - name: Use Clang
         if: matrix.compiler == 'clang'
         run: |
