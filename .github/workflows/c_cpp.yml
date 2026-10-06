@@ -80,9 +80,10 @@ jobs:
             cross: false
 
           # Linux (remote access enabled). The Rust library is always built with
-          # clang 21, which webrtc-sys requires. `compiler` selects the compiler
-          # for the C++ wrapper, which is built and tested with both GCC and
-          # clang; only the clang entries upload artifacts. require_cuda is only
+          # clang 21, which webrtc-sys requires. The C++ wrapper is built and
+          # tested with both GCC and clang: the GCC entries select the compiler
+          # via `cmake_args`, and `compiler` labels the job. Only the clang
+          # entries upload artifacts. require_cuda is only
           # set on the targets where webrtc-sys builds NVENC support and where
           # this job installs nvidia-cuda-dev below.
           - runner: ubuntu-22.04-arm
