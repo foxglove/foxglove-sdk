@@ -1,0 +1,21 @@
+name: Install clang
+description: >-
+  Install clang 21 from apt.llvm.org and select it as the C/C++ compiler. On Linux, webrtc-sys
+  compiles against the hermetic libc++ bundled with libwebrtc, which requires clang 21 or later.
+  Later steps can install other LLVM 21 packages (e.g. clang-format-21) from the same repository.
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: |
+        set -euo pipefail
+        codename=$(lsb_release -cs)
+        curl --retry 3 -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key \
+          | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc > /dev/null
+        echo "deb https://apt.llvm.org/${codename}/ llvm-toolchain-${codename}-21 main" \
+          | sudo tee /etc/apt/sources.list.d/apt.llvm.org-21.list > /dev/null
+        bash "$GITHUB_WORKSPACE/.github/scripts/apt-retry.sh" --no-install-recommends clang-21
+        echo "/usr/lib/llvm-21/bin" >> $GITHUB_PATH
+        echo "CC=clang" >> $GITHUB_ENV
+        echo "CXX=clang++" >> $GITHUB_ENV

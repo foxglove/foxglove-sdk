@@ -17,6 +17,8 @@ jobs:
       - name: Install common dependencies
         uses: ./.github/actions/common-deps
 
+      - uses: ./.github/actions/setup-clang
+
       - name: Install CUDA headers for NVENC
         run: |
           sudo apt-get install -y --no-install-recommends nvidia-cuda-dev
@@ -63,6 +65,8 @@ jobs:
       - name: Install common dependencies
         uses: ./.github/actions/common-deps
 
+      - uses: ./.github/actions/setup-clang
+
       - name: Install CUDA headers for NVENC
         run: |
           sudo apt-get install -y --no-install-recommends nvidia-cuda-dev
@@ -102,6 +106,8 @@ jobs:
 
       - name: Install common dependencies
         uses: ./.github/actions/common-deps
+
+      - uses: ./.github/actions/setup-clang
 
       - name: Install CUDA headers for NVENC
         run: |

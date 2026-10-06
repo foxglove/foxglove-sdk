@@ -41,7 +41,8 @@ When building from source, remote access must be enabled explicitly:
 MATURIN_PEP517_ARGS="--features remote-access" pip install .
 ```
 
-This requires system dependencies including `libva-dev` (Linux) and a C++ toolchain.
+This requires system dependencies including a C++ toolchain. On Linux, it also requires `libva-dev`
+and clang 21 or later; select clang with `CC=clang CXX=clang++`.
 
 ## Examples
 
