@@ -8,20 +8,20 @@ import path from "node:path";
 /**
  * Run each example in the Python SDK, after installing dependencies.
  *
- * If `--install-sdk-from-path` is passed, then the project dependencies will be updated to refer
- * to the SDK at a local path, relative to the example directory. CI uses this to test with the
- * latest SDK; by default, examples specify the published version in their pyproject.toml.
+ * If `--install-sdk-from-path` is passed, the local SDK will be installed into each example's
+ * environment. CI uses this to test with the latest SDK; by default, examples specify the
+ * published version in their pyproject.toml.
  *
  * Many of the examples start a live server which is run until interrupted; all examples are run
- * with a timeout (default 5s). These are run serially since they use the default Foxglove port
- * number and, for simplicity, don't illustrate that configuration.
+ * with a timeout (default 5s), after installation finishes. These are run serially since they
+ * use the default Foxglove port number and, for simplicity, don't illustrate that configuration.
  */
 
 const pyExamplesDir = path.resolve(__dirname, "../python/foxglove-sdk-examples");
 
 const tempFiles: string[] = [];
 
-async function main(opts: { timeout: string; installSdkFromPath: boolean }) {
+async function main(opts: { timeout: string; installSdkFromPath: boolean }): Promise<void> {
   const { timeout, installSdkFromPath } = opts;
   const timeoutMillis = parseInt(timeout);
 
@@ -40,7 +40,12 @@ async function main(opts: { timeout: string; installSdkFromPath: boolean }) {
     }
 
     // Skip examples that require external credentials, services, or hardware.
-    const skipList = ["remote-access", "oak-camera-streaming", "dataset-training"];
+    const skipList = [
+      "remote-access",
+      "oak-camera-streaming",
+      "dataset-training",
+      "so101-visualization",
+    ];
     if (skipList.includes(entry.name)) {
       console.debug(`Skipping example ${entry.name} (requires external credentials or hardware)`);
       continue;
@@ -54,28 +59,65 @@ async function main(opts: { timeout: string; installSdkFromPath: boolean }) {
 async function runExample(
   name: string,
   opts: { timeoutMillis: number; installSdkFromPath: boolean },
-) {
+): Promise<void> {
   const dir = path.join(pyExamplesDir, name);
-  const uvArgs = opts.installSdkFromPath ? ["--with", "../../foxglove-sdk"] : [];
+  const python = path.join(
+    dir,
+    ".venv",
+    process.platform === "win32" ? "Scripts/python.exe" : "bin/python",
+  );
+
+  await runExampleCommand(name, "uv", ["sync"], { cwd: dir });
+  if (opts.installSdkFromPath) {
+    await runExampleCommand(
+      name,
+      "uv",
+      ["pip", "install", "--python", python, "../../foxglove-sdk"],
+      {
+        cwd: dir,
+      },
+    );
+  }
+
   const exampleArgs = await getExampleArgs(name);
-  return await new Promise((resolve, reject) => {
-    const child = spawn("uv", ["run", ...uvArgs, "main.py", ...exampleArgs], {
-      cwd: dir,
+  await runExampleCommand(name, python, ["main.py", ...exampleArgs], {
+    cwd: dir,
+    timeoutMillis: opts.timeoutMillis,
+  });
+}
+
+async function runExampleCommand(
+  name: string,
+  command: string,
+  args: string[],
+  opts: { cwd: string; timeoutMillis?: number },
+): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    const child = spawn(command, args, {
+      cwd: opts.cwd,
+      stdio: "inherit",
     });
-    child.stderr.on("data", (data: Buffer | string) => {
-      console.debug(data.toString());
+    let timedOut = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    child.once("error", (err) => {
+      clearTimeout(timer);
+      reject(err);
     });
-    child.on("exit", (code, signal) => {
-      if (code === 0 || code === 143 || signal === "SIGTERM") {
+    child.once("exit", (code, signal) => {
+      clearTimeout(timer);
+      if (code === 0 || (timedOut && (code === 143 || signal === "SIGTERM"))) {
         resolve(undefined);
       } else {
         const signalOrCode = code != undefined ? `code ${code}` : (signal ?? "unknown");
-        reject(new Error(`Example ${name} exited with ${signalOrCode}`));
+        reject(new Error(`Example ${name} command ${command} exited with ${signalOrCode}`));
       }
     });
-    setTimeout(() => {
-      child.kill(SIGTERM);
-    }, opts.timeoutMillis);
+    if (opts.timeoutMillis != undefined) {
+      timer = setTimeout(() => {
+        timedOut = true;
+        child.kill(SIGTERM);
+      }, opts.timeoutMillis);
+    }
   });
 }
 
@@ -100,9 +142,10 @@ async function removeTempFiles() {
   }
 }
 
-async function getExampleArgs(example: string) {
+async function getExampleArgs(example: string): Promise<string[]> {
   switch (example) {
     case "ws-stream-mcap":
+    case "ws-playback-control-mcap":
       return ["--file", path.resolve(__dirname, "fixtures/empty.mcap")];
     case "write-mcap-file":
       return ["--path", await newTempFile()];
@@ -111,9 +154,13 @@ async function getExampleArgs(example: string) {
   }
 }
 
-program
-  .option("--timeout [duration]", "timeout for each example in milliseconds", "5000")
-  .option("--install-sdk-from-path", "use local sdk instead of version from pyproject", false)
-  .action(main)
-  .hook("postAction", removeTempFiles)
-  .parse();
+export const testOnlyExports = { getExampleArgs, runExample, main };
+
+if (require.main === module) {
+  program
+    .option("--timeout [duration]", "timeout for each example in milliseconds", "5000")
+    .option("--install-sdk-from-path", "use local sdk instead of version from pyproject", false)
+    .action(main)
+    .hook("postAction", removeTempFiles)
+    .parse();
+}
