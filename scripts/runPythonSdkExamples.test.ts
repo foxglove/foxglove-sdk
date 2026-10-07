@@ -22,11 +22,14 @@ describe("main", () => {
     jest.mocked(readdir).mockReset();
   });
 
-  it("skips the SO-101 example because it requires a physical robot", async () => {
+  it.each([
+    ["so101-visualization", "it requires a physical robot"],
+    ["asset-server", "it requires the remote-access feature"],
+  ])("skips the %s example because %s", async (example) => {
     const actualFs = jest.requireActual<typeof import("node:fs/promises")>("node:fs/promises");
     jest.mocked(readdir).mockImplementation(async (...args) => {
       const entries = await actualFs.readdir(...args);
-      return entries.filter((entry) => entry.name.toString() === "so101-visualization");
+      return entries.filter((entry) => entry.name.toString() === example);
     });
     await testOnlyExports.main({ timeout: "5000", installSdkFromPath: false });
 
@@ -112,18 +115,7 @@ describe("runExample", () => {
     );
     expect(jest.mocked(spawn).mock.calls.map(([command, args]) => [command, args])).toEqual([
       ["uv", ["sync"]],
-      [
-        "uv",
-        [
-          "pip",
-          "install",
-          "--python",
-          python,
-          "--config-settings",
-          "maturin.build-args=--features pyo3/extension-module,remote-access",
-          "../../foxglove-sdk",
-        ],
-      ],
+      ["uv", ["pip", "install", "--python", python, "../../foxglove-sdk"]],
       [python, ["main.py", "--file", path.resolve(__dirname, "fixtures/empty.mcap")]],
     ]);
     for (const [, , options] of jest.mocked(spawn).mock.calls) {

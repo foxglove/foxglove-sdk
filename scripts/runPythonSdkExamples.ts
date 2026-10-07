@@ -39,15 +39,17 @@ async function main(opts: { timeout: string; installSdkFromPath: boolean }): Pro
       continue;
     }
 
-    // Skip examples that require external credentials, services, or hardware.
+    // Skip examples that require external credentials, services, or hardware, or that import
+    // `foxglove.remote_access`, which the local SDK build doesn't include.
     const skipList = [
       "remote-access",
+      "asset-server",
       "oak-camera-streaming",
       "dataset-training",
       "so101-visualization",
     ];
     if (skipList.includes(entry.name)) {
-      console.debug(`Skipping example ${entry.name} (requires external credentials or hardware)`);
+      console.debug(`Skipping example ${entry.name}`);
       continue;
     }
 
@@ -72,15 +74,7 @@ async function runExample(
     await runExampleCommand(
       name,
       "uv",
-      [
-        "pip",
-        "install",
-        "--python",
-        python,
-        "--config-settings",
-        "maturin.build-args=--features pyo3/extension-module,remote-access",
-        "../../foxglove-sdk",
-      ],
+      ["pip", "install", "--python", python, "../../foxglove-sdk"],
       {
         cwd: dir,
       },
