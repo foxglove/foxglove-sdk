@@ -1023,25 +1023,22 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@foxglove/embed-react@npm:^0.2.3":
-  version: 0.2.3
-  resolution: "@foxglove/embed-react@npm:0.2.3"
+"@foxglove/embed-react@npm:^0.85.0":
+  version: 0.85.0
+  resolution: "@foxglove/embed-react@npm:0.85.0"
   dependencies:
-    "@foxglove/embed": "npm:0.2.3"
-    tslib: "npm:2.8.1"
+    "@foxglove/embed": "npm:0.85.0"
   peerDependencies:
     react: ">=18"
     react-dom: ">=18"
-  checksum: 10c0/40d9ff21933644389d062abacadf600f6302999593b22bc96d9d86be126d6c03b5e4d266b3daabedffc01167f9bf2efcb70ffe36b2992f8ca0454b7ef5b5b6bc
+  checksum: 10c0/9fac9fd7a10629ab5b0bbf1723dabdbc2ba236f9a07eecb924d8fb732f9e4c951846406197d5972059ca2052742e8d8b11b9b59544ebcb3de7e311375f3b5532
   languageName: node
   linkType: hard
 
-"@foxglove/embed@npm:0.2.3, @foxglove/embed@npm:^0.2.3":
-  version: 0.2.3
-  resolution: "@foxglove/embed@npm:0.2.3"
-  dependencies:
-    tslib: "npm:2.8.1"
-  checksum: 10c0/58a5af91ea86ba68039b48d50bede6a753b3bb9e6a071e906602ff9dc647e8550cb46e94dfa503cc6972df9831b0057678eff3be6de8b7f86a64951b8a74eee3
+"@foxglove/embed@npm:0.85.0, @foxglove/embed@npm:^0.85.0":
+  version: 0.85.0
+  resolution: "@foxglove/embed@npm:0.85.0"
+  checksum: 10c0/feb72d97a67614bee0c0677c9bbcbc35e20164fb41b0a19d19804c46cf3b41a03e6e37b0f08d77652a86824f1196adad4bfe4cb309baaba429c8a1780cfc2e04
   languageName: node
   linkType: hard
 
@@ -1080,7 +1077,7 @@ __metadata:
   resolution: "@foxglove/notebook-frontend@workspace:python/foxglove-sdk/notebook-frontend"
   dependencies:
     "@anywidget/types": "npm:0.2.0"
-    "@foxglove/embed": "npm:0.2.3"
+    "@foxglove/embed": "npm:0.85.0"
     "@foxglove/tsconfig": "npm:2.0.0"
     esbuild: "npm:0.28.2"
     typescript: "npm:5.9.3"
@@ -9017,8 +9014,8 @@ __metadata:
     "@carbon/icons-react": "npm:^11.70.0"
     "@emotion/react": "npm:^11.14.0"
     "@emotion/styled": "npm:^11.14.1"
-    "@foxglove/embed": "npm:^0.2.3"
-    "@foxglove/embed-react": "npm:^0.2.3"
+    "@foxglove/embed": "npm:^0.85.0"
+    "@foxglove/embed-react": "npm:^0.85.0"
     "@foxglove/tsconfig": "npm:^2.0.0"
     "@foxglove/wasm-zstd": "npm:^1.0.1"
     "@mui/material": "npm:^7.3.4"
@@ -10677,17 +10674,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"tslib@npm:2.8.1, tslib@npm:^2, tslib@npm:^2.0.0, tslib@npm:^2.0.3, tslib@npm:^2.4.0, tslib@npm:^2.6.2, tslib@npm:^2.8.1":
-  version: 2.8.1
-  resolution: "tslib@npm:2.8.1"
-  checksum: 10c0/9c4759110a19c53f992d9aae23aac5ced636e99887b51b9e61def52611732872ff7668757d4e4c61f19691e36f4da981cd9485e869b4a7408d689f6bf1f14e62
-  languageName: node
-  linkType: hard
-
 "tslib@npm:^1.8.1, tslib@npm:^1.9.3":
   version: 1.14.1
   resolution: "tslib@npm:1.14.1"
   checksum: 10c0/69ae09c49eea644bc5ebe1bca4fa4cc2c82b7b3e02f43b84bd891504edf66dbc6b2ec0eef31a957042de2269139e4acff911e6d186a258fb14069cd7f6febce2
+  languageName: node
+  linkType: hard
+
+"tslib@npm:^2, tslib@npm:^2.0.0, tslib@npm:^2.0.3, tslib@npm:^2.4.0, tslib@npm:^2.6.2, tslib@npm:^2.8.1":
+  version: 2.8.1
+  resolution: "tslib@npm:2.8.1"
+  checksum: 10c0/9c4759110a19c53f992d9aae23aac5ced636e99887b51b9e61def52611732872ff7668757d4e4c61f19691e36f4da981cd9485e869b4a7408d689f6bf1f14e62
   languageName: node
   linkType: hard
 
