@@ -28,12 +28,6 @@ describe("main", () => {
       const entries = await actualFs.readdir(...args);
       return entries.filter((entry) => entry.name.toString() === "so101-visualization");
     });
-    jest.mocked(spawn).mockImplementation((command) => {
-      const child = new ChildProcess();
-      queueMicrotask(() => child.emit("exit", command === "uv" ? 0 : 2, null));
-      return child;
-    });
-
     await testOnlyExports.main({ timeout: "5000", installSdkFromPath: false });
 
     expect(spawn).not.toHaveBeenCalled();
@@ -87,6 +81,11 @@ describe("runExample", () => {
   });
 
   it("waits for dependencies and the local SDK before starting the example timeout", async () => {
+    jest.replaceProperty(process, "env", {
+      ...process.env,
+      UV_PROJECT_ENVIRONMENT: "/tmp/other-environment",
+      RUNNER_TEST_ENV: "inherited",
+    });
     const run = testOnlyExports.runExample("ws-playback-control-mcap", {
       timeoutMillis,
       installSdkFromPath: true,
@@ -113,9 +112,25 @@ describe("runExample", () => {
     );
     expect(jest.mocked(spawn).mock.calls.map(([command, args]) => [command, args])).toEqual([
       ["uv", ["sync"]],
-      ["uv", ["pip", "install", "--python", python, "../../foxglove-sdk"]],
+      [
+        "uv",
+        [
+          "pip",
+          "install",
+          "--python",
+          python,
+          "--config-settings",
+          "maturin.build-args=--features pyo3/extension-module,remote-access",
+          "../../foxglove-sdk",
+        ],
+      ],
       [python, ["main.py", "--file", path.resolve(__dirname, "fixtures/empty.mcap")]],
     ]);
+    for (const [, , options] of jest.mocked(spawn).mock.calls) {
+      expect(options.env != undefined).toBe(true);
+      expect(options.env?.UV_PROJECT_ENVIRONMENT).toBeUndefined();
+      expect(options.env?.RUNNER_TEST_ENV).toBe("inherited");
+    }
 
     await jest.advanceTimersByTimeAsync(timeoutMillis - 1);
     expect(killMocks.get(example)).not.toHaveBeenCalled();

@@ -72,7 +72,15 @@ async function runExample(
     await runExampleCommand(
       name,
       "uv",
-      ["pip", "install", "--python", python, "../../foxglove-sdk"],
+      [
+        "pip",
+        "install",
+        "--python",
+        python,
+        "--config-settings",
+        "maturin.build-args=--features pyo3/extension-module,remote-access",
+        "../../foxglove-sdk",
+      ],
       {
         cwd: dir,
       },
@@ -96,6 +104,7 @@ async function runExampleCommand(
     const child = spawn(command, args, {
       cwd: opts.cwd,
       stdio: "inherit",
+      env: { ...process.env, UV_PROJECT_ENVIRONMENT: undefined },
     });
     let timedOut = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
