@@ -82,7 +82,7 @@ def test_native_s3_range_reads_are_sparse_and_propagate_errors(
             self.wfile.write(payload)
 
     def unexpected_api_request(*_args: Any, **_kwargs: Any) -> None:
-        raise AssertionError("Direct S3 reads must not use the Foxglove API")
+        raise AssertionError("S3 object storage reads must not use the Foxglove API")
 
     monkeypatch.setattr(requests.Session, "request", unexpected_api_request)
     server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)

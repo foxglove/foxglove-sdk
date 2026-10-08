@@ -88,7 +88,7 @@ def object_samples(episode: EpisodeReader) -> Iterator[dict[str, Any]]:
 
 @pytest.mark.parametrize("framework", ["torch", "ray"])
 @pytest.mark.parametrize("builtin", [False, True])
-def test_direct_storage_in_real_workers(
+def test_object_storage_in_real_workers(
     tmp_path: Path,
     framework: str,
     builtin: bool,
@@ -118,7 +118,7 @@ def test_direct_storage_in_real_workers(
         "topics": ["/selected"],
         "client_factory": make_client,
         "object_store_factory": None if builtin else partial(ArrowStore, os.getpid()),
-        "source": "object_storage" if builtin else "foxglove",
+        "source": "object_storage",
         "read_episode": object_samples,
     }
     monkeypatch.setattr(

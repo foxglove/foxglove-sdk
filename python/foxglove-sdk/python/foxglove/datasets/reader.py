@@ -147,7 +147,7 @@ class EpisodeReader:
             state stays local to the worker and episode. This does not decode media
             payloads into images.
         :param topics: Optional nonempty subset of the dataset topics. Filtering
-            happens on the server or through MCAP indexes for direct storage;
+            happens on the server or through MCAP indexes for object storage;
             separate calls open separate downloads.
         :param lookback: Additional history to request before the episode start,
             for stateful media decoding. Must be nonnegative. Only recordings
@@ -281,6 +281,8 @@ def _plan(
 ) -> _Plan:
     if source not in ("foxglove", "object_storage"):
         raise ValueError("source must be 'foxglove' or 'object_storage'")
+    if source == "foxglove" and object_store_factory is not None:
+        raise ValueError("object_store_factory requires source='object_storage'")
     if not dataset_id:
         raise ValueError("dataset_id must be nonempty")
     if version < 1:
@@ -306,7 +308,7 @@ def _plan(
         dataset_id=dataset_id,
         version_number=version,
         limit=_EPISODE_PAGE_SIZE,
-        **({"include_recordings": True} if make_store is not None else {}),
+        include_recordings=make_store is not None,
     )
     for entry in page.auto_paging_iter():
         episode = entry["episode"]
@@ -343,17 +345,21 @@ def _locations(
     recordings = episode.get("recordings")
     if not recordings:
         raise ValueError(
-            f"Episode {episode['id']} has no recording locations; direct storage "
+            f"Episode {episode['id']} has no recording locations; object storage "
             "requires a client with recording-location support and "
             "customer-managed indexed recordings"
         )
     locations = []
     for recording in recordings:
         location = recording.get("location")
-        if not recording["available"] or not location:
+        if not recording["available"]:
             raise ValueError(
-                f"Recording {recording['id']} in episode {episode['id']} is not "
-                "available in direct object storage; use a client with "
+                f"Recording {recording['id']} in episode {episode['id']} is not available"
+            )
+        if not location:
+            raise ValueError(
+                f"Recording {recording['id']} in episode {episode['id']} has no "
+                "object location; use a client with "
                 "recording-location support and customer-managed indexed recordings"
             )
         if not location.get("bucket") or not location.get("path"):

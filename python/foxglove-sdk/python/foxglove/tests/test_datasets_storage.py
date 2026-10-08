@@ -12,7 +12,7 @@ from foxglove.datasets.storage import ObjectLocation, _iter_messages
 from mcap.decoder import DecoderFactory
 from mcap.exceptions import DecoderNotFoundError
 from mcap.records import Schema
-from mcap.writer import CompressionType, Writer
+from mcap.writer import CompressionType, IndexType, Writer
 
 START = datetime(2026, 1, 1, tzinfo=timezone.utc)
 START_NS = 1767225600 * 1_000_000_000
@@ -69,6 +69,7 @@ def mcap_bytes(
     schema_name: str = "Measurement",
     encoding: str = "json",
     indexed: bool = True,
+    message_indexes: bool = True,
 ) -> bytes:
     output = io.BytesIO()
     writer = Writer(
@@ -76,6 +77,7 @@ def mcap_bytes(
         chunk_size=1,
         compression=CompressionType.NONE,
         use_chunking=indexed,
+        index_types=IndexType.ALL if message_indexes else IndexType.CHUNK,
     )
     writer.start()
     schema = writer.register_schema(schema_name, "jsonschema", b"{}")
@@ -226,7 +228,7 @@ def test_failed_open_closes_previously_opened_recordings() -> None:
 
 
 @pytest.mark.parametrize("indexed,seekable", [(False, True), (True, False)])
-def test_direct_reads_reject_unsupported_mcap_handles(
+def test_object_storage_reads_reject_unsupported_mcap_handles(
     indexed: bool, seekable: bool
 ) -> None:
     store = Store(
@@ -314,7 +316,7 @@ def plan_client(recordings: Any) -> MagicMock:
     return client
 
 
-def test_direct_plan_maps_azure_location_and_skips_worker_api_client() -> None:
+def test_object_storage_plan_maps_azure_location_and_skips_worker_api_client() -> None:
     location = ObjectLocation("container", "prefix/run.mcap", "account")
     recording = {
         "id": "recording",
@@ -329,7 +331,14 @@ def test_direct_plan_maps_azure_location_and_skips_worker_api_client() -> None:
     client_factory = MagicMock(return_value=client)
     store = Store({location: mcap_bytes([("/selected", 0, 1)])})
     store_factory = MagicMock(return_value=store)
-    plan = _plan("dataset", 7, ["/selected"], client_factory, store_factory)
+    plan = _plan(
+        "dataset",
+        7,
+        ["/selected"],
+        client_factory,
+        store_factory,
+        source="object_storage",
+    )
     assert plan.episodes[0].locations == (location,)
     store_factory.assert_not_called()
     client.get_dataset_version_episodes.assert_called_once_with(
@@ -367,13 +376,20 @@ def test_direct_plan_maps_azure_location_and_skips_worker_api_client() -> None:
         [{"id": "recording", "available": True, "location": {"bucket": "b"}}],
     ],
 )
-def test_direct_plan_rejects_missing_locations_before_opening_storage(
+def test_object_storage_plan_rejects_missing_locations_before_opening_storage(
     recordings: Any,
 ) -> None:
     client = plan_client(recordings)
     store_factory = MagicMock()
     with pytest.raises(ValueError, match="location|available"):
-        _plan("dataset", 7, ["/selected"], lambda: client, store_factory)
+        _plan(
+            "dataset",
+            7,
+            ["/selected"],
+            lambda: client,
+            store_factory,
+            source="object_storage",
+        )
     store_factory.assert_not_called()
 
 
@@ -430,7 +446,7 @@ def test_stateful_custom_decoder_runs_in_global_order_and_is_not_copied() -> Non
     assert all(file.closed for file in store.files)
 
 
-def test_direct_time_filter_preserves_nanosecond_precision() -> None:
+def test_object_storage_time_filter_preserves_nanosecond_precision() -> None:
     store = Store(
         {
             LOCATION: mcap_bytes(
@@ -454,7 +470,7 @@ def test_direct_time_filter_preserves_nanosecond_precision() -> None:
     assert [decoded for _, _, _, decoded in result] == [1000, 1999, 2000]
 
 
-def test_direct_time_filter_rejects_naive_boundaries_before_opening_files() -> None:
+def test_naive_time_boundaries_rejected_before_opening_files() -> None:
     store = Store({})
     with pytest.raises(ValueError, match="timezone-aware"):
         list(
@@ -539,3 +555,108 @@ def test_episode_ids_stay_consistent_across_topic_streams(
     assert set(factory.decoders) == {schema_a.id, schema_b.id}
     assert all(file.closed for file in store.files)
     reader._close()
+
+
+def test_object_storage_rejects_chunk_indexes_without_message_indexes() -> None:
+    store = Store({LOCATION: mcap_bytes([("/selected", 0, 1)], message_indexes=False)})
+    with pytest.raises(ValueError, match="message indexes"):
+        list(_iter_messages(store, [LOCATION], ["/selected"], START, START, None))
+    assert store.files[0].closed
+
+
+def test_channel_remapping_is_cached_per_file(monkeypatch: pytest.MonkeyPatch) -> None:
+    from foxglove.datasets.storage import _MessageIds
+
+    second = ObjectLocation("bucket", "second")
+    data = mcap_bytes([("/selected", offset, offset) for offset in range(100)])
+    store = Store({LOCATION: data, second: data})
+    ids = _MessageIds()
+    remap = MagicMock(wraps=ids.remap)
+    monkeypatch.setattr(ids, "remap", remap)
+    result = list(
+        _iter_messages(
+            store,
+            [LOCATION, second],
+            ["/selected"],
+            START,
+            START + timedelta(microseconds=1),
+            None,
+            ids,
+        )
+    )
+    assert len(result) == 200
+    assert remap.call_count == 2
+    assert all(channel is result[0][1] for _, channel, _, _ in result)
+
+
+def test_many_recordings_close_as_they_exhaust_and_skip_nonoverlapping_files() -> None:
+    locations = [ObjectLocation("bucket", f"{index}.mcap") for index in range(50)]
+    store = Store(
+        {
+            location: mcap_bytes([("/selected", index * 1_000_000_000, index)])
+            for index, location in enumerate(locations)
+        }
+    )
+    stream = _iter_messages(
+        store,
+        locations,
+        ["/selected"],
+        START + timedelta(seconds=10),
+        START + timedelta(seconds=39),
+        None,
+    )
+    assert next(stream)[3] == 10
+    assert len(store.files) == 50
+    assert sum(not file.closed for file in store.files) == 30
+    assert next(stream)[3] == 11
+    assert store.files[10].closed
+    assert sum(not file.closed for file in store.files) == 29
+    assert [decoded for _, _, _, decoded in stream] == list(range(12, 40))
+    assert all(file.closed for file in store.files)
+
+
+def test_nonoverlapping_summary_skips_chunk_reads_and_includes_end(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from mcap.reader import SeekingReader
+
+    second = ObjectLocation("bucket", "second")
+    third = ObjectLocation("bucket", "third")
+    store = Store(
+        {
+            LOCATION: mcap_bytes([("/selected", 999, "before")]),
+            second: mcap_bytes([("/selected", 2000, "end")]),
+            third: mcap_bytes([("/selected", 2001, "after")]),
+        }
+    )
+    original = SeekingReader.iter_messages
+    calls = []
+
+    def iter_messages(reader: SeekingReader, **kwargs: Any) -> Any:
+        calls.append(reader)
+        return original(reader, **kwargs)
+
+    monkeypatch.setattr(SeekingReader, "iter_messages", iter_messages)
+    result = list(
+        _iter_messages(
+            store,
+            [LOCATION, second, third],
+            ["/selected"],
+            START + timedelta(microseconds=1),
+            START + timedelta(microseconds=2),
+            None,
+        )
+    )
+    assert [decoded for _, _, _, decoded in result] == ["end"]
+    assert len(calls) == 1
+    assert all(file.closed for file in store.files)
+
+
+def test_decoder_failure_closes_all_recording_streams() -> None:
+    locations = [ObjectLocation("bucket", f"{index}.mcap") for index in range(50)]
+    data = mcap_bytes([("/selected", 0, 1)], encoding="custom")
+    store = Store(dict.fromkeys(locations, data))
+    with pytest.raises(DecoderNotFoundError):
+        list(_iter_messages(store, locations, ["/selected"], START, START, []))
+    assert len(store.files) == 50
+    assert all(file.closed for file in store.files)

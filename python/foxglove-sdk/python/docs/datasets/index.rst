@@ -72,8 +72,8 @@ The result is a ``ray.data.Dataset``. Callbacks must yield mappings with
 consistent column types, such as scalars or NumPy arrays. Use ``map_batches`` for
 further processing. ``concurrency`` limits the number of simultaneous read tasks.
 
-Direct object storage (BYOS)
---------------------------------
+Object storage
+--------------
 
 The default ``source="foxglove"`` downloads messages through Foxglove. For
 customer-managed indexed storage, pass ``source="object_storage"`` to either adapter.
@@ -90,8 +90,8 @@ sources:
 
 .. important::
 
-   Direct reads require the API and client to provide recording locations with
-   ``location.scheme`` (``s3``, ``gs``, or ``az``).
+   Object storage reads require the API and client to provide recording
+   locations with ``location.scheme`` (``s3``, ``gs``, or ``az``).
 
 The SDK selects S3, GCS, or Azure storage from the location's scheme. S3 bucket
 regions are discovered automatically and cached; Azure uses the location's
@@ -101,8 +101,8 @@ or the machine's IAM role, and grant read access to the original objects. The
 Foxglove API token does not grant bucket access. Run compute near your storage to
 avoid cross-region transfer.
 
-Direct reads require immutable, chunk-indexed MCAP recordings with summary
-indexes. Missing locations, permissions, unsupported formats, and missing indexes
+Object storage reads require immutable MCAP recordings with summaries, chunk
+indexes, and message indexes. Missing locations, permissions, unsupported formats, and missing indexes
 raise errors; there is no fallback to Foxglove downloads. Query-optimized sites
 that do not retain original objects should use the default download path.
 
@@ -149,18 +149,24 @@ one store in each consuming process; its ``open`` method receives an
        read_episode=read_episode, source="object_storage", object_store_factory=S3Store,
    )
 
-Supplying ``object_store_factory`` also selects direct reads when ``source`` is
-omitted, preserving existing factory-based calls. Use the exact bucket and object
-key from the location, which may differ from the display filename. Create live
-filesystem clients inside the factory; do not capture open files or short-lived
+A custom ``object_store_factory`` requires ``source="object_storage"``. Use the
+exact bucket and object key from the location, which may differ from the display
+filename. Create live filesystem clients inside the factory; do not capture open files or short-lived
 credentials. A custom store can return a seekable ``fsspec`` binary handle with
 bounded caching. Use ``multiprocessing_context="spawn"`` for PyTorch workers.
+
+The built-in S3 store discovers bucket regions through AWS. For S3-compatible
+services such as MinIO, custom endpoints, or networks that cannot reach the
+region-discovery endpoint, use a custom factory. Configure its
+``fs.S3FileSystem`` with an explicit ``region`` and, when needed,
+``endpoint_override="minio.example.com:9000"``. This bypasses built-in region
+discovery. Configure TLS and credentials for that endpoint in the factory.
 
 Performance and iteration behavior:
 
 * Planning requests recording locations with the paginated episode metadata;
   it does not open objects. Storage clients are created once per worker iteration
-  or Ray read task, after episode sharding. Direct-reading workers do not need
+  or Ray read task, after episode sharding. Object storage workers do not need
   to call the Foxglove API, and the planning client factory is not serialized.
 * MCAP indexes select chunks by topic and the episode's inclusive time window,
   extended by ``lookback`` when requested. A selected chunk may contain other
@@ -168,8 +174,12 @@ Performance and iteration behavior:
   uses a 64 KiB buffer to coalesce small header and summary reads.
 * Recordings are merged in log-time order before decoding. Equivalent schemas
   and channels share episode-local IDs; conflicting file-local IDs are remapped.
-  Original timestamps and payload bytes are preserved. Files close when the
-  episode ends, including errors and early termination.
+  Original timestamps and payload bytes are preserved. Files close as each
+  recording is exhausted, including errors and early termination. Recordings
+  outside the requested time range close after their summaries are read.
+* Before the first sample, each recording's summary is read and the first
+  matching chunk from each overlapping recording is loaded to establish global
+  timestamp order. Startup latency therefore grows with the number of recordings.
 * Memory includes the indexes and active decompressed chunks of the episode's
   recordings, decoded samples, and framework prefetch buffers. It is not bounded
   by Ray's output block target alone. Tune Ray ``concurrency`` or PyTorch

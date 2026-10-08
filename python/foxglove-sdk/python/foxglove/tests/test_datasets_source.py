@@ -84,7 +84,7 @@ def recording(location: dict[str, Any]) -> dict[str, Any]:
 
 
 @pytest.mark.parametrize("scheme", [None, "", "https", "file"])
-def test_builtin_direct_source_validates_scheme_before_constructing_storage(
+def test_builtin_object_storage_source_validates_scheme_before_constructing_storage(
     scheme: str | None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     client = plan_client(
@@ -100,7 +100,7 @@ def test_builtin_direct_source_validates_scheme_before_constructing_storage(
     )
 
 
-def test_direct_source_selects_builtin_storage_in_consuming_iteration(
+def test_object_storage_source_selects_builtin_storage_in_consuming_iteration(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     location = ObjectLocation("bucket", "prefix/file.mcap", scheme="s3")
@@ -108,14 +108,14 @@ def test_direct_source_selects_builtin_storage_in_consuming_iteration(
         [recording({"bucket": location.bucket, "path": location.path, "scheme": "s3"})]
     )
     client_factory = MagicMock(return_value=client)
-    store = Store({location: mcap_bytes([("/selected", 0, "direct sample")])})
+    store = Store({location: mcap_bytes([("/selected", 0, "object storage sample")])})
     store_factory = MagicMock(return_value=store)
     monkeypatch.setattr("foxglove.datasets.reader._CloudObjectStore", store_factory)
     plan = _plan("dataset", 7, ["/selected"], client_factory, source="object_storage")
     assert plan.episodes[0].locations == (location,)
     assert plan.client_factory is None
     store_factory.assert_not_called()
-    assert list(plan.read(plan.episodes, first_sample)) == ["direct sample"]
+    assert list(plan.read(plan.episodes, first_sample)) == ["object storage sample"]
     assert store.locations == [location]
     store_factory.assert_called_once_with()
     client_factory.assert_called_once_with()
@@ -123,10 +123,7 @@ def test_direct_source_selects_builtin_storage_in_consuming_iteration(
 
 
 @pytest.mark.parametrize("scheme", [None, "custom"])
-@pytest.mark.parametrize("source", ["foxglove", "object_storage"])
-def test_custom_storage_accepts_missing_or_unknown_schemes_and_implies_direct(
-    scheme: str | None, source: Any
-) -> None:
+def test_custom_storage_accepts_missing_or_unknown_schemes(scheme: str | None) -> None:
     location = ObjectLocation("bucket", "file.mcap", scheme=scheme)
     client = plan_client(
         [
@@ -139,7 +136,12 @@ def test_custom_storage_accepts_missing_or_unknown_schemes_and_implies_direct(
     store = Store({location: mcap_bytes([("/selected", 0, "custom sample")])})
     store_factory = MagicMock(return_value=store)
     plan = _plan(
-        "dataset", 7, ["/selected"], client_factory, store_factory, source=source
+        "dataset",
+        7,
+        ["/selected"],
+        client_factory,
+        store_factory,
+        source="object_storage",
     )
     store_factory.assert_not_called()
     assert plan.client_factory is None
@@ -154,7 +156,7 @@ def test_custom_storage_accepts_missing_or_unknown_schemes_and_implies_direct(
 
 
 @pytest.mark.parametrize("adapter", ["torch", "ray"])
-def test_public_adapters_forward_direct_source_without_creating_storage(
+def test_public_adapters_forward_object_storage_source_without_creating_storage(
     adapter: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     pytest.importorskip(adapter)
@@ -203,3 +205,50 @@ def test_invalid_source_fails_before_api_factory_is_called(adapter: str) -> None
                 source="invalid",
             )
     factory.assert_not_called()
+
+
+@pytest.mark.parametrize("adapter", ["plan", "torch", "ray"])
+@pytest.mark.parametrize("explicit_source", [False, True])
+def test_storage_factory_requires_object_storage_before_api_calls(
+    adapter: str, explicit_source: bool
+) -> None:
+    client_factory = MagicMock()
+    store_factory = MagicMock()
+    options: dict[str, Any] = {"source": "foxglove"} if explicit_source else {}
+    if adapter == "plan":
+        with pytest.raises(ValueError, match="requires source='object_storage'"):
+            _plan("dataset", 7, ["/camera"], client_factory, store_factory, **options)
+    else:
+        pytest.importorskip(adapter)
+        module = importlib.import_module(f"foxglove.datasets.{adapter}")
+        with pytest.raises(ValueError, match="requires source='object_storage'"):
+            module.read_dataset(
+                "dataset",
+                version=7,
+                topics=["/camera"],
+                read_episode=first_sample,
+                client_factory=client_factory,
+                object_store_factory=store_factory,
+                **options,
+            )
+    client_factory.assert_not_called()
+    store_factory.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "available,location,expected",
+    [
+        (False, None, "Recording recording in episode episode is not available"),
+        (True, None, "Recording recording in episode episode has no object location"),
+    ],
+)
+def test_recording_errors_distinguish_unavailable_from_missing_location(
+    available: bool, location: Any, expected: str
+) -> None:
+    client = plan_client(
+        [{"id": "recording", "available": available, "location": location}]
+    )
+    with pytest.raises(ValueError, match=expected) as error:
+        _plan("dataset", 7, ["/selected"], lambda: client, source="object_storage")
+    if not available:
+        assert "client" not in str(error.value)

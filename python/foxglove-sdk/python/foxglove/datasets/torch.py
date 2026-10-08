@@ -83,9 +83,9 @@ def read_dataset(
     without falling back to Foxglove downloads. Use DataLoader's ``spawn``
     multiprocessing context with cloud storage.
 
-    ``object_store_factory`` overrides the built-in storage and also enables direct
-    reads when supplied alone. Factories and callbacks used by workers must be
-    pickleable. The API client factory is used only during planning in direct mode
+    ``object_store_factory`` overrides built-in storage and requires
+    ``source="object_storage"``. Factories and callbacks used by workers must be
+    pickleable. The API client factory is used only during object storage planning
     and is not serialized; in default mode it also runs in each consuming process.
 
     Distributed rank and world size are captured here, before DataLoader workers

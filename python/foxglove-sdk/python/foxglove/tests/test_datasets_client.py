@@ -157,7 +157,7 @@ def test_real_client_pagination_filtering_and_incremental_mcap(
 
 
 @pytest.mark.parametrize("builtin", [False, True])
-def test_real_client_direct_storage_locations_and_cursor_pagination(
+def test_real_client_object_storage_locations_and_cursor_pagination(
     monkeypatch: pytest.MonkeyPatch,
     builtin: bool,
 ) -> None:
@@ -255,7 +255,7 @@ def test_real_client_direct_storage_locations_and_cursor_pagination(
         ["/camera"],
         None if builtin else lambda: client_module.Client(token="test"),
         None if builtin else lambda: store,
-        source="object_storage" if builtin else "foxglove",
+        source="object_storage",
     )
     assert [episode.locations for episode in plan.episodes] == [
         (locations[1],),

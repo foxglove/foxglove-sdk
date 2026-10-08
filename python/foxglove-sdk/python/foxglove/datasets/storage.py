@@ -1,4 +1,4 @@
-"""Direct, indexed MCAP reads from customer-managed object storage."""
+"""Indexed MCAP reads from customer-managed object storage."""
 
 from __future__ import annotations
 
@@ -58,14 +58,14 @@ ObjectStoreFactory = Callable[[], ObjectStore]
 def _validate_location(location: ObjectLocation) -> None:
     if location.scheme not in ("s3", "gs", "az"):
         raise ValueError(
-            f"Built-in direct storage requires location.scheme to be 's3', 'gs', "
+            f"Built-in object storage requires location.scheme to be 's3', 'gs', "
             f"or 'az'; got {location.scheme!r}. Provide an object_store_factory "
             "for a custom ObjectStore if the recording uses another storage provider "
             "or its scheme is unavailable."
         )
     if location.scheme == "az" and not location.azure_storage_account_name:
         raise ValueError(
-            "Built-in direct Azure storage requires azure_storage_account_name. "
+            "Built-in Azure object storage requires azure_storage_account_name. "
             "Provide an object_store_factory for a custom ObjectStore if the "
             "recording's storage account is unavailable."
         )
@@ -177,34 +177,63 @@ def _iter_messages(
     ids = message_ids if message_ids is not None else _MessageIds()
     decoders: dict[int, Callable[[bytes], Any]] = {}
 
+    def recording_messages(
+        location: ObjectLocation,
+    ) -> Generator[tuple[Schema | None, Channel, Message], None, None]:
+        with store.open(location) as file:
+            if not file.seekable():
+                raise ValueError("Object storage requires seekable MCAP files")
+            # MCAP parses summaries and chunk headers with many tiny reads. Bound
+            # read-ahead while coalescing these into fewer object-store requests.
+            with BufferedReader(
+                cast(RawIOBase, file), buffer_size=64 * 1024
+            ) as buffered:
+                reader = SeekingReader(buffered)
+                summary = reader.get_summary()
+                if summary is not None and summary.statistics is not None:
+                    if summary.statistics.message_count == 0:
+                        return
+                if summary is None or not summary.chunk_indexes:
+                    raise ValueError(
+                        "Object storage requires MCAP summary and chunk indexes"
+                    )
+                if any(
+                    not chunk.message_index_offsets for chunk in summary.chunk_indexes
+                ):
+                    raise ValueError(
+                        "Object storage requires MCAP message indexes in every chunk"
+                    )
+                if summary.statistics is not None:
+                    statistics = summary.statistics
+                    if (
+                        statistics.message_end_time < start_ns
+                        or statistics.message_start_time >= end_ns
+                    ):
+                        return
+                channels: dict[int, tuple[Schema | None, Channel]] = {}
+                for schema, channel, message in reader.iter_messages(
+                    topics=topics, start_time=start_ns, end_time=end_ns
+                ):
+                    mapped = channels.get(channel.id)
+                    if mapped is None:
+                        mapped = ids.remap(schema, channel)
+                        channels[channel.id] = mapped
+                    output_schema, output_channel = mapped
+                    yield (
+                        output_schema,
+                        output_channel,
+                        replace(message, channel_id=output_channel.id),
+                    )
+
     with ExitStack() as cleanup:
         streams = []
         for location in locations:
-            file = cleanup.enter_context(store.open(location))
-            if not file.seekable():
-                raise ValueError("Direct object storage requires seekable MCAP files")
-            # MCAP parses summaries and chunk headers with many tiny reads. Bound
-            # read-ahead while coalescing these into fewer object-store requests.
-            buffered = cleanup.enter_context(
-                BufferedReader(cast(RawIOBase, file), buffer_size=64 * 1024)
-            )
-            reader = SeekingReader(buffered)
-            summary = reader.get_summary()
-            if summary is not None and summary.statistics is not None:
-                if summary.statistics.message_count == 0:
-                    continue
-            if summary is None or not summary.chunk_indexes:
-                raise ValueError(
-                    "Direct object storage requires MCAP summary and chunk indexes"
-                )
-            stream = reader.iter_messages(
-                topics=topics, start_time=start_ns, end_time=end_ns
-            )
+            stream = recording_messages(location)
+            cleanup.callback(stream.close)
             streams.append(stream)
-        for schema, channel, message in heapq.merge(
+        for output_schema, output_channel, message in heapq.merge(
             *streams, key=lambda item: item[2].log_time
         ):
-            output_schema, output_channel = ids.remap(schema, channel)
             decoder = decoders.get(output_channel.id)
             if decoder is None:
                 for factory in factories:
@@ -222,6 +251,6 @@ def _iter_messages(
             yield (
                 output_schema,
                 output_channel,
-                replace(message, channel_id=output_channel.id),
+                message,
                 decoder(message.data),
             )

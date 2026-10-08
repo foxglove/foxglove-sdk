@@ -159,9 +159,10 @@ def read_dataset(
     falling back to Foxglove downloads.
 
     ``client_factory`` overrides API authentication or endpoints.
-    ``object_store_factory`` overrides built-in storage and enables direct reads
-    when supplied alone. Factories used by workers must be serializable; in direct
-    mode the API client factory is used only for planning and is not serialized.
+    ``object_store_factory`` overrides built-in storage and requires
+    ``source="object_storage"``. Factories used by workers must be serializable.
+    For object storage the API client factory is only used during planning and
+    is not serialized.
     No storage clients or open files are serialized in the read tasks.
 
     ``concurrency`` caps concurrent read tasks. Block construction follows Ray's
