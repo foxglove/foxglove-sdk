@@ -2,6 +2,7 @@ import logging
 import os
 import time
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import foxglove
 from foxglove import Parameter
@@ -12,12 +13,12 @@ from foxglove.messages import (
     Timestamp,
     Vector3,
 )
-from foxglove.remote_access import Capability as GatewayCapability
-from foxglove.remote_access import Client as GatewayClient
-from foxglove.remote_access import RemoteAccessListener
 from foxglove.websocket import Capability as WebSocketCapability
 from foxglove.websocket import Client as WebSocketClient
 from foxglove.websocket import ServerListener
+
+if TYPE_CHECKING:
+    from foxglove.remote_access import RemoteAccessGateway
 
 ASSET_ROOT = Path(__file__).parent.resolve()
 ROBOT_DESCRIPTION_PARAM = "/robot_description"
@@ -61,14 +62,32 @@ class WebSocketParameterServer(ServerListener):
         return get_parameters(param_names)
 
 
-class GatewayParameterServer(RemoteAccessListener):
-    def on_get_parameters(
-        self,
-        client: GatewayClient,
-        param_names: list[str],
-        request_id: str | None = None,
-    ) -> list[Parameter]:
-        return get_parameters(param_names)
+def start_gateway(device_token: str) -> "RemoteAccessGateway":
+    """Start a remote access gateway that serves the same parameters and assets.
+
+    `foxglove.remote_access` is only available in SDK builds with remote access enabled, so it is
+    imported here rather than at module scope.
+    """
+    from foxglove.remote_access import Capability as GatewayCapability
+    from foxglove.remote_access import Client as GatewayClient
+    from foxglove.remote_access import RemoteAccessListener
+
+    class GatewayParameterServer(RemoteAccessListener):
+        def on_get_parameters(
+            self,
+            client: GatewayClient,
+            param_names: list[str],
+            request_id: str | None = None,
+        ) -> list[Parameter]:
+            return get_parameters(param_names)
+
+    return foxglove.start_gateway(
+        name="asset-server",
+        device_token=device_token,
+        capabilities=[GatewayCapability.Parameters],
+        listener=GatewayParameterServer(),
+        asset_handler=asset_handler,
+    )
 
 
 def main() -> None:
@@ -87,16 +106,7 @@ def main() -> None:
     )
 
     device_token = os.getenv("FOXGLOVE_DEVICE_TOKEN")
-    if device_token:
-        gateway = foxglove.start_gateway(
-            name="asset-server",
-            device_token=device_token,
-            capabilities=[GatewayCapability.Parameters],
-            listener=GatewayParameterServer(),
-            asset_handler=asset_handler,
-        )
-    else:
-        gateway = None
+    gateway = start_gateway(device_token) if device_token else None
 
     try:
         while True:
