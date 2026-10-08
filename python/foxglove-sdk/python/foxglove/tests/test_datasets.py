@@ -39,7 +39,12 @@ class Client:
         return {"committed_at": "2026-01-01", "has_missing_recordings": False}
 
     def get_dataset_version_episodes(
-        self, *, dataset_id: str, version_number: int, limit: int
+        self,
+        *,
+        dataset_id: str,
+        version_number: int,
+        limit: int,
+        include_recordings: bool = False,
     ) -> Page:
         assert (dataset_id, version_number, limit) == ("dataset", 7, 2000)
         return Page()

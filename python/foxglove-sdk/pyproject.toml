@@ -15,8 +15,8 @@ documentation = "https://docs.foxglove.dev/"
 
 [project.optional-dependencies]
 notebook = ["anywidget", "mcap", "traitlets"]
-torch = ["foxglove-client>=0.20.0", "torch>=2.5,<3"]
-ray = ["foxglove-client>=0.20.0", "ray[data]>=2.49,<3"]
+torch = ["foxglove-client>=0.21.0", "torch>=2.5,<3"]
+ray = ["foxglove-client>=0.21.0", "ray[data]>=2.49,<3"]
 video = ["av>=16,<17", "numpy>=1.23,<3", "mcap>=1.3,<2"]
 
 [dependency-groups]
@@ -45,6 +45,8 @@ package = false
 # the published package metadata.
 [tool.uv.sources]
 torch = { index = "pytorch-cpu" }
+# Recording locations are merged upstream but absent from the 0.21.0 wheel.
+foxglove-client = { git = "https://github.com/foxglove/foxglove-python.git", rev = "4c7fa1159633fe07e54de78a6a3718e354af485f" }
 
 [[tool.uv.index]]
 name = "pytorch-cpu"

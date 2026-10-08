@@ -19,6 +19,7 @@ from ray.data.context import DataContext
 from ray.data.datasource import Datasource, ReadTask
 
 from .reader import ClientFactory, EpisodeReader, ReadEpisode, _Plan, _plan
+from .storage import ObjectStoreFactory
 
 if TYPE_CHECKING:
     from ray.data._internal.block_builder import BlockBuilder
@@ -133,6 +134,7 @@ def read_dataset(
     topics: Sequence[str],
     read_episode: ReadEpisode[Mapping[str, Any]],
     client_factory: ClientFactory,
+    object_store_factory: ObjectStoreFactory | None = None,
     concurrency: int | None = None,
 ) -> ray.data.Dataset:
     """Return a native Ray dataset of callback-produced sample mappings.
@@ -149,6 +151,12 @@ def read_dataset(
     and their dependencies available on every worker. Use consistent column types
     containing scalars, NumPy arrays, or other Arrow-compatible values.
 
+    Set ``object_store_factory`` to create a worker-local ``ObjectStore`` for direct
+    indexed MCAP reads with customer credentials. The factory must be serializable.
+    All recordings must have object locations; errors never fall back to server
+    downloads. No storage clients or open files are serialized in the read tasks.
+    In this mode, ``client_factory`` is used only for planning and is not serialized.
+
     ``concurrency`` caps concurrent read tasks. Block construction follows Ray's
     ``DataContext.target_max_block_size``. Ray can combine blocks and buffer multiple
     episodes before delivering output. This target is not a memory ceiling: large
@@ -157,6 +165,9 @@ def read_dataset(
     callbacks, so callbacks should not perform external side effects.
     """
     return ray.data.read_datasource(
-        _Datasource(_plan(dataset_id, version, topics, client_factory), read_episode),
+        _Datasource(
+            _plan(dataset_id, version, topics, client_factory, object_store_factory),
+            read_episode,
+        ),
         concurrency=concurrency,
     )

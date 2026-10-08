@@ -9,6 +9,8 @@ from datetime import datetime, timedelta
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, Protocol, TypeVar
 
+from .storage import ObjectLocation, ObjectStore, ObjectStoreFactory, _MessageIds
+
 if TYPE_CHECKING:
     from mcap.decoder import DecoderFactory
     from mcap.records import Channel, Message, Schema
@@ -28,7 +30,12 @@ class _Client(Protocol):
     ) -> Mapping[str, Any]: ...
 
     def get_dataset_version_episodes(
-        self, *, dataset_id: str, version_number: int, limit: int
+        self,
+        *,
+        dataset_id: str,
+        version_number: int,
+        limit: int,
+        include_recordings: bool = False,
     ) -> _Page: ...
 
     def iter_messages(
@@ -51,6 +58,7 @@ class _Episode:
     start_time: datetime
     end_time: datetime
     metadata: dict[str, Any]
+    locations: tuple[ObjectLocation, ...] = ()
 
 
 class EpisodeReader:
@@ -69,11 +77,17 @@ class EpisodeReader:
     """
 
     def __init__(
-        self, episode: _Episode, topics: tuple[str, ...], client: _Client
+        self,
+        episode: _Episode,
+        topics: tuple[str, ...],
+        client: _Client | None,
+        object_store: ObjectStore | None = None,
     ) -> None:
         self._episode = episode
         self._topics = topics
         self._client = client
+        self._object_store = object_store
+        self._message_ids = _MessageIds()
         self._streams: set[Generator[Any, None, None]] = set()
         self._closed = False
 
@@ -116,7 +130,8 @@ class EpisodeReader:
             state stays local to the worker and episode. This does not decode media
             payloads into images.
         :param topics: Optional nonempty subset of the dataset topics. Filtering
-            happens on the server; separate calls open separate downloads.
+            happens on the server or through MCAP indexes for direct storage;
+            separate calls open separate downloads.
         :param lookback: Additional history to request before the episode start,
             for stateful media decoding. Must be nonnegative. Only recordings
             attached to the episode are searched; history may be unavailable.
@@ -135,6 +150,23 @@ class EpisodeReader:
             raise ValueError("topics must be a nonempty sequence of topic names")
         if not set(selected_topics).issubset(self._topics):
             raise ValueError("topics must be a subset of the dataset topics")
+        if self._object_store is not None:
+            from .storage import _iter_messages
+
+            yield from self._manage(
+                _iter_messages(
+                    self._object_store,
+                    self._episode.locations,
+                    selected_topics,
+                    self.start_time - lookback,
+                    self.end_time,
+                    decoder_factories,
+                    self._message_ids,
+                )
+            )
+            return
+        if self._client is None:
+            raise RuntimeError("Episode reader has no message source")
         time_range = (
             {"start": self.start_time - lookback, "end": self.end_time}
             if lookback
@@ -186,16 +218,22 @@ class _Plan:
     version: int
     topics: tuple[str, ...]
     episodes: tuple[_Episode, ...]
-    client_factory: ClientFactory
+    client_factory: ClientFactory | None
+    object_store_factory: ObjectStoreFactory | None = None
 
     def read(
         self, episodes: Sequence[_Episode], read_episode: ReadEpisode[_T]
     ) -> Generator[_T, None, None]:
         if not episodes:
             return
-        client = self.client_factory()
+        object_store = (
+            self.object_store_factory()
+            if self.object_store_factory is not None
+            else None
+        )
+        client = self.client_factory() if self.client_factory is not None else None
         for episode in episodes:
-            reader = EpisodeReader(episode, self.topics, client)
+            reader = EpisodeReader(episode, self.topics, client, object_store)
             samples = None
             try:
                 samples = iter(read_episode(reader))
@@ -220,6 +258,7 @@ def _plan(
     version: int,
     topics: Sequence[str],
     client_factory: ClientFactory,
+    object_store_factory: ObjectStoreFactory | None = None,
 ) -> _Plan:
     if not dataset_id:
         raise ValueError("dataset_id must be nonempty")
@@ -237,7 +276,10 @@ def _plan(
         raise ValueError("Dataset version contains missing recordings")
     episodes = []
     page = client.get_dataset_version_episodes(
-        dataset_id=dataset_id, version_number=version, limit=_EPISODE_PAGE_SIZE
+        dataset_id=dataset_id,
+        version_number=version,
+        limit=_EPISODE_PAGE_SIZE,
+        **({"include_recordings": True} if object_store_factory is not None else {}),
     )
     for entry in page.auto_paging_iter():
         episode = entry["episode"]
@@ -249,6 +291,7 @@ def _plan(
                 episode["start_time"],
                 episode["end_time"],
                 dict(episode["metadata"]),
+                _locations(episode) if object_store_factory is not None else (),
             )
         )
     # Make rank/worker partitioning independent of pagination order and sort ties.
@@ -258,5 +301,37 @@ def _plan(
         version,
         selected_topics,
         tuple(episodes),
-        client_factory,
+        client_factory if object_store_factory is None else None,
+        object_store_factory,
     )
+
+
+def _locations(episode: Mapping[str, Any]) -> tuple[ObjectLocation, ...]:
+    recordings = episode.get("recordings")
+    if not recordings:
+        raise ValueError(
+            f"Episode {episode['id']} has no recording locations; direct storage "
+            "requires a client with recording-location support and "
+            "customer-managed indexed recordings"
+        )
+    locations = []
+    for recording in recordings:
+        location = recording.get("location")
+        if not recording["available"] or not location:
+            raise ValueError(
+                f"Recording {recording['id']} in episode {episode['id']} is not "
+                "available in direct object storage; use a client with "
+                "recording-location support and customer-managed indexed recordings"
+            )
+        if not location.get("bucket") or not location.get("path"):
+            raise ValueError(
+                f"Recording {recording['id']} has an invalid object location"
+            )
+        locations.append(
+            ObjectLocation(
+                bucket=location["bucket"],
+                path=location["path"],
+                azure_storage_account_name=location.get("azureStorageAccountName"),
+            )
+        )
+    return tuple(dict.fromkeys(locations))

@@ -74,6 +74,96 @@ The result is a ``ray.data.Dataset``. Callbacks must yield mappings with
 consistent column types, such as scalars or NumPy arrays. Use ``map_batches`` for
 further processing. ``concurrency`` limits the number of simultaneous read tasks.
 
+Direct object storage (BYOS)
+--------------------------------
+
+For customer-managed indexed storage, pass ``object_store_factory`` to either
+``read_dataset`` adapter. Foxglove supplies episode metadata and recording locations;
+workers read MCAP files directly from your bucket with your credentials. The same
+``read_episode`` callback works for both download paths.
+
+.. important::
+
+   Recording-location support is merged in ``foxglove-client`` but is not included
+   in its published 0.21.0 wheel. Until a release includes
+   `foxglove-python#164 <https://github.com/foxglove/foxglove-python/pull/164>`_,
+   install the tested client revision explicitly:
+
+   .. code-block:: bash
+
+      pip install 'foxglove-client @ git+https://github.com/foxglove/foxglove-python.git@4c7fa1159633fe07e54de78a6a3718e354af485f'
+
+For example, install ``pyarrow`` on every worker (already included with the Ray
+extra), then define this class at module scope alongside ``make_client`` and
+``read_episode`` from the examples above:
+
+.. code-block:: python
+
+   import pyarrow.fs as fs
+   from foxglove.datasets import ObjectLocation
+
+   class S3Store:
+       def __init__(self):
+           self.filesystem = fs.S3FileSystem(region="us-east-1")
+
+       def open(self, location: ObjectLocation):
+           return self.filesystem.open_input_file(
+               f"{location.bucket}/{location.path}"
+           )
+
+   if __name__ == "__main__":
+       dataset = read_dataset(
+           "ds_123", version=7, topics=["/training/measurements"],
+           read_episode=read_episode, client_factory=make_client,
+           object_store_factory=S3Store,
+       )
+
+S3 credentials are resolved in each consuming process using Arrow's credential
+chain, including environment variables or the machine's IAM role. Grant workers
+read access to the original objects; the Foxglove API token does not grant bucket
+access. Set the region to your bucket's region and run compute nearby to avoid
+cross-region transfer. Do not capture live filesystem clients, open files, or
+short-lived credentials in the factory. PyTorch users should create their
+``DataLoader`` under the main guard with ``multiprocessing_context="spawn"``
+when using loader workers.
+
+The ``open`` method receives the exact bucket and object key, which may differ
+from the recording's display filename. Use ``fs.GcsFileSystem()`` for GCS or
+``fs.AzureFileSystem(account_name="...")`` for Azure with credentials available
+on each worker. Azure locations also provide ``azure_storage_account_name``;
+your implementation can route accounts to separate filesystem clients. A custom
+store can alternatively return a seekable ``fsspec`` binary handle with bounded
+caching. Storage dependencies remain optional for PyTorch-only installations.
+
+Direct reads require immutable, chunk-indexed MCAP recordings with summary
+indexes. Missing locations, permissions, unsupported formats, and missing indexes
+raise errors; there is no fallback to Foxglove downloads. Query-optimized sites
+that do not retain original objects should use the default download path.
+
+Performance and iteration behavior:
+
+* Planning requests recording locations with the paginated episode metadata;
+  it does not open objects. Storage clients are created once per worker iteration
+  or Ray read task, after episode sharding. Direct-reading workers do not need
+  to call the Foxglove API, and the planning client factory is not serialized.
+* MCAP indexes select chunks by topic and the episode's inclusive time window,
+  extended by ``lookback`` when requested. A selected chunk may contain other
+  topics, so the reader still fetches and decompresses that whole chunk. The SDK
+  uses a 64 KiB buffer to coalesce small header and summary reads.
+* Recordings are merged in log-time order before decoding. Equivalent schemas
+  and channels share episode-local IDs; conflicting file-local IDs are remapped.
+  Original timestamps and payload bytes are preserved. Files close when the
+  episode ends, including errors and early termination.
+* Memory includes the indexes and active decompressed chunks of the episode's
+  recordings, decoded samples, and framework prefetch buffers. It is not bounded
+  by Ray's output block target alone. Tune Ray ``concurrency`` or PyTorch
+  ``num_workers`` and ``prefetch_factor`` against your workload and storage limits.
+* Every new iteration reads again. Sparse windows benefit from range reads;
+  repeated dense epochs may benefit from a bounded worker-local disk cache in
+  your store. Whole-file caches fetch the entire recording and can increase
+  first-sample latency and transfer. Keep recordings immutable and manage cache
+  size explicitly.
+
 Message formats
 ---------------
 
@@ -170,6 +260,15 @@ Episode reader
 ^^^^^^^^^^^^^^
 
 .. autoclass:: foxglove.datasets.EpisodeReader
+   :members:
+
+Object storage
+^^^^^^^^^^^^^^
+
+.. autoclass:: foxglove.datasets.ObjectLocation
+   :members:
+
+.. autoclass:: foxglove.datasets.ObjectStore
    :members:
 
 Video decoding

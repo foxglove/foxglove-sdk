@@ -476,17 +476,13 @@ wheels = [
 
 [[package]]
 name = "foxglove-client"
-version = "0.20.0"
-source = { registry = "https://pypi.org/simple" }
+version = "0.21.0"
+source = { git = "https://github.com/foxglove/foxglove-python.git?rev=4c7fa1159633fe07e54de78a6a3718e354af485f#4c7fa1159633fe07e54de78a6a3718e354af485f" }
 dependencies = [
     { name = "arrow" },
     { name = "mcap" },
     { name = "requests" },
     { name = "typing-extensions" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/fc/eb/bcf1bc6150eae821f4f9dfabf80234292215797e33d88ee88d123935a314/foxglove_client-0.20.0.tar.gz", hash = "sha256:694ae6f9e04043e70ef6d4335386359744fa65628bf57dc692b54fa11fc14287", size = 35821, upload-time = "2026-09-25T18:39:30.054Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/82/75/66cba4ed7458f97d19aabf0dd601392f1f6ff21a5e3ab24b0fc8c21af37e/foxglove_client-0.20.0-py3-none-any.whl", hash = "sha256:056e477f51f689117563dfa20ce3dc0b93dddd01c1407ed0570fee8a88b4bb0f", size = 21190, upload-time = "2026-09-25T18:39:28.76Z" },
 ]
 
 [[package]]
@@ -539,8 +535,8 @@ dev = [
 requires-dist = [
     { name = "anywidget", marker = "extra == 'notebook'" },
     { name = "av", marker = "extra == 'video'", specifier = ">=16,<17" },
-    { name = "foxglove-client", marker = "extra == 'ray'", specifier = ">=0.20.0" },
-    { name = "foxglove-client", marker = "extra == 'torch'", specifier = ">=0.20.0" },
+    { name = "foxglove-client", marker = "extra == 'ray'", git = "https://github.com/foxglove/foxglove-python.git?rev=4c7fa1159633fe07e54de78a6a3718e354af485f" },
+    { name = "foxglove-client", marker = "extra == 'torch'", git = "https://github.com/foxglove/foxglove-python.git?rev=4c7fa1159633fe07e54de78a6a3718e354af485f" },
     { name = "mcap", marker = "extra == 'notebook'" },
     { name = "mcap", marker = "extra == 'video'", specifier = ">=1.3,<2" },
     { name = "numpy", marker = "extra == 'video'", specifier = ">=1.23,<3" },
