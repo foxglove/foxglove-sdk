@@ -31,7 +31,11 @@ class ObjectPage:
                         {
                             "id": "recording",
                             "available": True,
-                            "location": {"bucket": self.directory, "path": "data.mcap"},
+                            "location": {
+                                "bucket": self.directory,
+                                "path": "data.mcap",
+                                "scheme": "s3",
+                            },
                         }
                     ],
                 }
@@ -83,7 +87,13 @@ def object_samples(episode: EpisodeReader) -> Iterator[dict[str, Any]]:
 
 
 @pytest.mark.parametrize("framework", ["torch", "ray"])
-def test_direct_storage_in_real_workers(tmp_path: Path, framework: str) -> None:
+@pytest.mark.parametrize("builtin", [False, True])
+def test_direct_storage_in_real_workers(
+    tmp_path: Path,
+    framework: str,
+    builtin: bool,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     pytest.importorskip(framework)
     pytest.importorskip("pyarrow")
     (tmp_path / "data.mcap").write_bytes(
@@ -107,9 +117,13 @@ def test_direct_storage_in_real_workers(tmp_path: Path, framework: str) -> None:
         "version": 7,
         "topics": ["/selected"],
         "client_factory": make_client,
-        "object_store_factory": partial(ArrowStore, os.getpid()),
+        "object_store_factory": None if builtin else partial(ArrowStore, os.getpid()),
+        "source": "direct" if builtin else "foxglove",
         "read_episode": object_samples,
     }
+    monkeypatch.setattr(
+        "foxglove.datasets.reader._CloudObjectStore", partial(ArrowStore, os.getpid())
+    )
     expected = [
         {
             "episode": str(index),

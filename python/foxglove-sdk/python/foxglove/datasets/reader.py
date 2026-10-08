@@ -2,14 +2,22 @@
 
 from __future__ import annotations
 
+import os
 from collections.abc import Callable, Generator, Iterable, Iterator, Mapping, Sequence
 from contextlib import ExitStack
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Any, Protocol, TypeVar
+from typing import TYPE_CHECKING, Any, Literal, Protocol, TypeVar, cast
 
-from .storage import ObjectLocation, ObjectStore, ObjectStoreFactory, _MessageIds
+from .storage import (
+    ObjectLocation,
+    ObjectStore,
+    ObjectStoreFactory,
+    _CloudObjectStore,
+    _MessageIds,
+    _validate_location,
+)
 
 if TYPE_CHECKING:
     from mcap.decoder import DecoderFactory
@@ -50,6 +58,15 @@ class _Client(Protocol):
 
 
 ClientFactory = Callable[[], _Client]
+
+
+def _make_client() -> _Client:
+    from foxglove.client import Client
+
+    token = os.environ.get("FOXGLOVE_API_TOKEN")
+    if not token:
+        raise ValueError("Set FOXGLOVE_API_TOKEN or provide client_factory")
+    return cast(_Client, Client(token=token))
 
 
 @dataclass(frozen=True)
@@ -257,9 +274,13 @@ def _plan(
     dataset_id: str,
     version: int,
     topics: Sequence[str],
-    client_factory: ClientFactory,
+    client_factory: ClientFactory | None = None,
     object_store_factory: ObjectStoreFactory | None = None,
+    *,
+    source: Literal["foxglove", "direct"] = "foxglove",
 ) -> _Plan:
+    if source not in ("foxglove", "direct"):
+        raise ValueError("source must be 'foxglove' or 'direct'")
     if not dataset_id:
         raise ValueError("dataset_id must be nonempty")
     if version < 1:
@@ -268,7 +289,13 @@ def _plan(
     # An empty topic list would read every topic.
     if isinstance(topics, str) or not selected_topics:
         raise ValueError("topics must be a nonempty sequence of topic names")
-    client = client_factory()
+    make_client = client_factory if client_factory is not None else _make_client
+    make_store = (
+        object_store_factory
+        if object_store_factory is not None
+        else _CloudObjectStore if source == "direct" else None
+    )
+    client = make_client()
     info = client.get_dataset_version(dataset_id=dataset_id, version_number=version)
     if info["committed_at"] is None:
         raise ValueError("Dataset version must be committed")
@@ -279,7 +306,7 @@ def _plan(
         dataset_id=dataset_id,
         version_number=version,
         limit=_EPISODE_PAGE_SIZE,
-        **({"include_recordings": True} if object_store_factory is not None else {}),
+        **({"include_recordings": True} if make_store is not None else {}),
     )
     for entry in page.auto_paging_iter():
         episode = entry["episode"]
@@ -291,7 +318,11 @@ def _plan(
                 episode["start_time"],
                 episode["end_time"],
                 dict(episode["metadata"]),
-                _locations(episode) if object_store_factory is not None else (),
+                (
+                    _locations(episode, validate=object_store_factory is None)
+                    if make_store is not None
+                    else ()
+                ),
             )
         )
     # Make rank/worker partitioning independent of pagination order and sort ties.
@@ -301,12 +332,14 @@ def _plan(
         version,
         selected_topics,
         tuple(episodes),
-        client_factory if object_store_factory is None else None,
-        object_store_factory,
+        make_client if make_store is None else None,
+        make_store,
     )
 
 
-def _locations(episode: Mapping[str, Any]) -> tuple[ObjectLocation, ...]:
+def _locations(
+    episode: Mapping[str, Any], *, validate: bool = False
+) -> tuple[ObjectLocation, ...]:
     recordings = episode.get("recordings")
     if not recordings:
         raise ValueError(
@@ -327,11 +360,13 @@ def _locations(episode: Mapping[str, Any]) -> tuple[ObjectLocation, ...]:
             raise ValueError(
                 f"Recording {recording['id']} has an invalid object location"
             )
-        locations.append(
-            ObjectLocation(
-                bucket=location["bucket"],
-                path=location["path"],
-                azure_storage_account_name=location.get("azureStorageAccountName"),
-            )
+        object_location = ObjectLocation(
+            bucket=location["bucket"],
+            path=location["path"],
+            azure_storage_account_name=location.get("azureStorageAccountName"),
+            scheme=location.get("scheme"),
         )
+        if validate:
+            _validate_location(object_location)
+        locations.append(object_location)
     return tuple(dict.fromkeys(locations))

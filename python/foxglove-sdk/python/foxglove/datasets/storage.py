@@ -14,6 +14,7 @@ from typing import IO, TYPE_CHECKING, Any, Protocol, cast
 if TYPE_CHECKING:
     from mcap.decoder import DecoderFactory
     from mcap.records import Channel, Message, Schema
+    from pyarrow.fs import FileSystem
 
 
 @dataclass(frozen=True)
@@ -21,6 +22,8 @@ class ObjectLocation:
     """Location of an original recording in customer-managed storage.
 
     ``path`` is the full object key, not the recording's display filename.
+    ``scheme`` identifies the cloud provider: ``s3``, ``gs``, or ``az`` for
+    built-in storage access. Custom stores may also accept other or absent schemes.
     For Azure, ``bucket`` is the container and ``azure_storage_account_name``
     identifies its account. These APIs are experimental and unstable.
     """
@@ -28,6 +31,7 @@ class ObjectLocation:
     bucket: str
     path: str
     azure_storage_account_name: str | None = None
+    scheme: str | None = None
 
 
 class ObjectStore(Protocol):
@@ -49,6 +53,61 @@ class ObjectStore(Protocol):
 
 
 ObjectStoreFactory = Callable[[], ObjectStore]
+
+
+def _validate_location(location: ObjectLocation) -> None:
+    if location.scheme not in ("s3", "gs", "az"):
+        raise ValueError(
+            f"Built-in direct storage requires location.scheme to be 's3', 'gs', "
+            f"or 'az'; got {location.scheme!r}. Provide an object_store_factory "
+            "for a custom ObjectStore if the recording uses another storage provider "
+            "or its scheme is unavailable."
+        )
+    if location.scheme == "az" and not location.azure_storage_account_name:
+        raise ValueError(
+            "Built-in direct Azure storage requires azure_storage_account_name. "
+            "Provide an object_store_factory for a custom ObjectStore if the "
+            "recording's storage account is unavailable."
+        )
+
+
+class _CloudObjectStore:
+    """Open cloud objects with credentials discovered in the reading worker."""
+
+    def __init__(self) -> None:
+        self._s3_regions: dict[str, str] = {}
+        self._s3_filesystems: dict[str, FileSystem] = {}
+        self._gcs_filesystem: FileSystem | None = None
+        self._azure_filesystems: dict[str, FileSystem] = {}
+
+    def open(self, location: ObjectLocation) -> IO[bytes]:
+        _validate_location(location)
+
+        from pyarrow import fs
+
+        if location.scheme == "s3":
+            region = self._s3_regions.get(location.bucket)
+            if region is None:
+                region = fs.resolve_s3_region(location.bucket)
+                self._s3_regions[location.bucket] = region
+            filesystem = self._s3_filesystems.get(region)
+            if filesystem is None:
+                filesystem = fs.S3FileSystem(region=region)
+                self._s3_filesystems[region] = filesystem
+        elif location.scheme == "gs":
+            filesystem = self._gcs_filesystem
+            if filesystem is None:
+                filesystem = fs.GcsFileSystem()
+                self._gcs_filesystem = filesystem
+        else:
+            account = cast(str, location.azure_storage_account_name)
+            filesystem = self._azure_filesystems.get(account)
+            if filesystem is None:
+                filesystem = fs.AzureFileSystem(account_name=account)
+                self._azure_filesystems[account] = filesystem
+        return cast(
+            IO[bytes], filesystem.open_input_file(f"{location.bucket}/{location.path}")
+        )
 
 
 class _MessageIds:

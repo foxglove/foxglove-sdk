@@ -156,8 +156,10 @@ def test_real_client_pagination_filtering_and_incremental_mcap(
     assert opened[0].closed
 
 
+@pytest.mark.parametrize("builtin", [False, True])
 def test_real_client_direct_storage_locations_and_cursor_pagination(
     monkeypatch: pytest.MonkeyPatch,
+    builtin: bool,
 ) -> None:
     import requests
     from foxglove.datasets.storage import ObjectLocation
@@ -165,8 +167,8 @@ def test_real_client_direct_storage_locations_and_cursor_pagination(
     from .test_datasets_storage import Store, mcap_bytes
 
     locations = [
-        ObjectLocation("bucket", "prefix/s3.mcap"),
-        ObjectLocation("container", "prefix/azure.mcap", "account"),
+        ObjectLocation("bucket", "prefix/s3.mcap", scheme="s3"),
+        ObjectLocation("container", "prefix/azure.mcap", "account", scheme="az"),
     ]
     store = Store(
         {
@@ -193,7 +195,11 @@ def test_real_client_direct_storage_locations_and_cursor_pagination(
             assert cursor in (None, "second")
             index = 1 if cursor else 0
             location = locations[index]
-            raw_location = {"bucket": location.bucket, "path": location.path}
+            raw_location: dict[str, Any] = {
+                "bucket": location.bucket,
+                "path": location.path,
+                "scheme": location.scheme,
+            }
             if location.azure_storage_account_name:
                 raw_location["azureStorageAccountName"] = (
                     location.azure_storage_account_name
@@ -241,12 +247,15 @@ def test_real_client_direct_storage_locations_and_cursor_pagination(
         return response
 
     monkeypatch.setattr(requests.Session, "request", request)
+    monkeypatch.setenv("FOXGLOVE_API_TOKEN", "test")
+    monkeypatch.setattr("foxglove.datasets.reader._CloudObjectStore", lambda: store)
     plan = _plan(
         "dataset",
         7,
         ["/camera"],
-        lambda: client_module.Client(token="test"),
-        lambda: store,
+        None if builtin else lambda: client_module.Client(token="test"),
+        None if builtin else lambda: store,
+        source="direct" if builtin else "foxglove",
     )
     assert [episode.locations for episode in plan.episodes] == [
         (locations[1],),

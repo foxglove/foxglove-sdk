@@ -30,13 +30,8 @@ with ``speed`` and ``steering`` fields; adapt ``read_episode`` to your data.
 
 .. code-block:: python
 
-   import os
-   from foxglove.client import Client
    from foxglove.datasets.torch import read_dataset
    from torch.utils.data import DataLoader
-
-   def make_client():
-       return Client(token=os.environ["FOXGLOVE_API_TOKEN"])
 
    def read_episode(episode):
        for schema, channel, message, decoded in episode.iter_messages():
@@ -45,9 +40,12 @@ with ``speed`` and ``steering`` fields; adapt ``read_episode`` to your data.
    if __name__ == "__main__":
        dataset = read_dataset(
            "ds_123", version=7, topics=["/training/measurements"],
-           read_episode=read_episode, client_factory=make_client,
+           read_episode=read_episode,
        )
-       loader = DataLoader(dataset, batch_size=32, num_workers=2)
+       loader = DataLoader(
+           dataset, batch_size=32, num_workers=2,
+           multiprocessing_context="spawn", prefetch_factor=1,
+       )
        for batch in loader:
            print(batch)
 
@@ -57,7 +55,7 @@ dictionaries, or objects handled by a custom ``collate_fn``.
 Ray Data
 --------
 
-Use the same callback and client factory with the Ray adapter:
+Use the same callback with the Ray adapter:
 
 .. code-block:: python
 
@@ -65,7 +63,7 @@ Use the same callback and client factory with the Ray adapter:
 
    dataset = read_dataset(
        "ds_123", version=7, topics=["/training/measurements"],
-       read_episode=read_episode, client_factory=make_client, concurrency=2,
+       read_episode=read_episode, concurrency=2,
    )
    for batch in dataset.iter_torch_batches(batch_size=32):
        print(batch)
@@ -77,25 +75,60 @@ further processing. ``concurrency`` limits the number of simultaneous read tasks
 Direct object storage (BYOS)
 --------------------------------
 
-For customer-managed indexed storage, pass ``object_store_factory`` to either
-``read_dataset`` adapter. Foxglove supplies episode metadata and recording locations;
-workers read MCAP files directly from your bucket with your credentials. The same
-``read_episode`` callback works for both download paths.
+The default ``source="foxglove"`` downloads messages through Foxglove. For
+customer-managed indexed storage, pass ``source="direct"`` to either adapter.
+Foxglove supplies episode metadata and recording locations; workers read MCAP
+files directly with their cloud credentials. The same callback works for both
+sources:
+
+.. code-block:: python
+
+   dataset = read_dataset(
+       "ds_123", version=7, topics=["/training/measurements"],
+       read_episode=read_episode, source="direct",
+   )
 
 .. important::
 
-   Recording-location support is merged in ``foxglove-client`` but is not included
-   in its published 0.21.0 wheel. Until a release includes
-   `foxglove-python#164 <https://github.com/foxglove/foxglove-python/pull/164>`_,
-   install the tested client revision explicitly:
+   Direct reads require the API and client to provide recording locations with
+   ``location.scheme`` (``s3``, ``gs``, or ``az``).
 
-   .. code-block:: bash
+The SDK selects S3, GCS, or Azure storage from the location's scheme. S3 bucket
+regions are discovered automatically and cached; Azure uses the location's
+``azure_storage_account_name``. The framework extras include ``pyarrow``.
+Configure native cloud credentials on each worker, such as environment variables
+or the machine's IAM role, and grant read access to the original objects. The
+Foxglove API token does not grant bucket access. Run compute near your storage to
+avoid cross-region transfer.
 
-      pip install 'foxglove-client @ git+https://github.com/foxglove/foxglove-python.git@4c7fa1159633fe07e54de78a6a3718e354af485f'
+Direct reads require immutable, chunk-indexed MCAP recordings with summary
+indexes. Missing locations, permissions, unsupported formats, and missing indexes
+raise errors; there is no fallback to Foxglove downloads. Query-optimized sites
+that do not retain original objects should use the default download path.
 
-For example, install ``pyarrow`` on every worker (already included with the Ray
-extra), then define this class at module scope alongside ``make_client`` and
-``read_episode`` from the examples above:
+Custom factories
+^^^^^^^^^^^^^^^^
+
+Use ``client_factory`` for custom Foxglove authentication or configuration.
+Without a factory, the SDK creates a client using ``FOXGLOVE_API_TOKEN``.
+Define factories at module scope so workers can serialize them:
+
+.. code-block:: python
+
+   import os
+   from foxglove.client import Client
+
+   def make_client():
+       return Client(token=os.environ["MY_FOXGLOVE_TOKEN"])
+
+   dataset = read_dataset(
+       "ds_123", version=7, topics=["/training/measurements"],
+       read_episode=read_episode, client_factory=make_client,
+   )
+
+For custom storage or caching, pass ``object_store_factory``. A factory creates
+one store in each consuming process; its ``open`` method receives an
+``ObjectLocation`` and returns a seekable binary handle. For example:
 
 .. code-block:: python
 
@@ -111,34 +144,17 @@ extra), then define this class at module scope alongside ``make_client`` and
                f"{location.bucket}/{location.path}"
            )
 
-   if __name__ == "__main__":
-       dataset = read_dataset(
-           "ds_123", version=7, topics=["/training/measurements"],
-           read_episode=read_episode, client_factory=make_client,
-           object_store_factory=S3Store,
-       )
+   dataset = read_dataset(
+       "ds_123", version=7, topics=["/training/measurements"],
+       read_episode=read_episode, source="direct", object_store_factory=S3Store,
+   )
 
-S3 credentials are resolved in each consuming process using Arrow's credential
-chain, including environment variables or the machine's IAM role. Grant workers
-read access to the original objects; the Foxglove API token does not grant bucket
-access. Set the region to your bucket's region and run compute nearby to avoid
-cross-region transfer. Do not capture live filesystem clients, open files, or
-short-lived credentials in the factory. PyTorch users should create their
-``DataLoader`` under the main guard with ``multiprocessing_context="spawn"``
-when using loader workers.
-
-The ``open`` method receives the exact bucket and object key, which may differ
-from the recording's display filename. Use ``fs.GcsFileSystem()`` for GCS or
-``fs.AzureFileSystem(account_name="...")`` for Azure with credentials available
-on each worker. Azure locations also provide ``azure_storage_account_name``;
-your implementation can route accounts to separate filesystem clients. A custom
-store can alternatively return a seekable ``fsspec`` binary handle with bounded
-caching. Storage dependencies remain optional for PyTorch-only installations.
-
-Direct reads require immutable, chunk-indexed MCAP recordings with summary
-indexes. Missing locations, permissions, unsupported formats, and missing indexes
-raise errors; there is no fallback to Foxglove downloads. Query-optimized sites
-that do not retain original objects should use the default download path.
+Supplying ``object_store_factory`` also selects direct reads when ``source`` is
+omitted, preserving existing factory-based calls. Use the exact bucket and object
+key from the location, which may differ from the display filename. Create live
+filesystem clients inside the factory; do not capture open files or short-lived
+credentials. A custom store can return a seekable ``fsspec`` binary handle with
+bounded caching. Use ``multiprocessing_context="spawn"`` for PyTorch workers.
 
 Performance and iteration behavior:
 
@@ -183,7 +199,7 @@ Install ``foxglove-sdk[video,torch]`` or ``foxglove-sdk[video,ray]``, plus the
 MCAP decoder for your recording (see `Message formats`_).
 
 Pass ``decode_h264`` as the episode callback to decode every selected camera topic.
-Using ``make_client`` from above and equally sized camera images:
+Using equally sized camera images:
 
 .. code-block:: python
 
@@ -195,9 +211,13 @@ Using ``make_client`` from above and equally sized camera images:
        dataset = read_dataset(
            "ds_123", version=7,
            topics=["/camera/front", "/camera/wrist"],
-           read_episode=decode_h264, client_factory=make_client,
+           read_episode=decode_h264,
        )
-       for batch in DataLoader(dataset, batch_size=16, num_workers=2):
+       loader = DataLoader(
+           dataset, batch_size=16, num_workers=2,
+           multiprocessing_context="spawn", prefetch_factor=1,
+       )
+       for batch in loader:
            images = to_image_tensor(batch)  # [B, 3, H, W]
            print(batch["topic"], images.shape)
 

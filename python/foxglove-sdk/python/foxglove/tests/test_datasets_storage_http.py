@@ -7,7 +7,7 @@ from typing import IO, Any, cast
 from urllib.parse import urlsplit
 
 import pytest
-from foxglove.datasets.storage import ObjectLocation, _iter_messages
+from foxglove.datasets.storage import ObjectLocation, _CloudObjectStore, _iter_messages
 
 from .test_datasets_storage import START, mcap_bytes
 
@@ -15,9 +15,11 @@ s3 = pytest.importorskip("pyarrow.fs")
 
 
 @pytest.mark.parametrize("deny_reads", [False, True])
+@pytest.mark.parametrize("builtin", [False, True])
 def test_native_s3_range_reads_are_sparse_and_propagate_errors(
     monkeypatch: pytest.MonkeyPatch,
     deny_reads: bool,
+    builtin: bool,
     record_property: Callable[[str, object], None],
 ) -> None:
     import requests
@@ -29,7 +31,7 @@ def test_native_s3_range_reads_are_sparse_and_propagate_errors(
             for topic in ("/selected", "/other")
         ]
     )
-    location = ObjectLocation("bucket", "prefix/run.mcap")
+    location = ObjectLocation("bucket", "prefix/run.mcap", scheme="s3")
     ranges: list[str | None] = []
     fetched_sizes: list[int] = []
     paths: list[str] = []
@@ -108,9 +110,16 @@ def test_native_s3_range_reads_are_sparse_and_propagate_errors(
                     ),
                 )
 
+        monkeypatch.setattr(s3, "resolve_s3_region", lambda bucket: "us-east-1")
+        monkeypatch.setattr(s3, "S3FileSystem", lambda **kwargs: filesystem)
         stamp = START + timedelta(seconds=50)
         stream = _iter_messages(
-            S3Store(), [location], ["/selected"], stamp, stamp, None
+            _CloudObjectStore() if builtin else S3Store(),
+            [location],
+            ["/selected"],
+            stamp,
+            stamp,
+            None,
         )
         if deny_reads:
             with pytest.raises(
