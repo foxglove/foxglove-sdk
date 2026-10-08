@@ -22,14 +22,11 @@ describe("main", () => {
     jest.mocked(readdir).mockReset();
   });
 
-  it.each([
-    ["so101-visualization", "it requires a physical robot"],
-    ["asset-server", "it requires the remote-access feature"],
-  ])("skips the %s example because %s", async (example) => {
+  it("skips the so101-visualization example because it requires a physical robot", async () => {
     const actualFs = jest.requireActual<typeof import("node:fs/promises")>("node:fs/promises");
     jest.mocked(readdir).mockImplementation(async (...args) => {
       const entries = await actualFs.readdir(...args);
-      return entries.filter((entry) => entry.name.toString() === example);
+      return entries.filter((entry) => entry.name.toString() === "so101-visualization");
     });
     await testOnlyExports.main({ timeout: "5000", installSdkFromPath: false });
 

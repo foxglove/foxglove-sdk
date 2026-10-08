@@ -39,11 +39,9 @@ async function main(opts: { timeout: string; installSdkFromPath: boolean }): Pro
       continue;
     }
 
-    // Skip examples that require external credentials, services, or hardware, or that import
-    // `foxglove.remote_access`, which the local SDK build doesn't include.
+    // Skip examples that require external credentials, services, or hardware.
     const skipList = [
       "remote-access",
-      "asset-server",
       "oak-camera-streaming",
       "dataset-training",
       "so101-visualization",
