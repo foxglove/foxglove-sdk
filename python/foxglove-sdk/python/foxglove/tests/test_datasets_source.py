@@ -93,7 +93,7 @@ def test_builtin_direct_source_validates_scheme_before_constructing_storage(
     store_factory = MagicMock()
     monkeypatch.setattr("foxglove.datasets.reader._CloudObjectStore", store_factory)
     with pytest.raises(ValueError, match="object_store_factory"):
-        _plan("dataset", 7, ["/selected"], lambda: client, source="direct")
+        _plan("dataset", 7, ["/selected"], lambda: client, source="object_storage")
     store_factory.assert_not_called()
     client.get_dataset_version_episodes.assert_called_once_with(
         dataset_id="dataset", version_number=7, limit=2000, include_recordings=True
@@ -111,7 +111,7 @@ def test_direct_source_selects_builtin_storage_in_consuming_iteration(
     store = Store({location: mcap_bytes([("/selected", 0, "direct sample")])})
     store_factory = MagicMock(return_value=store)
     monkeypatch.setattr("foxglove.datasets.reader._CloudObjectStore", store_factory)
-    plan = _plan("dataset", 7, ["/selected"], client_factory, source="direct")
+    plan = _plan("dataset", 7, ["/selected"], client_factory, source="object_storage")
     assert plan.episodes[0].locations == (location,)
     assert plan.client_factory is None
     store_factory.assert_not_called()
@@ -123,7 +123,7 @@ def test_direct_source_selects_builtin_storage_in_consuming_iteration(
 
 
 @pytest.mark.parametrize("scheme", [None, "custom"])
-@pytest.mark.parametrize("source", ["foxglove", "direct"])
+@pytest.mark.parametrize("source", ["foxglove", "object_storage"])
 def test_custom_storage_accepts_missing_or_unknown_schemes_and_implies_direct(
     scheme: str | None, source: Any
 ) -> None:
@@ -174,7 +174,7 @@ def test_public_adapters_forward_direct_source_without_creating_storage(
         topics=["/selected"],
         read_episode=first_sample,
         client_factory=lambda: client,
-        source="direct",
+        source="object_storage",
     )
     assert dataset._plan.client_factory is None
     assert dataset._plan.object_store_factory is store_factory

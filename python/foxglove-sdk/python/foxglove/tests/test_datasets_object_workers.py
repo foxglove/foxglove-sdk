@@ -118,7 +118,7 @@ def test_direct_storage_in_real_workers(
         "topics": ["/selected"],
         "client_factory": make_client,
         "object_store_factory": None if builtin else partial(ArrowStore, os.getpid()),
-        "source": "direct" if builtin else "foxglove",
+        "source": "object_storage" if builtin else "foxglove",
         "read_episode": object_samples,
     }
     monkeypatch.setattr(

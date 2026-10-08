@@ -277,10 +277,10 @@ def _plan(
     client_factory: ClientFactory | None = None,
     object_store_factory: ObjectStoreFactory | None = None,
     *,
-    source: Literal["foxglove", "direct"] = "foxglove",
+    source: Literal["foxglove", "object_storage"] = "foxglove",
 ) -> _Plan:
-    if source not in ("foxglove", "direct"):
-        raise ValueError("source must be 'foxglove' or 'direct'")
+    if source not in ("foxglove", "object_storage"):
+        raise ValueError("source must be 'foxglove' or 'object_storage'")
     if not dataset_id:
         raise ValueError("dataset_id must be nonempty")
     if version < 1:
@@ -293,7 +293,7 @@ def _plan(
     make_store = (
         object_store_factory
         if object_store_factory is not None
-        else _CloudObjectStore if source == "direct" else None
+        else _CloudObjectStore if source == "object_storage" else None
     )
     client = make_client()
     info = client.get_dataset_version(dataset_id=dataset_id, version_number=version)

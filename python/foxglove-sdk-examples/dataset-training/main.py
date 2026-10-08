@@ -1,8 +1,8 @@
 """Read a committed Foxglove dataset with PyTorch or Ray.
 
 The selected JSON topic contains speed, acceleration, and steering numbers.
-Set FOXGLOVE_API_TOKEN before running. Direct mode uses cloud credentials on
-workers; the default Foxglove mode also needs FOXGLOVE_API_TOKEN on workers.
+Set FOXGLOVE_API_TOKEN before running. Object storage mode uses cloud credentials
+on workers; the default Foxglove mode also needs FOXGLOVE_API_TOKEN on workers.
 """
 
 import argparse
@@ -25,7 +25,7 @@ def read_episode(episode: EpisodeReader) -> Iterator[dict[str, np.ndarray]]:
 
 
 def run_torch(
-    dataset_id: str, version: int, source: Literal["foxglove", "direct"]
+    dataset_id: str, version: int, source: Literal["foxglove", "object_storage"]
 ) -> None:
     """Load batches directly with PyTorch."""
     from foxglove.datasets.torch import read_dataset
@@ -50,7 +50,7 @@ def run_torch(
 
 
 def run_ray(
-    dataset_id: str, version: int, source: Literal["foxglove", "direct"]
+    dataset_id: str, version: int, source: Literal["foxglove", "object_storage"]
 ) -> None:
     """Load with Ray and consume batches as PyTorch tensors."""
     import ray
@@ -78,7 +78,9 @@ def main() -> None:
     parser.add_argument("--dataset-id", required=True)
     parser.add_argument("--version", type=int, required=True)
     parser.add_argument("--framework", choices=["torch", "ray"], default="torch")
-    parser.add_argument("--source", choices=["foxglove", "direct"], default="foxglove")
+    parser.add_argument(
+        "--source", choices=["foxglove", "object_storage"], default="foxglove"
+    )
     args = parser.parse_args()
     if args.framework == "torch":
         run_torch(args.dataset_id, args.version, args.source)

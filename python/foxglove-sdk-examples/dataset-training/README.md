@@ -14,11 +14,11 @@ uv run main.py --dataset-id ds_123 --version 7 --framework ray
 ```
 
 The default `--source foxglove` downloads through Foxglove. To read original MCAP
-objects from customer-managed indexed storage, use `--source direct` with either
+objects from customer-managed indexed storage, use `--source object_storage` with either
 framework:
 
 ```sh
-uv run main.py --dataset-id ds_123 --version 7 --framework torch --source direct
+uv run main.py --dataset-id ds_123 --version 7 --framework torch --source object_storage
 ```
 
 Direct reads require the API and client to provide recording locations with

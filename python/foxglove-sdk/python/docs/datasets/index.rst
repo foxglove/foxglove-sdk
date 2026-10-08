@@ -76,7 +76,7 @@ Direct object storage (BYOS)
 --------------------------------
 
 The default ``source="foxglove"`` downloads messages through Foxglove. For
-customer-managed indexed storage, pass ``source="direct"`` to either adapter.
+customer-managed indexed storage, pass ``source="object_storage"`` to either adapter.
 Foxglove supplies episode metadata and recording locations; workers read MCAP
 files directly with their cloud credentials. The same callback works for both
 sources:
@@ -85,7 +85,7 @@ sources:
 
    dataset = read_dataset(
        "ds_123", version=7, topics=["/training/measurements"],
-       read_episode=read_episode, source="direct",
+       read_episode=read_episode, source="object_storage",
    )
 
 .. important::
@@ -146,7 +146,7 @@ one store in each consuming process; its ``open`` method receives an
 
    dataset = read_dataset(
        "ds_123", version=7, topics=["/training/measurements"],
-       read_episode=read_episode, source="direct", object_store_factory=S3Store,
+       read_episode=read_episode, source="object_storage", object_store_factory=S3Store,
    )
 
 Supplying ``object_store_factory`` also selects direct reads when ``source`` is

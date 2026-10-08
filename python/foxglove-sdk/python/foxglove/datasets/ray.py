@@ -133,7 +133,7 @@ def read_dataset(
     version: int,
     topics: Sequence[str],
     read_episode: ReadEpisode[Mapping[str, Any]],
-    source: Literal["foxglove", "direct"] = "foxglove",
+    source: Literal["foxglove", "object_storage"] = "foxglove",
     client_factory: ClientFactory | None = None,
     object_store_factory: ObjectStoreFactory | None = None,
     concurrency: int | None = None,
@@ -152,7 +152,7 @@ def read_dataset(
     and their dependencies available on every worker. Use consistent column types
     containing scalars, NumPy arrays, or other Arrow-compatible values.
 
-    The default client uses ``FOXGLOVE_API_TOKEN``. Set ``source="direct"`` to read
+    The default client uses ``FOXGLOVE_API_TOKEN``. Set ``source="object_storage"`` to read
     indexed MCAPs directly from S3, GCS, or Azure. The SDK selects the filesystem
     from recording locations and uses each worker's cloud credentials. Missing
     locations, unsupported schemes, and access failures raise errors without

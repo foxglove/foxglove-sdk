@@ -255,7 +255,7 @@ def test_real_client_direct_storage_locations_and_cursor_pagination(
         ["/camera"],
         None if builtin else lambda: client_module.Client(token="test"),
         None if builtin else lambda: store,
-        source="direct" if builtin else "foxglove",
+        source="object_storage" if builtin else "foxglove",
     )
     assert [episode.locations for episode in plan.episodes] == [
         (locations[1],),

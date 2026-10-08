@@ -58,7 +58,7 @@ def read_dataset(
     version: int,
     topics: Sequence[str],
     read_episode: ReadEpisode[_T],
-    source: Literal["foxglove", "direct"] = "foxglove",
+    source: Literal["foxglove", "object_storage"] = "foxglove",
     client_factory: ClientFactory | None = None,
     object_store_factory: ObjectStoreFactory | None = None,
     rank: int | None = None,
@@ -77,7 +77,7 @@ def read_dataset(
     ``FOXGLOVE_API_TOKEN`` from the environment; override ``client_factory`` for
     custom authentication or endpoints.
 
-    ``source="direct"`` reads indexed MCAPs from S3, GCS, or Azure using recording
+    ``source="object_storage"`` reads indexed MCAPs from S3, GCS, or Azure using recording
     locations and the worker's cloud credentials. No filesystem configuration is
     needed. Missing locations, unsupported schemes, and access failures raise errors
     without falling back to Foxglove downloads. Use DataLoader's ``spawn``
