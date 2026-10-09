@@ -660,3 +660,129 @@ def test_decoder_failure_closes_all_recording_streams() -> None:
         list(_iter_messages(store, locations, ["/selected"], START, START, []))
     assert len(store.files) == 50
     assert all(file.closed for file in store.files)
+
+
+def mcap_with_unindexed_chunk(
+    *, message_time: int | None, statistics: bool, compressed: bool
+) -> bytes:
+    """Write an indexed message followed by a chunk without message indexes."""
+    from mcap.data_stream import RecordBuilder
+    from mcap.records import (
+        Channel,
+        Chunk,
+        ChunkIndex,
+        DataEnd,
+        Footer,
+        Header,
+        Message,
+        MessageIndex,
+        Statistics,
+    )
+
+    def pack(*records: Any) -> bytes:
+        builder = RecordBuilder()
+        for record in records:
+            record.write(builder)
+        return bytes(builder.end())
+
+    magic = b"\x89MCAP0\r\n"
+    output = io.BytesIO()
+    output.write(magic + pack(Header("", "test")))
+    channel = Channel(1, "/selected", "json", {}, 0)
+    unused = Channel(2, "/unused", "json", {}, 0)
+    indexes = []
+    for indexed in (True, False):
+        stamp = START_NS if indexed else (message_time or 0)
+        records: list[Channel | Message] = [channel] if indexed else [unused]
+        if indexed or message_time is not None:
+            records.append(Message(1, stamp, b"42", stamp, 0))
+        raw = pack(*records)
+        if compressed:
+            import zstandard
+
+            data = zstandard.compress(raw)
+        else:
+            data = raw
+        compression = "zstd" if compressed else ""
+        offset = output.tell()
+        chunk = pack(Chunk(compression, data, stamp, stamp, 0, len(raw)))
+        output.write(chunk)
+        message_offset = output.tell()
+        message_index = (
+            pack(MessageIndex(1, [(stamp, len(pack(channel)))])) if indexed else b""
+        )
+        output.write(message_index)
+        indexes.append(
+            ChunkIndex(
+                len(chunk),
+                offset,
+                compression,
+                len(data),
+                stamp,
+                len(message_index),
+                {1: message_offset} if indexed else {},
+                stamp,
+                len(raw),
+            )
+        )
+    output.write(pack(DataEnd(0)))
+    summary_start = output.tell()
+    output.write(pack(channel, unused))
+    if statistics:
+        count = 1 if message_time is None else 2
+        output.write(
+            pack(
+                Statistics(
+                    0,
+                    2,
+                    {1: count},
+                    2,
+                    count,
+                    START_NS,
+                    (
+                        min(START_NS, message_time)
+                        if message_time is not None
+                        else START_NS
+                    ),
+                    0,
+                    0,
+                )
+            )
+        )
+    output.write(pack(*indexes, Footer(summary_start, 0, 0)) + magic)
+    return output.getvalue()
+
+
+@pytest.mark.parametrize("statistics", [False, True])
+@pytest.mark.parametrize("compressed", [False, True])
+def test_message_free_chunk_does_not_reject_indexed_recording(
+    statistics: bool, compressed: bool
+) -> None:
+    from mcap.reader import SeekingReader
+
+    data = mcap_with_unindexed_chunk(
+        message_time=None, statistics=statistics, compressed=compressed
+    )
+    assert len(list(SeekingReader(io.BytesIO(data)).iter_messages())) == 1
+    store = Store({LOCATION: data})
+    result = list(_iter_messages(store, [LOCATION], ["/selected"], START, START, None))
+    assert [decoded for _, _, _, decoded in result] == [42]
+    assert all(file.closed for file in store.files)
+
+
+@pytest.mark.parametrize("message_time", [0, START_NS])
+@pytest.mark.parametrize("statistics", [False, True])
+@pytest.mark.parametrize("compressed", [False, True])
+def test_indexed_channel_does_not_hide_unindexed_messages_in_another_chunk(
+    message_time: int, statistics: bool, compressed: bool
+) -> None:
+    from mcap.reader import NonSeekingReader
+
+    data = mcap_with_unindexed_chunk(
+        message_time=message_time, statistics=statistics, compressed=compressed
+    )
+    assert len(list(NonSeekingReader(io.BytesIO(data)).iter_messages())) == 2
+    store = Store({LOCATION: data})
+    with pytest.raises(ValueError, match="chunk containing messages"):
+        list(_iter_messages(store, [LOCATION], ["/selected"], START, START, None))
+    assert all(file.closed for file in store.files)

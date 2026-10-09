@@ -161,8 +161,11 @@ def _iter_messages(
     decoder_factories: Sequence[DecoderFactory] | None,
     message_ids: _MessageIds | None = None,
 ) -> Generator[tuple[Schema | None, Channel, Message, Any], None, None]:
+    from mcap.data_stream import ReadDataStream
     from mcap.exceptions import DecoderNotFoundError
     from mcap.reader import SeekingReader
+    from mcap.records import Chunk, Message
+    from mcap.stream_reader import breakup_chunk
 
     start_ns, end_ns = _nanoseconds(start), _nanoseconds(end) + 1
     if decoder_factories is None:
@@ -197,11 +200,26 @@ def _iter_messages(
                     raise ValueError(
                         "Object storage requires MCAP summary and chunk indexes"
                     )
-                if any(
-                    not chunk.message_index_offsets for chunk in summary.chunk_indexes
-                ):
+                for chunk_index in summary.chunk_indexes:
+                    if chunk_index.message_index_offsets:
+                        continue
+                    # Zero timestamps can mean either no messages or messages at
+                    # the Unix epoch. Inspect only these ambiguous chunks; normal
+                    # indexed chunks need no extra reads.
+                    if (
+                        chunk_index.message_start_time == 0
+                        and chunk_index.message_end_time == 0
+                    ):
+                        buffered.seek(chunk_index.chunk_start_offset + 1 + 8)
+                        chunk = Chunk.read(ReadDataStream(buffered))
+                        if not any(
+                            isinstance(record, Message)
+                            for record in breakup_chunk(chunk)
+                        ):
+                            continue
                     raise ValueError(
-                        "Object storage requires MCAP message indexes in every chunk"
+                        "Object storage requires MCAP message indexes in every "
+                        "chunk containing messages"
                     )
                 if summary.statistics is not None:
                     statistics = summary.statistics
