@@ -10,7 +10,7 @@ from contextlib import closing
 from dataclasses import replace
 from functools import partial
 from itertools import islice
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 import pyarrow as pa
 import ray.data
@@ -19,6 +19,7 @@ from ray.data.context import DataContext
 from ray.data.datasource import Datasource, ReadTask
 
 from .reader import ClientFactory, EpisodeReader, ReadEpisode, _Plan, _plan
+from .storage import ObjectStoreFactory
 
 if TYPE_CHECKING:
     from ray.data._internal.block_builder import BlockBuilder
@@ -132,7 +133,9 @@ def read_dataset(
     version: int,
     topics: Sequence[str],
     read_episode: ReadEpisode[Mapping[str, Any]],
-    client_factory: ClientFactory,
+    source: Literal["foxglove", "object_storage"] = "foxglove",
+    client_factory: ClientFactory | None = None,
+    object_store_factory: ObjectStoreFactory | None = None,
     concurrency: int | None = None,
 ) -> ray.data.Dataset:
     """Return a native Ray dataset of callback-produced sample mappings.
@@ -149,6 +152,19 @@ def read_dataset(
     and their dependencies available on every worker. Use consistent column types
     containing scalars, NumPy arrays, or other Arrow-compatible values.
 
+    The default client uses ``FOXGLOVE_API_TOKEN``. Set ``source="object_storage"`` to read
+    indexed MCAPs directly from S3, GCS, or Azure. The SDK selects the filesystem
+    from recording locations and uses each worker's cloud credentials. Missing
+    locations, unsupported schemes, and access failures raise errors without
+    falling back to Foxglove downloads.
+
+    ``client_factory`` overrides API authentication or endpoints.
+    ``object_store_factory`` overrides built-in storage and requires
+    ``source="object_storage"``. Factories used by workers must be serializable.
+    For object storage the API client factory is only used during planning and
+    is not serialized.
+    No storage clients or open files are serialized in the read tasks.
+
     ``concurrency`` caps concurrent read tasks. Block construction follows Ray's
     ``DataContext.target_max_block_size``. Ray can combine blocks and buffer multiple
     episodes before delivering output. This target is not a memory ceiling: large
@@ -157,6 +173,16 @@ def read_dataset(
     callbacks, so callbacks should not perform external side effects.
     """
     return ray.data.read_datasource(
-        _Datasource(_plan(dataset_id, version, topics, client_factory), read_episode),
+        _Datasource(
+            _plan(
+                dataset_id,
+                version,
+                topics,
+                client_factory,
+                object_store_factory,
+                source=source,
+            ),
+            read_episode,
+        ),
         concurrency=concurrency,
     )

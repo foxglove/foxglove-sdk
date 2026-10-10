@@ -6,13 +6,14 @@ These APIs are experimental and unstable and may change in backward-incompatible
 from __future__ import annotations
 
 from collections.abc import Iterator, Mapping, Sequence
-from typing import Any, TypeVar
+from typing import Any, Literal, TypeVar
 
 import torch.distributed as distributed
 from torch import Tensor, as_tensor
 from torch.utils.data import IterableDataset, get_worker_info
 
 from .reader import ClientFactory, ReadEpisode, _Plan, _plan
+from .storage import ObjectStoreFactory
 
 _T = TypeVar("_T")
 
@@ -57,7 +58,9 @@ def read_dataset(
     version: int,
     topics: Sequence[str],
     read_episode: ReadEpisode[_T],
-    client_factory: ClientFactory,
+    source: Literal["foxglove", "object_storage"] = "foxglove",
+    client_factory: ClientFactory | None = None,
+    object_store_factory: ObjectStoreFactory | None = None,
     rank: int | None = None,
     world_size: int | None = None,
 ) -> IterableDataset[_T]:
@@ -69,9 +72,21 @@ def read_dataset(
         ways as we continue development and incorporate user feedback.
 
     ``read_episode`` yields samples, such as tensors, tuples, or dictionaries.
-    Use DataLoader's ``collate_fn`` for custom sample types. ``client_factory``
-    creates a Foxglove API client in each consuming process. Both must be pickleable
-    for spawned workers. Only metadata is fetched here. Each new iteration rereads data.
+    Use DataLoader's ``collate_fn`` for custom sample types. Only metadata is fetched
+    here. Each new iteration rereads data. The default client reads
+    ``FOXGLOVE_API_TOKEN`` from the environment; override ``client_factory`` for
+    custom authentication or endpoints.
+
+    ``source="object_storage"`` reads indexed MCAPs from S3, GCS, or Azure using recording
+    locations and the worker's cloud credentials. No filesystem configuration is
+    needed. Missing locations, unsupported schemes, and access failures raise errors
+    without falling back to Foxglove downloads. Use DataLoader's ``spawn``
+    multiprocessing context with cloud storage.
+
+    ``object_store_factory`` overrides built-in storage and requires
+    ``source="object_storage"``. Factories and callbacks used by workers must be
+    pickleable. The API client factory is used only during object storage planning
+    and is not serialized; in default mode it also runs in each consuming process.
 
     Distributed rank and world size are captured here, before DataLoader workers
     start, or can be supplied together explicitly. Episodes can yield unequal
@@ -89,7 +104,14 @@ def read_dataset(
     if not 0 <= resolved_rank < resolved_world_size:
         raise ValueError("Require world_size > 0 and 0 <= rank < world_size")
     return _TorchDataset(
-        _plan(dataset_id, version, topics, client_factory),
+        _plan(
+            dataset_id,
+            version,
+            topics,
+            client_factory,
+            object_store_factory,
+            source=source,
+        ),
         read_episode,
         resolved_rank,
         resolved_world_size,

@@ -5,7 +5,7 @@ from typing import Any
 import pytest
 from foxglove.datasets import EpisodeReader
 
-from .test_datasets import Client
+from .datasets_helpers import Client
 
 torch = pytest.importorskip("torch")
 

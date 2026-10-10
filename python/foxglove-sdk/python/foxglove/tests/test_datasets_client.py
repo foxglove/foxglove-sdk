@@ -154,3 +154,127 @@ def test_real_client_pagination_filtering_and_incremental_mcap(
     assert opened[0].tell() < len(data)
     stream.close()
     assert opened[0].closed
+
+
+@pytest.mark.parametrize("builtin", [False, True])
+def test_real_client_object_storage_locations_and_cursor_pagination(
+    monkeypatch: pytest.MonkeyPatch,
+    builtin: bool,
+) -> None:
+    import requests
+    from foxglove.datasets.storage import ObjectLocation
+
+    from .datasets_helpers import Store, mcap_bytes
+
+    locations = [
+        ObjectLocation("bucket", "prefix/s3.mcap", scheme="s3"),
+        ObjectLocation("container", "prefix/azure.mcap", "account", scheme="az"),
+    ]
+    store = Store(
+        {
+            location: mcap_bytes([("/camera", 0, {"value": index})])
+            for index, location in enumerate(locations)
+        }
+    )
+    calls: list[tuple[str, dict[str, Any]]] = []
+
+    def request(
+        session: requests.Session, method: str, url: str, **kwargs: Any
+    ) -> requests.Response:
+        assert method.upper() == "GET"
+        calls.append((url, kwargs))
+        stamp = "2026-01-01T00:00:00Z"
+        response = requests.Response()
+        response.status_code = 200
+        response.url = url
+        payload: dict[str, Any]
+        if url.endswith("/episodes"):
+            assert kwargs["params"]["include"] == "recordings"
+            assert kwargs["params"]["limit"] == 2000
+            cursor = kwargs["params"].get("cursor")
+            assert cursor in (None, "second")
+            index = 1 if cursor else 0
+            location = locations[index]
+            raw_location: dict[str, Any] = {
+                "bucket": location.bucket,
+                "path": location.path,
+                "scheme": location.scheme,
+            }
+            if location.azure_storage_account_name:
+                raw_location["azureStorageAccountName"] = (
+                    location.azure_storage_account_name
+                )
+            payload = {
+                "episodes": [
+                    {
+                        "addedAt": stamp,
+                        "addedInVersion": 7,
+                        "episode": {
+                            "id": "a" if cursor else "b",
+                            "projectId": "project",
+                            "startTime": stamp,
+                            "endTime": stamp,
+                            "metadata": {},
+                            "createdAt": stamp,
+                            "recordings": [
+                                {
+                                    "id": f"recording_{index}",
+                                    "path": "display-name.mcap",
+                                    "location": raw_location,
+                                    "start": stamp,
+                                    "end": stamp,
+                                    "available": True,
+                                    "resolvable": True,
+                                }
+                            ],
+                        },
+                    }
+                ]
+            }
+            if not cursor:
+                response.headers["fg-pagination-next-cursor"] = "second"
+        else:
+            assert url.endswith("/datasets/dataset/versions/7")
+            payload = {
+                "versionNumber": 7,
+                "committedAt": stamp,
+                "createdAt": stamp,
+                "episodeCount": 2,
+                "addedEpisodeCount": 2,
+                "removedEpisodeCount": 0,
+            }
+        response._content = json.dumps(payload).encode()
+        return response
+
+    monkeypatch.setattr(requests.Session, "request", request)
+    monkeypatch.setenv("FOXGLOVE_API_TOKEN", "test")
+    monkeypatch.setattr("foxglove.datasets.reader._CloudObjectStore", lambda: store)
+    plan = _plan(
+        "dataset",
+        7,
+        ["/camera"],
+        None if builtin else lambda: client_module.Client(token="test"),
+        None if builtin else lambda: store,
+        source="object_storage",
+    )
+    assert [episode.locations for episode in plan.episodes] == [
+        (locations[1],),
+        (locations[0],),
+    ]
+    assert [
+        call["params"].get("cursor") for url, call in calls if url.endswith("/episodes")
+    ] == [
+        None,
+        "second",
+    ]
+    assert store.files == []
+    planning_requests = len(calls)
+
+    def samples(reader: EpisodeReader) -> Iterator[dict[str, Any]]:
+        for _, _, _, decoded in reader.iter_messages():
+            yield decoded
+
+    assert list(plan.read(plan.episodes, samples)) == [{"value": 1}, {"value": 0}]
+    assert store.locations == [locations[1], locations[0]]
+    assert all(file.closed for file in store.files)
+    assert len(calls) == planning_requests == 3
