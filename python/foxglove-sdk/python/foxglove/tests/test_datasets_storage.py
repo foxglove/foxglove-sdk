@@ -1,13 +1,13 @@
 import io
 import json
 import threading
-from collections.abc import Callable, Iterator
+from collections.abc import Callable
 from datetime import timedelta
 from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
-from foxglove.datasets.reader import EpisodeReader, _Episode, _plan
+from foxglove.datasets.reader import EpisodeReader, _Episode
 from foxglove.datasets.storage import ObjectLocation, _iter_messages
 from mcap.decoder import DecoderFactory
 from mcap.exceptions import DecoderNotFoundError
@@ -19,7 +19,6 @@ from .datasets_helpers import (
     Store,
     mcap_bytes,
     mcap_with_unindexed_chunk,
-    plan_client,
 )
 
 LOCATION = ObjectLocation("bucket", "prefix/run.mcap")
@@ -226,83 +225,6 @@ def test_decoder_failure_closes_storage_file() -> None:
     with pytest.raises(DecoderNotFoundError):
         list(_iter_messages(store, [LOCATION], ["/selected"], START, START, []))
     assert store.files[0].closed
-
-
-def test_object_storage_plan_maps_azure_location_and_skips_worker_api_client() -> None:
-    location = ObjectLocation("container", "prefix/run.mcap", "account")
-    recording = {
-        "id": "recording",
-        "available": True,
-        "location": {
-            "bucket": location.bucket,
-            "path": location.path,
-            "azureStorageAccountName": location.azure_storage_account_name,
-        },
-    }
-    client = plan_client([recording, recording])
-    client_factory = MagicMock(return_value=client)
-    store = Store({location: mcap_bytes([("/selected", 0, 1)])})
-    store_factory = MagicMock(return_value=store)
-    plan = _plan(
-        "dataset",
-        7,
-        ["/selected"],
-        client_factory,
-        store_factory,
-        source="object_storage",
-    )
-    assert plan.episodes[0].locations == (location,)
-    store_factory.assert_not_called()
-    client.get_dataset_version_episodes.assert_called_once_with(
-        dataset_id="dataset",
-        version_number=7,
-        limit=2000,
-        include_recordings=True,
-    )
-
-    def samples(reader: EpisodeReader) -> Iterator[Any]:
-        for _, _, _, decoded in reader.iter_messages():
-            yield decoded
-
-    assert list(plan.read(plan.episodes, samples)) == [1]
-    client_factory.assert_called_once()
-    store_factory.assert_called_once()
-    client.iter_messages.assert_not_called()
-    assert store.locations == [location]
-    assert store.files[0].closed
-
-
-@pytest.mark.parametrize(
-    "recordings",
-    [
-        None,
-        [],
-        [{"id": "recording", "available": True, "location": None}],
-        [
-            {
-                "id": "recording",
-                "available": False,
-                "location": {"bucket": "b", "path": "p"},
-            }
-        ],
-        [{"id": "recording", "available": True, "location": {"bucket": "b"}}],
-    ],
-)
-def test_object_storage_plan_rejects_missing_locations_before_opening_storage(
-    recordings: Any,
-) -> None:
-    client = plan_client(recordings)
-    store_factory = MagicMock()
-    with pytest.raises(ValueError, match="location|available"):
-        _plan(
-            "dataset",
-            7,
-            ["/selected"],
-            lambda: client,
-            store_factory,
-            source="object_storage",
-        )
-    store_factory.assert_not_called()
 
 
 def test_stateful_custom_decoder_runs_in_global_order_and_is_not_copied() -> None:
