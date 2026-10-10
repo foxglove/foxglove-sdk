@@ -164,7 +164,7 @@ def test_real_client_object_storage_locations_and_cursor_pagination(
     import requests
     from foxglove.datasets.storage import ObjectLocation
 
-    from .test_datasets_storage import Store, mcap_bytes
+    from .datasets_helpers import Store, mcap_bytes
 
     locations = [
         ObjectLocation("bucket", "prefix/s3.mcap", scheme="s3"),

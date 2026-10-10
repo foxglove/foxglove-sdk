@@ -292,11 +292,13 @@ def _plan(
     if isinstance(topics, str) or not selected_topics:
         raise ValueError("topics must be a nonempty sequence of topic names")
     make_client = client_factory if client_factory is not None else _make_client
-    make_store = (
-        object_store_factory
-        if object_store_factory is not None
-        else _CloudObjectStore if source == "object_storage" else None
-    )
+    make_store: ObjectStoreFactory | None = None
+    if source == "object_storage":
+        make_store = (
+            object_store_factory
+            if object_store_factory is not None
+            else _CloudObjectStore
+        )
     client = make_client()
     info = client.get_dataset_version(dataset_id=dataset_id, version_number=version)
     if info["committed_at"] is None:

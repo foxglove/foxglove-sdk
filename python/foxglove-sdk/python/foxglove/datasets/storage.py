@@ -13,7 +13,7 @@ from typing import IO, TYPE_CHECKING, Any, Protocol, cast
 
 if TYPE_CHECKING:
     from mcap.decoder import DecoderFactory
-    from mcap.records import Channel, Message, Schema
+    from mcap.records import Channel, ChunkIndex, Message, Schema
     from pyarrow.fs import FileSystem
 
 
@@ -152,6 +152,31 @@ def _nanoseconds(value: datetime) -> int:
     ) * 1_000_000_000 + delta.microseconds * 1000
 
 
+def _validate_message_indexes(
+    stream: IO[bytes], chunk_indexes: Sequence[ChunkIndex]
+) -> None:
+    """Reject unindexed messages while allowing chunks with no messages."""
+    from mcap.data_stream import ReadDataStream
+    from mcap.records import Chunk, Message
+    from mcap.stream_reader import breakup_chunk
+
+    for chunk_index in chunk_indexes:
+        if chunk_index.message_index_offsets:
+            continue
+        # Zero timestamps can mean either no messages or messages at
+        # the Unix epoch. Inspect only these ambiguous chunks; normal
+        # indexed chunks need no extra reads.
+        if chunk_index.message_start_time == 0 and chunk_index.message_end_time == 0:
+            stream.seek(chunk_index.chunk_start_offset + 1 + 8)
+            chunk = Chunk.read(ReadDataStream(stream))
+            if not any(isinstance(record, Message) for record in breakup_chunk(chunk)):
+                continue
+        raise ValueError(
+            "Object storage requires MCAP message indexes in every "
+            "chunk containing messages"
+        )
+
+
 def _iter_messages(
     store: ObjectStore,
     locations: Sequence[ObjectLocation],
@@ -161,11 +186,8 @@ def _iter_messages(
     decoder_factories: Sequence[DecoderFactory] | None,
     message_ids: _MessageIds | None = None,
 ) -> Generator[tuple[Schema | None, Channel, Message, Any], None, None]:
-    from mcap.data_stream import ReadDataStream
     from mcap.exceptions import DecoderNotFoundError
     from mcap.reader import SeekingReader
-    from mcap.records import Chunk, Message
-    from mcap.stream_reader import breakup_chunk
 
     start_ns, end_ns = _nanoseconds(start), _nanoseconds(end) + 1
     if decoder_factories is None:
@@ -200,27 +222,7 @@ def _iter_messages(
                     raise ValueError(
                         "Object storage requires MCAP summary and chunk indexes"
                     )
-                for chunk_index in summary.chunk_indexes:
-                    if chunk_index.message_index_offsets:
-                        continue
-                    # Zero timestamps can mean either no messages or messages at
-                    # the Unix epoch. Inspect only these ambiguous chunks; normal
-                    # indexed chunks need no extra reads.
-                    if (
-                        chunk_index.message_start_time == 0
-                        and chunk_index.message_end_time == 0
-                    ):
-                        buffered.seek(chunk_index.chunk_start_offset + 1 + 8)
-                        chunk = Chunk.read(ReadDataStream(buffered))
-                        if not any(
-                            isinstance(record, Message)
-                            for record in breakup_chunk(chunk)
-                        ):
-                            continue
-                    raise ValueError(
-                        "Object storage requires MCAP message indexes in every "
-                        "chunk containing messages"
-                    )
+                _validate_message_indexes(buffered, summary.chunk_indexes)
                 if summary.statistics is not None:
                     statistics = summary.statistics
                     if (

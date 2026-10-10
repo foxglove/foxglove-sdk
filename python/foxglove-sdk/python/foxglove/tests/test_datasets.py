@@ -1,88 +1,12 @@
-import json
-from collections.abc import Generator, Iterator
-from datetime import datetime, timedelta, timezone
+from collections.abc import Iterator
+from datetime import timedelta
 from typing import Any
 
 import pytest
 from foxglove.datasets import EpisodeReader
 from foxglove.datasets.reader import _plan
-from mcap.decoder import DecoderFactory
-from mcap.records import Channel, Message, Schema
 
-
-class Page:
-    def auto_paging_iter(self) -> Iterator[dict[str, Any]]:
-        # Deliberately non-sorted, spanning more than one yielded batch.
-        for ids in (("c", "a"), ("d", "b")):
-            for episode_id in ids:
-                yield {
-                    "has_missing_recordings": False,
-                    "episode": {
-                        "id": episode_id,
-                        "start_time": datetime(2026, 1, 1, tzinfo=timezone.utc),
-                        "end_time": datetime(2026, 1, 2, tzinfo=timezone.utc),
-                        "metadata": {"label": episode_id},
-                    },
-                }
-
-
-class Client:
-    def __init__(self) -> None:
-        self.calls: list[tuple[str, list[str]]] = []
-        self.closed: list[str] = []
-        self.time_ranges: list[tuple[datetime | None, datetime | None]] = []
-
-    def get_dataset_version(
-        self, *, dataset_id: str, version_number: int
-    ) -> dict[str, Any]:
-        assert (dataset_id, version_number) == ("dataset", 7)
-        return {"committed_at": "2026-01-01", "has_missing_recordings": False}
-
-    def get_dataset_version_episodes(
-        self,
-        *,
-        dataset_id: str,
-        version_number: int,
-        limit: int,
-        include_recordings: bool = False,
-    ) -> Page:
-        assert (dataset_id, version_number, limit) == ("dataset", 7, 2000)
-        return Page()
-
-    def iter_messages(
-        self,
-        *,
-        episode_id: str,
-        topics: list[str],
-        decoder_factories: list[DecoderFactory] | None = None,
-        start: datetime | None = None,
-        end: datetime | None = None,
-    ) -> Generator[tuple[Schema | None, Channel, Message, Any], None, None]:
-        assert decoder_factories is None
-        self.calls.append((episode_id, topics))
-        self.time_ranges.append((start, end))
-        try:
-            yield (
-                Schema(id=1, data=b"{}", encoding="jsonschema", name="Episode"),
-                Channel(
-                    id=1,
-                    schema_id=1,
-                    topic=topics[0],
-                    message_encoding="json",
-                    metadata={},
-                ),
-                Message(
-                    channel_id=1,
-                    log_time=0,
-                    publish_time=0,
-                    sequence=0,
-                    data=json.dumps(episode_id).encode(),
-                ),
-                episode_id,
-            )
-            raise AssertionError("Read past the requested sample")
-        finally:
-            self.closed.append(episode_id)
+from .datasets_helpers import Client, Page
 
 
 def samples(episode: EpisodeReader) -> Iterator[dict[str, Any]]:

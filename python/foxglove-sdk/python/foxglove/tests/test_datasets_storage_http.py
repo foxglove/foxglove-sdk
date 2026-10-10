@@ -9,7 +9,7 @@ from urllib.parse import urlsplit
 import pytest
 from foxglove.datasets.storage import ObjectLocation, _CloudObjectStore, _iter_messages
 
-from .test_datasets_storage import START, mcap_bytes
+from .datasets_helpers import START, mcap_bytes
 
 s3 = pytest.importorskip("pyarrow.fs")
 

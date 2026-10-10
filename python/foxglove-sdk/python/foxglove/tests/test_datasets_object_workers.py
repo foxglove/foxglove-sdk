@@ -9,8 +9,7 @@ from typing import IO, Any
 import pytest
 from foxglove.datasets import EpisodeReader, ObjectLocation
 
-from .test_datasets import Client
-from .test_datasets_storage import START, START_NS, mcap_bytes
+from .datasets_helpers import START, START_NS, Client, mcap_bytes
 
 os.environ.setdefault("RAY_ENABLE_UV_RUN_RUNTIME_ENV", "0")
 

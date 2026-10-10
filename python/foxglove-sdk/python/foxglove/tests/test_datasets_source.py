@@ -9,8 +9,7 @@ from foxglove.datasets import EpisodeReader
 from foxglove.datasets.reader import _make_client, _plan
 from foxglove.datasets.storage import ObjectLocation
 
-from .test_datasets import Client
-from .test_datasets_storage import Store, mcap_bytes, plan_client
+from .datasets_helpers import Client, Store, mcap_bytes, plan_client
 
 
 def first_sample(episode: EpisodeReader) -> Iterator[Any]:
