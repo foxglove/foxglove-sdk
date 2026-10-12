@@ -369,6 +369,26 @@ public:
     std::optional<std::string_view> id = std::nullopt
   ) const noexcept;
 
+  /// @brief Sends a status message to a single connected participant.
+  ///
+  /// The participant is identified by the `client_id` passed to RemoteAccessGatewayCallbacks. If
+  /// the client is not connected, or there is no active session, this method does nothing.
+  ///
+  /// This method may be called from within RemoteAccessGatewayCallbacks, such as
+  /// `onClientAdvertise`.
+  ///
+  /// The caller may optionally provide a message ID, which can be used in a
+  /// subsequent call to `removeStatus()`.
+  ///
+  /// @param client_id Client ID.
+  /// @param level Status level value.
+  /// @param message Status message.
+  /// @param id Optional message ID.
+  [[nodiscard]] FoxgloveError sendStatus(
+    uint32_t client_id, RemoteAccessStatusLevel level, std::string_view message,
+    std::optional<std::string_view> id = std::nullopt
+  ) const noexcept;
+
   /// @brief Removes status messages from all connected participants.
   ///
   /// Previously published status messages are referenced by ID.
