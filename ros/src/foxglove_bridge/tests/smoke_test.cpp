@@ -1,9 +1,14 @@
 #include <chrono>
 #include <filesystem>
+#include <functional>
 #include <future>
+#include <map>
+#include <mutex>
+#include <optional>
 #include <string>
 #include <thread>
 
+#include <diagnostic_msgs/msg/diagnostic_array.hpp>
 #include <gtest/gtest.h>
 #include <nlohmann/json.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -900,6 +905,207 @@ TEST(SmokeTest, serviceEventTopicDoesNotPreventFutureAdvertisements) {
   EXPECT_EQ("std_msgs/msg/String", afterChannelFuture.get().schemaName);
 }
 #endif
+
+// Runs a separate bridge with diagnostics enabled on a random port, so that its cumulative failure
+// counters aren't affected by other tests.
+class DiagnosticsTest : public testing::Test {
+public:
+  inline static const std::string BRIDGE_NODE_NAME = "foxglove_bridge_diagnostics_test";
+
+protected:
+  using DiagnosticStatus = diagnostic_msgs::msg::DiagnosticStatus;
+
+  void SetUp() override {
+    rclcpp::NodeOptions bridgeOptions;
+    bridgeOptions.arguments({"--ros-args", "-r", "__node:=" + BRIDGE_NODE_NAME});
+    bridgeOptions.append_parameter_override("port", 0);
+    bridgeOptions.append_parameter_override("publish_diagnostics", true);
+    bridgeOptions.append_parameter_override("diagnostic_updater.period", 0.1);
+    _bridge = std::make_shared<foxglove_bridge::FoxgloveBridge>(bridgeOptions);
+    _port = _bridge->get_parameter("port").as_int();
+    _uri = "ws://localhost:" + std::to_string(_port);
+
+    _listener = rclcpp::Node::make_shared("diagnostics_listener");
+    _diagnosticsSub = _listener->create_subscription<diagnostic_msgs::msg::DiagnosticArray>(
+      "/diagnostics", 10, [this](std::shared_ptr<const diagnostic_msgs::msg::DiagnosticArray> msg) {
+        std::lock_guard<std::mutex> lock(_statusesMutex);
+        for (const auto& status : msg->status) {
+          _statuses[status.name] = status;
+        }
+      });
+
+    _executor.add_node(_bridge->get_node_base_interface());
+    _executor.add_node(_listener);
+    _spinThread = std::thread([this]() {
+      _executor.spin();
+    });
+  }
+
+  void TearDown() override {
+    _executor.cancel();
+    _spinThread.join();
+    _executor.remove_node(_listener);
+    _executor.remove_node(_bridge->get_node_base_interface());
+  }
+
+  static std::optional<std::string> valueOf(const DiagnosticStatus& status,
+                                            const std::string& key) {
+    for (const auto& kv : status.values) {
+      if (kv.key == key) {
+        return kv.value;
+      }
+    }
+    return std::nullopt;
+  }
+
+  /// Waits until the latest status published for `task` satisfies `pred`.
+  testing::AssertionResult waitForStatus(const std::string& task,
+                                         const std::function<bool(const DiagnosticStatus&)>& pred) {
+    const std::string name = BRIDGE_NODE_NAME + ": " + task;
+    const auto deadline = std::chrono::steady_clock::now() + DEFAULT_TIMEOUT;
+    std::optional<DiagnosticStatus> latest;
+    while (std::chrono::steady_clock::now() < deadline) {
+      {
+        std::lock_guard<std::mutex> lock(_statusesMutex);
+        if (const auto it = _statuses.find(name); it != _statuses.end()) {
+          latest = it->second;
+        }
+      }
+      if (latest && pred(*latest)) {
+        return testing::AssertionSuccess();
+      }
+      std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    }
+    if (!latest) {
+      return testing::AssertionFailure() << "no status received for \"" << name << "\"";
+    }
+    auto failure = testing::AssertionFailure()
+                   << "latest \"" << name << "\" status: level " << static_cast<int>(latest->level)
+                   << ", message \"" << latest->message << "\"";
+    for (const auto& kv : latest->values) {
+      failure << ", " << kv.key << "=" << kv.value;
+    }
+    return failure;
+  }
+
+  bool hasStatus(const std::string& task) {
+    std::lock_guard<std::mutex> lock(_statusesMutex);
+    return _statuses.count(BRIDGE_NODE_NAME + ": " + task) > 0;
+  }
+
+  std::shared_ptr<foxglove_bridge::FoxgloveBridge> _bridge;
+  int64_t _port = 0;
+  std::string _uri;
+  rclcpp::Node::SharedPtr _listener;
+  rclcpp::Subscription<diagnostic_msgs::msg::DiagnosticArray>::SharedPtr _diagnosticsSub;
+  rclcpp::executors::SingleThreadedExecutor _executor;
+  std::thread _spinThread;
+  std::mutex _statusesMutex;
+  std::map<std::string, DiagnosticStatus> _statuses;
+};
+
+TEST_F(DiagnosticsTest, publishesBridgeStatus) {
+  EXPECT_TRUE(waitForStatus("build_info", [](const DiagnosticStatus& status) {
+    return status.level == DiagnosticStatus::OK &&
+           valueOf(status, "Bridge version") == foxglove_bridge::FOXGLOVE_BRIDGE_VERSION &&
+           valueOf(status, "SDK version") == FOXGLOVE_BRIDGE_SDK_VERSION;
+  }));
+  EXPECT_TRUE(waitForStatus("websocket_server", [this](const DiagnosticStatus& status) {
+    return status.level == DiagnosticStatus::OK &&
+           valueOf(status, "Port") == std::to_string(_port) && valueOf(status, "Clients") == "0";
+  }));
+  EXPECT_TRUE(waitForStatus("forwarding", [](const DiagnosticStatus& status) {
+    return status.level == DiagnosticStatus::OK && valueOf(status, "Active subscriptions") == "0";
+  }));
+  // Remote access is disabled, so its task isn't registered.
+  EXPECT_FALSE(hasStatus("remote_access"));
+}
+
+TEST_F(DiagnosticsTest, reportsClientsAndActiveSubscriptions) {
+  const std::string topicName = "/diagnostics_test_topic";
+  auto node = rclcpp::Node::make_shared("diagnostics_test_publisher");
+  auto pub = node->create_publisher<std_msgs::msg::String>(topicName, 10);
+
+  auto client = std::make_shared<foxglove::test::Client<websocketpp::config::asio_client>>();
+  auto channelFuture = client->waitForChannel(topicName);
+  ASSERT_EQ(std::future_status::ready, client->connect(_uri).wait_for(DEFAULT_TIMEOUT));
+  ASSERT_EQ(std::future_status::ready, channelFuture.wait_for(DEFAULT_TIMEOUT));
+  EXPECT_TRUE(waitForStatus("websocket_server", [](const DiagnosticStatus& status) {
+    return valueOf(status, "Clients") == "1";
+  }));
+
+  const foxglove::test::SubscriptionId subscriptionId = 1;
+  client->subscribe({{subscriptionId, channelFuture.get().id}});
+  EXPECT_TRUE(waitForStatus("forwarding", [](const DiagnosticStatus& status) {
+    return status.level == DiagnosticStatus::OK && valueOf(status, "Active subscriptions") == "1";
+  }));
+
+  client->unsubscribe({subscriptionId});
+  EXPECT_TRUE(waitForStatus("forwarding", [](const DiagnosticStatus& status) {
+    return valueOf(status, "Active subscriptions") == "0";
+  }));
+}
+
+TEST_F(DiagnosticsTest, countsIncompatibleQosAsFailedSubscription) {
+  const std::string topicName = "/diagnostics_test_qos_topic";
+  auto node = rclcpp::Node::make_shared("diagnostics_test_qos_publisher");
+  auto reliablePub =
+    node->create_publisher<std_msgs::msg::String>(topicName, rclcpp::QoS{10}.reliable());
+
+  // With only reliable publishers, the bridge subscribes with reliable QoS.
+  auto client = std::make_shared<foxglove::test::Client<websocketpp::config::asio_client>>();
+  auto channelFuture = client->waitForChannel(topicName);
+  ASSERT_EQ(std::future_status::ready, client->connect(_uri).wait_for(DEFAULT_TIMEOUT));
+  ASSERT_EQ(std::future_status::ready, channelFuture.wait_for(DEFAULT_TIMEOUT));
+  client->subscribe({{1, channelFuture.get().id}});
+  ASSERT_TRUE(waitForStatus("forwarding", [](const DiagnosticStatus& status) {
+    return status.level == DiagnosticStatus::OK && valueOf(status, "Active subscriptions") == "1";
+  }));
+
+  // A best-effort publisher can't serve the bridge's reliable subscription.
+  auto bestEffortPub =
+    node->create_publisher<std_msgs::msg::String>(topicName, rclcpp::QoS{10}.best_effort());
+  EXPECT_TRUE(waitForStatus("forwarding", [](const DiagnosticStatus& status) {
+    return status.level == DiagnosticStatus::WARN &&
+           valueOf(status, "Failed subscriptions") != "0" &&
+           valueOf(status, "Failed service calls") == "0";
+  }));
+}
+
+TEST_F(DiagnosticsTest, countsFailedServiceCalls) {
+  const std::string serviceName = "/diagnostics_test_service";
+  auto node = rclcpp::Node::make_shared("diagnostics_test_service_node");
+  auto service = node->create_service<std_srvs::srv::SetBool>(
+    serviceName, [](std::shared_ptr<std_srvs::srv::SetBool::Request>,
+                    std::shared_ptr<std_srvs::srv::SetBool::Response>) {});
+
+  auto client = std::make_shared<foxglove::test::Client<websocketpp::config::asio_client>>();
+  auto serviceFuture = client->waitForService(serviceName);
+  ASSERT_EQ(std::future_status::ready, client->connect(_uri).wait_for(DEFAULT_TIMEOUT));
+  ASSERT_EQ(std::future_status::ready, serviceFuture.wait_for(DEFAULT_TIMEOUT));
+
+  std::promise<void> failurePromise;
+  auto failureFuture = failurePromise.get_future();
+  client->setTextMessageHandler([&failurePromise](const std::string& payload) {
+    if (nlohmann::json::parse(payload).value("op", "") == "serviceCallFailure") {
+      failurePromise.set_value();
+    }
+  });
+
+  // An empty payload can't be deserialized into a request, so the call fails before it is sent.
+  foxglove::test::ServiceRequest request;
+  request.serviceId = serviceFuture.get().id;
+  request.callId = 1;
+  request.encoding = "cdr";
+  client->sendServiceRequest(request);
+  ASSERT_EQ(std::future_status::ready, failureFuture.wait_for(DEFAULT_TIMEOUT));
+
+  EXPECT_TRUE(waitForStatus("forwarding", [](const DiagnosticStatus& status) {
+    return status.level == DiagnosticStatus::WARN &&
+           valueOf(status, "Failed service calls") == "1" &&
+           valueOf(status, "Failed subscriptions") == "0";
+  }));
+}
 
 // Run all the tests that were declared with TEST()
 int main(int argc, char** argv) {
