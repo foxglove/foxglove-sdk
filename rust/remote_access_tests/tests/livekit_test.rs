@@ -3290,3 +3290,182 @@ async fn livekit_video_channel_forces_lossy_over_reliable_classifier() -> Result
     gw.stop().await?;
     Ok(())
 }
+
+// ===========================================================================
+// Gateway stats tests
+// ===========================================================================
+
+/// Test that gateway stats report the active session and its viewers, and count data
+/// track drops by cause.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_gateway_stats_report_session_viewers_and_data_track_drops() -> Result<()> {
+    let ctx = foxglove::Context::new();
+    let channel = ctx
+        .channel_builder("/test")
+        .message_encoding("json")
+        .build_raw()
+        .context("create channel")?;
+
+    let limit = 1200;
+    let gw = TestGateway::start_with_options(
+        &ctx,
+        TestGatewayOptions {
+            max_data_track_message_size: Some(limit),
+            ..Default::default()
+        },
+    )
+    .await?;
+
+    // The mock server wakes the gateway immediately, so it joins the room before any
+    // viewer does.
+    poll_until(|| gw.handle.stats().session_active).await;
+    let stats = gw.handle.stats();
+    assert_eq!(stats.viewer_count, 0);
+    assert!(stats.connection_quality.is_some());
+
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+    let _server_info = viewer.expect_server_info().await?;
+    let advertise = viewer.expect_advertise().await?;
+    let channel_id = advertise.channels[0].id;
+    viewer.subscribe_and_wait(&[channel_id], &channel).await?;
+    let mut ch_reader = viewer.expect_device_channel_data_track(channel_id).await?;
+    poll_until(|| gw.handle.stats().viewer_count == 1).await;
+
+    channel.log(b"before");
+    assert_eq!(
+        ch_reader.next_message_data().await?.data.as_ref(),
+        b"before"
+    );
+    let baseline = gw.handle.stats();
+    assert_eq!(baseline.oversized_drops, 0);
+    assert_eq!(baseline.data_track_full_drops, 0);
+
+    // The oversized counter is cumulative, even though the oversized warning (and the
+    // per-channel count it reports) is throttled.
+    let oversized = vec![0xAB_u8; limit + 1];
+    for _ in 0..3 {
+        channel.log(&oversized);
+    }
+    assert_eq!(gw.handle.stats().oversized_drops, 3);
+
+    // LiveKit buffers only a few frames per data track, and the gateway runs on this
+    // test's single-threaded runtime, so a burst logged without yielding overflows it.
+    for _ in 0..200 {
+        channel.log(&[0u8; 100]);
+    }
+    let stats = gw.handle.stats();
+    assert!(
+        stats.data_track_full_drops > 0,
+        "expected data track full drops, got {stats:?}"
+    );
+    assert_eq!(stats.oversized_drops, 3);
+    info!("gateway stats after burst: {stats:?}");
+
+    viewer.close().await?;
+    poll_until(|| gw.handle.stats().viewer_count == 0).await;
+
+    // The counters outlive the viewer, and stay cumulative.
+    let stats = gw.handle.stats();
+    assert!(stats.session_active);
+    assert_eq!(stats.oversized_drops, 3);
+    assert!(stats.data_track_full_drops > 0);
+
+    gw.stop().await?;
+    Ok(())
+}
+
+/// Test that image messages dropped from a full video encoding queue are counted.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_gateway_stats_count_video_queue_drops() -> Result<()> {
+    let ctx = foxglove::Context::new();
+    let video_channel = ctx
+        .channel_builder("/camera")
+        .message_encoding("protobuf")
+        .schema(Schema::new("foxglove.RawImage", "protobuf", &b""[..]))
+        .build_raw()
+        .context("create video channel")?;
+
+    let gw = TestGateway::start(&ctx).await?;
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+    let _server_info = viewer.expect_server_info().await?;
+    let advertise = viewer.expect_advertise().await?;
+    let channel_id = advertise.channels[0].id;
+    viewer
+        .subscribe_video_and_wait(&[channel_id], &video_channel)
+        .await?;
+    let _track = viewer.expect_track_subscribed().await?;
+    assert_eq!(gw.handle.stats().video_queue_drops, 0);
+
+    // The encoding queue holds two frames, and its consumer cannot run until this
+    // single-threaded test yields.
+    let image = encode_raw_image("camera");
+    for _ in 0..10 {
+        video_channel.log(&image);
+    }
+    let stats = gw.handle.stats();
+    assert!(
+        stats.video_queue_drops > 0,
+        "expected video queue drops, got {stats:?}"
+    );
+    assert_eq!(stats.data_track_full_drops, 0);
+
+    viewer.close().await?;
+    gw.stop().await?;
+    Ok(())
+}
+
+/// Test that a viewer reset after its control queue overflows is counted, and that the
+/// viewer is re-added.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_gateway_stats_count_participant_resets() -> Result<()> {
+    let ctx = foxglove::Context::new();
+    let channel = ctx
+        .channel_builder("/config")
+        .message_encoding("json")
+        .build_raw()
+        .context("create channel")?;
+
+    let gw = TestGateway::start_with_options(
+        &ctx,
+        TestGatewayOptions {
+            qos_classifier: Some(Box::new(|_| {
+                QosProfile::builder()
+                    .reliability(Reliability::Reliable)
+                    .build()
+            })),
+            message_backlog_size: Some(8),
+            ..Default::default()
+        },
+    )
+    .await?;
+
+    let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
+    let _server_info = viewer.expect_server_info().await?;
+    let advertise = viewer.expect_advertise().await?;
+    viewer
+        .subscribe_and_wait(&[advertise.channels[0].id], &channel)
+        .await?;
+    poll_until(|| gw.handle.stats().viewer_count == 1).await;
+    assert_eq!(gw.handle.stats().participant_resets, 0);
+
+    // Reliable messages go through the viewer's control queue, which this burst
+    // overflows before the queue's flush task gets a chance to run.
+    for _ in 0..100 {
+        channel.log(b"{}");
+    }
+    poll_until(|| gw.handle.stats().participant_resets == 1).await;
+    poll_until(|| gw.handle.stats().viewer_count == 1).await;
+
+    viewer.close().await?;
+    gw.stop().await?;
+    Ok(())
+}

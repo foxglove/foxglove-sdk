@@ -871,6 +871,7 @@ pub struct TestGatewayOptions {
     pub qos_classifier: Option<QosClassifierFn>,
     pub suppress_video_transcode: Option<SuppressVideoTranscodeFn>,
     pub max_data_track_message_size: Option<usize>,
+    pub message_backlog_size: Option<usize>,
     pub point_cloud_compression: Option<Option<foxglove::remote_access::PointCloudCompression>>,
 }
 
@@ -960,6 +961,9 @@ impl TestGateway {
         }
         if let Some(size) = options.max_data_track_message_size {
             gateway = gateway.max_data_track_message_size(size);
+        }
+        if let Some(size) = options.message_backlog_size {
+            gateway = gateway.message_backlog_size(size);
         }
         if let Some(compression) = options.point_cloud_compression {
             gateway = gateway.point_cloud_compression_fn(move |_| compression);
