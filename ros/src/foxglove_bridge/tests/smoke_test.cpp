@@ -917,8 +917,9 @@ public:
 protected:
   using DiagnosticStatus = diagnostic_msgs::msg::DiagnosticStatus;
 
-  /// A second bridge in the same context isn't notified of graph changes, so tests must create
-  /// their topics and services before starting it.
+  /// With rmw_fastrtps_cpp, only the first node in a context to request graph events is notified of
+  /// graph changes, which in this process is the shared bridge. Tests must create their topics and
+  /// services before starting this bridge, so that its initial graph query finds them.
   void startBridge() {
     rclcpp::NodeOptions bridgeOptions;
     bridgeOptions.arguments({"--ros-args", "-r", "__node:=" + BRIDGE_NODE_NAME});
