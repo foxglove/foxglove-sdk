@@ -9,7 +9,7 @@ from foxglove.datasets import EpisodeReader
 from foxglove.datasets.reader import _make_client, _plan
 from foxglove.datasets.storage import ObjectLocation
 
-from .datasets_helpers import Client, Store, mcap_bytes, plan_client
+from .datasets_helpers import Client, JsonDecoder, Store, mcap_bytes, plan_client
 
 
 def first_sample(episode: EpisodeReader) -> Iterator[Any]:
@@ -158,7 +158,6 @@ def test_public_adapters_forward_object_storage_source_without_creating_storage(
 def test_storage_planning_and_worker_lifecycle(
     location: ObjectLocation, builtin: bool, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    pytest.importorskip("foxglove.client")
     raw_location = {
         "bucket": location.bucket,
         "path": location.path,
@@ -187,7 +186,14 @@ def test_storage_planning_and_worker_lifecycle(
         dataset_id="dataset", version_number=7, limit=2000, include_recordings=True
     )
     store_factory.assert_not_called()
-    assert list(plan.read(plan.episodes, first_sample)) == ["sample"]
+
+    def samples(episode: EpisodeReader) -> Iterator[Any]:
+        for _, _, _, decoded in episode.iter_messages(
+            decoder_factories=[JsonDecoder()]
+        ):
+            yield decoded
+
+    assert list(plan.read(plan.episodes, samples)) == ["sample"]
     store_factory.assert_called_once_with()
     client_factory.assert_called_once_with()
     client.iter_messages.assert_not_called()

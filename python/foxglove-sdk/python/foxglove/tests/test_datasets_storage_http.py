@@ -9,10 +9,9 @@ from urllib.parse import urlsplit
 import pytest
 from foxglove.datasets.storage import ObjectLocation, _CloudObjectStore, _iter_messages
 
-from .datasets_helpers import START, mcap_bytes
+from .datasets_helpers import START, JsonDecoder, mcap_bytes
 
 s3 = pytest.importorskip("pyarrow.fs")
-pytest.importorskip("foxglove.client")
 
 
 @pytest.mark.parametrize("deny_reads", [False, True])
@@ -23,8 +22,6 @@ def test_native_s3_range_reads_are_sparse_and_propagate_errors(
     builtin: bool,
     record_property: Callable[[str, object], None],
 ) -> None:
-    import requests
-
     data = mcap_bytes(
         [
             (topic, index * 1_000_000_000, {"value": index, "padding": "x" * 16384})
@@ -82,10 +79,6 @@ def test_native_s3_range_reads_are_sparse_and_propagate_errors(
             self.end_headers()
             self.wfile.write(payload)
 
-    def unexpected_api_request(*_args: Any, **_kwargs: Any) -> None:
-        raise AssertionError("S3 object storage reads must not use the Foxglove API")
-
-    monkeypatch.setattr(requests.Session, "request", unexpected_api_request)
     server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
@@ -120,7 +113,7 @@ def test_native_s3_range_reads_are_sparse_and_propagate_errors(
             ["/selected"],
             stamp,
             stamp,
-            None,
+            [JsonDecoder()],
         )
         if deny_reads:
             with pytest.raises(

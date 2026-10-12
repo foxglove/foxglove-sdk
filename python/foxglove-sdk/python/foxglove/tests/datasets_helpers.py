@@ -2,7 +2,7 @@
 
 import io
 import json
-from collections.abc import Generator, Iterator
+from collections.abc import Callable, Generator, Iterator
 from datetime import datetime, timezone
 from typing import IO, Any
 from unittest.mock import MagicMock
@@ -14,6 +14,13 @@ from mcap.writer import CompressionType, IndexType, Writer
 
 START = datetime(2026, 1, 1, tzinfo=timezone.utc)
 START_NS = 1767225600 * 1_000_000_000
+
+
+class JsonDecoder(DecoderFactory):
+    def decoder_for(
+        self, message_encoding: str, schema: Schema | None
+    ) -> Callable[[bytes], Any] | None:
+        return json.loads if message_encoding == "json" else None
 
 
 class Page:
