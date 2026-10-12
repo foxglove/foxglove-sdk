@@ -56,32 +56,43 @@ void BridgeDiagnostics::reportRemoteAccess(
 }
 
 void BridgeDiagnostics::reportForwarding(size_t activeSubscriptions,
-                                         diagnostic_updater::DiagnosticStatusWrapper& stat) {
+                                         diagnostic_updater::DiagnosticStatusWrapper& stat,
+                                         std::chrono::steady_clock::time_point now) {
   const ForwardingCounts counts{_failedSubscriptions.load(), _incompatibleQosEvents.load(),
                                 _failedServiceCalls.load()};
   const ForwardingCounts last = _lastReportedForwarding;
-
-  std::string newFailures;
-  const auto addNewFailures = [&newFailures](uint64_t current, uint64_t previous,
-                                             const std::string& singular,
-                                             const std::string& plural) {
-    if (current > previous) {
-      newFailures +=
-        (newFailures.empty() ? "" : ", ") + pluralize(current - previous, singular, plural);
+  const bool increased = counts.failedSubscriptions > last.failedSubscriptions ||
+                         counts.incompatibleQosEvents > last.incompatibleQosEvents ||
+                         counts.failedServiceCalls > last.failedServiceCalls;
+  const bool holdingWarn = _lastForwardingIncrease.has_value() &&
+                           now - *_lastForwardingIncrease < DIAGNOSTICS_FORWARDING_WARN_HOLD;
+  if (increased) {
+    if (!holdingWarn) {
+      _forwardingWarnBaseline = last;
     }
-  };
-  addNewFailures(counts.failedSubscriptions, last.failedSubscriptions, "failed subscription",
-                 "failed subscriptions");
-  addNewFailures(counts.incompatibleQosEvents, last.incompatibleQosEvents, "incompatible QoS event",
-                 "incompatible QoS events");
-  addNewFailures(counts.failedServiceCalls, last.failedServiceCalls, "failed service call",
-                 "failed service calls");
+    _lastForwardingIncrease = now;
+  }
   _lastReportedForwarding = counts;
 
-  if (newFailures.empty()) {
-    stat.summary(DiagnosticStatus::OK, "No new failures");
+  if (increased || holdingWarn) {
+    std::string failures;
+    const auto addFailures = [&failures](uint64_t current, uint64_t baseline,
+                                         const std::string& singular, const std::string& plural) {
+      if (current > baseline) {
+        failures +=
+          (failures.empty() ? "" : ", ") + pluralize(current - baseline, singular, plural);
+      }
+    };
+    const ForwardingCounts& baseline = _forwardingWarnBaseline;
+    addFailures(counts.failedSubscriptions, baseline.failedSubscriptions, "failed subscription",
+                "failed subscriptions");
+    addFailures(counts.incompatibleQosEvents, baseline.incompatibleQosEvents,
+                "incompatible QoS event", "incompatible QoS events");
+    addFailures(counts.failedServiceCalls, baseline.failedServiceCalls, "failed service call",
+                "failed service calls");
+    stat.summary(DiagnosticStatus::WARN, "Recent failures: " + failures);
   } else {
-    stat.summary(DiagnosticStatus::WARN, newFailures + " since the last report");
+    stat.summary(DiagnosticStatus::OK, "No recent failures");
   }
   stat.add("Active subscriptions", activeSubscriptions);
   stat.add("Failed subscriptions", counts.failedSubscriptions);

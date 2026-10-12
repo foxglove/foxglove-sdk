@@ -167,7 +167,7 @@ If `publish_diagnostics` is set to `true` (the default), foxglove_bridge publish
 
 - `websocket_server`: the WebSocket server port and the number of connected WebSocket clients. Always OK.
 - `remote_access` (only when `remote_access` is enabled): the gateway connection state and the number of reconnects since startup, where a reconnect is the gateway losing an established connection to Foxglove. OK when connected, even if no viewer is connected; WARN while connecting; ERROR if the gateway has shut down, for example because the device token was rejected.
-- `forwarding`: the number of active ROS subscriptions, plus these counts since startup: failed subscriptions (subscriptions that couldn't be created), incompatible QoS events (a publisher whose QoS can't serve an existing subscription, which stays active for compatible publishers), and failed service calls. WARN when any of these counts increased since the previous report, otherwise OK. Each failure is also logged with its cause.
+- `forwarding`: the number of active ROS subscriptions, plus these counts since startup: failed subscriptions (subscriptions that couldn't be created), incompatible QoS events (a publisher whose QoS can't serve an existing subscription, which stays active for compatible publishers), and failed service calls. WARN for 10 seconds after any of these counts last increased, listing the failures since the warning began, so that `diagnostic_aggregator` has time to publish it; otherwise OK. Each failure is also logged with its cause.
 
 ## For developers
 
