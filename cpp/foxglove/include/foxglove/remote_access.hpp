@@ -266,7 +266,8 @@ enum class VideoEncoderBackend : uint8_t {
 ///   @ref RemoteAccessGatewayOptions::message_backlog_size.
 /// - `data_track_full` (integer): Messages dropped because a data track's send queue was full.
 /// - `data_track_not_ready` (integer): Messages dropped because a channel's data track was not
-///   published, which is expected briefly after each channel is advertised.
+///   published, which is expected briefly after each channel is advertised. Not broken down by
+///   topic.
 /// - `oversized` (integer): Messages dropped for exceeding
 ///   @ref RemoteAccessGatewayOptions::max_data_track_message_size.
 /// - `video_queue` (integer): Image messages dropped before video encoding because the encoder
@@ -274,8 +275,8 @@ enum class VideoEncoderBackend : uint8_t {
 /// - `point_cloud_queue` (integer): Point cloud messages dropped before compression because
 ///   compression was slower than the log rate.
 /// - `video_encode_errors` (integer): Image messages that could not be encoded as video.
-/// - `topics` (array): The drop counters above for each topic with a nonzero counter, as objects
-///   with a `topic` field.
+/// - `topics` (array): The drop counters above, except `data_track_not_ready`, for each topic
+///   with a nonzero counter, as objects with a `topic` field.
 ///
 /// Of the drops and resets, only `data_track_full` and `participant_resets` are logged as
 /// warnings, throttled across the gateway. The others are expected in normal operation.

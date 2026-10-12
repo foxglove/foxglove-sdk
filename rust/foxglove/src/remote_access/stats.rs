@@ -72,7 +72,7 @@ const REMOTE_ACCESS_STATS_JSON_SCHEMA: &str = r#"{
     "data_track_not_ready": {
       "type": "integer",
       "minimum": 0,
-      "description": "Messages dropped because a channel's data track was not published. This is expected for a few milliseconds after each channel is advertised."
+      "description": "Messages dropped because a channel's data track was not published. This is expected for a few milliseconds after each channel is advertised, so it is not broken down by topic."
     },
     "oversized": {
       "type": "integer",
@@ -96,7 +96,7 @@ const REMOTE_ACCESS_STATS_JSON_SCHEMA: &str = r#"{
     },
     "topics": {
       "type": "array",
-      "description": "Drop counters for each topic with at least one nonzero counter. The counters for each topic add up to the gateway-wide counters of the same name.",
+      "description": "Drop counters for each topic with at least one nonzero counter, for every cause except data_track_not_ready. The counters for each topic add up to the gateway-wide counters of the same name.",
       "items": {
         "type": "object",
         "properties": {
@@ -108,11 +108,6 @@ const REMOTE_ACCESS_STATS_JSON_SCHEMA: &str = r#"{
             "type": "integer",
             "minimum": 0,
             "description": "Messages dropped because the data track's send queue was full."
-          },
-          "data_track_not_ready": {
-            "type": "integer",
-            "minimum": 0,
-            "description": "Messages dropped because the data track was not published."
           },
           "oversized": {
             "type": "integer",
@@ -163,12 +158,12 @@ const REMOTE_ACCESS_STATS_JSON_SCHEMA: &str = r#"{
 /// | `reconnects` | integer | Times the gateway lost its connection to the Foxglove platform and started reconnecting. |
 /// | `participant_resets` | integer | Times a viewer was disconnected and reconnected because its control message queue overflowed or a write to it failed. See [`Gateway::message_backlog_size`](crate::remote_access::Gateway::message_backlog_size). |
 /// | `data_track_full` | integer | Messages dropped because a data track's send queue was full. |
-/// | `data_track_not_ready` | integer | Messages dropped because a channel's data track was not published, which is expected briefly after each channel is advertised. |
+/// | `data_track_not_ready` | integer | Messages dropped because a channel's data track was not published, which is expected briefly after each channel is advertised. Not broken down by topic. |
 /// | `oversized` | integer | Messages dropped for exceeding [`Gateway::max_data_track_message_size`](crate::remote_access::Gateway::max_data_track_message_size). |
 /// | `video_queue` | integer | Image messages dropped before video encoding because the encoder was slower than the log rate. |
 /// | `point_cloud_queue` | integer | Point cloud messages dropped before compression because compression was slower than the log rate. |
 /// | `video_encode_errors` | integer | Image messages that could not be encoded as video. |
-/// | `topics` | array | The drop counters above for each topic with a nonzero counter, as objects with a `topic` field. |
+/// | `topics` | array | The drop counters above, except `data_track_not_ready`, for each topic with a nonzero counter, as objects with a `topic` field. |
 ///
 /// Of the drops and resets, only `data_track_full` and `participant_resets` are logged as
 /// warnings, throttled across the gateway. The others are expected in normal operation.
@@ -314,6 +309,7 @@ pub(crate) struct RemoteAccessStats {
     connection_quality: Option<ConnectionQuality>,
     reconnects: u64,
     participant_resets: u64,
+    data_track_not_ready: u64,
     #[serde(flatten)]
     drops: DropStats,
     topics: Vec<TopicStats>,
@@ -333,6 +329,7 @@ impl RemoteAccessStats {
             connection_quality: session.map(|s| s.connection_quality),
             reconnects: counters.reconnects.load(Ordering::Relaxed),
             participant_resets: counters.participant_resets.load(Ordering::Relaxed),
+            data_track_not_ready: counters.data_track_not_ready.load(Ordering::Relaxed),
             drops: counters.totals.load(),
             topics: counters.topic_stats(),
         }
@@ -360,10 +357,13 @@ impl Encode for RemoteAccessStats {
 }
 
 /// Drop counts by cause, for a topic or for the whole gateway.
+///
+/// Data-track-not-ready drops are counted separately, for the whole gateway only. They happen
+/// for a few milliseconds after every advertise, so counting them per topic would list nearly
+/// every topic.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize)]
 struct DropStats {
     data_track_full: u64,
-    data_track_not_ready: u64,
     oversized: u64,
     video_queue: u64,
     point_cloud_queue: u64,
@@ -380,7 +380,6 @@ struct TopicStats {
 #[derive(Debug, Default)]
 struct DropCounters {
     data_track_full: AtomicU64,
-    data_track_not_ready: AtomicU64,
     oversized: AtomicU64,
     video_queue: AtomicU64,
     point_cloud_queue: AtomicU64,
@@ -391,7 +390,6 @@ impl DropCounters {
     fn load(&self) -> DropStats {
         DropStats {
             data_track_full: self.data_track_full.load(Ordering::Relaxed),
-            data_track_not_ready: self.data_track_not_ready.load(Ordering::Relaxed),
             oversized: self.oversized.load(Ordering::Relaxed),
             video_queue: self.video_queue.load(Ordering::Relaxed),
             point_cloud_queue: self.point_cloud_queue.load(Ordering::Relaxed),
@@ -408,6 +406,7 @@ pub(crate) struct GatewayCounters {
     totals: DropCounters,
     /// Per-topic drop counters, added when a topic first counts a drop.
     topics: parking_lot::Mutex<BTreeMap<String, Arc<DropCounters>>>,
+    data_track_not_ready: AtomicU64,
     reconnects: AtomicU64,
     participant_resets: AtomicU64,
     data_track_full_throttler: parking_lot::Mutex<Throttler>,
@@ -419,6 +418,7 @@ impl Default for GatewayCounters {
         Self {
             totals: DropCounters::default(),
             topics: parking_lot::Mutex::default(),
+            data_track_not_ready: AtomicU64::new(0),
             reconnects: AtomicU64::new(0),
             participant_resets: AtomicU64::new(0),
             data_track_full_throttler: parking_lot::Mutex::new(Throttler::new(WARN_INTERVAL)),
@@ -503,8 +503,11 @@ impl TopicCounters {
         counter(&self.gateway.totals).fetch_add(count, Ordering::Relaxed) + count
     }
 
+    /// Counts a data-track-not-ready drop, for the whole gateway only.
     pub fn record_data_track_not_ready_drop(&self) {
-        self.add(|c| &c.data_track_not_ready, 1);
+        self.gateway
+            .data_track_not_ready
+            .fetch_add(1, Ordering::Relaxed);
     }
 
     /// Counts a data-track-full drop. Returns the gateway-wide cumulative count if a warning is
@@ -570,12 +573,14 @@ mod tests {
         let imu = counters.for_topic("/imu");
         let camera = counters.for_topic("/camera");
         let _quiet = counters.for_topic("/quiet");
+        let advertised = counters.for_topic("/advertised");
 
         imu.record_data_track_not_ready_drop();
         imu.record_data_track_not_ready_drop();
         let _ = imu.record_data_track_full_drop();
         imu.record_oversized_drop();
         camera.record_data_track_not_ready_drop();
+        advertised.record_data_track_not_ready_drop();
         camera.record_video_queue_drops(4);
         camera.record_video_queue_drops(0);
         camera.record_video_encode_error();
@@ -599,17 +604,17 @@ mod tests {
                 "reconnects": 1,
                 "participant_resets": 1,
                 "data_track_full": 1,
-                "data_track_not_ready": 3,
+                "data_track_not_ready": 4,
                 "oversized": 1,
                 "video_queue": 4,
                 "point_cloud_queue": 5,
                 "video_encode_errors": 1,
-                // Sorted by topic, and only topics with drops are listed.
+                // Sorted by topic. Not-ready drops are only counted gateway-wide, so topics
+                // with no other drops, like /advertised, are not listed.
                 "topics": [
                     {
                         "topic": "/camera",
                         "data_track_full": 0,
-                        "data_track_not_ready": 1,
                         "oversized": 0,
                         "video_queue": 4,
                         "point_cloud_queue": 0,
@@ -618,7 +623,6 @@ mod tests {
                     {
                         "topic": "/imu",
                         "data_track_full": 1,
-                        "data_track_not_ready": 2,
                         "oversized": 1,
                         "video_queue": 0,
                         "point_cloud_queue": 0,
@@ -627,7 +631,6 @@ mod tests {
                     {
                         "topic": "/lidar",
                         "data_track_full": 0,
-                        "data_track_not_ready": 0,
                         "oversized": 0,
                         "video_queue": 0,
                         "point_cloud_queue": 5,

@@ -304,7 +304,7 @@ mod tests {
     }
 
     #[test]
-    fn counts_drops_before_track_is_published_per_topic() {
+    fn counts_drops_before_track_is_published_gateway_wide() {
         let counters = Arc::new(GatewayCounters::default());
         let first = DataTrack::for_test(16, counters.for_topic("/first"));
         let second = DataTrack::for_test(16, counters.for_topic("/second"));
@@ -319,9 +319,6 @@ mod tests {
         assert_eq!(stats["data_track_not_ready"], 4);
         assert_eq!(stats["data_track_full"], 0);
         assert_eq!(stats["oversized"], 0);
-        assert_eq!(stats["topics"][0]["topic"], "/first");
-        assert_eq!(stats["topics"][0]["data_track_not_ready"], 3);
-        assert_eq!(stats["topics"][1]["topic"], "/second");
-        assert_eq!(stats["topics"][1]["data_track_not_ready"], 1);
+        assert_eq!(stats["topics"], serde_json::json!([]));
     }
 }
