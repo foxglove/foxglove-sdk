@@ -11,13 +11,16 @@ use anyhow::{Context as _, Result, bail};
 use foxglove::messages::{RawImage, Timestamp};
 use foxglove::protocol::v2::client::SubscribeChannel;
 use foxglove::protocol::v2::server::ServerMessage;
-use foxglove::remote_access::{ConnectionGraph, ConnectionStatus, QosProfile, Reliability};
+use foxglove::remote_access::{
+    ConnectionGraph, ConnectionStatus, DEFAULT_STATS_TOPIC, QosProfile, Reliability, StatsOptions,
+};
 use foxglove::{Encode, Schema};
 use livekit::{Room, RoomOptions};
 use remote_access_tests::livekit_token;
 use remote_access_tests::mock_listener::MockListener;
 use remote_access_tests::test_helpers::{
-    ClientChannelDesc, EVENT_TIMEOUT, TestGateway, TestGatewayOptions, ViewerConnection, poll_until,
+    ClientChannelDesc, EVENT_TIMEOUT, StatsSink, TestGateway, TestGatewayOptions, ViewerConnection,
+    poll_until, topic_stats,
 };
 use serial_test::serial;
 use tracing::info;
@@ -3295,8 +3298,26 @@ async fn livekit_video_channel_forces_lossy_over_reliable_classifier() -> Result
 // Gateway stats tests
 // ===========================================================================
 
-/// Test that gateway stats report the active session and its viewers, and count data
-/// track drops by cause.
+/// Stats options that publish often enough for tests to wait on.
+fn test_stats_options() -> StatsOptions {
+    StatsOptions::new().interval(Duration::from_millis(100))
+}
+
+/// Returns the ID of the advertised channel with `topic`.
+fn advertised_channel_id(
+    advertise: &foxglove::protocol::v2::server::Advertise<'_>,
+    topic: &str,
+) -> Result<u64> {
+    advertise
+        .channels
+        .iter()
+        .find(|ch| ch.topic == topic)
+        .map(|ch| ch.id)
+        .with_context(|| format!("{topic} is not advertised"))
+}
+
+/// Test that the gateway's stats report the active session and its viewers, count data
+/// track drops by cause and topic, and are delivered to remote viewers.
 #[traced_test]
 #[ignore]
 #[tokio::test]
@@ -3308,12 +3329,14 @@ async fn livekit_gateway_stats_report_session_viewers_and_data_track_drops() -> 
         .message_encoding("json")
         .build_raw()
         .context("create channel")?;
+    let stats_sink = StatsSink::add_to(&ctx);
 
     let limit = 1200;
     let gw = TestGateway::start_with_options(
         &ctx,
         TestGatewayOptions {
             max_data_track_message_size: Some(limit),
+            stats: Some(test_stats_options()),
             ..Default::default()
         },
     )
@@ -3321,27 +3344,36 @@ async fn livekit_gateway_stats_report_session_viewers_and_data_track_drops() -> 
 
     // The mock server wakes the gateway immediately, so it joins the room before any
     // viewer does.
-    poll_until(|| gw.handle.stats().session_active).await;
-    let stats = gw.handle.stats();
-    assert_eq!(stats.viewer_count, 0);
-    assert!(stats.connection_quality.is_some());
+    let stats = stats_sink.wait_for(|s| s["session_active"] == true).await;
+    assert_eq!(stats["state"], "connected");
+    assert_eq!(stats["viewer_count"], 0);
+    assert!(stats["connection_quality"].is_string(), "{stats}");
 
     let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
     let _server_info = viewer.expect_server_info().await?;
     let advertise = viewer.expect_advertise().await?;
-    let channel_id = advertise.channels[0].id;
+    let channel_id = advertised_channel_id(&advertise, "/test")?;
+    let stats_channel_id = advertised_channel_id(&advertise, DEFAULT_STATS_TOPIC)?;
     viewer.subscribe_and_wait(&[channel_id], &channel).await?;
     let mut ch_reader = viewer.expect_device_channel_data_track(channel_id).await?;
-    poll_until(|| gw.handle.stats().viewer_count == 1).await;
+    let baseline = stats_sink.wait_for(|s| s["viewer_count"] == 1).await;
+    assert_eq!(baseline["oversized"], 0);
+    assert_eq!(baseline["data_track_full"], 0);
+
+    // The stats channel is an ordinary channel, so remote viewers can subscribe to it.
+    viewer.send_subscribe(&[stats_channel_id]).await?;
+    let mut stats_reader = viewer
+        .expect_device_channel_data_track(stats_channel_id)
+        .await?;
+    let remote_stats: serde_json::Value =
+        serde_json::from_slice(&stats_reader.next_message_data().await?.data)?;
+    assert_eq!(remote_stats["viewer_count"], 1);
 
     channel.log(b"before");
     assert_eq!(
         ch_reader.next_message_data().await?.data.as_ref(),
         b"before"
     );
-    let baseline = gw.handle.stats();
-    assert_eq!(baseline.oversized_drops, 0);
-    assert_eq!(baseline.data_track_full_drops, 0);
 
     // The oversized counter is cumulative, even though the oversized warning (and the
     // per-channel count it reports) is throttled.
@@ -3349,40 +3381,49 @@ async fn livekit_gateway_stats_report_session_viewers_and_data_track_drops() -> 
     for _ in 0..3 {
         channel.log(&oversized);
     }
-    assert_eq!(gw.handle.stats().oversized_drops, 3);
+    let stats = stats_sink.wait_for(|s| s["oversized"] == 3).await;
+    let test_stats = topic_stats(&stats, "/test").context("/test has drops")?;
+    assert_eq!(test_stats["oversized"], 3);
 
     // LiveKit buffers only a few frames per data track, and the gateway runs on this
     // test's single-threaded runtime, so a burst logged without yielding overflows it.
     for _ in 0..200 {
         channel.log(&[0u8; 100]);
     }
-    let stats = gw.handle.stats();
+    let stats = stats_sink
+        .wait_for(|s| s["data_track_full"].as_u64() > Some(0))
+        .await;
+    let test_stats = topic_stats(&stats, "/test").context("/test has drops")?;
     assert!(
-        stats.data_track_full_drops > 0,
-        "expected data track full drops, got {stats:?}"
+        test_stats["data_track_full"].as_u64() > Some(0),
+        "expected data track full drops on /test, got {stats}"
     );
-    assert_eq!(stats.oversized_drops, 3);
-    info!("gateway stats after burst: {stats:?}");
+    assert_eq!(stats["oversized"], 3);
+    info!("gateway stats after burst: {stats}");
 
     viewer.close().await?;
-    poll_until(|| gw.handle.stats().viewer_count == 0).await;
 
     // The counters outlive the viewer, and stay cumulative.
-    let stats = gw.handle.stats();
-    assert!(stats.session_active);
-    assert_eq!(stats.oversized_drops, 3);
-    assert!(stats.data_track_full_drops > 0);
+    let stats = stats_sink.wait_for(|s| s["viewer_count"] == 0).await;
+    assert_eq!(stats["session_active"], true);
+    assert_eq!(stats["oversized"], 3);
+    assert!(stats["data_track_full"].as_u64() > Some(0));
 
     gw.stop().await?;
+    let stats = stats_sink.wait_for(|s| s["state"] == "shutting_down").await;
+    assert_eq!(stats["session_active"], false);
+    assert_eq!(stats["oversized"], 3);
+    assert!(ctx.get_channel_by_topic(DEFAULT_STATS_TOPIC).is_none());
     Ok(())
 }
 
-/// Test that image messages dropped from a full video encoding queue are counted.
+/// Test that image messages dropped from a full video encoding queue, and images that
+/// can't be encoded, are counted.
 #[traced_test]
 #[ignore]
 #[tokio::test]
 #[serial(livekit)]
-async fn livekit_gateway_stats_count_video_queue_drops() -> Result<()> {
+async fn livekit_gateway_stats_count_video_queue_drops_and_encode_errors() -> Result<()> {
     let ctx = foxglove::Context::new();
     let video_channel = ctx
         .channel_builder("/camera")
@@ -3390,17 +3431,26 @@ async fn livekit_gateway_stats_count_video_queue_drops() -> Result<()> {
         .schema(Schema::new("foxglove.RawImage", "protobuf", &b""[..]))
         .build_raw()
         .context("create video channel")?;
+    let stats_sink = StatsSink::add_to(&ctx);
 
-    let gw = TestGateway::start(&ctx).await?;
+    let gw = TestGateway::start_with_options(
+        &ctx,
+        TestGatewayOptions {
+            stats: Some(test_stats_options()),
+            ..Default::default()
+        },
+    )
+    .await?;
     let mut viewer = ViewerConnection::connect(&gw.room_name, "viewer-1").await?;
     let _server_info = viewer.expect_server_info().await?;
     let advertise = viewer.expect_advertise().await?;
-    let channel_id = advertise.channels[0].id;
+    let channel_id = advertised_channel_id(&advertise, "/camera")?;
     viewer
         .subscribe_video_and_wait(&[channel_id], &video_channel)
         .await?;
     let _track = viewer.expect_track_subscribed().await?;
-    assert_eq!(gw.handle.stats().video_queue_drops, 0);
+    let baseline = stats_sink.wait_for(|s| s["viewer_count"] == 1).await;
+    assert_eq!(baseline["video_queue"], 0);
 
     // The encoding queue holds two frames, and its consumer cannot run until this
     // single-threaded test yields.
@@ -3408,12 +3458,18 @@ async fn livekit_gateway_stats_count_video_queue_drops() -> Result<()> {
     for _ in 0..10 {
         video_channel.log(&image);
     }
-    let stats = gw.handle.stats();
+    // The newest message is never evicted, so this one is encoded once the queue drains.
+    video_channel.log(b"not an image");
+
+    let stats = stats_sink.wait_for(|s| s["video_encode_errors"] == 1).await;
     assert!(
-        stats.video_queue_drops > 0,
-        "expected video queue drops, got {stats:?}"
+        stats["video_queue"].as_u64() > Some(0),
+        "expected video queue drops, got {stats}"
     );
-    assert_eq!(stats.data_track_full_drops, 0);
+    let camera_stats = topic_stats(&stats, "/camera").context("/camera has drops")?;
+    assert_eq!(camera_stats["video_queue"], stats["video_queue"]);
+    assert_eq!(camera_stats["video_encode_errors"], 1);
+    assert_eq!(stats["data_track_full"], 0);
 
     viewer.close().await?;
     gw.stop().await?;
@@ -3433,16 +3489,22 @@ async fn livekit_gateway_stats_count_participant_resets() -> Result<()> {
         .message_encoding("json")
         .build_raw()
         .context("create channel")?;
+    let stats_sink = StatsSink::add_to(&ctx);
 
     let gw = TestGateway::start_with_options(
         &ctx,
         TestGatewayOptions {
-            qos_classifier: Some(Box::new(|_| {
-                QosProfile::builder()
-                    .reliability(Reliability::Reliable)
-                    .build()
+            qos_classifier: Some(Box::new(|descriptor| {
+                if descriptor.topic() == "/config" {
+                    QosProfile::builder()
+                        .reliability(Reliability::Reliable)
+                        .build()
+                } else {
+                    QosProfile::default()
+                }
             })),
             message_backlog_size: Some(8),
+            stats: Some(test_stats_options()),
             ..Default::default()
         },
     )
@@ -3452,18 +3514,19 @@ async fn livekit_gateway_stats_count_participant_resets() -> Result<()> {
     let _server_info = viewer.expect_server_info().await?;
     let advertise = viewer.expect_advertise().await?;
     viewer
-        .subscribe_and_wait(&[advertise.channels[0].id], &channel)
+        .subscribe_and_wait(&[advertised_channel_id(&advertise, "/config")?], &channel)
         .await?;
-    poll_until(|| gw.handle.stats().viewer_count == 1).await;
-    assert_eq!(gw.handle.stats().participant_resets, 0);
+    let baseline = stats_sink.wait_for(|s| s["viewer_count"] == 1).await;
+    assert_eq!(baseline["participant_resets"], 0);
 
     // Reliable messages go through the viewer's control queue, which this burst
     // overflows before the queue's flush task gets a chance to run.
     for _ in 0..100 {
         channel.log(b"{}");
     }
-    poll_until(|| gw.handle.stats().participant_resets == 1).await;
-    poll_until(|| gw.handle.stats().viewer_count == 1).await;
+    stats_sink
+        .wait_for(|s| s["participant_resets"] == 1 && s["viewer_count"] == 1)
+        .await;
 
     viewer.close().await?;
     gw.stop().await?;

@@ -873,6 +873,7 @@ pub struct TestGatewayOptions {
     pub max_data_track_message_size: Option<usize>,
     pub message_backlog_size: Option<usize>,
     pub point_cloud_compression: Option<Option<foxglove::remote_access::PointCloudCompression>>,
+    pub stats: Option<foxglove::remote_access::StatsOptions>,
 }
 
 /// A test gateway backed by a mock Foxglove API server and a LiveKit room.
@@ -968,6 +969,9 @@ impl TestGateway {
         if let Some(compression) = options.point_cloud_compression {
             gateway = gateway.point_cloud_compression_fn(move |_| compression);
         }
+        if let Some(stats) = options.stats {
+            gateway = gateway.stats(stats);
+        }
 
         let handle = gateway.start().context("start Gateway")?;
 
@@ -1004,6 +1008,96 @@ async fn subscribe_to_device_data_track(
         .map_err(|e| anyhow::anyhow!("failed to subscribe to data track: {e}"))?;
     info!("subscribed to device data track: {name}");
     Ok(DeviceChannelReader { channel_id, stream })
+}
+
+// ---------------------------------------------------------------------------
+// StatsSink: records the gateway's stats messages.
+// ---------------------------------------------------------------------------
+
+/// A sink that keeps the latest message on the default remote access stats topic.
+///
+/// It subscribes to no other channel, so it doesn't affect `RawChannel::has_sinks` for the
+/// channels under test.
+pub struct StatsSink {
+    id: foxglove::SinkId,
+    latest: std::sync::Mutex<Option<serde_json::Value>>,
+}
+
+impl StatsSink {
+    /// Creates a stats sink and adds it to `ctx`.
+    pub fn add_to(ctx: &foxglove::Context) -> Arc<Self> {
+        let sink = Arc::new(Self {
+            id: foxglove::SinkId::next(),
+            latest: std::sync::Mutex::new(None),
+        });
+        ctx.add_sink(sink.clone());
+        sink
+    }
+
+    /// Waits for a stats message that satisfies `predicate`, and returns it. Panics after
+    /// [`EVENT_TIMEOUT`].
+    pub async fn wait_for(
+        &self,
+        predicate: impl Fn(&serde_json::Value) -> bool,
+    ) -> serde_json::Value {
+        let deadline = tokio::time::Instant::now() + EVENT_TIMEOUT;
+        loop {
+            let latest = self.latest.lock().unwrap().clone();
+            if let Some(stats) = latest.as_ref()
+                && predicate(stats)
+            {
+                return stats.clone();
+            }
+            if tokio::time::Instant::now() >= deadline {
+                panic!(
+                    "stats condition not met within {EVENT_TIMEOUT:?}; latest stats: {latest:?}"
+                );
+            }
+            tokio::time::sleep(POLL_INTERVAL).await;
+        }
+    }
+}
+
+impl foxglove::Sink for StatsSink {
+    fn id(&self) -> foxglove::SinkId {
+        self.id
+    }
+
+    fn log(
+        &self,
+        _channel: &foxglove::RawChannel,
+        msg: &[u8],
+        _metadata: &foxglove::Metadata,
+    ) -> std::result::Result<(), foxglove::FoxgloveError> {
+        let stats = serde_json::from_slice(msg).expect("stats message is JSON");
+        *self.latest.lock().unwrap() = Some(stats);
+        Ok(())
+    }
+
+    fn add_channels(
+        &self,
+        channels: &[&Arc<foxglove::RawChannel>],
+    ) -> Option<Vec<foxglove::ChannelId>> {
+        Some(
+            channels
+                .iter()
+                .filter(|channel| channel.topic() == foxglove::remote_access::DEFAULT_STATS_TOPIC)
+                .map(|channel| channel.id())
+                .collect(),
+        )
+    }
+
+    fn auto_subscribe(&self) -> bool {
+        false
+    }
+}
+
+/// Returns the per-topic stats for `topic`, or `None` if the topic has no drops.
+pub fn topic_stats<'a>(stats: &'a serde_json::Value, topic: &str) -> Option<&'a serde_json::Value> {
+    stats["topics"]
+        .as_array()?
+        .iter()
+        .find(|entry| entry["topic"] == topic)
 }
 
 // ---------------------------------------------------------------------------
