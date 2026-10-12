@@ -94,8 +94,9 @@ impl GatewayHandle {
     /// Sends a status message to a single connected participant.
     ///
     /// The participant is identified by its client ID, as returned by
-    /// [`Client::id`](super::Client::id). Does nothing if the client is not connected, or if there
-    /// is no active session.
+    /// [`Client::id`](super::Client::id). If the client is unknown or has disconnected, or there is
+    /// no active session, the status is silently dropped. This is not an error, because a client
+    /// can disconnect at any time.
     ///
     /// This method may be called from within [`Listener`] callbacks.
     pub fn send_status(&self, client_id: ClientId, status: super::Status) {

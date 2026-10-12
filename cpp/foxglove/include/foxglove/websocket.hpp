@@ -437,7 +437,8 @@ public:
   /// @brief Sends a status message to a single client.
   ///
   /// The client is identified by the `client_id` passed to WebSocketServerCallbacks. If the
-  /// client is not connected, this method does nothing.
+  /// client is unknown or has disconnected, the status is silently dropped and this method returns
+  /// FoxgloveError::Ok. This is not an error, because a client can disconnect at any time.
   ///
   /// This method may be called from within WebSocketServerCallbacks, such as
   /// `onClientAdvertise`.

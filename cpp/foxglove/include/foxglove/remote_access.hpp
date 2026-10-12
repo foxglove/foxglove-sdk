@@ -372,7 +372,9 @@ public:
   /// @brief Sends a status message to a single connected participant.
   ///
   /// The participant is identified by the `client_id` passed to RemoteAccessGatewayCallbacks. If
-  /// the client is not connected, or there is no active session, this method does nothing.
+  /// the client is unknown or has disconnected, or there is no active session, the status is
+  /// silently dropped and this method returns FoxgloveError::Ok. This is not an error, because a
+  /// client can disconnect at any time.
   ///
   /// This method may be called from within RemoteAccessGatewayCallbacks, such as
   /// `onClientAdvertise`.

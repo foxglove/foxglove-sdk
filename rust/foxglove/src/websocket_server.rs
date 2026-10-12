@@ -371,7 +371,9 @@ impl WebSocketServerHandle {
     /// Sends a status message to a single client.
     ///
     /// The client is identified by its ID, as returned by
-    /// [`Client::id`](crate::websocket::Client::id). Does nothing if the client is not connected.
+    /// [`Client::id`](crate::websocket::Client::id). If the client is unknown or has disconnected,
+    /// the status is silently dropped. This is not an error, because a client can disconnect at
+    /// any time.
     ///
     /// This method may be called from within
     /// [`ServerListener`](crate::websocket::ServerListener) callbacks.

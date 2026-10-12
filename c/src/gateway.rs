@@ -1272,7 +1272,9 @@ pub unsafe extern "C" fn foxglove_gateway_publish_status(
 /// Sends a status message to a single connected participant.
 ///
 /// The participant is identified by the `client_id` passed to gateway callbacks. If the client is
-/// not connected, or there is no active session, this function does nothing.
+/// unknown or has disconnected, or there is no active session, the status is silently dropped and
+/// this function returns `FOXGLOVE_ERROR_OK`. This is not an error, because a client can
+/// disconnect at any time.
 ///
 /// This function may be called from within gateway callbacks, such as `on_client_advertise`.
 ///

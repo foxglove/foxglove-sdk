@@ -827,8 +827,9 @@ pub unsafe extern "C" fn foxglove_server_publish_status(
 
 /// Sends a status message to a single client.
 ///
-/// The client is identified by the `client_id` passed to server callbacks. If the client is not
-/// connected, this function does nothing.
+/// The client is identified by the `client_id` passed to server callbacks. If the client is
+/// unknown or has disconnected, the status is silently dropped and this function returns
+/// `FOXGLOVE_ERROR_OK`. This is not an error, because a client can disconnect at any time.
 ///
 /// This function may be called from within server callbacks, such as `on_client_advertise`.
 ///
