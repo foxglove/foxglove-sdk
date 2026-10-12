@@ -185,13 +185,6 @@ target_compile_definitions(foxglove_bridge_component
     RESOURCE_RETRIEVER_VERSION_PATCH=${resource_retriever_VERSION_PATCH}
 )
 
-# The C++ SDK has no version accessor, so the version of the SDK release we build against is
-# reported in diagnostics from here. PUBLIC so tests can compare against it.
-target_compile_definitions(foxglove_bridge_component
-  PUBLIC
-    FOXGLOVE_BRIDGE_SDK_VERSION="${FOXGLOVE_SDK_VERSION}"
-)
-
 if (FOXGLOVE_BRIDGE_REMOTE_ACCESS)
   target_compile_definitions(foxglove_bridge_component PUBLIC FOXGLOVE_REMOTE_ACCESS)
 endif()

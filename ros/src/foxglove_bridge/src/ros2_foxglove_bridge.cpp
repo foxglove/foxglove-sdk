@@ -1732,24 +1732,10 @@ void FoxgloveBridge::publishClientCount() {
 }
 
 void FoxgloveBridge::setupDiagnostics() {
-  BuildInfo buildInfo;
-  buildInfo.bridgeVersion = FOXGLOVE_BRIDGE_VERSION;
-  buildInfo.bridgeGitHash = FOXGLOVE_BRIDGE_GIT_HASH;
-  buildInfo.sdkVersion = FOXGLOVE_BRIDGE_SDK_VERSION;
-  const char* rosDistro = std::getenv("ROS_DISTRO");
-  buildInfo.rosDistro = (rosDistro && strlen(rosDistro) > 0) ? rosDistro : "unknown";
-#ifdef FOXGLOVE_REMOTE_ACCESS
-  buildInfo.remoteAccessSupport = true;
-#endif
-
   // The updater publishes from a node timer. Tasks only read state cached by callbacks, so
   // nothing is published from SDK threads.
   _diagnosticUpdater = std::make_unique<diagnostic_updater::Updater>(this);
   _diagnosticUpdater->setHardwareID(DIAGNOSTICS_HARDWARE_ID);
-  _diagnosticUpdater->add(DIAGNOSTICS_TASK_BUILD_INFO,
-                          [buildInfo](diagnostic_updater::DiagnosticStatusWrapper& stat) {
-                            reportBuildInfo(buildInfo, stat);
-                          });
   _diagnosticUpdater->add(DIAGNOSTICS_TASK_WEBSOCKET_SERVER,
                           [this](diagnostic_updater::DiagnosticStatusWrapper& stat) {
                             reportWebSocketServer(_server->port(), _server->clientCount(), stat);

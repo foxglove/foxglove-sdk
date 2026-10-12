@@ -134,7 +134,7 @@ Parameters are provided to configure the behavior of the bridge. These parameter
 - **sysinfo**: Publish process and system statistics (CPU, memory, etc.) on a channel. Defaults to `true`.
 - **sysinfo_topic**: Topic name for system info messages. Defaults to `/foxglove_bridge/sysinfo`.
 - **sysinfo_refresh_interval**: Refresh interval for system info messages in milliseconds. Minimum 200ms. Defaults to `500`.
-- **publish_diagnostics**: Publish bridge and remote access health as `diagnostic_msgs/msg/DiagnosticArray` messages on `/diagnostics`. See [Diagnostic topics](#diagnostic-topics). Defaults to `false`.
+- **publish_diagnostics**: Publish bridge and remote access health as `diagnostic_msgs/msg/DiagnosticArray` messages on `/diagnostics`. See [Diagnostic topics](#diagnostic-topics). Defaults to `true`.
 - **message_backlog_size**: Maximum number of outgoing messages to buffer per connected WebSocket client or remote access gateway participant. The WebSocket server drops the oldest data-plane message on overflow and disconnects clients whose control-plane queue fills. The remote access gateway disconnects participants whose queue fills. Defaults to `1024`.
 - **remote_access**: Enable the remote access gateway, allowing the bridge to be reached through Foxglove's platform without exposing a port on the device. Requires the bridge to be built with `FOXGLOVE_BRIDGE_REMOTE_ACCESS=ON` (the default for our published Docker images). Defaults to `false`.
 - **device_token**: Foxglove device token used to authenticate with the Foxglove platform when `remote_access` is enabled. If empty, the bridge falls back to the `FOXGLOVE_DEVICE_TOKEN` environment variable, which is preferred: a token passed as a parameter is readable by other nodes via the ROS 2 parameter services, while the environment variable is only visible to the bridge process.
@@ -163,9 +163,8 @@ If `publish_client_count` is set to `true`, foxglove_bridge publishes the number
 
 If `sysinfo` is set to `true` (the default), foxglove_bridge publishes process and system statistics to the topic configured by `sysinfo_topic` (default `/foxglove_bridge/sysinfo`).
 
-If `publish_diagnostics` is set to `true`, foxglove_bridge publishes its health on `/diagnostics` using [diagnostic_updater](https://index.ros.org/p/diagnostic_updater/), so it works with the standard `diagnostic_aggregator`. Each status is named `<node name>: <task>`, and the publishing period is set by the `diagnostic_updater.period` parameter (default `1.0` seconds). The tasks are:
+If `publish_diagnostics` is set to `true` (the default), foxglove_bridge publishes its health on `/diagnostics` using [diagnostic_updater](https://index.ros.org/p/diagnostic_updater/), so it works with the standard `diagnostic_aggregator`. Each status is named `<node name>: <task>`, and the publishing period is set by the `diagnostic_updater.period` parameter (default `1.0` seconds). The tasks are:
 
-- `build_info`: the bridge version and git hash, the Foxglove SDK version, the ROS distro, and whether the bridge was built with remote access support. Always OK.
 - `websocket_server`: the WebSocket server port and the number of connected WebSocket clients. Always OK.
 - `remote_access` (only when `remote_access` is enabled): the gateway connection state and the number of reconnects since startup, where a reconnect is the gateway losing an established connection to Foxglove. OK when connected, even if no viewer is connected; WARN while connecting; ERROR if the gateway has shut down, for example because the device token was rejected.
 - `forwarding`: the number of active ROS subscriptions, plus the number of failed subscriptions (subscriptions that couldn't be created, and incompatible QoS events) and failed service calls since startup. WARN when either failure count is nonzero. Each failure is also logged with its cause.

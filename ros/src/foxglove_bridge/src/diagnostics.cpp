@@ -1,5 +1,7 @@
 #include "foxglove_bridge/diagnostics.hpp"
 
+#include <string>
+
 #include <diagnostic_msgs/msg/diagnostic_status.hpp>
 
 namespace foxglove_bridge {
@@ -65,16 +67,6 @@ void BridgeDiagnostics::reportForwarding(size_t activeSubscriptions,
   stat.add("Active subscriptions", activeSubscriptions);
   stat.add("Failed subscriptions", failedSubscriptions);
   stat.add("Failed service calls", failedServiceCalls);
-}
-
-void reportBuildInfo(const BuildInfo& info, diagnostic_updater::DiagnosticStatusWrapper& stat) {
-  stat.summary(DiagnosticStatus::OK,
-               "foxglove_bridge " + info.bridgeVersion + ", Foxglove SDK " + info.sdkVersion);
-  stat.add("Bridge version", info.bridgeVersion);
-  stat.add("Bridge git hash", info.bridgeGitHash);
-  stat.add("SDK version", info.sdkVersion);
-  stat.add("ROS distro", info.rosDistro);
-  stat.add("Remote access support", info.remoteAccessSupport);
 }
 
 void reportWebSocketServer(uint16_t port, size_t clientCount,

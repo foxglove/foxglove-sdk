@@ -3,14 +3,12 @@
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
-#include <string>
 
 #include <diagnostic_updater/diagnostic_status_wrapper.hpp>
 
 namespace foxglove_bridge {
 
 constexpr char DIAGNOSTICS_HARDWARE_ID[] = "none";
-constexpr char DIAGNOSTICS_TASK_BUILD_INFO[] = "build_info";
 constexpr char DIAGNOSTICS_TASK_WEBSOCKET_SERVER[] = "websocket_server";
 constexpr char DIAGNOSTICS_TASK_REMOTE_ACCESS[] = "remote_access";
 constexpr char DIAGNOSTICS_TASK_FORWARDING[] = "forwarding";
@@ -22,15 +20,6 @@ enum class RemoteAccessState : uint8_t {
   Connected,
   ShuttingDown,
   Shutdown,
-};
-
-/// Static information reported by the build_info task.
-struct BuildInfo {
-  std::string bridgeVersion;
-  std::string bridgeGitHash;
-  std::string sdkVersion;
-  std::string rosDistro;
-  bool remoteAccessSupport = false;
 };
 
 /// Cached health state behind the bridge's /diagnostics tasks.
@@ -61,8 +50,6 @@ private:
   std::atomic<uint64_t> _failedSubscriptions{0};
   std::atomic<uint64_t> _failedServiceCalls{0};
 };
-
-void reportBuildInfo(const BuildInfo& info, diagnostic_updater::DiagnosticStatusWrapper& stat);
 
 void reportWebSocketServer(uint16_t port, size_t clientCount,
                            diagnostic_updater::DiagnosticStatusWrapper& stat);

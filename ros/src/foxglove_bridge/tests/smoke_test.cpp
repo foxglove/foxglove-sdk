@@ -906,8 +906,8 @@ TEST(SmokeTest, serviceEventTopicDoesNotPreventFutureAdvertisements) {
 }
 #endif
 
-// Runs a separate bridge with diagnostics enabled on a random port, so that its cumulative failure
-// counters aren't affected by other tests.
+// Runs a separate bridge with default diagnostics settings on a random port, so that its cumulative
+// failure counters aren't affected by other tests.
 class DiagnosticsTest : public testing::Test {
 public:
   inline static const std::string BRIDGE_NODE_NAME = "foxglove_bridge_diagnostics_test";
@@ -915,15 +915,14 @@ public:
 protected:
   using DiagnosticStatus = diagnostic_msgs::msg::DiagnosticStatus;
 
-  void SetUp() override {
+  /// A second bridge in the same context isn't notified of graph changes, so tests must create
+  /// their topics and services before starting it.
+  void startBridge() {
     rclcpp::NodeOptions bridgeOptions;
     bridgeOptions.arguments({"--ros-args", "-r", "__node:=" + BRIDGE_NODE_NAME});
     bridgeOptions.append_parameter_override("port", 0);
-    bridgeOptions.append_parameter_override("publish_diagnostics", true);
     bridgeOptions.append_parameter_override("diagnostic_updater.period", 0.1);
     _bridge = std::make_shared<foxglove_bridge::FoxgloveBridge>(bridgeOptions);
-    _port = _bridge->get_parameter("port").as_int();
-    _uri = "ws://localhost:" + std::to_string(_port);
 
     _listener = rclcpp::Node::make_shared("diagnostics_listener");
     _diagnosticsSub = _listener->create_subscription<diagnostic_msgs::msg::DiagnosticArray>(
@@ -939,9 +938,20 @@ protected:
     _spinThread = std::thread([this]() {
       _executor.spin();
     });
+
+    // The bridge picks a random port, which it only reports through diagnostics.
+    std::optional<std::string> port;
+    ASSERT_TRUE(waitForStatus("websocket_server", [&port](const DiagnosticStatus& status) {
+      port = valueOf(status, "Port");
+      return port.has_value() && port != "0";
+    }));
+    _uri = "ws://localhost:" + *port;
   }
 
   void TearDown() override {
+    if (!_spinThread.joinable()) {
+      return;
+    }
     _executor.cancel();
     _spinThread.join();
     _executor.remove_node(_listener);
@@ -994,7 +1004,6 @@ protected:
   }
 
   std::shared_ptr<foxglove_bridge::FoxgloveBridge> _bridge;
-  int64_t _port = 0;
   std::string _uri;
   rclcpp::Node::SharedPtr _listener;
   rclcpp::Subscription<diagnostic_msgs::msg::DiagnosticArray>::SharedPtr _diagnosticsSub;
@@ -1005,14 +1014,9 @@ protected:
 };
 
 TEST_F(DiagnosticsTest, publishesBridgeStatus) {
-  EXPECT_TRUE(waitForStatus("build_info", [](const DiagnosticStatus& status) {
-    return status.level == DiagnosticStatus::OK &&
-           valueOf(status, "Bridge version") == foxglove_bridge::FOXGLOVE_BRIDGE_VERSION &&
-           valueOf(status, "SDK version") == FOXGLOVE_BRIDGE_SDK_VERSION;
-  }));
-  EXPECT_TRUE(waitForStatus("websocket_server", [this](const DiagnosticStatus& status) {
-    return status.level == DiagnosticStatus::OK &&
-           valueOf(status, "Port") == std::to_string(_port) && valueOf(status, "Clients") == "0";
+  ASSERT_NO_FATAL_FAILURE(startBridge());
+  EXPECT_TRUE(waitForStatus("websocket_server", [](const DiagnosticStatus& status) {
+    return status.level == DiagnosticStatus::OK && valueOf(status, "Clients") == "0";
   }));
   EXPECT_TRUE(waitForStatus("forwarding", [](const DiagnosticStatus& status) {
     return status.level == DiagnosticStatus::OK && valueOf(status, "Active subscriptions") == "0";
@@ -1025,6 +1029,7 @@ TEST_F(DiagnosticsTest, reportsClientsAndActiveSubscriptions) {
   const std::string topicName = "/diagnostics_test_topic";
   auto node = rclcpp::Node::make_shared("diagnostics_test_publisher");
   auto pub = node->create_publisher<std_msgs::msg::String>(topicName, 10);
+  ASSERT_NO_FATAL_FAILURE(startBridge());
 
   auto client = std::make_shared<foxglove::test::Client<websocketpp::config::asio_client>>();
   auto channelFuture = client->waitForChannel(topicName);
@@ -1051,6 +1056,7 @@ TEST_F(DiagnosticsTest, countsIncompatibleQosAsFailedSubscription) {
   auto node = rclcpp::Node::make_shared("diagnostics_test_qos_publisher");
   auto reliablePub =
     node->create_publisher<std_msgs::msg::String>(topicName, rclcpp::QoS{10}.reliable());
+  ASSERT_NO_FATAL_FAILURE(startBridge());
 
   // With only reliable publishers, the bridge subscribes with reliable QoS.
   auto client = std::make_shared<foxglove::test::Client<websocketpp::config::asio_client>>();
@@ -1078,6 +1084,7 @@ TEST_F(DiagnosticsTest, countsFailedServiceCalls) {
   auto service = node->create_service<std_srvs::srv::SetBool>(
     serviceName, [](std::shared_ptr<std_srvs::srv::SetBool::Request>,
                     std::shared_ptr<std_srvs::srv::SetBool::Response>) {});
+  ASSERT_NO_FATAL_FAILURE(startBridge());
 
   auto client = std::make_shared<foxglove::test::Client<websocketpp::config::asio_client>>();
   auto serviceFuture = client->waitForService(serviceName);

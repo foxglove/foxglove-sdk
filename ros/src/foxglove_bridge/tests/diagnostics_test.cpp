@@ -127,25 +127,6 @@ TEST(BridgeDiagnosticsTest, ForwardingWarnsOnFailedServiceCalls) {
   EXPECT_EQ(valueOf(stat, "Failed service calls"), "1");
 }
 
-TEST(BridgeDiagnosticsTest, BuildInfoIsOkAndReportsVersions) {
-  foxglove_bridge::BuildInfo info;
-  info.bridgeVersion = "1.2.3";
-  info.bridgeGitHash = "abc1234";
-  info.sdkVersion = "0.28.0";
-  info.rosDistro = "jazzy";
-  info.remoteAccessSupport = true;
-
-  DiagnosticStatusWrapper stat;
-  foxglove_bridge::reportBuildInfo(info, stat);
-  EXPECT_EQ(stat.level, DiagnosticStatus::OK);
-  EXPECT_EQ(stat.message, "foxglove_bridge 1.2.3, Foxglove SDK 0.28.0");
-  EXPECT_EQ(valueOf(stat, "Bridge version"), "1.2.3");
-  EXPECT_EQ(valueOf(stat, "Bridge git hash"), "abc1234");
-  EXPECT_EQ(valueOf(stat, "SDK version"), "0.28.0");
-  EXPECT_EQ(valueOf(stat, "ROS distro"), "jazzy");
-  EXPECT_EQ(valueOf(stat, "Remote access support"), "True");
-}
-
 TEST(BridgeDiagnosticsTest, WebSocketServerIsOkAndReportsClientCount) {
   DiagnosticStatusWrapper stat;
   foxglove_bridge::reportWebSocketServer(8765, 1, stat);
