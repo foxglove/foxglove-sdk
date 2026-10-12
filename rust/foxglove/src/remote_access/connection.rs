@@ -28,6 +28,7 @@ use crate::{
         protocol_version::{self, REMOTE_ACCESS_PROTOCOL_VERSION},
         qos::QosClassifier,
         session::{RemoteAccessSession, SessionParams},
+        stats::{GatewayCounters, GatewayStats},
         suppress_video_transcode::SuppressVideoTranscode,
         watch::Watch,
         watch_loop::{
@@ -158,6 +159,8 @@ pub(super) struct RemoteAccessConnection {
     /// correlation and for threading through subsequent watch streams as a client-provided
     /// correlation ID.
     remote_access_session_id: OnceLock<String>,
+    /// Drop and reset counters, shared with each session so they accumulate across sessions.
+    counters: Arc<GatewayCounters>,
 }
 
 impl RemoteAccessConnection {
@@ -190,12 +193,22 @@ impl RemoteAccessConnection {
             device_context: OnceCell::new(),
             status: AtomicU8::new(ConnectionStatus::Connecting as u8),
             remote_access_session_id: OnceLock::new(),
+            counters: Arc::default(),
         }
     }
 
     /// Returns the current connection status.
     pub fn status(&self) -> ConnectionStatus {
         ConnectionStatus::from_u8(self.status.load(Ordering::Relaxed))
+    }
+
+    /// Returns a snapshot of the gateway stats, including the current session's, if any.
+    pub fn stats(&self) -> GatewayStats {
+        let session = self.session.lock().clone();
+        match session {
+            Some(session) => session.gateway_stats(),
+            None => self.counters.snapshot(),
+        }
     }
 
     /// Returns the sink ID of the current session, if one is active.
@@ -349,6 +362,7 @@ impl RemoteAccessConnection {
             parameter_handler: self.parameter_handler.clone(),
             server_info,
             device_wait_for_viewer: Some(device_wait_for_viewer),
+            counters: self.counters.clone(),
         };
         Ok((RemoteAccessSession::new(session_params), room_events))
     }

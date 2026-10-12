@@ -1170,6 +1170,7 @@ mod tests {
                 channel_id,
                 "/cloud".to_string(),
                 make_config(),
+                Arc::default(),
             ))
         }
 

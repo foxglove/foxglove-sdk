@@ -1,6 +1,6 @@
 //! Background point-cloud transcoding for remote access sessions.
 
-use std::sync::Weak;
+use std::sync::{Arc, Weak};
 
 use bytes::Bytes;
 use tokio::runtime::Handle;
@@ -9,6 +9,8 @@ use tracing::warn;
 use crate::ChannelId;
 use crate::remote_access::point_cloud_compression::PointCloudCompressionConfig;
 use crate::remote_access::point_cloud_transcode::transcode_point_cloud_message;
+use crate::remote_access::session::send_head_drop;
+use crate::remote_access::stats::GatewayCounters;
 
 use super::RemoteAccessSession;
 
@@ -27,6 +29,8 @@ use super::RemoteAccessSession;
 pub(crate) struct PointCloudPublisher {
     tx: flume::Sender<(Bytes, u64)>,
     rx: flume::Receiver<(Bytes, u64)>,
+    /// Gateway-lifetime drop counters.
+    counters: Arc<GatewayCounters>,
 }
 
 impl PointCloudPublisher {
@@ -43,6 +47,7 @@ impl PointCloudPublisher {
         channel_id: ChannelId,
         topic: String,
         config: PointCloudCompressionConfig,
+        counters: Arc<GatewayCounters>,
     ) -> Self {
         let (tx, rx) = flume::bounded::<(Bytes, u64)>(Self::CHANNEL_CAPACITY);
         let consumer_rx = rx.clone();
@@ -88,24 +93,52 @@ impl PointCloudPublisher {
                 }
             }
         });
-        Self { tx, rx }
+        Self { tx, rx, counters }
     }
 
     /// Send a message for transcoding. Non-blocking: if the channel is full, the oldest
-    /// message is dropped to make room (head-drop for minimal latency on live data).
+    /// message is dropped to make room (head-drop for minimal latency on live data), and
+    /// counted in the gateway counters.
     ///
     /// `log_time` is the message log time in nanoseconds since epoch.
     pub fn send(&self, data: Bytes, log_time: u64) {
-        let msg = (data, log_time);
-        match self.tx.try_send(msg) {
-            Ok(()) => {}
-            Err(flume::TrySendError::Full(msg)) => {
-                let _ = self.rx.try_recv();
-                let _ = self.tx.try_send(msg);
-            }
-            Err(flume::TrySendError::Disconnected(_)) => {
-                warn!("point cloud publisher channel closed");
-            }
+        match send_head_drop(&self.tx, &self.rx, (data, log_time)) {
+            Ok(dropped) => self.counters.record_point_cloud_queue_drops(dropped),
+            Err(_) => warn!("point cloud publisher channel closed"),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::remote_access::PointCloudCompression;
+    use crate::remote_access::point_cloud_transcode::PointCloudInputSchema;
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn counts_messages_dropped_from_full_queue() {
+        let counters = Arc::new(GatewayCounters::default());
+        let publisher = PointCloudPublisher::new(
+            &Handle::current(),
+            Weak::new(),
+            ChannelId::new(1),
+            "/cloud".to_string(),
+            PointCloudCompressionConfig {
+                input_schema: PointCloudInputSchema::FoxgloveProtobuf,
+                options: PointCloudCompression::default(),
+            },
+            counters.clone(),
+        );
+
+        // The background task cannot run until this test yields, so the queue fills
+        // after `CHANNEL_CAPACITY` messages and each later message evicts the oldest.
+        for log_time in 0..5 {
+            publisher.send(Bytes::new(), log_time);
+        }
+
+        assert_eq!(
+            counters.snapshot().point_cloud_queue_drops,
+            5 - PointCloudPublisher::CHANNEL_CAPACITY as u64
+        );
     }
 }

@@ -55,6 +55,7 @@ use crate::{
         participant::{Participant, ParticipantRegistry, ParticipantWriter},
         protocol_version,
         rtt_tracker::RttTracker,
+        stats::{GatewayCounters, GatewayStats},
     },
 };
 
@@ -80,6 +81,29 @@ fn is_expected_stream_end(e: &std::io::Error) -> bool {
         e.get_ref().and_then(|e| e.downcast_ref::<StreamError>()),
         Some(StreamError::AbnormalEnd(_))
     )
+}
+
+/// Sends a message on a bounded queue without blocking. If the queue is full, the oldest
+/// message is dropped to make room (head-drop for minimal latency on live data).
+///
+/// Returns the number of messages dropped, which can include `msg` itself if another
+/// producer refills the queue first, or an error if the queue is disconnected.
+fn send_head_drop<T>(
+    tx: &flume::Sender<T>,
+    rx: &flume::Receiver<T>,
+    msg: T,
+) -> std::result::Result<u64, flume::SendError<T>> {
+    let msg = match tx.try_send(msg) {
+        Ok(()) => return Ok(0),
+        Err(flume::TrySendError::Full(msg)) => msg,
+        Err(flume::TrySendError::Disconnected(msg)) => return Err(flume::SendError(msg)),
+    };
+    let evicted = u64::from(rx.try_recv().is_ok());
+    match tx.try_send(msg) {
+        Ok(()) => Ok(evicted),
+        Err(flume::TrySendError::Full(_)) => Ok(evicted + 1),
+        Err(flume::TrySendError::Disconnected(msg)) => Err(flume::SendError(msg)),
+    }
 }
 
 #[derive(Debug)]
@@ -366,6 +390,8 @@ pub(super) struct RemoteAccessSession {
     /// to `foxglove.CompressedPointCloud` before delivery to participants. `None` applies
     /// the default: compress every compressible Lossy channel with the default options.
     point_cloud_compression: Option<Arc<dyn PointCloudCompressionPolicy>>,
+    /// Drop and reset counters, owned by the connection so they outlive the session.
+    counters: Arc<GatewayCounters>,
 }
 
 impl Sink for RemoteAccessSession {
@@ -613,6 +639,7 @@ pub(super) struct SessionParams {
     pub(super) video_codec_override: Option<VideoCodec>,
     pub(super) video_encoder: super::gateway::VideoEncoderBackend,
     pub(super) point_cloud_compression: Option<Arc<dyn PointCloudCompressionPolicy>>,
+    pub(super) counters: Arc<GatewayCounters>,
 }
 
 impl RemoteAccessSession {
@@ -653,6 +680,7 @@ impl RemoteAccessSession {
             active_compression_warnings: parking_lot::Mutex::new(HashMap::new()),
             video_encoder: params.video_encoder,
             point_cloud_compression: params.point_cloud_compression,
+            counters: params.counters,
         })
     }
 
@@ -679,6 +707,22 @@ impl RemoteAccessSession {
             participants: self.participant_registry.participant_count(),
             subscriptions: state.subscription_count(),
             video_tracks: state.video_track_count(),
+        }
+    }
+
+    /// Returns the gateway counters, with the fields describing this session filled in.
+    pub(super) fn gateway_stats(&self) -> GatewayStats {
+        let ice_rtt = self
+            .ice_rtt_tracker
+            .lock()
+            .latest_ms()
+            .and_then(|rtt_ms| Duration::try_from_secs_f64(rtt_ms / 1000.0).ok());
+        GatewayStats {
+            session_active: true,
+            viewer_count: self.participant_registry.participant_count(),
+            ice_rtt,
+            connection_quality: Some(self.room.local_participant().connection_quality().into()),
+            ..self.counters.snapshot()
         }
     }
 
@@ -2100,14 +2144,27 @@ impl RemoteAccessSession {
             return;
         };
 
-        warn!(
-            remote_access_session_id,
-            participant_identity = %participant_id,
-            sid = %sid,
-            joined_at,
-            version = %version,
-            "resetting participant after control-plane failure",
-        );
+        // Resets are throttled gateway-wide, since a congested link can reset every viewer.
+        if let Some(participant_resets) = self.counters.record_participant_reset() {
+            warn!(
+                remote_access_session_id,
+                participant_identity = %participant_id,
+                sid = %sid,
+                joined_at,
+                version = %version,
+                participant_resets,
+                "resetting participant after control-plane failure",
+            );
+        } else {
+            debug!(
+                remote_access_session_id,
+                participant_identity = %participant_id,
+                sid = %sid,
+                joined_at,
+                version = %version,
+                "resetting participant after control-plane failure",
+            );
+        }
         if let Err(e) = self.add_participant(participant_id, sid, joined_at).await {
             error!(
                 remote_access_session_id,
@@ -2682,6 +2739,7 @@ impl RemoteAccessSession {
                 video_source.clone(),
                 input_schema,
                 self.video_metadata_tx.clone(),
+                self.counters.clone(),
             ));
             let expected_publisher = publisher.clone();
 
@@ -2798,6 +2856,7 @@ impl RemoteAccessSession {
                     channel_id,
                     topic,
                     config,
+                    self.counters.clone(),
                 )),
             );
         }
@@ -2885,6 +2944,7 @@ impl RemoteAccessSession {
                 *channel_id,
                 self.cancellation_token.clone(),
                 self.max_data_track_message_size,
+                self.counters.clone(),
             );
             self.channel_registry
                 .write()
@@ -2927,6 +2987,16 @@ mod tests {
 
         let reset = std::io::Error::from(std::io::ErrorKind::ConnectionReset);
         assert!(!is_expected_stream_end(&reset));
+    }
+
+    #[test]
+    fn send_head_drop_evicts_oldest_and_reports_drop_count() {
+        let (tx, rx) = flume::bounded(2);
+        assert_eq!(send_head_drop(&tx, &rx, 1).unwrap(), 0);
+        assert_eq!(send_head_drop(&tx, &rx, 2).unwrap(), 0);
+        assert_eq!(send_head_drop(&tx, &rx, 3).unwrap(), 1);
+        assert_eq!(send_head_drop(&tx, &rx, 4).unwrap(), 1);
+        assert_eq!(rx.drain().collect::<Vec<_>>(), vec![3, 4]);
     }
 
     fn make_participant_with_rx(name: &str) -> (Arc<Participant>, flume::Receiver<Bytes>) {

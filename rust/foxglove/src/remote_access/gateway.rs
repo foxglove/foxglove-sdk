@@ -22,7 +22,7 @@ use super::suppress_video_transcode::{SuppressVideoTranscode, SuppressVideoTrans
 
 use super::connection::{ConnectionParams, ConnectionStatus, RemoteAccessConnection};
 use super::session::MIN_DATA_TRACK_MESSAGE_SIZE;
-use super::{Capability, Listener};
+use super::{Capability, GatewayStats, Listener};
 use crate::remote_common::parameters::ParameterHandler;
 
 /// A handle to the remote access gateway connection.
@@ -48,6 +48,14 @@ impl GatewayHandle {
     /// Returns the current connection status.
     pub fn connection_status(&self) -> ConnectionStatus {
         self.connection.status()
+    }
+
+    /// Returns a snapshot of the gateway's statistics.
+    ///
+    /// See [`GatewayStats`] for details of each field. This is cheap enough to poll
+    /// periodically, for example to export the counters to a metrics system.
+    pub fn stats(&self) -> GatewayStats {
+        self.connection.stats()
     }
 
     /// Returns the sink ID of the current session, if one is active.
@@ -812,6 +820,15 @@ mod tests {
         std::thread::sleep(std::time::Duration::from_millis(10));
         let handle = GatewayHandle::with_runner(runner, rt.handle().clone());
         // Should not panic; should log a warning.
+        handle.stop_blocking();
+    }
+
+    #[test]
+    fn stats_without_session_reports_zero_counters_and_no_session_fields() {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let runner = rt.spawn(async {});
+        let handle = GatewayHandle::with_runner(runner, rt.handle().clone());
+        assert_eq!(handle.stats(), GatewayStats::default());
         handle.stop_blocking();
     }
 

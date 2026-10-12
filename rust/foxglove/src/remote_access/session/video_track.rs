@@ -10,6 +10,8 @@ use tracing::{debug, error, warn};
 
 use crate::RawChannel;
 use crate::img2yuv::{ImageEncoding, ImageMessage, Yuv420Buffer};
+use crate::remote_access::session::send_head_drop;
+use crate::remote_access::stats::GatewayCounters;
 use crate::throttler::Throttler;
 
 /// Minimum width and height (in pixels) that we will hand to the libwebrtc video encoder.
@@ -179,6 +181,8 @@ pub(crate) struct VideoPublisher {
     video_source: NativeVideoSource,
     /// The latest video metadata observed by the background transcoding task.
     metadata: Arc<ArcSwapOption<VideoMetadata>>,
+    /// Gateway-lifetime drop counters.
+    counters: Arc<GatewayCounters>,
 }
 
 impl VideoPublisher {
@@ -194,6 +198,7 @@ impl VideoPublisher {
         video_source: NativeVideoSource,
         input_schema: VideoInputSchema,
         video_metadata_tx: watch::Sender<()>,
+        counters: Arc<GatewayCounters>,
     ) -> Self {
         let (tx, rx) = flume::bounded::<(Bytes, u64)>(Self::CHANNEL_CAPACITY);
         let metadata: Arc<ArcSwapOption<VideoMetadata>> = Arc::new(ArcSwapOption::empty());
@@ -240,6 +245,7 @@ impl VideoPublisher {
             rx,
             video_source,
             metadata,
+            counters,
         }
     }
 
@@ -249,21 +255,15 @@ impl VideoPublisher {
     }
 
     /// Send a frame for encoding. Non-blocking: if the channel is full, the oldest frame
-    /// is dropped to make room (head-drop for minimal latency on live video).
+    /// is dropped to make room (head-drop for minimal latency on live video), and counted
+    /// in the gateway counters.
     ///
     /// `log_time_ns` is the message log time in nanoseconds since epoch, forwarded to the
     /// video encoder as frame timestamp.
     pub fn send(&self, data: Bytes, log_time_ns: u64) {
-        let msg = (data, log_time_ns);
-        match self.tx.try_send(msg) {
-            Ok(()) => {}
-            Err(flume::TrySendError::Full(msg)) => {
-                let _ = self.rx.try_recv();
-                let _ = self.tx.try_send(msg);
-            }
-            Err(flume::TrySendError::Disconnected(_)) => {
-                warn!("video publisher channel closed");
-            }
+        match send_head_drop(&self.tx, &self.rx, (data, log_time_ns)) {
+            Ok(dropped) => self.counters.record_video_queue_drops(dropped),
+            Err(_) => warn!("video publisher channel closed"),
         }
     }
 }
