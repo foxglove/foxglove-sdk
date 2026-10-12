@@ -1,22 +1,284 @@
+use std::borrow::Cow;
+use std::collections::BTreeMap;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
+use bytes::BufMut;
+use serde::Serialize;
+
+use crate::remote_access::ConnectionStatus;
 use crate::throttler::Throttler;
+use crate::{Channel, ChannelBuilder, Context, Encode, Schema};
+
+/// The default topic for remote access gateway statistics. See [`StatsOptions`].
+pub const DEFAULT_STATS_TOPIC: &str = "/remote_access_stats";
+
+/// The default interval between remote access gateway statistics messages. See
+/// [`StatsOptions`].
+pub const DEFAULT_STATS_INTERVAL: Duration = Duration::from_secs(1);
+
+/// Shorter stats intervals are clamped to this.
+const MIN_STATS_INTERVAL: Duration = Duration::from_millis(100);
 
 /// Minimum interval between gateway-wide warnings for each warned drop or reset cause.
 const WARN_INTERVAL: Duration = Duration::from_secs(30);
 
-/// The quality of the gateway's connection to the remote access server, as estimated by the
-/// server.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum ConnectionQuality {
-    /// The connection is excellent.
+/// JSON Schema (draft 2020-12) describing [`RemoteAccessStats`].
+const REMOTE_ACCESS_STATS_JSON_SCHEMA: &str = r#"{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RemoteAccessStats",
+  "description": "Statistics for a Foxglove remote access gateway. Counters are cumulative over the lifetime of the gateway.",
+  "type": "object",
+  "properties": {
+    "state": {
+      "type": "string",
+      "enum": ["connecting", "connected", "shutting_down"],
+      "description": "The gateway's connection to the Foxglove platform. 'connected' means the gateway is available for remote access, whether or not a viewer session is active. 'shutting_down' is reported in the last message, after the gateway is stopped."
+    },
+    "session_active": {
+      "type": "boolean",
+      "description": "Whether the gateway is joined to a remote access session, which happens when a viewer requests a connection."
+    },
+    "viewer_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "The number of viewers connected to the current session, or 0 if no session is active."
+    },
+    "rtt_ms": {
+      "type": "number",
+      "description": "The most recent ICE round-trip time between the gateway and the remote access server, in milliseconds. It is sampled every 30 seconds during a session, and is omitted if no session is active or the session has not been sampled yet."
+    },
+    "connection_quality": {
+      "type": "string",
+      "enum": ["excellent", "good", "poor", "lost"],
+      "description": "The remote access server's estimate of the quality of the gateway's connection. Omitted if no session is active."
+    },
+    "reconnects": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "The number of times the gateway lost its connection to the Foxglove platform and started reconnecting."
+    },
+    "participant_resets": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "The number of times a viewer was disconnected and reconnected because its control message queue overflowed or a write to it failed."
+    },
+    "data_track_full": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Messages dropped because a data track's send queue was full. Viewers also see these as gaps in the channel's sequence numbers."
+    },
+    "data_track_not_ready": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Messages dropped because a channel's data track was not published. This is expected for a few milliseconds after each channel is advertised."
+    },
+    "oversized": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Messages dropped because they exceeded the maximum data track message size."
+    },
+    "video_queue": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Image messages dropped before video encoding because the encoder was slower than the log rate."
+    },
+    "point_cloud_queue": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Point cloud messages dropped before compression because compression was slower than the log rate."
+    },
+    "video_encode_errors": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Image messages that could not be encoded as video, for example because they could not be decoded or were below the minimum encoder size."
+    },
+    "topics": {
+      "type": "array",
+      "description": "Drop counters for each topic with at least one nonzero counter. The counters for each topic add up to the gateway-wide counters of the same name.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "topic": {
+            "type": "string",
+            "description": "The channel topic."
+          },
+          "data_track_full": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Messages dropped because the data track's send queue was full."
+          },
+          "data_track_not_ready": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Messages dropped because the data track was not published."
+          },
+          "oversized": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Messages dropped because they exceeded the maximum data track message size."
+          },
+          "video_queue": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Image messages dropped before video encoding."
+          },
+          "point_cloud_queue": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Point cloud messages dropped before compression."
+          },
+          "video_encode_errors": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Image messages that could not be encoded as video."
+          }
+        }
+      }
+    }
+  }
+}"#;
+
+/// Options for the statistics that a remote access gateway publishes, enabled with
+/// [`Gateway::stats`](crate::remote_access::Gateway::stats).
+///
+/// The gateway logs a JSON message with the `foxglove.RemoteAccessStats` JSON Schema to a
+/// channel in its context, every [`interval`](Self::interval). It keeps publishing while it is
+/// dormant or reconnecting, and publishes a last message with the `shutting_down` state when it
+/// is stopped. Like any other channel in the context, remote viewers receive it too.
+///
+/// # Published fields
+///
+/// Counters are cumulative over the lifetime of the gateway. They are not reset when a session
+/// ends or the gateway reconnects.
+///
+/// | Field | Type | Description |
+/// | --- | --- | --- |
+/// | `state` | string | `connecting`, `connected`, or `shutting_down`. `connected` means the gateway is available for remote access, whether or not a viewer session is active. |
+/// | `session_active` | boolean | Whether the gateway is joined to a remote access session, which happens when a viewer requests a connection. |
+/// | `viewer_count` | integer | The number of viewers connected to the current session. |
+/// | `rtt_ms` | number | The most recent ICE round-trip time to the remote access server, sampled every 30 seconds. Omitted if no session is active or the session has not been sampled yet. |
+/// | `connection_quality` | string | `excellent`, `good`, `poor`, or `lost`. Omitted if no session is active. |
+/// | `reconnects` | integer | Times the gateway lost its connection to the Foxglove platform and started reconnecting. |
+/// | `participant_resets` | integer | Times a viewer was disconnected and reconnected because its control message queue overflowed or a write to it failed. See [`Gateway::message_backlog_size`](crate::remote_access::Gateway::message_backlog_size). |
+/// | `data_track_full` | integer | Messages dropped because a data track's send queue was full. |
+/// | `data_track_not_ready` | integer | Messages dropped because a channel's data track was not published, which is expected briefly after each channel is advertised. |
+/// | `oversized` | integer | Messages dropped for exceeding [`Gateway::max_data_track_message_size`](crate::remote_access::Gateway::max_data_track_message_size). |
+/// | `video_queue` | integer | Image messages dropped before video encoding because the encoder was slower than the log rate. |
+/// | `point_cloud_queue` | integer | Point cloud messages dropped before compression because compression was slower than the log rate. |
+/// | `video_encode_errors` | integer | Image messages that could not be encoded as video. |
+/// | `topics` | array | The drop counters above for each topic with a nonzero counter, as objects with a `topic` field. |
+///
+/// Of the drops and resets, only `data_track_full` and `participant_resets` are logged as
+/// warnings, throttled across the gateway. The others are expected in normal operation.
+#[must_use]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StatsOptions {
+    topic: String,
+    interval: Duration,
+}
+
+impl Default for StatsOptions {
+    fn default() -> Self {
+        Self {
+            topic: DEFAULT_STATS_TOPIC.to_string(),
+            interval: DEFAULT_STATS_INTERVAL,
+        }
+    }
+}
+
+impl StatsOptions {
+    /// Creates stats options with the default topic and interval.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Sets the topic of the stats channel.
+    ///
+    /// Defaults to [`DEFAULT_STATS_TOPIC`].
+    pub fn topic(mut self, topic: impl Into<String>) -> Self {
+        self.topic = topic.into();
+        self
+    }
+
+    /// Sets the interval between stats messages.
+    ///
+    /// The interval is clamped to a minimum of 100 ms. Defaults to [`DEFAULT_STATS_INTERVAL`].
+    pub fn interval(mut self, interval: Duration) -> Self {
+        self.interval = interval;
+        self
+    }
+
+    /// Creates the stats channel on `context`.
+    pub(crate) fn into_publisher(self, context: &Arc<Context>) -> StatsPublisher {
+        let interval = if self.interval < MIN_STATS_INTERVAL {
+            tracing::info!(
+                "remote access stats interval {:?} is below minimum {MIN_STATS_INTERVAL:?}, clamping",
+                self.interval
+            );
+            MIN_STATS_INTERVAL
+        } else {
+            self.interval
+        };
+        let channel = ChannelBuilder::new(self.topic)
+            .context(context)
+            .build::<RemoteAccessStats>();
+        StatsPublisher { channel, interval }
+    }
+}
+
+/// The stats channel and publishing interval for a gateway with stats enabled.
+#[derive(Debug)]
+pub(crate) struct StatsPublisher {
+    channel: Channel<RemoteAccessStats>,
+    interval: Duration,
+}
+
+impl StatsPublisher {
+    pub fn interval(&self) -> Duration {
+        self.interval
+    }
+
+    /// Logs a stats message, which is only built if the channel has sinks.
+    pub fn publish(&self, stats: impl FnOnce() -> RemoteAccessStats) {
+        if self.channel.has_sinks() {
+            self.channel.log(&stats());
+        }
+    }
+
+    /// Closes the stats channel, removing it from the context.
+    pub fn close(&self) {
+        self.channel.close();
+    }
+}
+
+/// The gateway state reported in stats.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+enum StatsState {
+    Connecting,
+    Connected,
+    ShuttingDown,
+}
+
+impl From<ConnectionStatus> for StatsState {
+    fn from(status: ConnectionStatus) -> Self {
+        match status {
+            ConnectionStatus::Connecting => Self::Connecting,
+            ConnectionStatus::Connected => Self::Connected,
+            ConnectionStatus::ShuttingDown | ConnectionStatus::Shutdown => Self::ShuttingDown,
+        }
+    }
+}
+
+/// The remote access server's estimate of the quality of the gateway's connection.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub(crate) enum ConnectionQuality {
     Excellent,
-    /// The connection is good.
     Good,
-    /// The connection is poor.
     Poor,
-    /// The connection has been lost.
     Lost,
 }
 
@@ -31,73 +293,122 @@ impl From<livekit::prelude::ConnectionQuality> for ConnectionQuality {
     }
 }
 
-/// A snapshot of remote access gateway statistics, returned by
-/// [`GatewayHandle::stats`](crate::remote_access::GatewayHandle::stats).
-///
-/// The drop and reset counters are cumulative over the lifetime of the gateway. They are never
-/// reset, including when the gateway returns to its dormant state or reconnects, so the
-/// difference between two snapshots is the number of events in between. Each counter covers a
-/// single cause; there is no per-channel breakdown.
-///
-/// Some drops are expected in normal operation and are not logged as warnings:
-/// [`data_track_not_ready_drops`](Self::data_track_not_ready_drops) for the first few
-/// milliseconds after each channel is advertised, and
-/// [`video_queue_drops`](Self::video_queue_drops) and
-/// [`point_cloud_queue_drops`](Self::point_cloud_queue_drops) whenever encoding is slower than
-/// the log rate. [`data_track_full_drops`](Self::data_track_full_drops) and
-/// [`participant_resets`](Self::participant_resets) indicate that the link to viewers is
-/// congested, and are logged as throttled warnings.
-///
-/// The remaining fields describe the current session, if any. A session is active while the
-/// gateway is joined to a remote access room, which happens when a viewer requests a
-/// connection.
-#[derive(Debug, Clone, Default, PartialEq)]
-#[non_exhaustive]
-pub struct GatewayStats {
-    /// Messages dropped because the channel's data track was not published: either it was
-    /// still being published after the channel was advertised, or it had been unpublished.
-    pub data_track_not_ready_drops: u64,
-    /// Messages dropped because the channel's data track send queue was full.
-    ///
-    /// These messages had already been assigned a sequence number, so viewers also observe them
-    /// as gaps in the sequence.
-    pub data_track_full_drops: u64,
-    /// Messages dropped because they exceeded the maximum data track message size. See
-    /// [`Gateway::max_data_track_message_size`](crate::remote_access::Gateway::max_data_track_message_size).
-    pub oversized_drops: u64,
-    /// Image messages dropped from a full video encoding queue, before encoding.
-    pub video_queue_drops: u64,
-    /// Point cloud messages dropped from a full point cloud compression queue, before
-    /// compression.
-    pub point_cloud_queue_drops: u64,
-    /// Viewers that were disconnected and reconnected after a control-plane failure, either
-    /// because their control message queue overflowed or because a write to their control
-    /// stream failed. See
-    /// [`Gateway::message_backlog_size`](crate::remote_access::Gateway::message_backlog_size).
-    pub participant_resets: u64,
-    /// Whether the gateway is currently joined to a remote access session.
-    pub session_active: bool,
-    /// The number of viewers connected to the current session, or zero if no session is
-    /// active.
+/// The stats that describe an active session.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(crate) struct SessionSnapshot {
     pub viewer_count: usize,
-    /// The most recent ICE round-trip time for the current session.
-    ///
-    /// This is sampled every 30 seconds, and is `None` if no session is active or if the
-    /// session has not been sampled yet.
-    pub ice_rtt: Option<Duration>,
-    /// The quality of the gateway's connection for the current session, or `None` if no
-    /// session is active.
-    pub connection_quality: Option<ConnectionQuality>,
+    pub rtt_ms: Option<f64>,
+    pub connection_quality: ConnectionQuality,
 }
 
-/// Gateway-lifetime drop and reset counters, shared by every session the gateway runs.
+/// A remote access stats message, encoded as JSON with the `foxglove.RemoteAccessStats` JSON
+/// Schema.
+#[derive(Debug, Serialize)]
+pub(crate) struct RemoteAccessStats {
+    state: StatsState,
+    session_active: bool,
+    viewer_count: usize,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    rtt_ms: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    connection_quality: Option<ConnectionQuality>,
+    reconnects: u64,
+    participant_resets: u64,
+    #[serde(flatten)]
+    drops: DropStats,
+    topics: Vec<TopicStats>,
+}
+
+impl RemoteAccessStats {
+    pub fn new(
+        status: ConnectionStatus,
+        session: Option<SessionSnapshot>,
+        counters: &GatewayCounters,
+    ) -> Self {
+        Self {
+            state: status.into(),
+            session_active: session.is_some(),
+            viewer_count: session.map_or(0, |s| s.viewer_count),
+            rtt_ms: session.and_then(|s| s.rtt_ms),
+            connection_quality: session.map(|s| s.connection_quality),
+            reconnects: counters.reconnects.load(Ordering::Relaxed),
+            participant_resets: counters.participant_resets.load(Ordering::Relaxed),
+            drops: counters.totals.load(),
+            topics: counters.topic_stats(),
+        }
+    }
+}
+
+impl Encode for RemoteAccessStats {
+    type Error = serde_json::Error;
+
+    fn get_schema() -> Option<Schema> {
+        Some(Schema::new(
+            "foxglove.RemoteAccessStats".to_string(),
+            "jsonschema".to_string(),
+            Cow::Borrowed(REMOTE_ACCESS_STATS_JSON_SCHEMA.as_bytes()),
+        ))
+    }
+
+    fn get_message_encoding() -> String {
+        "json".to_string()
+    }
+
+    fn encode(&self, buf: &mut impl BufMut) -> Result<(), Self::Error> {
+        serde_json::to_writer(buf.writer(), self)
+    }
+}
+
+/// Drop counts by cause, for a topic or for the whole gateway.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize)]
+struct DropStats {
+    data_track_full: u64,
+    data_track_not_ready: u64,
+    oversized: u64,
+    video_queue: u64,
+    point_cloud_queue: u64,
+    video_encode_errors: u64,
+}
+
+#[derive(Debug, Serialize)]
+struct TopicStats {
+    topic: String,
+    #[serde(flatten)]
+    drops: DropStats,
+}
+
+#[derive(Debug, Default)]
+struct DropCounters {
+    data_track_full: AtomicU64,
+    data_track_not_ready: AtomicU64,
+    oversized: AtomicU64,
+    video_queue: AtomicU64,
+    point_cloud_queue: AtomicU64,
+    video_encode_errors: AtomicU64,
+}
+
+impl DropCounters {
+    fn load(&self) -> DropStats {
+        DropStats {
+            data_track_full: self.data_track_full.load(Ordering::Relaxed),
+            data_track_not_ready: self.data_track_not_ready.load(Ordering::Relaxed),
+            oversized: self.oversized.load(Ordering::Relaxed),
+            video_queue: self.video_queue.load(Ordering::Relaxed),
+            point_cloud_queue: self.point_cloud_queue.load(Ordering::Relaxed),
+            video_encode_errors: self.video_encode_errors.load(Ordering::Relaxed),
+        }
+    }
+}
+
+/// Gateway-lifetime counters, shared by every session the gateway runs.
+///
+/// Counting is always on, so that the counts are the same whether or not stats are published.
 #[derive(Debug)]
 pub(crate) struct GatewayCounters {
-    data_track_not_ready_drops: AtomicU64,
-    data_track_full_drops: AtomicU64,
-    oversized_drops: AtomicU64,
-    video_queue_drops: AtomicU64,
-    point_cloud_queue_drops: AtomicU64,
+    totals: DropCounters,
+    /// Per-topic drop counters, added when a topic first counts a drop.
+    topics: parking_lot::Mutex<BTreeMap<String, Arc<DropCounters>>>,
+    reconnects: AtomicU64,
     participant_resets: AtomicU64,
     data_track_full_throttler: parking_lot::Mutex<Throttler>,
     participant_reset_throttler: parking_lot::Mutex<Throttler>,
@@ -106,11 +417,9 @@ pub(crate) struct GatewayCounters {
 impl Default for GatewayCounters {
     fn default() -> Self {
         Self {
-            data_track_not_ready_drops: AtomicU64::new(0),
-            data_track_full_drops: AtomicU64::new(0),
-            oversized_drops: AtomicU64::new(0),
-            video_queue_drops: AtomicU64::new(0),
-            point_cloud_queue_drops: AtomicU64::new(0),
+            totals: DropCounters::default(),
+            topics: parking_lot::Mutex::default(),
+            reconnects: AtomicU64::new(0),
             participant_resets: AtomicU64::new(0),
             data_track_full_throttler: parking_lot::Mutex::new(Throttler::new(WARN_INTERVAL)),
             participant_reset_throttler: parking_lot::Mutex::new(Throttler::new(WARN_INTERVAL)),
@@ -119,37 +428,17 @@ impl Default for GatewayCounters {
 }
 
 impl GatewayCounters {
-    pub fn record_data_track_not_ready_drop(&self) {
-        self.data_track_not_ready_drops
-            .fetch_add(1, Ordering::Relaxed);
-    }
-
-    /// Counts a data-track-full drop. Returns the cumulative count if a warning is due, which
-    /// happens at most once per [`WARN_INTERVAL`] across the gateway.
-    #[must_use]
-    pub fn record_data_track_full_drop(&self) -> Option<u64> {
-        let total = self.data_track_full_drops.fetch_add(1, Ordering::Relaxed) + 1;
-        self.data_track_full_throttler
-            .lock()
-            .try_acquire()
-            .then_some(total)
-    }
-
-    pub fn record_oversized_drop(&self) {
-        self.oversized_drops.fetch_add(1, Ordering::Relaxed);
-    }
-
-    pub fn record_video_queue_drops(&self, count: u64) {
-        if count > 0 {
-            self.video_queue_drops.fetch_add(count, Ordering::Relaxed);
+    /// Returns the drop counters for `topic`.
+    pub fn for_topic(self: &Arc<Self>, topic: &str) -> TopicCounters {
+        TopicCounters {
+            gateway: self.clone(),
+            topic: topic.into(),
+            counters: OnceLock::new(),
         }
     }
 
-    pub fn record_point_cloud_queue_drops(&self, count: u64) {
-        if count > 0 {
-            self.point_cloud_queue_drops
-                .fetch_add(count, Ordering::Relaxed);
-        }
+    pub fn record_reconnect(&self) {
+        self.reconnects.fetch_add(1, Ordering::Relaxed);
     }
 
     /// Counts a participant reset. Returns the cumulative count if a warning is due, which
@@ -163,64 +452,369 @@ impl GatewayCounters {
             .then_some(total)
     }
 
-    /// Returns a snapshot with the counters filled in, and no active session.
-    pub fn snapshot(&self) -> GatewayStats {
-        GatewayStats {
-            data_track_not_ready_drops: self.data_track_not_ready_drops.load(Ordering::Relaxed),
-            data_track_full_drops: self.data_track_full_drops.load(Ordering::Relaxed),
-            oversized_drops: self.oversized_drops.load(Ordering::Relaxed),
-            video_queue_drops: self.video_queue_drops.load(Ordering::Relaxed),
-            point_cloud_queue_drops: self.point_cloud_queue_drops.load(Ordering::Relaxed),
-            participant_resets: self.participant_resets.load(Ordering::Relaxed),
-            ..GatewayStats::default()
+    fn topic_stats(&self) -> Vec<TopicStats> {
+        self.topics
+            .lock()
+            .iter()
+            .map(|(topic, counters)| TopicStats {
+                topic: topic.clone(),
+                drops: counters.load(),
+            })
+            .filter(|stats| stats.drops != DropStats::default())
+            .collect()
+    }
+}
+
+#[cfg(test)]
+impl GatewayCounters {
+    /// Returns a stats message with these counters, and no session, as JSON.
+    pub fn to_json(&self) -> serde_json::Value {
+        serde_json::to_value(RemoteAccessStats::new(
+            ConnectionStatus::Connected,
+            None,
+            self,
+        ))
+        .expect("stats serialize as JSON")
+    }
+}
+
+/// Drop counters for one topic, which also count toward the gateway-wide totals.
+#[derive(Debug, Clone)]
+pub(crate) struct TopicCounters {
+    gateway: Arc<GatewayCounters>,
+    topic: Arc<str>,
+    /// Registered with the gateway on the first drop, so that only topics with drops are
+    /// tracked.
+    counters: OnceLock<Arc<DropCounters>>,
+}
+
+impl TopicCounters {
+    /// Adds `count` to a counter for this topic and the gateway, returning the gateway total.
+    fn add(&self, counter: fn(&DropCounters) -> &AtomicU64, count: u64) -> u64 {
+        let topic_counters = self.counters.get_or_init(|| {
+            self.gateway
+                .topics
+                .lock()
+                .entry(self.topic.to_string())
+                .or_default()
+                .clone()
+        });
+        counter(topic_counters).fetch_add(count, Ordering::Relaxed);
+        counter(&self.gateway.totals).fetch_add(count, Ordering::Relaxed) + count
+    }
+
+    pub fn record_data_track_not_ready_drop(&self) {
+        self.add(|c| &c.data_track_not_ready, 1);
+    }
+
+    /// Counts a data-track-full drop. Returns the gateway-wide cumulative count if a warning is
+    /// due, which happens at most once per [`WARN_INTERVAL`] across the gateway.
+    #[must_use]
+    pub fn record_data_track_full_drop(&self) -> Option<u64> {
+        let total = self.add(|c| &c.data_track_full, 1);
+        self.gateway
+            .data_track_full_throttler
+            .lock()
+            .try_acquire()
+            .then_some(total)
+    }
+
+    pub fn record_oversized_drop(&self) {
+        self.add(|c| &c.oversized, 1);
+    }
+
+    pub fn record_video_queue_drops(&self, count: u64) {
+        if count > 0 {
+            self.add(|c| &c.video_queue, count);
         }
+    }
+
+    pub fn record_point_cloud_queue_drops(&self, count: u64) {
+        if count > 0 {
+            self.add(|c| &c.point_cloud_queue, count);
+        }
+    }
+
+    pub fn record_video_encode_error(&self) {
+        self.add(|c| &c.video_encode_errors, 1);
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeSet;
+
+    use serde_json::json;
+
     use super::*;
+    use crate::testutil::RecordingSink;
+
+    fn to_json(stats: &RemoteAccessStats) -> serde_json::Value {
+        let mut buf = Vec::new();
+        stats.encode(&mut buf).expect("stats encode");
+        serde_json::from_slice(&buf).expect("stats encode as JSON")
+    }
+
+    fn keys(value: &serde_json::Value) -> BTreeSet<String> {
+        value
+            .as_object()
+            .expect("value is a JSON object")
+            .keys()
+            .cloned()
+            .collect()
+    }
 
     #[test]
-    fn snapshot_reports_cumulative_counts_per_cause() {
-        let counters = GatewayCounters::default();
-        counters.record_data_track_not_ready_drop();
-        counters.record_data_track_not_ready_drop();
-        let _ = counters.record_data_track_full_drop();
-        counters.record_oversized_drop();
-        counters.record_oversized_drop();
-        counters.record_oversized_drop();
-        counters.record_video_queue_drops(4);
-        counters.record_point_cloud_queue_drops(5);
+    fn counts_drops_per_topic_and_in_gateway_totals() {
+        let counters = Arc::new(GatewayCounters::default());
+        let imu = counters.for_topic("/imu");
+        let camera = counters.for_topic("/camera");
+        let _quiet = counters.for_topic("/quiet");
+
+        imu.record_data_track_not_ready_drop();
+        imu.record_data_track_not_ready_drop();
+        let _ = imu.record_data_track_full_drop();
+        imu.record_oversized_drop();
+        camera.record_data_track_not_ready_drop();
+        camera.record_video_queue_drops(4);
+        camera.record_video_queue_drops(0);
+        camera.record_video_encode_error();
+        counters
+            .for_topic("/lidar")
+            .record_point_cloud_queue_drops(5);
+        counters.record_reconnect();
         let _ = counters.record_participant_reset();
 
-        let stats = counters.snapshot();
-        assert_eq!(stats.data_track_not_ready_drops, 2);
-        assert_eq!(stats.data_track_full_drops, 1);
-        assert_eq!(stats.oversized_drops, 3);
-        assert_eq!(stats.video_queue_drops, 4);
-        assert_eq!(stats.point_cloud_queue_drops, 5);
-        assert_eq!(stats.participant_resets, 1);
-        assert!(!stats.session_active);
-        assert_eq!(stats.viewer_count, 0);
-        assert_eq!(stats.ice_rtt, None);
-        assert_eq!(stats.connection_quality, None);
+        let stats = to_json(&RemoteAccessStats::new(
+            ConnectionStatus::Connected,
+            None,
+            &counters,
+        ));
+        assert_eq!(
+            stats,
+            json!({
+                "state": "connected",
+                "session_active": false,
+                "viewer_count": 0,
+                "reconnects": 1,
+                "participant_resets": 1,
+                "data_track_full": 1,
+                "data_track_not_ready": 3,
+                "oversized": 1,
+                "video_queue": 4,
+                "point_cloud_queue": 5,
+                "video_encode_errors": 1,
+                // Sorted by topic, and only topics with drops are listed.
+                "topics": [
+                    {
+                        "topic": "/camera",
+                        "data_track_full": 0,
+                        "data_track_not_ready": 1,
+                        "oversized": 0,
+                        "video_queue": 4,
+                        "point_cloud_queue": 0,
+                        "video_encode_errors": 1,
+                    },
+                    {
+                        "topic": "/imu",
+                        "data_track_full": 1,
+                        "data_track_not_ready": 2,
+                        "oversized": 1,
+                        "video_queue": 0,
+                        "point_cloud_queue": 0,
+                        "video_encode_errors": 0,
+                    },
+                    {
+                        "topic": "/lidar",
+                        "data_track_full": 0,
+                        "data_track_not_ready": 0,
+                        "oversized": 0,
+                        "video_queue": 0,
+                        "point_cloud_queue": 5,
+                        "video_encode_errors": 0,
+                    },
+                ],
+            })
+        );
+    }
+
+    #[test]
+    fn counters_for_the_same_topic_are_shared() {
+        let counters = Arc::new(GatewayCounters::default());
+        counters.for_topic("/imu").record_oversized_drop();
+        counters.for_topic("/imu").record_oversized_drop();
+
+        let stats = to_json(&RemoteAccessStats::new(
+            ConnectionStatus::Connecting,
+            None,
+            &counters,
+        ));
+        assert_eq!(stats["oversized"], 2);
+        assert_eq!(stats["topics"].as_array().map(Vec::len), Some(1));
+        assert_eq!(stats["topics"][0]["oversized"], 2);
     }
 
     #[test]
     fn warned_causes_are_throttled_but_always_counted() {
-        let counters = GatewayCounters::default();
+        let counters = Arc::new(GatewayCounters::default());
+        let imu = counters.for_topic("/imu");
+        let camera = counters.for_topic("/camera");
 
         // The first event of each warned cause is due a warning; later ones within the
-        // interval are counted silently.
-        assert_eq!(counters.record_data_track_full_drop(), Some(1));
-        assert_eq!(counters.record_data_track_full_drop(), None);
-        assert_eq!(counters.record_data_track_full_drop(), None);
+        // interval are counted silently. Track-full warnings are throttled across topics.
+        assert_eq!(imu.record_data_track_full_drop(), Some(1));
+        assert_eq!(imu.record_data_track_full_drop(), None);
+        assert_eq!(camera.record_data_track_full_drop(), None);
         assert_eq!(counters.record_participant_reset(), Some(1));
         assert_eq!(counters.record_participant_reset(), None);
 
-        let stats = counters.snapshot();
-        assert_eq!(stats.data_track_full_drops, 3);
-        assert_eq!(stats.participant_resets, 2);
+        let stats = to_json(&RemoteAccessStats::new(
+            ConnectionStatus::Connected,
+            None,
+            &counters,
+        ));
+        assert_eq!(stats["data_track_full"], 3);
+        assert_eq!(stats["participant_resets"], 2);
+    }
+
+    #[test]
+    fn reports_session_fields_only_while_a_session_is_active() {
+        let counters = GatewayCounters::default();
+        let session = SessionSnapshot {
+            viewer_count: 2,
+            rtt_ms: Some(12.5),
+            connection_quality: ConnectionQuality::Good,
+        };
+
+        let active = to_json(&RemoteAccessStats::new(
+            ConnectionStatus::Connected,
+            Some(session),
+            &counters,
+        ));
+        assert_eq!(active["session_active"], true);
+        assert_eq!(active["viewer_count"], 2);
+        assert_eq!(active["rtt_ms"], 12.5);
+        assert_eq!(active["connection_quality"], "good");
+
+        let unsampled = to_json(&RemoteAccessStats::new(
+            ConnectionStatus::Connected,
+            Some(SessionSnapshot {
+                rtt_ms: None,
+                ..session
+            }),
+            &counters,
+        ));
+        assert!(unsampled.get("rtt_ms").is_none());
+        assert_eq!(unsampled["connection_quality"], "good");
+
+        let dormant = to_json(&RemoteAccessStats::new(
+            ConnectionStatus::Connected,
+            None,
+            &counters,
+        ));
+        assert_eq!(dormant["session_active"], false);
+        assert_eq!(dormant["viewer_count"], 0);
+        assert!(dormant.get("rtt_ms").is_none());
+        assert!(dormant.get("connection_quality").is_none());
+    }
+
+    #[test]
+    fn reports_shutdown_as_shutting_down() {
+        let counters = GatewayCounters::default();
+        for (status, state) in [
+            (ConnectionStatus::Connecting, "connecting"),
+            (ConnectionStatus::Connected, "connected"),
+            (ConnectionStatus::ShuttingDown, "shutting_down"),
+            (ConnectionStatus::Shutdown, "shutting_down"),
+        ] {
+            let stats = to_json(&RemoteAccessStats::new(status, None, &counters));
+            assert_eq!(stats["state"], state, "{status:?}");
+        }
+    }
+
+    #[test]
+    fn schema_properties_match_serialized_fields() {
+        // Guards against drift between the hand-written JSON schema and the serialized
+        // message, including the optional fields and the per-topic objects.
+        let counters = Arc::new(GatewayCounters::default());
+        counters.for_topic("/imu").record_oversized_drop();
+        let stats = to_json(&RemoteAccessStats::new(
+            ConnectionStatus::Connected,
+            Some(SessionSnapshot {
+                viewer_count: 1,
+                rtt_ms: Some(1.0),
+                connection_quality: ConnectionQuality::Excellent,
+            }),
+            &counters,
+        ));
+
+        let schema = RemoteAccessStats::get_schema().expect("RemoteAccessStats has a schema");
+        assert_eq!(schema.name, "foxglove.RemoteAccessStats");
+        assert_eq!(schema.encoding, "jsonschema");
+        assert_eq!(RemoteAccessStats::get_message_encoding(), "json");
+        let schema: serde_json::Value =
+            serde_json::from_slice(&schema.data).expect("schema is valid JSON");
+
+        assert_eq!(
+            keys(&schema["properties"]),
+            keys(&stats),
+            "JSON schema properties must match RemoteAccessStats serialized field names"
+        );
+        assert_eq!(
+            keys(&schema["properties"]["topics"]["items"]["properties"]),
+            keys(&stats["topics"][0]),
+            "JSON schema topic properties must match TopicStats serialized field names"
+        );
+    }
+
+    #[test]
+    fn publisher_creates_channel_and_clamps_interval() {
+        let ctx = Context::new();
+        let publisher = StatsOptions::new()
+            .topic("/custom/stats")
+            .interval(Duration::ZERO)
+            .into_publisher(&ctx);
+        assert_eq!(publisher.interval(), MIN_STATS_INTERVAL);
+
+        let channel = ctx
+            .get_channel_by_topic("/custom/stats")
+            .expect("stats channel is registered");
+        assert_eq!(channel.message_encoding(), "json");
+        assert_eq!(
+            channel.schema().map(|s| s.name.as_str()),
+            Some("foxglove.RemoteAccessStats")
+        );
+
+        publisher.close();
+        assert!(ctx.get_channel_by_topic("/custom/stats").is_none());
+    }
+
+    #[test]
+    fn publisher_builds_messages_only_when_the_channel_has_sinks() {
+        let ctx = Context::new();
+        let publisher = StatsOptions::new().into_publisher(&ctx);
+        let counters = GatewayCounters::default();
+
+        publisher.publish(|| unreachable!("no sinks are subscribed"));
+
+        let sink = Arc::new(RecordingSink::new());
+        ctx.add_sink(sink.clone());
+        publisher.publish(|| RemoteAccessStats::new(ConnectionStatus::Connecting, None, &counters));
+        let messages = sink.take_messages();
+        assert_eq!(messages.len(), 1);
+        let stats: serde_json::Value =
+            serde_json::from_slice(&messages[0].msg).expect("stats message is JSON");
+        assert_eq!(stats["state"], "connecting");
+    }
+
+    #[test]
+    fn default_options_use_default_topic_and_interval() {
+        assert_eq!(
+            StatsOptions::new(),
+            StatsOptions {
+                topic: DEFAULT_STATS_TOPIC.to_string(),
+                interval: DEFAULT_STATS_INTERVAL,
+            }
+        );
     }
 }

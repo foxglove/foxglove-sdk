@@ -55,7 +55,7 @@ use crate::{
         participant::{Participant, ParticipantRegistry, ParticipantWriter},
         protocol_version,
         rtt_tracker::RttTracker,
-        stats::{GatewayCounters, GatewayStats},
+        stats::{GatewayCounters, SessionSnapshot, TopicCounters},
     },
 };
 
@@ -491,9 +491,9 @@ impl Sink for RemoteAccessSession {
         // Track advertised channels, detect video-capable ones, and classify QoS.
         let advertised_ids: std::collections::HashSet<u64> =
             advertise_msg.channels.iter().map(|ch| ch.id).collect();
-        let advertised_channel_ids: SmallVec<[ChannelId; 4]> = {
+        let data_track_channels: SmallVec<[&Arc<RawChannel>; 4]> = {
             let mut state = self.channel_registry.write();
-            let mut ids = SmallVec::new();
+            let mut data_track_channels = SmallVec::new();
             for &ch in &filtered {
                 if advertised_ids.contains(&u64::from(ch.id())) {
                     state.insert_channel(ch);
@@ -538,19 +538,19 @@ impl Sink for RemoteAccessSession {
                     }
                     state.insert_qos_profile(ch.id(), qos);
                     if qos.reliability != Reliability::Reliable {
-                        ids.push(ch.id());
+                        data_track_channels.push(ch);
                     }
                 }
             }
             state.add_metadata_to_advertisement(&mut advertise_msg);
             state.rewrite_point_cloud_advertisements(&mut advertise_msg);
-            ids
+            data_track_channels
         };
 
         self.broadcast_control(encode_json_message(&advertise_msg));
 
         // Eagerly publish a data track for each newly advertised channel.
-        self.publish_data_tracks(&advertised_channel_ids);
+        self.publish_data_tracks(&data_track_channels);
 
         // Clients subscribe asynchronously.
         None
@@ -710,19 +710,12 @@ impl RemoteAccessSession {
         }
     }
 
-    /// Returns the gateway counters, with the fields describing this session filled in.
-    pub(super) fn gateway_stats(&self) -> GatewayStats {
-        let ice_rtt = self
-            .ice_rtt_tracker
-            .lock()
-            .latest_ms()
-            .and_then(|rtt_ms| Duration::try_from_secs_f64(rtt_ms / 1000.0).ok());
-        GatewayStats {
-            session_active: true,
+    /// Returns the stats that describe this session.
+    pub(super) fn stats_snapshot(&self) -> SessionSnapshot {
+        SessionSnapshot {
             viewer_count: self.participant_registry.participant_count(),
-            ice_rtt,
-            connection_quality: Some(self.room.local_participant().connection_quality().into()),
-            ..self.counters.snapshot()
+            rtt_ms: self.ice_rtt_tracker.lock().latest_ms(),
+            connection_quality: self.room.local_participant().connection_quality().into(),
         }
     }
 
@@ -2722,24 +2715,25 @@ impl RemoteAccessSession {
     ///
     /// Caller must hold `subscription_lock`.
     fn start_video_tracks(self: &Arc<Self>, first_subscribed: &[ChannelId]) {
-        let to_start: SmallVec<[(ChannelId, VideoInputSchema); 4]> = {
+        let to_start: SmallVec<[(ChannelId, VideoInputSchema, TopicCounters); 4]> = {
             let state = self.channel_registry.read();
             first_subscribed
                 .iter()
                 .filter_map(|&channel_id| {
                     let input_schema = state.get_video_schema(&channel_id)?;
-                    Some((channel_id, input_schema))
+                    let topic = state.get_channel_descriptor(&channel_id)?.topic();
+                    Some((channel_id, input_schema, self.counters.for_topic(topic)))
                 })
                 .collect()
         };
 
-        for (channel_id, input_schema) in to_start {
+        for (channel_id, input_schema, counters) in to_start {
             let video_source = NativeVideoSource::default();
             let publisher = Arc::new(VideoPublisher::new(
                 video_source.clone(),
                 input_schema,
                 self.video_metadata_tx.clone(),
-                self.counters.clone(),
+                counters,
             ));
             let expected_publisher = publisher.clone();
 
@@ -2848,6 +2842,7 @@ impl RemoteAccessSession {
             else {
                 continue;
             };
+            let counters = self.counters.for_topic(&topic);
             state.insert_point_cloud_publisher(
                 channel_id,
                 Arc::new(PointCloudPublisher::new(
@@ -2856,7 +2851,7 @@ impl RemoteAccessSession {
                     channel_id,
                     topic,
                     config,
-                    self.counters.clone(),
+                    counters,
                 )),
             );
         }
@@ -2936,19 +2931,19 @@ impl RemoteAccessSession {
     ///
     /// Reliable channels should be excluded by the caller; their data goes via
     /// the control plane instead of data tracks.
-    fn publish_data_tracks(&self, topics: &[ChannelId]) {
-        for channel_id in topics {
+    fn publish_data_tracks(&self, channels: &[&Arc<RawChannel>]) {
+        for channel in channels {
             let data_track = DataTrack::publish(
                 &self.runtime,
                 self.room.local_participant(),
-                *channel_id,
+                channel.id(),
                 self.cancellation_token.clone(),
                 self.max_data_track_message_size,
-                self.counters.clone(),
+                self.counters.for_topic(channel.topic()),
             );
             self.channel_registry
                 .write()
-                .insert_data_track(*channel_id, data_track);
+                .insert_data_track(channel.id(), data_track);
         }
     }
 

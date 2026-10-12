@@ -22,7 +22,8 @@ use super::suppress_video_transcode::{SuppressVideoTranscode, SuppressVideoTrans
 
 use super::connection::{ConnectionParams, ConnectionStatus, RemoteAccessConnection};
 use super::session::MIN_DATA_TRACK_MESSAGE_SIZE;
-use super::{Capability, GatewayStats, Listener};
+use super::stats::StatsOptions;
+use super::{Capability, Listener};
 use crate::remote_common::parameters::ParameterHandler;
 
 /// A handle to the remote access gateway connection.
@@ -48,14 +49,6 @@ impl GatewayHandle {
     /// Returns the current connection status.
     pub fn connection_status(&self) -> ConnectionStatus {
         self.connection.status()
-    }
-
-    /// Returns a snapshot of the gateway's statistics.
-    ///
-    /// See [`GatewayStats`] for details of each field. This is cheap enough to poll
-    /// periodically, for example to export the counters to a metrics system.
-    pub fn stats(&self) -> GatewayStats {
-        self.connection.stats()
     }
 
     /// Returns the sink ID of the current session, if one is active.
@@ -146,6 +139,7 @@ impl GatewayHandle {
             video_codec_override: None,
             video_encoder: VideoEncoderBackend::Auto,
             point_cloud_compression: None,
+            stats: None,
             context: std::sync::Weak::new(),
         };
         let services = Arc::new(parking_lot::RwLock::new(ServiceMap::default()));
@@ -266,6 +260,7 @@ pub struct Gateway {
     max_data_track_message_size: Option<usize>,
     video_encoder: VideoEncoderBackend,
     point_cloud_compression: Option<Arc<dyn PointCloudCompressionPolicy>>,
+    stats: Option<StatsOptions>,
     context: std::sync::Weak<Context>,
 }
 
@@ -293,6 +288,7 @@ impl Default for Gateway {
             // Transparent point-cloud compression is opt-out: with no policy set, every
             // compressible Lossy channel is compressed with the default options.
             point_cloud_compression: None,
+            stats: None,
             context: Arc::downgrade(&Context::get_default()),
         }
     }
@@ -328,6 +324,7 @@ impl std::fmt::Debug for Gateway {
                 &self.max_data_track_message_size,
             )
             .field("video_encoder", &self.video_encoder)
+            .field("stats", &self.stats)
             .field("has_context", &(self.context.strong_count() > 0));
         dbg.field(
             "has_point_cloud_compression_policy",
@@ -647,6 +644,19 @@ impl Gateway {
         self
     }
 
+    /// Publishes gateway statistics on a channel in the gateway's context.
+    ///
+    /// The stats include the gateway's connection state, viewer count, and link quality, and
+    /// counters of dropped messages and viewer resets over the lifetime of the gateway. See
+    /// [`StatsOptions`] for the published fields.
+    ///
+    /// The channel is created when the gateway is started, and is closed when it is stopped.
+    /// By default, no stats are published.
+    pub fn stats(mut self, options: StatsOptions) -> Self {
+        self.stats = Some(options);
+        self
+    }
+
     /// Starts the remote access gateway, which will establish a connection in the background.
     ///
     /// Returns a handle that can optionally be used to manage the gateway.
@@ -768,6 +778,16 @@ impl Gateway {
             )));
         }
         let runtime = self.runtime.unwrap_or_else(get_runtime_handle);
+        // Create the stats channel now, so that it's registered before start() returns.
+        let stats = self.stats.and_then(|options| match self.context.upgrade() {
+            Some(context) => Some(options.into_publisher(&context)),
+            None => {
+                tracing::warn!(
+                    "Not publishing remote access stats: the gateway's context has been dropped"
+                );
+                None
+            }
+        });
         let services = Arc::new(parking_lot::RwLock::new(ServiceMap::from_iter(
             self.services.into_values(),
         )));
@@ -791,6 +811,7 @@ impl Gateway {
             video_codec_override,
             video_encoder,
             point_cloud_compression: self.point_cloud_compression,
+            stats,
             context: self.context,
         };
         let connection = RemoteAccessConnection::new(params, services);
@@ -823,13 +844,62 @@ mod tests {
         handle.stop_blocking();
     }
 
-    #[test]
-    fn stats_without_session_reports_zero_counters_and_no_session_fields() {
-        let rt = tokio::runtime::Runtime::new().unwrap();
-        let runner = rt.spawn(async {});
-        let handle = GatewayHandle::with_runner(runner, rt.handle().clone());
-        assert_eq!(handle.stats(), GatewayStats::default());
-        handle.stop_blocking();
+    #[tokio::test]
+    async fn stats_are_published_while_connecting_and_when_stopped() {
+        let ctx = Context::new();
+        let sink = Arc::new(crate::testutil::RecordingSink::new());
+        ctx.add_sink(sink.clone());
+        let handle = Gateway::new()
+            .context(&ctx)
+            .device_token("test-token")
+            // Nothing listens on this port, so the gateway stays in the connecting state.
+            .foxglove_api_url("http://127.0.0.1:1")
+            .stats(
+                StatsOptions::new()
+                    .topic("/stats")
+                    .interval(Duration::from_millis(100)),
+            )
+            .start()
+            .expect("gateway starts");
+        let channel = ctx
+            .get_channel_by_topic("/stats")
+            .expect("stats channel is created by start");
+
+        let mut messages = Vec::new();
+        tokio::time::timeout(Duration::from_secs(10), async {
+            while messages.len() < 2 {
+                tokio::time::sleep(Duration::from_millis(20)).await;
+                messages.extend(sink.take_messages());
+            }
+        })
+        .await
+        .expect("stats are published while connecting");
+        handle.stop().await.expect("gateway stops");
+        messages.extend(sink.take_messages());
+
+        let states: Vec<String> = messages
+            .iter()
+            .map(|message| {
+                assert_eq!(message.channel_id, channel.id());
+                let stats: serde_json::Value =
+                    serde_json::from_slice(&message.msg).expect("stats message is JSON");
+                assert_eq!(stats["session_active"], false);
+                stats["state"]
+                    .as_str()
+                    .expect("state is a string")
+                    .to_string()
+            })
+            .collect();
+        let (last, earlier) = states.split_last().expect("stats were published");
+        assert_eq!(last, "shutting_down");
+        assert!(
+            earlier.iter().all(|state| state == "connecting"),
+            "{states:?}"
+        );
+        assert!(
+            ctx.get_channel_by_topic("/stats").is_none(),
+            "stats channel is closed when the gateway stops"
+        );
     }
 
     #[test]

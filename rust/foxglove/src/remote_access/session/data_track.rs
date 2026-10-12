@@ -10,7 +10,7 @@ use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, warn};
 
-use crate::remote_access::stats::GatewayCounters;
+use crate::remote_access::stats::TopicCounters;
 use crate::{ChannelId, Metadata};
 
 const FRAME_HEADER_SIZE: usize = 8; // u16 LE flags + u16 LE data_offset + u32 LE sequence
@@ -54,8 +54,8 @@ pub(crate) struct DataTrack {
     oversized_dropped: AtomicU64,
     /// Throttles warnings emitted when oversized messages are dropped.
     oversized_throttler: parking_lot::Mutex<crate::throttler::Throttler>,
-    /// Gateway-lifetime drop counters.
-    counters: Arc<GatewayCounters>,
+    /// Gateway-lifetime drop counters for the channel's topic.
+    counters: TopicCounters,
 }
 
 impl DataTrack {
@@ -74,7 +74,7 @@ impl DataTrack {
         channel_id: ChannelId,
         session_cancel: CancellationToken,
         max_message_size: usize,
-        counters: Arc<GatewayCounters>,
+        counters: TopicCounters,
     ) -> Self {
         let track = Arc::new(OnceLock::new());
         let track_clone = Arc::clone(&track);
@@ -146,7 +146,7 @@ impl DataTrack {
     /// [`max_message_size`](Self::max_message_size), with a throttled
     /// gateway-wide warning if the track's send queue is full, or with a
     /// throttled debug log if the track is not published. Every drop is counted
-    /// in the gateway counters.
+    /// in the gateway stats.
     ///
     /// Returns `Err(OversizedDropReport)` only when an oversized-drop warning
     /// fires. All other delivered or dropped messages return `Ok(())`.
@@ -243,12 +243,13 @@ impl Drop for DataTrack {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::remote_access::stats::GatewayCounters;
 
     impl DataTrack {
         /// Builds a `DataTrack` with no live LiveKit track, so the size gate and
         /// not-ready path in [`log`](Self::log) can be exercised without a room or
         /// participant.
-        fn for_test(max_message_size: usize, counters: Arc<GatewayCounters>) -> Self {
+        fn for_test(max_message_size: usize, counters: TopicCounters) -> Self {
             Self {
                 track: Arc::new(OnceLock::new()),
                 close: CancellationToken::new(),
@@ -270,7 +271,7 @@ mod tests {
     #[test]
     fn drops_oversized_message_and_counts_it() {
         let counters = Arc::new(GatewayCounters::default());
-        let track = DataTrack::for_test(16, counters.clone());
+        let track = DataTrack::for_test(16, counters.for_topic("/topic"));
         let channel_id = ChannelId::new(1);
         let metadata = Metadata::default();
 
@@ -293,18 +294,20 @@ mod tests {
         assert_eq!(track.log(channel_id, &[0u8; 16], &metadata), Ok(()));
         assert_eq!(track.oversized_dropped(), 1);
 
-        // The gateway counter is cumulative and is not reset by the warning. The
+        // The stats counter is cumulative and is not reset by the warning. The
         // at-limit message was dropped only because the track is not published.
-        let stats = counters.snapshot();
-        assert_eq!(stats.oversized_drops, 2);
-        assert_eq!(stats.data_track_not_ready_drops, 1);
+        let stats = counters.to_json();
+        assert_eq!(stats["oversized"], 2);
+        assert_eq!(stats["data_track_not_ready"], 1);
+        assert_eq!(stats["topics"][0]["topic"], "/topic");
+        assert_eq!(stats["topics"][0]["oversized"], 2);
     }
 
     #[test]
-    fn counts_drops_before_track_is_published_across_tracks() {
+    fn counts_drops_before_track_is_published_per_topic() {
         let counters = Arc::new(GatewayCounters::default());
-        let first = DataTrack::for_test(16, counters.clone());
-        let second = DataTrack::for_test(16, counters.clone());
+        let first = DataTrack::for_test(16, counters.for_topic("/first"));
+        let second = DataTrack::for_test(16, counters.for_topic("/second"));
         let metadata = Metadata::default();
 
         for _ in 0..3 {
@@ -312,9 +315,13 @@ mod tests {
         }
         assert_eq!(second.log(ChannelId::new(2), &[0u8; 4], &metadata), Ok(()));
 
-        let stats = counters.snapshot();
-        assert_eq!(stats.data_track_not_ready_drops, 4);
-        assert_eq!(stats.data_track_full_drops, 0);
-        assert_eq!(stats.oversized_drops, 0);
+        let stats = counters.to_json();
+        assert_eq!(stats["data_track_not_ready"], 4);
+        assert_eq!(stats["data_track_full"], 0);
+        assert_eq!(stats["oversized"], 0);
+        assert_eq!(stats["topics"][0]["topic"], "/first");
+        assert_eq!(stats["topics"][0]["data_track_not_ready"], 3);
+        assert_eq!(stats["topics"][1]["topic"], "/second");
+        assert_eq!(stats["topics"][1]["data_track_not_ready"], 1);
     }
 }

@@ -1,6 +1,6 @@
 //! Background point-cloud transcoding for remote access sessions.
 
-use std::sync::{Arc, Weak};
+use std::sync::Weak;
 
 use bytes::Bytes;
 use tokio::runtime::Handle;
@@ -10,7 +10,7 @@ use crate::ChannelId;
 use crate::remote_access::point_cloud_compression::PointCloudCompressionConfig;
 use crate::remote_access::point_cloud_transcode::transcode_point_cloud_message;
 use crate::remote_access::session::send_head_drop;
-use crate::remote_access::stats::GatewayCounters;
+use crate::remote_access::stats::TopicCounters;
 
 use super::RemoteAccessSession;
 
@@ -29,8 +29,8 @@ use super::RemoteAccessSession;
 pub(crate) struct PointCloudPublisher {
     tx: flume::Sender<(Bytes, u64)>,
     rx: flume::Receiver<(Bytes, u64)>,
-    /// Gateway-lifetime drop counters.
-    counters: Arc<GatewayCounters>,
+    /// Gateway-lifetime drop counters for the channel's topic.
+    counters: TopicCounters,
 }
 
 impl PointCloudPublisher {
@@ -47,7 +47,7 @@ impl PointCloudPublisher {
         channel_id: ChannelId,
         topic: String,
         config: PointCloudCompressionConfig,
-        counters: Arc<GatewayCounters>,
+        counters: TopicCounters,
     ) -> Self {
         let (tx, rx) = flume::bounded::<(Bytes, u64)>(Self::CHANNEL_CAPACITY);
         let consumer_rx = rx.clone();
@@ -98,7 +98,7 @@ impl PointCloudPublisher {
 
     /// Send a message for transcoding. Non-blocking: if the channel is full, the oldest
     /// message is dropped to make room (head-drop for minimal latency on live data), and
-    /// counted in the gateway counters.
+    /// counted in the gateway stats.
     ///
     /// `log_time` is the message log time in nanoseconds since epoch.
     pub fn send(&self, data: Bytes, log_time: u64) {
@@ -111,9 +111,12 @@ impl PointCloudPublisher {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
     use super::*;
     use crate::remote_access::PointCloudCompression;
     use crate::remote_access::point_cloud_transcode::PointCloudInputSchema;
+    use crate::remote_access::stats::GatewayCounters;
 
     #[tokio::test(flavor = "current_thread")]
     async fn counts_messages_dropped_from_full_queue() {
@@ -127,7 +130,7 @@ mod tests {
                 input_schema: PointCloudInputSchema::FoxgloveProtobuf,
                 options: PointCloudCompression::default(),
             },
-            counters.clone(),
+            counters.for_topic("/cloud"),
         );
 
         // The background task cannot run until this test yields, so the queue fills
@@ -136,9 +139,10 @@ mod tests {
             publisher.send(Bytes::new(), log_time);
         }
 
-        assert_eq!(
-            counters.snapshot().point_cloud_queue_drops,
-            5 - PointCloudPublisher::CHANNEL_CAPACITY as u64
-        );
+        let dropped = 5 - PointCloudPublisher::CHANNEL_CAPACITY as u64;
+        let stats = counters.to_json();
+        assert_eq!(stats["point_cloud_queue"], dropped);
+        assert_eq!(stats["topics"][0]["topic"], "/cloud");
+        assert_eq!(stats["topics"][0]["point_cloud_queue"], dropped);
     }
 }
