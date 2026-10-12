@@ -9,6 +9,7 @@ use crate::{
     ChannelDescriptor, Context, FoxgloveError, SinkChannelFilter, SinkId,
     protocol::v2::parameter::Parameter,
     remote_common::AnyClient,
+    remote_common::ClientId,
     remote_common::connection_graph::ConnectionGraph,
     remote_common::fetch_asset::{AssetHandler, AsyncAssetHandlerFn, BlockingAssetHandlerFn},
     remote_common::service::{Service, ServiceMap},
@@ -88,6 +89,17 @@ impl GatewayHandle {
     /// ID may be included in the status to later remove it by referencing that ID.
     pub fn publish_status(&self, status: super::Status) {
         self.connection.publish_status(status);
+    }
+
+    /// Sends a status message to a single connected participant.
+    ///
+    /// The participant is identified by its client ID, as returned by
+    /// [`Client::id`](super::Client::id). Does nothing if the client is not connected, or if there
+    /// is no active session.
+    ///
+    /// This method may be called from within [`Listener`] callbacks.
+    pub fn send_status(&self, client_id: ClientId, status: super::Status) {
+        self.connection.send_status(client_id, status);
     }
 
     /// Removes status messages by ID from all connected participants.

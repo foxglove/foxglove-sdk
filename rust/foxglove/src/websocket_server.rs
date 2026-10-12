@@ -12,7 +12,7 @@ use crate::websocket::PlaybackState;
 use crate::websocket::TlsIdentity;
 use crate::websocket::service::Service;
 use crate::websocket::{
-    AnyClient, AssetHandler, AsyncAssetHandlerFn, BlockingAssetHandlerFn, Capability,
+    AnyClient, AssetHandler, AsyncAssetHandlerFn, BlockingAssetHandlerFn, Capability, ClientId,
     ConnectionGraph, Parameter, ParameterHandler, Server, ServerOptions, ShutdownHandle, Status,
     create_server,
 };
@@ -366,6 +366,17 @@ impl WebSocketServerHandle {
     /// ID may be included in the status to later remove it by referencing that ID.
     pub fn publish_status(&self, status: Status) {
         self.0.publish_status(status);
+    }
+
+    /// Sends a status message to a single client.
+    ///
+    /// The client is identified by its ID, as returned by
+    /// [`Client::id`](crate::websocket::Client::id). Does nothing if the client is not connected.
+    ///
+    /// This method may be called from within
+    /// [`ServerListener`](crate::websocket::ServerListener) callbacks.
+    pub fn send_status(&self, client_id: ClientId, status: Status) {
+        self.0.send_status(client_id, status);
     }
 
     /// Removes status messages by ID from all clients.

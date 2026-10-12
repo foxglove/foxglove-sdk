@@ -51,6 +51,16 @@ impl From<ClientId> for u32 {
     }
 }
 
+/// Converts a raw client ID, such as one received in a C or C++ callback, back into a
+/// [`ClientId`].
+///
+/// IDs are never reused, so an ID that doesn't belong to a connected client refers to no client.
+impl From<u32> for ClientId {
+    fn from(id: u32) -> Self {
+        Self(id)
+    }
+}
+
 impl std::fmt::Display for ClientId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)

@@ -28,7 +28,7 @@ use crate::remote_access::point_cloud_compression::{
 };
 use crate::remote_common::connection_graph::ConnectionGraph;
 use crate::remote_common::{
-    AnyClient,
+    AnyClient, ClientId,
     fetch_asset::AssetResponder,
     parameters::{GetParametersResponder, ParameterHandler, SetParametersResponder},
     service::{CallId, Service, ServiceId, ServiceMap},
@@ -2528,6 +2528,21 @@ impl RemoteAccessSession {
     /// Publish a status message to all connected participants.
     pub(super) fn publish_status(&self, status: Status) {
         self.broadcast_control(encode_json_message(&status));
+    }
+
+    /// Send a status message to the participant with the given client ID, if it is connected.
+    ///
+    /// This must not take `subscription_lock`, because listeners may call it from callbacks that
+    /// run while that lock is held, such as `on_client_advertise`.
+    pub(super) fn send_status(&self, client_id: ClientId, status: Status) {
+        let Some(participant) = self
+            .participant_registry
+            .get_participant_by_client_id(client_id)
+        else {
+            debug!("Client {client_id} not connected, dropping status message");
+            return;
+        };
+        participant.send_control(encode_json_message(&status));
     }
 
     /// Remove status messages by ID from all connected participants.
