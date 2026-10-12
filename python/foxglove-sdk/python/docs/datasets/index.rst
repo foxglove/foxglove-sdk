@@ -30,13 +30,8 @@ with ``speed`` and ``steering`` fields; adapt ``read_episode`` to your data.
 
 .. code-block:: python
 
-   import os
-   from foxglove.client import Client
    from foxglove.datasets.torch import read_dataset
    from torch.utils.data import DataLoader
-
-   def make_client():
-       return Client(token=os.environ["FOXGLOVE_API_TOKEN"])
 
    def read_episode(episode):
        for schema, channel, message, decoded in episode.iter_messages():
@@ -45,9 +40,12 @@ with ``speed`` and ``steering`` fields; adapt ``read_episode`` to your data.
    if __name__ == "__main__":
        dataset = read_dataset(
            "ds_123", version=7, topics=["/training/measurements"],
-           read_episode=read_episode, client_factory=make_client,
+           read_episode=read_episode,
        )
-       loader = DataLoader(dataset, batch_size=32, num_workers=2)
+       loader = DataLoader(
+           dataset, batch_size=32, num_workers=2,
+           multiprocessing_context="spawn", prefetch_factor=1,
+       )
        for batch in loader:
            print(batch)
 
@@ -57,7 +55,7 @@ dictionaries, or objects handled by a custom ``collate_fn``.
 Ray Data
 --------
 
-Use the same callback and client factory with the Ray adapter:
+Use the same callback with the Ray adapter:
 
 .. code-block:: python
 
@@ -65,7 +63,7 @@ Use the same callback and client factory with the Ray adapter:
 
    dataset = read_dataset(
        "ds_123", version=7, topics=["/training/measurements"],
-       read_episode=read_episode, client_factory=make_client, concurrency=2,
+       read_episode=read_episode, concurrency=2,
    )
    for batch in dataset.iter_torch_batches(batch_size=32):
        print(batch)
@@ -73,6 +71,124 @@ Use the same callback and client factory with the Ray adapter:
 The result is a ``ray.data.Dataset``. Callbacks must yield mappings with
 consistent column types, such as scalars or NumPy arrays. Use ``map_batches`` for
 further processing. ``concurrency`` limits the number of simultaneous read tasks.
+
+Object storage
+--------------
+
+The default ``source="foxglove"`` downloads messages through Foxglove. For
+customer-managed indexed storage, pass ``source="object_storage"`` to either adapter.
+Foxglove supplies episode metadata and recording locations; workers read MCAP
+files directly with their cloud credentials. The same callback works for both
+sources:
+
+.. code-block:: python
+
+   dataset = read_dataset(
+       "ds_123", version=7, topics=["/training/measurements"],
+       read_episode=read_episode, source="object_storage",
+   )
+
+.. important::
+
+   Object storage reads require the API and client to provide recording
+   locations with ``location.scheme`` (``s3``, ``gs``, or ``az``).
+
+The SDK selects S3, GCS, or Azure storage from the location's scheme. S3 bucket
+regions are discovered automatically and cached; Azure uses the location's
+``azure_storage_account_name``. The framework extras include ``pyarrow``.
+Configure native cloud credentials on each worker, such as environment variables
+or the machine's IAM role, and grant read access to the original objects. The
+Foxglove API token does not grant bucket access. Run compute near your storage to
+avoid cross-region transfer.
+
+Object storage reads require immutable MCAP recordings with summaries, chunk
+indexes, and message indexes. Missing locations, permissions, unsupported formats, and missing indexes
+raise errors; there is no fallback to Foxglove downloads. Query-optimized sites
+that do not retain original objects should use the default download path.
+
+Custom factories
+^^^^^^^^^^^^^^^^
+
+Use ``client_factory`` for custom Foxglove authentication or configuration.
+Without a factory, the SDK creates a client using ``FOXGLOVE_API_TOKEN``.
+Define factories at module scope so workers can serialize them:
+
+.. code-block:: python
+
+   import os
+   from foxglove.client import Client
+
+   def make_client():
+       return Client(token=os.environ["MY_FOXGLOVE_TOKEN"])
+
+   dataset = read_dataset(
+       "ds_123", version=7, topics=["/training/measurements"],
+       read_episode=read_episode, client_factory=make_client,
+   )
+
+For custom storage or caching, pass ``object_store_factory``. A factory creates
+one store in each consuming process; its ``open`` method receives an
+``ObjectLocation`` and returns a seekable binary handle. For example:
+
+.. code-block:: python
+
+   import pyarrow.fs as fs
+   from foxglove.datasets import ObjectLocation
+
+   class S3Store:
+       def __init__(self):
+           self.filesystem = fs.S3FileSystem(region="us-east-1")
+
+       def open(self, location: ObjectLocation):
+           return self.filesystem.open_input_file(
+               f"{location.bucket}/{location.path}"
+           )
+
+   dataset = read_dataset(
+       "ds_123", version=7, topics=["/training/measurements"],
+       read_episode=read_episode, source="object_storage", object_store_factory=S3Store,
+   )
+
+A custom ``object_store_factory`` requires ``source="object_storage"``. Use the
+exact bucket and object key from the location, which may differ from the display
+filename. Create live filesystem clients inside the factory; do not capture open files or short-lived
+credentials. A custom store can return a seekable ``fsspec`` binary handle with
+bounded caching. Use ``multiprocessing_context="spawn"`` for PyTorch workers.
+
+The built-in S3 store discovers bucket regions through AWS. For S3-compatible
+services such as MinIO, custom endpoints, or networks that cannot reach the
+region-discovery endpoint, use a custom factory. Configure its
+``fs.S3FileSystem`` with an explicit ``region`` and, when needed,
+``endpoint_override="minio.example.com:9000"``. This bypasses built-in region
+discovery. Configure TLS and credentials for that endpoint in the factory.
+
+Performance and iteration behavior:
+
+* Planning requests recording locations with the paginated episode metadata;
+  it does not open objects. Storage clients are created once per worker iteration
+  or Ray read task, after episode sharding. Object storage workers do not need
+  to call the Foxglove API, and the planning client factory is not serialized.
+* MCAP indexes select chunks by topic and the episode's inclusive time window,
+  extended by ``lookback`` when requested. A selected chunk may contain other
+  topics, so the reader still fetches and decompresses that whole chunk. The SDK
+  uses a 64 KiB buffer to coalesce small header and summary reads.
+* Recordings are merged in log-time order before decoding. Equivalent schemas
+  and channels share episode-local IDs; conflicting file-local IDs are remapped.
+  Original timestamps and payload bytes are preserved. Files close as each
+  recording is exhausted, including errors and early termination. Recordings
+  outside the requested time range close after their summaries are read.
+* Before the first sample, each recording's summary is read and the first
+  matching chunk from each overlapping recording is loaded to establish global
+  timestamp order. Startup latency therefore grows with the number of recordings.
+* Memory includes the indexes and active decompressed chunks of the episode's
+  recordings, decoded samples, and framework prefetch buffers. It is not bounded
+  by Ray's output block target alone. Tune Ray ``concurrency`` or PyTorch
+  ``num_workers`` and ``prefetch_factor`` against your workload and storage limits.
+* Every new iteration reads again. Sparse windows benefit from range reads;
+  repeated dense epochs may benefit from a bounded worker-local disk cache in
+  your store. Whole-file caches fetch the entire recording and can increase
+  first-sample latency and transfer. Keep recordings immutable and manage cache
+  size explicitly.
 
 Message formats
 ---------------
@@ -93,7 +209,7 @@ Install ``foxglove-sdk[video,torch]`` or ``foxglove-sdk[video,ray]``, plus the
 MCAP decoder for your recording (see `Message formats`_).
 
 Pass ``decode_h264`` as the episode callback to decode every selected camera topic.
-Using ``make_client`` from above and equally sized camera images:
+Using equally sized camera images:
 
 .. code-block:: python
 
@@ -105,9 +221,13 @@ Using ``make_client`` from above and equally sized camera images:
        dataset = read_dataset(
            "ds_123", version=7,
            topics=["/camera/front", "/camera/wrist"],
-           read_episode=decode_h264, client_factory=make_client,
+           read_episode=decode_h264,
        )
-       for batch in DataLoader(dataset, batch_size=16, num_workers=2):
+       loader = DataLoader(
+           dataset, batch_size=16, num_workers=2,
+           multiprocessing_context="spawn", prefetch_factor=1,
+       )
+       for batch in loader:
            images = to_image_tensor(batch)  # [B, 3, H, W]
            print(batch["topic"], images.shape)
 
@@ -170,6 +290,15 @@ Episode reader
 ^^^^^^^^^^^^^^
 
 .. autoclass:: foxglove.datasets.EpisodeReader
+   :members:
+
+Object storage
+^^^^^^^^^^^^^^
+
+.. autoclass:: foxglove.datasets.ObjectLocation
+   :members:
+
+.. autoclass:: foxglove.datasets.ObjectStore
    :members:
 
 Video decoding
