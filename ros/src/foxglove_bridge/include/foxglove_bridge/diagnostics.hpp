@@ -33,22 +33,36 @@ public:
   /// counts as a reconnect.
   void setRemoteAccessState(RemoteAccessState state);
 
-  /// Records ROS subscriptions that could not be created, or incompatible-QoS events on existing
-  /// subscriptions.
-  void recordFailedSubscriptions(uint64_t count = 1);
+  /// Records a ROS subscription that could not be created.
+  void recordFailedSubscription();
+
+  /// Records incompatible-QoS events on an existing subscription. The subscription stays active and
+  /// keeps receiving from compatible publishers.
+  void recordIncompatibleQosEvents(uint64_t count);
 
   /// Records a client service call that failed before or while being sent to the ROS service.
   void recordFailedServiceCall();
 
   void reportRemoteAccess(diagnostic_updater::DiagnosticStatusWrapper& stat) const;
+
+  /// Reports cumulative failure counts, and WARN only if a count increased since the previous call,
+  /// so a past failure doesn't keep the status at WARN. Must only be called from one thread.
   void reportForwarding(size_t activeSubscriptions,
-                        diagnostic_updater::DiagnosticStatusWrapper& stat) const;
+                        diagnostic_updater::DiagnosticStatusWrapper& stat);
 
 private:
+  struct ForwardingCounts {
+    uint64_t failedSubscriptions = 0;
+    uint64_t incompatibleQosEvents = 0;
+    uint64_t failedServiceCalls = 0;
+  };
+
   std::atomic<RemoteAccessState> _remoteAccessState{RemoteAccessState::Connecting};
   std::atomic<uint64_t> _remoteAccessReconnects{0};
   std::atomic<uint64_t> _failedSubscriptions{0};
+  std::atomic<uint64_t> _incompatibleQosEvents{0};
   std::atomic<uint64_t> _failedServiceCalls{0};
+  ForwardingCounts _lastReportedForwarding;
 };
 
 void reportWebSocketServer(uint16_t port, size_t clientCount,

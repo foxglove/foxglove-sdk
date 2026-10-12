@@ -28,8 +28,7 @@ DiagnosticStatus remoteAccessStatus(const BridgeDiagnostics& diagnostics) {
   return static_cast<const DiagnosticStatus&>(stat);
 }
 
-DiagnosticStatus forwardingStatus(const BridgeDiagnostics& diagnostics,
-                                  size_t activeSubscriptions = 0) {
+DiagnosticStatus forwardingStatus(BridgeDiagnostics& diagnostics, size_t activeSubscriptions = 0) {
   DiagnosticStatusWrapper stat;
   diagnostics.reportForwarding(activeSubscriptions, stat);
   return static_cast<const DiagnosticStatus&>(stat);
@@ -100,21 +99,34 @@ TEST(BridgeDiagnosticsTest, ForwardingWithoutFailuresIsOk) {
   BridgeDiagnostics diagnostics;
   const auto stat = forwardingStatus(diagnostics, 3);
   EXPECT_EQ(stat.level, DiagnosticStatus::OK);
-  EXPECT_EQ(stat.message, "No failures");
+  EXPECT_EQ(stat.message, "No new failures");
   EXPECT_EQ(valueOf(stat, "Active subscriptions"), "3");
   EXPECT_EQ(valueOf(stat, "Failed subscriptions"), "0");
+  EXPECT_EQ(valueOf(stat, "Incompatible QoS events"), "0");
   EXPECT_EQ(valueOf(stat, "Failed service calls"), "0");
 }
 
 TEST(BridgeDiagnosticsTest, ForwardingWarnsOnFailedSubscriptions) {
   BridgeDiagnostics diagnostics;
-  diagnostics.recordFailedSubscriptions();
-  diagnostics.recordFailedSubscriptions(2);
+  diagnostics.recordFailedSubscription();
+  diagnostics.recordFailedSubscription();
   const auto stat = forwardingStatus(diagnostics);
   EXPECT_EQ(stat.level, DiagnosticStatus::WARN);
-  EXPECT_EQ(stat.message, "3 failed subscriptions and 0 failed service calls since startup");
-  EXPECT_EQ(valueOf(stat, "Failed subscriptions"), "3");
+  EXPECT_EQ(stat.message, "2 failed subscriptions since the last report");
+  EXPECT_EQ(valueOf(stat, "Failed subscriptions"), "2");
+  EXPECT_EQ(valueOf(stat, "Incompatible QoS events"), "0");
   EXPECT_EQ(valueOf(stat, "Failed service calls"), "0");
+}
+
+TEST(BridgeDiagnosticsTest, ForwardingCountsIncompatibleQosEventsSeparately) {
+  BridgeDiagnostics diagnostics;
+  diagnostics.recordIncompatibleQosEvents(2);
+  const auto stat = forwardingStatus(diagnostics, 1);
+  EXPECT_EQ(stat.level, DiagnosticStatus::WARN);
+  EXPECT_EQ(stat.message, "2 incompatible QoS events since the last report");
+  EXPECT_EQ(valueOf(stat, "Active subscriptions"), "1");
+  EXPECT_EQ(valueOf(stat, "Failed subscriptions"), "0");
+  EXPECT_EQ(valueOf(stat, "Incompatible QoS events"), "2");
 }
 
 TEST(BridgeDiagnosticsTest, ForwardingWarnsOnFailedServiceCalls) {
@@ -122,9 +134,39 @@ TEST(BridgeDiagnosticsTest, ForwardingWarnsOnFailedServiceCalls) {
   diagnostics.recordFailedServiceCall();
   const auto stat = forwardingStatus(diagnostics);
   EXPECT_EQ(stat.level, DiagnosticStatus::WARN);
-  EXPECT_EQ(stat.message, "0 failed subscriptions and 1 failed service call since startup");
+  EXPECT_EQ(stat.message, "1 failed service call since the last report");
   EXPECT_EQ(valueOf(stat, "Failed subscriptions"), "0");
   EXPECT_EQ(valueOf(stat, "Failed service calls"), "1");
+}
+
+TEST(BridgeDiagnosticsTest, ForwardingListsEachKindOfNewFailure) {
+  BridgeDiagnostics diagnostics;
+  diagnostics.recordFailedSubscription();
+  diagnostics.recordIncompatibleQosEvents(1);
+  diagnostics.recordFailedServiceCall();
+  diagnostics.recordFailedServiceCall();
+  const auto stat = forwardingStatus(diagnostics);
+  EXPECT_EQ(stat.level, DiagnosticStatus::WARN);
+  EXPECT_EQ(stat.message,
+            "1 failed subscription, 1 incompatible QoS event, 2 failed service calls since the "
+            "last report");
+}
+
+TEST(BridgeDiagnosticsTest, ForwardingWarningClearsWhenNoNewFailures) {
+  BridgeDiagnostics diagnostics;
+  diagnostics.recordFailedServiceCall();
+  EXPECT_EQ(forwardingStatus(diagnostics).level, DiagnosticStatus::WARN);
+
+  auto stat = forwardingStatus(diagnostics);
+  EXPECT_EQ(stat.level, DiagnosticStatus::OK);
+  EXPECT_EQ(stat.message, "No new failures");
+  EXPECT_EQ(valueOf(stat, "Failed service calls"), "1");
+
+  diagnostics.recordFailedServiceCall();
+  stat = forwardingStatus(diagnostics);
+  EXPECT_EQ(stat.level, DiagnosticStatus::WARN);
+  EXPECT_EQ(stat.message, "1 failed service call since the last report");
+  EXPECT_EQ(valueOf(stat, "Failed service calls"), "2");
 }
 
 TEST(BridgeDiagnosticsTest, WebSocketServerIsOkAndReportsClientCount) {

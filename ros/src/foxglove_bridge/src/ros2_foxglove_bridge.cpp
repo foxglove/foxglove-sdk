@@ -951,7 +951,7 @@ Subscription FoxgloveBridge::createRosSubscription(ChannelId channelId, const st
     [this, topic, datatype](const rclcpp::QOSRequestedIncompatibleQoSInfo& info) {
       RCLCPP_ERROR(this->get_logger(), "Incompatible subscriber QoS settings for topic \"%s\" (%s)",
                    topic.c_str(), datatype.c_str());
-      _diagnostics.recordFailedSubscriptions(
+      _diagnostics.recordIncompatibleQosEvents(
         static_cast<uint64_t>(std::max(info.total_count_change, int32_t{1})));
     };
 
@@ -1019,7 +1019,7 @@ void FoxgloveBridge::createOrIncrementSubscriptionLocked(ChannelId channelId, Cl
                      "Cannot subscribe to topic \"%s\" on channel %" PRIu64
                      ": no schema and no matching topic in the ROS graph",
                      topic.c_str(), static_cast<uint64_t>(channelId));
-        _diagnostics.recordFailedSubscriptions();
+        _diagnostics.recordFailedSubscription();
         return;
       }
       datatype = topicIt->second.front();
@@ -1030,7 +1030,7 @@ void FoxgloveBridge::createOrIncrementSubscriptionLocked(ChannelId channelId, Cl
     try {
       channelSub.rosSubscription = createRosSubscription(channelId, topic, datatype, qos);
     } catch (const std::exception&) {
-      _diagnostics.recordFailedSubscriptions();
+      _diagnostics.recordFailedSubscription();
       throw;
     }
     channelSub.qos = qos;

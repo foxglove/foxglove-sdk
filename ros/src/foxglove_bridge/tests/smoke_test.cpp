@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <chrono>
 #include <filesystem>
 #include <functional>
@@ -7,6 +8,7 @@
 #include <optional>
 #include <string>
 #include <thread>
+#include <vector>
 
 #include <diagnostic_msgs/msg/diagnostic_array.hpp>
 #include <gtest/gtest.h>
@@ -929,7 +931,7 @@ protected:
       "/diagnostics", 10, [this](std::shared_ptr<const diagnostic_msgs::msg::DiagnosticArray> msg) {
         std::lock_guard<std::mutex> lock(_statusesMutex);
         for (const auto& status : msg->status) {
-          _statuses[status.name] = status;
+          _statuses[status.name].push_back(status);
         }
       });
 
@@ -971,18 +973,35 @@ protected:
   /// Waits until the latest status published for `task` satisfies `pred`.
   testing::AssertionResult waitForStatus(const std::string& task,
                                          const std::function<bool(const DiagnosticStatus&)>& pred) {
+    return waitForStatus(task, pred, false);
+  }
+
+  /// Waits until any status published for `task` satisfies `pred`. Use this for levels that only
+  /// last one publishing period.
+  testing::AssertionResult waitForAnyStatus(
+    const std::string& task, const std::function<bool(const DiagnosticStatus&)>& pred) {
+    return waitForStatus(task, pred, true);
+  }
+
+  testing::AssertionResult waitForStatus(const std::string& task,
+                                         const std::function<bool(const DiagnosticStatus&)>& pred,
+                                         bool anyReceived) {
     const std::string name = BRIDGE_NODE_NAME + ": " + task;
     const auto deadline = std::chrono::steady_clock::now() + DEFAULT_TIMEOUT;
+    std::vector<DiagnosticStatus> received;
     std::optional<DiagnosticStatus> latest;
     while (std::chrono::steady_clock::now() < deadline) {
       {
         std::lock_guard<std::mutex> lock(_statusesMutex);
         if (const auto it = _statuses.find(name); it != _statuses.end()) {
-          latest = it->second;
+          received = it->second;
         }
       }
-      if (latest && pred(*latest)) {
-        return testing::AssertionSuccess();
+      if (!received.empty()) {
+        latest = received.back();
+        if (anyReceived ? std::any_of(received.begin(), received.end(), pred) : pred(*latest)) {
+          return testing::AssertionSuccess();
+        }
       }
       std::this_thread::sleep_for(std::chrono::milliseconds(20));
     }
@@ -1010,7 +1029,7 @@ protected:
   rclcpp::executors::SingleThreadedExecutor _executor;
   std::thread _spinThread;
   std::mutex _statusesMutex;
-  std::map<std::string, DiagnosticStatus> _statuses;
+  std::map<std::string, std::vector<DiagnosticStatus>> _statuses;
 };
 
 TEST_F(DiagnosticsTest, publishesBridgeStatus) {
@@ -1051,7 +1070,7 @@ TEST_F(DiagnosticsTest, reportsClientsAndActiveSubscriptions) {
   }));
 }
 
-TEST_F(DiagnosticsTest, countsIncompatibleQosAsFailedSubscription) {
+TEST_F(DiagnosticsTest, countsIncompatibleQosEventsSeparatelyFromFailedSubscriptions) {
   const std::string topicName = "/diagnostics_test_qos_topic";
   auto node = rclcpp::Node::make_shared("diagnostics_test_qos_publisher");
   auto reliablePub =
@@ -1068,13 +1087,17 @@ TEST_F(DiagnosticsTest, countsIncompatibleQosAsFailedSubscription) {
     return status.level == DiagnosticStatus::OK && valueOf(status, "Active subscriptions") == "1";
   }));
 
-  // A best-effort publisher can't serve the bridge's reliable subscription.
+  // A best-effort publisher can't serve the bridge's reliable subscription, which stays active.
   auto bestEffortPub =
     node->create_publisher<std_msgs::msg::String>(topicName, rclcpp::QoS{10}.best_effort());
-  EXPECT_TRUE(waitForStatus("forwarding", [](const DiagnosticStatus& status) {
+  EXPECT_TRUE(waitForAnyStatus("forwarding", [](const DiagnosticStatus& status) {
     return status.level == DiagnosticStatus::WARN &&
-           valueOf(status, "Failed subscriptions") != "0" &&
-           valueOf(status, "Failed service calls") == "0";
+           valueOf(status, "Incompatible QoS events") != "0";
+  }));
+  EXPECT_TRUE(waitForStatus("forwarding", [](const DiagnosticStatus& status) {
+    return status.level == DiagnosticStatus::OK && valueOf(status, "Active subscriptions") == "1" &&
+           valueOf(status, "Incompatible QoS events") != "0" &&
+           valueOf(status, "Failed subscriptions") == "0";
   }));
 }
 
@@ -1107,9 +1130,12 @@ TEST_F(DiagnosticsTest, countsFailedServiceCalls) {
   client->sendServiceRequest(request);
   ASSERT_EQ(std::future_status::ready, failureFuture.wait_for(DEFAULT_TIMEOUT));
 
+  EXPECT_TRUE(waitForAnyStatus("forwarding", [](const DiagnosticStatus& status) {
+    return status.level == DiagnosticStatus::WARN && valueOf(status, "Failed service calls") == "1";
+  }));
+  // The warning clears on the next report, and the count is kept.
   EXPECT_TRUE(waitForStatus("forwarding", [](const DiagnosticStatus& status) {
-    return status.level == DiagnosticStatus::WARN &&
-           valueOf(status, "Failed service calls") == "1" &&
+    return status.level == DiagnosticStatus::OK && valueOf(status, "Failed service calls") == "1" &&
            valueOf(status, "Failed subscriptions") == "0";
   }));
 }

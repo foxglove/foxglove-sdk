@@ -21,8 +21,12 @@ void BridgeDiagnostics::setRemoteAccessState(RemoteAccessState state) {
   }
 }
 
-void BridgeDiagnostics::recordFailedSubscriptions(uint64_t count) {
-  _failedSubscriptions += count;
+void BridgeDiagnostics::recordFailedSubscription() {
+  ++_failedSubscriptions;
+}
+
+void BridgeDiagnostics::recordIncompatibleQosEvents(uint64_t count) {
+  _incompatibleQosEvents += count;
 }
 
 void BridgeDiagnostics::recordFailedServiceCall() {
@@ -52,21 +56,37 @@ void BridgeDiagnostics::reportRemoteAccess(
 }
 
 void BridgeDiagnostics::reportForwarding(size_t activeSubscriptions,
-                                         diagnostic_updater::DiagnosticStatusWrapper& stat) const {
-  const uint64_t failedSubscriptions = _failedSubscriptions.load();
-  const uint64_t failedServiceCalls = _failedServiceCalls.load();
-  if (failedSubscriptions == 0 && failedServiceCalls == 0) {
-    stat.summary(DiagnosticStatus::OK, "No failures");
+                                         diagnostic_updater::DiagnosticStatusWrapper& stat) {
+  const ForwardingCounts counts{_failedSubscriptions.load(), _incompatibleQosEvents.load(),
+                                _failedServiceCalls.load()};
+  const ForwardingCounts last = _lastReportedForwarding;
+
+  std::string newFailures;
+  const auto addNewFailures = [&newFailures](uint64_t current, uint64_t previous,
+                                             const std::string& singular,
+                                             const std::string& plural) {
+    if (current > previous) {
+      newFailures +=
+        (newFailures.empty() ? "" : ", ") + pluralize(current - previous, singular, plural);
+    }
+  };
+  addNewFailures(counts.failedSubscriptions, last.failedSubscriptions, "failed subscription",
+                 "failed subscriptions");
+  addNewFailures(counts.incompatibleQosEvents, last.incompatibleQosEvents, "incompatible QoS event",
+                 "incompatible QoS events");
+  addNewFailures(counts.failedServiceCalls, last.failedServiceCalls, "failed service call",
+                 "failed service calls");
+  _lastReportedForwarding = counts;
+
+  if (newFailures.empty()) {
+    stat.summary(DiagnosticStatus::OK, "No new failures");
   } else {
-    stat.summary(DiagnosticStatus::WARN,
-                 pluralize(failedSubscriptions, "failed subscription", "failed subscriptions") +
-                   " and " +
-                   pluralize(failedServiceCalls, "failed service call", "failed service calls") +
-                   " since startup");
+    stat.summary(DiagnosticStatus::WARN, newFailures + " since the last report");
   }
   stat.add("Active subscriptions", activeSubscriptions);
-  stat.add("Failed subscriptions", failedSubscriptions);
-  stat.add("Failed service calls", failedServiceCalls);
+  stat.add("Failed subscriptions", counts.failedSubscriptions);
+  stat.add("Incompatible QoS events", counts.incompatibleQosEvents);
+  stat.add("Failed service calls", counts.failedServiceCalls);
 }
 
 void reportWebSocketServer(uint16_t port, size_t clientCount,
