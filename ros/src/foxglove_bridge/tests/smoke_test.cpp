@@ -926,6 +926,7 @@ int main(int argc, char** argv) {
     executor.cancel();
     spinnerThread.join();
     executor.remove_node(node.get_node_base_interface());
+    g_bridge = nullptr;
   }
 
   // The global context must be shut down before returning. Otherwise its static destructor shuts
