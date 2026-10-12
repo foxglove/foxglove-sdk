@@ -25,6 +25,7 @@ LOCATION = ObjectLocation("bucket", "prefix/run.mcap")
 
 
 def test_indexed_sparse_reads_filter_topics_time_and_include_end() -> None:
+    pytest.importorskip("foxglove.client")
     data = mcap_bytes(
         [
             (topic, index * 1_000_000_000, {"value": index, "padding": "x" * 16384})
@@ -61,6 +62,7 @@ def test_indexed_sparse_reads_filter_topics_time_and_include_end() -> None:
 
 
 def test_split_recordings_merge_globally_and_remap_colliding_ids() -> None:
+    pytest.importorskip("foxglove.client")
     second = ObjectLocation("bucket", "prefix/second.mcap")
     third = ObjectLocation("bucket", "prefix/third.mcap")
     store = Store(
@@ -99,6 +101,7 @@ def test_split_recordings_merge_globally_and_remap_colliding_ids() -> None:
 
 
 def test_lookback_and_repeated_streams_open_fresh_files() -> None:
+    pytest.importorskip("foxglove.client")
     store = Store(
         {
             LOCATION: mcap_bytes(
@@ -131,6 +134,7 @@ def test_lookback_and_repeated_streams_open_fresh_files() -> None:
 
 
 def test_cancellation_closes_all_split_recordings() -> None:
+    pytest.importorskip("foxglove.client")
     second = ObjectLocation("bucket", "second")
     data = mcap_bytes([("/selected", 0, 1), ("/selected", 1, 2)])
     store = Store({LOCATION: data, second: data})
@@ -150,6 +154,7 @@ def test_cancellation_closes_all_split_recordings() -> None:
 
 
 def test_failed_open_closes_previously_opened_recordings() -> None:
+    pytest.importorskip("foxglove.client")
     second = ObjectLocation("bucket", "missing")
     store = Store({LOCATION: mcap_bytes([("/selected", 0, 1)])})
     with pytest.raises(KeyError):
@@ -163,6 +168,7 @@ def test_failed_open_closes_previously_opened_recordings() -> None:
 def test_object_storage_reads_reject_unsupported_mcap_handles(
     indexed: bool, seekable: bool
 ) -> None:
+    pytest.importorskip("foxglove.client")
     store = Store(
         {LOCATION: mcap_bytes([("/selected", 0, 1)], indexed=indexed)},
         seekable=seekable,
@@ -173,6 +179,7 @@ def test_object_storage_reads_reject_unsupported_mcap_handles(
 
 
 def test_empty_indexed_recording_produces_no_messages() -> None:
+    pytest.importorskip("foxglove.client")
     store = Store({LOCATION: mcap_bytes([])})
     assert (
         list(_iter_messages(store, [LOCATION], ["/selected"], START, START, None)) == []
@@ -281,6 +288,7 @@ def test_stateful_custom_decoder_runs_in_global_order_and_is_not_copied() -> Non
 
 
 def test_object_storage_time_filter_preserves_nanosecond_precision() -> None:
+    pytest.importorskip("foxglove.client")
     store = Store(
         {
             LOCATION: mcap_bytes(
@@ -392,6 +400,7 @@ def test_episode_ids_stay_consistent_across_topic_streams(
 
 
 def test_object_storage_rejects_chunk_indexes_without_message_indexes() -> None:
+    pytest.importorskip("foxglove.client")
     store = Store({LOCATION: mcap_bytes([("/selected", 0, 1)], message_indexes=False)})
     with pytest.raises(ValueError, match="message indexes"):
         list(_iter_messages(store, [LOCATION], ["/selected"], START, START, None))
@@ -399,6 +408,7 @@ def test_object_storage_rejects_chunk_indexes_without_message_indexes() -> None:
 
 
 def test_channel_remapping_is_cached_per_file(monkeypatch: pytest.MonkeyPatch) -> None:
+    pytest.importorskip("foxglove.client")
     from foxglove.datasets.storage import _MessageIds
 
     second = ObjectLocation("bucket", "second")
@@ -424,6 +434,7 @@ def test_channel_remapping_is_cached_per_file(monkeypatch: pytest.MonkeyPatch) -
 
 
 def test_many_recordings_close_as_they_exhaust_and_skip_nonoverlapping_files() -> None:
+    pytest.importorskip("foxglove.client")
     locations = [ObjectLocation("bucket", f"{index}.mcap") for index in range(50)]
     store = Store(
         {
@@ -452,6 +463,7 @@ def test_many_recordings_close_as_they_exhaust_and_skip_nonoverlapping_files() -
 def test_nonoverlapping_summary_skips_chunk_reads_and_includes_end(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    pytest.importorskip("foxglove.client")
     from mcap.reader import SeekingReader
 
     second = ObjectLocation("bucket", "second")
@@ -501,6 +513,7 @@ def test_decoder_failure_closes_all_recording_streams() -> None:
 def test_message_free_chunk_does_not_reject_indexed_recording(
     statistics: bool, compressed: bool
 ) -> None:
+    pytest.importorskip("foxglove.client")
     from mcap.reader import SeekingReader
 
     data = mcap_with_unindexed_chunk(
@@ -519,6 +532,7 @@ def test_message_free_chunk_does_not_reject_indexed_recording(
 def test_indexed_channel_does_not_hide_unindexed_messages_in_another_chunk(
     message_time: int, statistics: bool, compressed: bool
 ) -> None:
+    pytest.importorskip("foxglove.client")
     from mcap.reader import NonSeekingReader
 
     data = mcap_with_unindexed_chunk(

@@ -19,7 +19,7 @@ def first_sample(episode: EpisodeReader) -> Iterator[Any]:
 def test_default_api_client_reads_environment_again_after_plan_serialization(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    client_module = importlib.import_module("foxglove.client")
+    client_module = pytest.importorskip("foxglove.client")
     constructor = MagicMock(side_effect=lambda **kwargs: Client())
     monkeypatch.setattr(client_module, "Client", constructor)
     monkeypatch.setenv("FOXGLOVE_API_TOKEN", "driver-token-must-not-be-serialized")
@@ -52,7 +52,7 @@ def test_default_api_client_reads_environment_again_after_plan_serialization(
 def test_missing_default_api_token_is_actionable_before_network(
     token: str | None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    client_module = importlib.import_module("foxglove.client")
+    client_module = pytest.importorskip("foxglove.client")
     constructor = MagicMock()
     monkeypatch.setattr(client_module, "Client", constructor)
     if token is None:
@@ -68,7 +68,7 @@ def test_custom_api_factory_takes_precedence_without_default_token(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.delenv("FOXGLOVE_API_TOKEN", raising=False)
-    client_module = importlib.import_module("foxglove.client")
+    client_module = pytest.importorskip("foxglove.client")
     constructor = MagicMock()
     monkeypatch.setattr(client_module, "Client", constructor)
     factory = MagicMock(side_effect=Client)
@@ -158,6 +158,7 @@ def test_public_adapters_forward_object_storage_source_without_creating_storage(
 def test_storage_planning_and_worker_lifecycle(
     location: ObjectLocation, builtin: bool, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    pytest.importorskip("foxglove.client")
     raw_location = {
         "bucket": location.bucket,
         "path": location.path,

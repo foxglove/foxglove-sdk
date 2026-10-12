@@ -12,6 +12,7 @@ from foxglove.datasets.storage import ObjectLocation, _CloudObjectStore, _iter_m
 from .datasets_helpers import START, mcap_bytes
 
 s3 = pytest.importorskip("pyarrow.fs")
+pytest.importorskip("foxglove.client")
 
 
 @pytest.mark.parametrize("deny_reads", [False, True])

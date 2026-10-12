@@ -93,6 +93,7 @@ def test_object_storage_in_real_workers(
     builtin: bool,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    pytest.importorskip("foxglove.client")
     pytest.importorskip(framework)
     pytest.importorskip("pyarrow")
     (tmp_path / "data.mcap").write_bytes(
