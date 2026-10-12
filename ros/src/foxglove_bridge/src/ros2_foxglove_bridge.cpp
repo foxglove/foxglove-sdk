@@ -182,7 +182,7 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
   const auto capabilities = this->get_parameter(PARAM_CAPABILITIES).as_string_array();
   const auto clientTopicWhiteList =
     this->get_parameter(PARAM_CLIENT_TOPIC_WHITELIST).as_string_array();
-  const auto clientTopicWhiteListPatterns = parseRegexStrings(this, clientTopicWhiteList);
+  _clientTopicWhitelistPatterns = parseRegexStrings(this, clientTopicWhiteList);
   _includeHidden = this->get_parameter(PARAM_INCLUDE_HIDDEN).as_bool();
   const auto assetUriAllowlist = this->get_parameter(PARAM_ASSET_URI_ALLOWLIST).as_string_array();
   _assetUriAllowlistPatterns = parseRegexStrings(this, assetUriAllowlist);
@@ -1093,6 +1093,33 @@ void FoxgloveBridge::removeOrDecrementSubscriptionLocked(ChannelId channelId, Cl
   }
 }
 
+bool FoxgloveBridge::admitClientChannel(ClientId clientId, ChannelId channelId,
+                                        const std::string& topicName, bool isGateway) {
+  // Match the name the publisher would be created on, so that relative or remapped names can't
+  // slip past the patterns.
+  const auto resolvedTopicName = this->get_node_topics_interface()->resolve_topic_name(topicName);
+  if (matchesRegex(resolvedTopicName, _clientTopicWhitelistPatterns)) {
+    return true;
+  }
+
+  const std::string message =
+    "Publishing on \"" + resolvedTopicName + "\" is not allowed: the topic does not match " +
+    PARAM_CLIENT_TOPIC_WHITELIST + ". Messages on this channel will be dropped.";
+  RCLCPP_WARN(
+    this->get_logger(), "%sRejected advertisement of channel %" PRIu64 " from client %u. %s",
+    isGateway ? "Gateway: " : "", static_cast<uint64_t>(channelId), clientId, message.c_str());
+
+  const ChannelAndClientId key = {channelId, clientId};
+#ifdef FOXGLOVE_REMOTE_ACCESS
+  if (isGateway) {
+    _gatewayRejectedClientChannels.insert(key);
+    return false;
+  }
+#endif
+  _rejectedClientChannels.insert(key);
+  return false;
+}
+
 ClientAdvertisement FoxgloveBridge::createClientPublisher(const std::string& topicName,
                                                           const std::string& topicType,
                                                           const std::string& encoding,
@@ -1201,6 +1228,9 @@ void FoxgloveBridge::clientAdvertise(ClientId clientId, const foxglove::ClientCh
   }
 
   try {
+    if (!admitClientChannel(clientId, channel.id, topicName, false)) {
+      return;
+    }
     auto ad =
       createClientPublisher(topicName, topicType, encoding, channel.schema, channel.schema_len);
     RCLCPP_INFO(this->get_logger(),
@@ -1220,6 +1250,9 @@ void FoxgloveBridge::clientUnadvertise(ClientId clientId, ChannelId clientChanne
 
   auto it = _clientAdvertisedTopics.find(key);
   if (it == _clientAdvertisedTopics.end()) {
+    if (_rejectedClientChannels.erase(key) > 0) {
+      return;
+    }
     throw ClientChannelError("Ignoring client unadvertisement from client ID " +
                              std::to_string(clientId) + " for unknown channel " +
                              std::to_string(clientChannelId));
@@ -1250,6 +1283,9 @@ void FoxgloveBridge::clientMessage(ClientId clientId, ChannelId clientChannelId,
 
     auto it = _clientAdvertisedTopics.find(key);
     if (it == _clientAdvertisedTopics.end()) {
+      if (_rejectedClientChannels.count(key) > 0) {
+        return;
+      }
       throw ClientChannelError("Dropping client message from client ID " +
                                std::to_string(clientId) + " for unknown channel " +
                                std::to_string(clientChannelId) +
@@ -1788,6 +1824,9 @@ void FoxgloveBridge::gatewayClientAdvertise(uint32_t clientId,
   }
 
   try {
+    if (!admitClientChannel(clientId, channelId, topicName, true)) {
+      return;
+    }
     auto ad = createClientPublisher(topicName, topicType, encoding, schemaData, schemaLen);
     RCLCPP_INFO(this->get_logger(),
                 "Gateway: client %u is advertising channel %" PRIu64
@@ -1812,6 +1851,9 @@ void FoxgloveBridge::gatewayClientUnadvertise(uint32_t clientId,
 
   auto it = _gatewayClientAdvertisedTopics.find(key);
   if (it == _gatewayClientAdvertisedTopics.end()) {
+    if (_gatewayRejectedClientChannels.erase(key) > 0) {
+      return;
+    }
     RCLCPP_WARN(this->get_logger(),
                 "Gateway: client %u unadvertised unknown channel %" PRIu64 " (\"%s\")", clientId,
                 static_cast<uint64_t>(channelId), std::string(channel.topic()).c_str());
@@ -1842,6 +1884,9 @@ void FoxgloveBridge::gatewayClientMessage(uint32_t clientId,
 
     auto it = _gatewayClientAdvertisedTopics.find(key);
     if (it == _gatewayClientAdvertisedTopics.end()) {
+      if (_gatewayRejectedClientChannels.count(key) > 0) {
+        return;
+      }
       RCLCPP_ERROR(this->get_logger(),
                    "Gateway: dropping message from client %u for unknown channel %" PRIu64,
                    clientId, static_cast<uint64_t>(channelId));

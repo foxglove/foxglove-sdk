@@ -2,6 +2,10 @@
 Changelog for package foxglove_bridge
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* **Behavior change:** enforce the ``client_topic_whitelist`` parameter, which was previously ignored. Advertisements from WebSocket and remote access clients for topics that don't match a pattern are now rejected, and messages on those channels are dropped. Patterns are matched against the fully qualified topic name, so if you set this parameter, check your patterns: one without a leading ``/`` (e.g. ``cmd_vel`` instead of ``/cmd_vel``) will now block client publishing (such as teleop) on that topic.
+
 3.6.0 (2026-09-28)
 ------------------
 * Add ``point_cloud_compression_method`` parameter to select the encoding method for remote access point cloud compression

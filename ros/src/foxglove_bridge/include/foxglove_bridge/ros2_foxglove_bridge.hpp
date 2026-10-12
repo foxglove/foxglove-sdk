@@ -117,13 +117,18 @@ private:
   };
   std::unordered_map<ChannelId, ChannelSubscription> _subscriptions;
 
+  using ClientChannelSet = std::unordered_set<ChannelAndClientId, PairHash>;
+
   std::unordered_map<ChannelAndClientId, ClientAdvertisement, PairHash> _clientAdvertisedTopics;
+  // Client channels rejected by client_topic_whitelist; their messages are dropped silently.
+  ClientChannelSet _rejectedClientChannels;
   foxglove::WebSocketServerCapabilities _capabilities;
 
 #ifdef FOXGLOVE_REMOTE_ACCESS
   std::unique_ptr<foxglove::RemoteAccessGateway> _gateway;
   std::unordered_map<ChannelAndClientId, ClientAdvertisement, PairHash>
     _gatewayClientAdvertisedTopics;
+  ClientChannelSet _gatewayRejectedClientChannels;
 #endif
   ServicesByType _advertisedServices;
   std::unordered_map<std::string, GenericClient::SharedPtr> _serviceClients;
@@ -132,6 +137,7 @@ private:
   foxglove_bridge::MessageDefinitionCache _messageDefinitionCache;
   std::vector<std::regex> _topicWhitelistPatterns;
   std::vector<std::regex> _serviceWhitelistPatterns;
+  std::vector<std::regex> _clientTopicWhitelistPatterns;
   std::vector<std::regex> _assetUriAllowlistPatterns;
   std::vector<std::regex> _bestEffortQosTopicWhiteListPatterns;
 #ifdef FOXGLOVE_REMOTE_ACCESS
@@ -244,6 +250,12 @@ private:
 
   // Shared helpers for client publish (used by both WebSocket and gateway paths).
   // Must be called with _clientAdvertisementsMutex held. May throw.
+
+  // Returns whether client_topic_whitelist allows a client to publish on the resolved
+  // `topicName`. Otherwise rejects the client channel: logs a warning and records the channel, so
+  // that the message handlers can drop its messages without logging each one.
+  bool admitClientChannel(ClientId clientId, ChannelId channelId, const std::string& topicName,
+                          bool isGateway);
   ClientAdvertisement createClientPublisher(const std::string& topicName,
                                             const std::string& topicType,
                                             const std::string& encoding,
