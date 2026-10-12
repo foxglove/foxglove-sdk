@@ -6321,6 +6321,32 @@ foxglove_error foxglove_gateway_publish_status(const struct foxglove_gateway *ga
 
 #if defined(FOXGLOVE_REMOTE_ACCESS)
 /**
+ * Sends a status message to a single connected participant.
+ *
+ * The participant is identified by the `client_id` passed to gateway callbacks. If the client is
+ * not connected, or there is no active session, this function does nothing.
+ *
+ * This function may be called from within gateway callbacks, such as `on_client_advertise`.
+ *
+ * The caller may optionally provide a message ID, which can be used in a subsequent call to
+ * `foxglove_gateway_remove_status`.
+ *
+ * # Safety
+ * - `gateway` must be a valid pointer to a gateway started with `foxglove_gateway_start`.
+ * - `message` must be a valid UTF-8 string, which must remain valid for the duration of this
+ *   call.
+ * - `id` must either be NULL, or a pointer to a valid UTF-8 string, which must remain valid for
+ *   the duration of this call.
+ */
+foxglove_error foxglove_gateway_send_status(const struct foxglove_gateway *gateway,
+                                            uint32_t client_id,
+                                            foxglove_server_status_level level,
+                                            struct foxglove_string message,
+                                            const struct foxglove_string *id);
+#endif
+
+#if defined(FOXGLOVE_REMOTE_ACCESS)
+/**
  * Removes status messages from all connected participants.
  *
  * Previously published status messages are referenced by ID.
@@ -7003,6 +7029,31 @@ foxglove_error foxglove_server_publish_status(struct foxglove_websocket_server *
                                               foxglove_server_status_level level,
                                               struct foxglove_string message,
                                               const struct foxglove_string *id);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Sends a status message to a single client.
+ *
+ * The client is identified by the `client_id` passed to server callbacks. If the client is not
+ * connected, this function does nothing.
+ *
+ * This function may be called from within server callbacks, such as `on_client_advertise`.
+ *
+ * The caller may optionally provide a message ID, which can be used in a subsequent call to
+ * `foxglove_server_remove_status`.
+ *
+ * # Safety
+ * - `message` must be a valid UTF-8 string, which must remain valid for the duration of this
+ *   call.
+ * - `id` must either be NULL, or a pointer to a valid UTF-8 string, which must remain valid for
+ *   the duration of this call.
+ */
+foxglove_error foxglove_server_send_status(const struct foxglove_websocket_server *server,
+                                           uint32_t client_id,
+                                           foxglove_server_status_level level,
+                                           struct foxglove_string message,
+                                           const struct foxglove_string *id);
 #endif
 
 #if !defined(__wasm__)
