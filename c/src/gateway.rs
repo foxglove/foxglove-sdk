@@ -759,7 +759,8 @@ impl foxglove::remote_access::Listener for FoxgloveGatewayCallbacks {
 #[repr(C)]
 pub struct FoxgloveGatewayStatsOptions<'a> {
     /// Optional channel topic name. If `data` is null or `len` is 0, defaults to
-    /// `/remote_access_stats`.
+    /// `/remote_access_stats`. Each gateway that publishes stats to a context needs its own
+    /// topic.
     pub topic: FoxgloveString,
 
     /// Optional interval between stats messages, in milliseconds.

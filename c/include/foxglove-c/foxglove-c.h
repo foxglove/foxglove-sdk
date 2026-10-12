@@ -2938,7 +2938,8 @@ typedef struct foxglove_point_cloud_compression {
 typedef struct foxglove_gateway_stats_options {
   /**
    * Optional channel topic name. If `data` is null or `len` is 0, defaults to
-   * `/remote_access_stats`.
+   * `/remote_access_stats`. Each gateway that publishes stats to a context needs its own
+   * topic.
    */
   struct foxglove_string topic;
   /**

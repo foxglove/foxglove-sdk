@@ -191,7 +191,8 @@ impl StatsOptions {
 
     /// Sets the topic of the stats channel.
     ///
-    /// Defaults to [`DEFAULT_STATS_TOPIC`].
+    /// Each gateway that publishes stats to a context needs its own topic. Defaults to
+    /// [`DEFAULT_STATS_TOPIC`].
     pub fn topic(mut self, topic: impl Into<String>) -> Self {
         self.topic = topic.into();
         self
@@ -216,6 +217,14 @@ impl StatsOptions {
         } else {
             self.interval
         };
+        // An identical existing channel would be shared, and closed when either gateway stops.
+        if context.get_channel_by_topic(&self.topic).is_some() {
+            tracing::warn!(
+                "remote access stats topic {} is already in use in this context; \
+                 use a unique stats topic for each gateway",
+                self.topic
+            );
+        }
         let channel = ChannelBuilder::new(self.topic)
             .context(context)
             .build::<RemoteAccessStats>();
@@ -548,6 +557,7 @@ mod tests {
     use std::collections::BTreeSet;
 
     use serde_json::json;
+    use tracing_test::traced_test;
 
     use super::*;
     use crate::testutil::RecordingSink;
@@ -790,6 +800,19 @@ mod tests {
 
         publisher.close();
         assert!(ctx.get_channel_by_topic("/custom/stats").is_none());
+    }
+
+    #[test]
+    #[traced_test]
+    fn publisher_warns_when_the_stats_topic_is_in_use() {
+        let ctx = Context::new();
+        let _first = StatsOptions::new().into_publisher(&ctx);
+        assert!(!logs_contain("already in use"));
+
+        let _second = StatsOptions::new().into_publisher(&ctx);
+        assert!(logs_contain(
+            "remote access stats topic /remote_access_stats is already in use in this context"
+        ));
     }
 
     #[test]

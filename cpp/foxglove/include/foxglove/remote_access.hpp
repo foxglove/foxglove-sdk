@@ -283,7 +283,8 @@ enum class VideoEncoderBackend : uint8_t {
 struct RemoteAccessStatsOptions {
   /// @brief Optional channel topic name.
   ///
-  /// Defaults to `/remote_access_stats`.
+  /// Each gateway that publishes stats to a context needs its own topic. Defaults to
+  /// `/remote_access_stats`.
   std::optional<std::string> topic;
 
   /// @brief Optional interval between stats messages.
