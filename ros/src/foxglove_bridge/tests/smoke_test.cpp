@@ -906,8 +906,8 @@ TEST(SmokeTest, serviceEventTopicDoesNotPreventFutureAdvertisements) {
 }
 #endif
 
-// Runs a separate bridge with default diagnostics settings on a random port, so that its cumulative
-// failure counters aren't affected by other tests.
+// Runs a separate bridge with diagnostics enabled on a random port, so that its cumulative failure
+// counters aren't affected by other tests.
 class DiagnosticsTest : public testing::Test {
 public:
   inline static const std::string BRIDGE_NODE_NAME = "foxglove_bridge_diagnostics_test";
@@ -922,6 +922,7 @@ protected:
     rclcpp::NodeOptions bridgeOptions;
     bridgeOptions.arguments({"--ros-args", "-r", "__node:=" + BRIDGE_NODE_NAME});
     bridgeOptions.append_parameter_override("port", 0);
+    bridgeOptions.append_parameter_override("publish_diagnostics", true);
     bridgeOptions.append_parameter_override("diagnostic_updater.period", 0.1);
     _bridge = std::make_shared<foxglove_bridge::FoxgloveBridge>(bridgeOptions);
 
