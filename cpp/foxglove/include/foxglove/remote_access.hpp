@@ -234,6 +234,63 @@ enum class VideoEncoderBackend : uint8_t {
   VideoToolbox = 5,
 };
 
+// Keep this comment in sync with rust/foxglove/src/remote_access/stats.rs
+
+/// @brief Options for the statistics that a remote access gateway publishes, enabled with
+/// @ref RemoteAccessGatewayOptions::stats.
+///
+/// The gateway logs a JSON message with the `foxglove.RemoteAccessStats` JSON Schema to a
+/// channel in its context, every @ref interval. It keeps publishing while it is dormant or
+/// reconnecting, and publishes a last message with the `shutting_down` state when it is
+/// stopped. Like any other channel in the context, remote viewers receive it too.
+///
+/// @par Published fields
+///
+/// Counters are cumulative over the lifetime of the gateway. They are not reset when a session
+/// ends or the gateway reconnects.
+///
+/// - `state` (string): `connecting`, `connected`, or `shutting_down`. `connected` means the
+///   gateway is available for remote access, whether or not a viewer session is active.
+/// - `session_active` (boolean): Whether the gateway is joined to a remote access session,
+///   which happens when a viewer requests a connection.
+/// - `viewer_count` (integer): The number of viewers connected to the current session.
+/// - `rtt_ms` (number): The most recent ICE round-trip time to the remote access server,
+///   sampled every 30 seconds. Omitted if no session is active or the session has not been
+///   sampled yet.
+/// - `connection_quality` (string): `excellent`, `good`, `poor`, or `lost`. Omitted if no
+///   session is active.
+/// - `reconnects` (integer): Times the gateway lost its connection to the Foxglove platform and
+///   started reconnecting.
+/// - `participant_resets` (integer): Times a viewer was disconnected and reconnected because its
+///   control message queue overflowed or a write to it failed. See
+///   @ref RemoteAccessGatewayOptions::message_backlog_size.
+/// - `data_track_full` (integer): Messages dropped because a data track's send queue was full.
+/// - `data_track_not_ready` (integer): Messages dropped because a channel's data track was not
+///   published, which is expected briefly after each channel is advertised.
+/// - `oversized` (integer): Messages dropped for exceeding
+///   @ref RemoteAccessGatewayOptions::max_data_track_message_size.
+/// - `video_queue` (integer): Image messages dropped before video encoding because the encoder
+///   was slower than the log rate.
+/// - `point_cloud_queue` (integer): Point cloud messages dropped before compression because
+///   compression was slower than the log rate.
+/// - `video_encode_errors` (integer): Image messages that could not be encoded as video.
+/// - `topics` (array): The drop counters above for each topic with a nonzero counter, as objects
+///   with a `topic` field.
+///
+/// Of the drops and resets, only `data_track_full` and `participant_resets` are logged as
+/// warnings, throttled across the gateway. The others are expected in normal operation.
+struct RemoteAccessStatsOptions {
+  /// @brief Optional channel topic name.
+  ///
+  /// Defaults to `/remote_access_stats`.
+  std::optional<std::string> topic;
+
+  /// @brief Optional interval between stats messages.
+  ///
+  /// Defaults to 1000ms. Clamped to a minimum of 100ms.
+  std::optional<std::chrono::milliseconds> interval;
+};
+
 /// @brief Options for creating a remote access gateway.
 struct RemoteAccessGatewayOptions {
   /// @brief The logging context for this gateway.
@@ -321,6 +378,12 @@ struct RemoteAccessGatewayOptions {
   /// and deliver the raw point cloud on the control bytestream; the callback is not
   /// consulted for them.
   PointCloudCompressionFn point_cloud_compression;
+  /// @brief Optional statistics publishing.
+  ///
+  /// If set, the gateway periodically logs its connection state, viewer count, and cumulative
+  /// message drop and participant reset counters to a channel in @ref context; see
+  /// @ref RemoteAccessStatsOptions. If not set, the gateway does not publish statistics.
+  std::optional<RemoteAccessStatsOptions> stats = std::nullopt;
   // New fields are appended last so that adding them preserves the layout of pre-existing fields.
 };
 

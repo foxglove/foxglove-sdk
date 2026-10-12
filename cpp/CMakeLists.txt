@@ -331,6 +331,9 @@ set(foxglove_test_srcs
     "foxglove/tests/test_system_info.cpp"
     "foxglove/tests/test_websocket.cpp"
 )
+if(FOXGLOVE_REMOTE_ACCESS)
+  list(APPEND foxglove_test_srcs "foxglove/tests/test_remote_access.cpp")
+endif()
 add_executable(tests "${foxglove_test_srcs}")
 set_property(TARGET tests PROPERTY CXX_STANDARD 17)
 set_property(TARGET tests PROPERTY CXX_STANDARD_REQUIRED True)

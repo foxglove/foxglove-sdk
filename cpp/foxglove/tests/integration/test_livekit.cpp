@@ -942,6 +942,47 @@ TEST_CASE("livekit: connection status lifecycle", "[integration]") {
   CHECK(statuses[statuses.size() - 1] == foxglove::RemoteAccessConnectionStatus::Shutdown);
 }
 
+TEST_CASE("livekit: stats report the active session to a subscribed viewer", "[integration]") {
+  auto ctx = foxglove::Context::create();
+
+  TestGatewayOptions opts;
+  // The stats channel exists before the viewer joins, so deliver it on the control plane rather
+  // than on a data track announced in the join burst.
+  opts.qos_classifier = [](const foxglove::ChannelDescriptor& /*ch*/) {
+    return foxglove::QosProfile{foxglove::Reliability::Reliable};
+  };
+  foxglove::RemoteAccessStatsOptions stats;
+  stats.interval = 100ms;
+  opts.stats = std::move(stats);
+  auto gw = TestGateway::start_with_options(ctx, std::move(opts));
+
+  auto viewer = ViewerConnection::connect(gw.room_name, "viewer-1");
+  viewer.expect_server_info();
+
+  auto advertise = viewer.expect_advertise();
+  REQUIRE(advertise["channels"].size() == 1);
+  auto& adv_ch = advertise["channels"][0];
+  CHECK(adv_ch["topic"] == "/remote_access_stats");
+  CHECK(adv_ch["encoding"] == "json");
+  CHECK(adv_ch["schemaName"] == "foxglove.RemoteAccessStats");
+  auto channel_id = adv_ch["id"].get<uint64_t>();
+
+  viewer.send_subscribe({channel_id});
+  auto msg = viewer.expect_message_data();
+  CHECK(msg.value("channelId", uint64_t{0}) == channel_id);
+  auto data = msg.value("data", std::vector<uint8_t>{});
+  auto stats_msg = nlohmann::json::parse(data.begin(), data.end());
+  CHECK(stats_msg["state"] == "connected");
+  CHECK(stats_msg["session_active"] == true);
+  CHECK(stats_msg["viewer_count"] == 1);
+  CHECK(stats_msg.contains("connection_quality"));
+  CHECK(stats_msg["participant_resets"] == 0);
+  CHECK(stats_msg["data_track_full"] == 0);
+  CHECK(stats_msg["topics"].empty());
+
+  gw.stop();
+}
+
 // ===========================================================================
 // Connection graph tests
 // ===========================================================================
