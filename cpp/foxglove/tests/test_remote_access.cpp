@@ -7,6 +7,7 @@
 #include <catch2/matchers/catch_matchers_string.hpp>
 
 #include <chrono>
+#include <cstddef>
 #include <fstream>
 #include <iterator>
 #include <optional>
@@ -55,6 +56,15 @@ std::string recordGateway(std::optional<foxglove::RemoteAccessStatsOptions> stat
   return {std::istreambuf_iterator<char>(stream), std::istreambuf_iterator<char>()};
 }
 
+size_t countOccurrences(const std::string& haystack, const std::string& needle) {
+  size_t count = 0;
+  for (auto pos = haystack.find(needle); pos != std::string::npos;
+       pos = haystack.find(needle, pos + needle.size())) {
+    ++count;
+  }
+  return count;
+}
+
 }  // namespace
 
 TEST_CASE("RemoteAccessGateway publishes stats while connecting and when stopped") {
@@ -69,6 +79,17 @@ TEST_CASE("RemoteAccessGateway publishes stats while connecting and when stopped
   REQUIRE_THAT(content, ContainsSubstring(R"({"state":"connecting","session_active":false)"));
   REQUIRE_THAT(content, ContainsSubstring(R"({"state":"shutting_down","session_active":false)"));
   REQUIRE_THAT(content, !ContainsSubstring("/remote_access_stats"));
+}
+
+TEST_CASE("RemoteAccessGateway clamps a zero stats interval to the minimum") {
+  foxglove::RemoteAccessStatsOptions stats;
+  stats.interval = std::chrono::milliseconds(0);
+
+  auto content = recordGateway(std::move(stats));
+
+  // The gateway runs for 350 ms, so the 100 ms minimum publishes several messages, where the
+  // 1 s default would publish one.
+  REQUIRE(countOccurrences(content, R"({"state":"connecting")") >= 2);
 }
 
 TEST_CASE("RemoteAccessGateway publishes stats on the default topic") {

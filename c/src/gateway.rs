@@ -765,7 +765,7 @@ pub struct FoxgloveGatewayStatsOptions<'a> {
 
     /// Optional interval between stats messages, in milliseconds.
     ///
-    /// When null or zero, defaults to 1000 ms. Clamped to a minimum of 100 ms.
+    /// When null, defaults to 1000 ms. Clamped to a minimum of 100 ms.
     pub interval_ms: Option<&'a u64>,
 }
 
@@ -780,9 +780,7 @@ impl FoxgloveGatewayStatsOptions<'_> {
         if !topic.is_empty() {
             options = options.topic(topic);
         }
-        if let Some(&interval_ms) = self.interval_ms
-            && interval_ms > 0
-        {
+        if let Some(&interval_ms) = self.interval_ms {
             options = options.interval(Duration::from_millis(interval_ms));
         }
         Ok(options)
@@ -1409,7 +1407,10 @@ mod stats_tests {
             unsafe { options.to_native() }.expect("valid options"),
             StatsOptions::new()
         );
+    }
 
+    #[test]
+    fn test_zero_stats_interval_is_passed_through_to_be_clamped() {
         let zero = 0;
         let options = FoxgloveGatewayStatsOptions {
             topic: FoxgloveString::default(),
@@ -1417,7 +1418,7 @@ mod stats_tests {
         };
         assert_eq!(
             unsafe { options.to_native() }.expect("valid options"),
-            StatsOptions::new()
+            StatsOptions::new().interval(Duration::ZERO)
         );
     }
 

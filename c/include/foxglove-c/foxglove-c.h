@@ -2945,7 +2945,7 @@ typedef struct foxglove_gateway_stats_options {
   /**
    * Optional interval between stats messages, in milliseconds.
    *
-   * When null or zero, defaults to 1000 ms. Clamped to a minimum of 100 ms.
+   * When null, defaults to 1000 ms. Clamped to a minimum of 100 ms.
    */
   const uint64_t *interval_ms;
 } foxglove_gateway_stats_options;
