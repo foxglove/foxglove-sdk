@@ -14,9 +14,9 @@
 
 #include <atomic>
 #include <condition_variable>
+#include <cstdint>
 #include <cstring>
 #include <libwebsockets.h>
-#include <limits>
 #include <mutex>
 #include <queue>
 #include <thread>
@@ -1990,9 +1990,7 @@ TEST_CASE("Send status to a single client from onClientAdvertise") {
   }
 
   // Sending to an unknown client is a no-op.
-  auto error = server.sendStatus(
-    std::numeric_limits<uint32_t>::max(), foxglove::WebSocketServerStatusLevel::Error, "nobody"
-  );
+  auto error = server.sendStatus(UINT32_MAX, foxglove::WebSocketServerStatusLevel::Error, "nobody");
   REQUIRE(error == foxglove::FoxgloveError::Ok);
 
   // client2 didn't receive the status, so the next broadcast is the first status it sees.

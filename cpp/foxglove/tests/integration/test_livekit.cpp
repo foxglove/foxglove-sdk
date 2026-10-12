@@ -14,7 +14,7 @@
 
 #include <algorithm>
 #include <atomic>
-#include <limits>
+#include <cstdint>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -698,9 +698,8 @@ TEST_CASE(
   }
 
   CHECK(
-    gw.gateway().sendStatus(
-      std::numeric_limits<uint32_t>::max(), foxglove::RemoteAccessStatusLevel::Error, "unknown"
-    ) == foxglove::FoxgloveError::Ok
+    gw.gateway().sendStatus(UINT32_MAX, foxglove::RemoteAccessStatusLevel::Error, "unknown") ==
+    foxglove::FoxgloveError::Ok
   );
 
   // Neither the targeted status nor the one for an unknown client reached viewer-2, so the next
