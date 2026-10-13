@@ -2,6 +2,12 @@
 Changelog for package foxglove_bridge
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+3.6.1 (2026-10-13)
+------------------
+* Remote access sessions now recover after a network drop instead of staying stuck until the process restarts
+* Fix a remote access crash on the first ICE candidate, resource leaks across repeated reconnects, and lost messages on reliable data channels after a resume
+* Update Foxglove SDK version to 0.29.2
+
 3.6.0 (2026-09-28)
 ------------------
 * Add ``point_cloud_compression_method`` parameter to select the encoding method for remote access point cloud compression
