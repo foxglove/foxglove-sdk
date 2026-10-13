@@ -43,6 +43,15 @@ describe("getExampleArgs", () => {
       await expect(access(file)).resolves.toBeUndefined();
     },
   );
+
+  it("supplies an existing video file for rgb-camera-visualization", async () => {
+    const file = path.resolve(__dirname, "fixtures/camera.avi");
+    expect(await testOnlyExports.getExampleArgs("rgb-camera-visualization")).toEqual([
+      "--camera-id",
+      file,
+    ]);
+    await expect(access(file)).resolves.toBeUndefined();
+  });
 });
 
 describe("runExample", () => {
