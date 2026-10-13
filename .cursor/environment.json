@@ -1,0 +1,4 @@
+{
+  "snapshot": "snapshot-20260611-57c2be68-1a16-44e1-b416-d66777c26c3d",
+  "install": "git lfs pull\nyarn install\ncurl -LsSf https://astral.sh/uv/install.sh | sh\nexport PATH=\"$HOME/.local/bin:$PATH\"\nuv sync"
+}
