@@ -6,7 +6,7 @@ import type { RunnerWorker } from "./RunnerWorker";
 
 type EventMap = {
   ready: () => void;
-  ["run-completed"]: (mcapFilename: string | undefined) => void;
+  ["run-completed"]: (mcapFilenames: string[]) => void;
   ["set-layout"]: (layoutJson: string) => void;
 };
 
@@ -34,8 +34,8 @@ export class Runner extends EventEmitter<EventMap> {
     this.emit("run-completed", await this.#remote.run(code, currentUrl));
   }
 
-  async readFile(): Promise<{ name: string; data: Uint8Array<ArrayBuffer> }> {
-    return await this.#remote.readFile();
+  async readFiles(): Promise<{ name: string; data: Uint8Array<ArrayBuffer> }[]> {
+    return await this.#remote.readFiles();
   }
 
   async getCompletionItems(
