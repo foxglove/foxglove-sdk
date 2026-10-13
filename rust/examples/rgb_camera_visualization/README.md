@@ -4,7 +4,7 @@ This example demonstrates how to stream RGB camera data to Foxglove using the Ru
 
 ## Installing Dependencies
 
-This example uses OpenCV for camera capture. You'll need to install OpenCV development libraries:
+This example uses OpenCV for camera capture. You'll need to install OpenCV 4.x or 5.x development libraries:
 
 **Ubuntu/Debian:**
 ```bash

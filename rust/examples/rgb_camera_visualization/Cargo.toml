@@ -9,4 +9,4 @@ clap = { version = "4.5", features = ["derive"] }
 ctrlc = "3.4.5"
 env_logger = "0.11.5"
 anyhow = "1.0"
-opencv = { version = "0.95", default-features = false, features = ["videoio"] }
+opencv = { version = "0.101", default-features = false, features = ["videoio"] }

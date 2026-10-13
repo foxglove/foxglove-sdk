@@ -150,6 +150,8 @@ async function getExampleArgs(example: string): Promise<string[]> {
       return ["--file", path.resolve(__dirname, "fixtures/empty.mcap")];
     case "write-mcap-file":
       return ["--path", await newTempFile()];
+    case "rgb-camera-visualization":
+      return ["--camera-id", path.resolve(__dirname, "fixtures/camera.avi")];
     default:
       return [];
   }
