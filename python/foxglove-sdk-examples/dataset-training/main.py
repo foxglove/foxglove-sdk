@@ -1,21 +1,16 @@
 """Read a committed Foxglove dataset with PyTorch or Ray.
 
 The selected JSON topic contains speed, acceleration, and steering numbers.
-Set FOXGLOVE_API_TOKEN on every worker before running this example.
+Set FOXGLOVE_API_TOKEN before running. Object storage mode uses cloud credentials
+on workers; the default Foxglove mode also needs FOXGLOVE_API_TOKEN on workers.
 """
 
 import argparse
-import os
 from collections.abc import Iterator
+from typing import Literal
 
 import numpy as np
-from foxglove.client import Client
 from foxglove.datasets import EpisodeReader
-
-
-def make_client() -> Client:
-    """Create a client using credentials available in the current worker."""
-    return Client(token=os.environ["FOXGLOVE_API_TOKEN"])
 
 
 def read_episode(episode: EpisodeReader) -> Iterator[dict[str, np.ndarray]]:
@@ -29,7 +24,9 @@ def read_episode(episode: EpisodeReader) -> Iterator[dict[str, np.ndarray]]:
         }
 
 
-def run_torch(dataset_id: str, version: int) -> None:
+def run_torch(
+    dataset_id: str, version: int, source: Literal["foxglove", "object_storage"]
+) -> None:
     """Load batches directly with PyTorch."""
     from foxglove.datasets.torch import read_dataset
     from torch.utils.data import DataLoader
@@ -39,14 +36,22 @@ def run_torch(dataset_id: str, version: int) -> None:
         version=version,
         topics=["/training/measurements"],
         read_episode=read_episode,
-        client_factory=make_client,
+        source=source,
     )
-    loader = DataLoader(dataset, batch_size=32, num_workers=2, prefetch_factor=1)
+    loader = DataLoader(
+        dataset,
+        batch_size=32,
+        num_workers=2,
+        prefetch_factor=1,
+        multiprocessing_context="spawn",
+    )
     for batch in loader:
         print(batch["inputs"].shape, batch["target"].shape)
 
 
-def run_ray(dataset_id: str, version: int) -> None:
+def run_ray(
+    dataset_id: str, version: int, source: Literal["foxglove", "object_storage"]
+) -> None:
     """Load with Ray and consume batches as PyTorch tensors."""
     import ray
     from foxglove.datasets.ray import read_dataset
@@ -58,7 +63,7 @@ def run_ray(dataset_id: str, version: int) -> None:
             version=version,
             topics=["/training/measurements"],
             read_episode=read_episode,
-            client_factory=make_client,
+            source=source,
             concurrency=2,
         )
         for batch in dataset.iter_torch_batches(batch_size=32, device="cpu"):
@@ -73,11 +78,14 @@ def main() -> None:
     parser.add_argument("--dataset-id", required=True)
     parser.add_argument("--version", type=int, required=True)
     parser.add_argument("--framework", choices=["torch", "ray"], default="torch")
+    parser.add_argument(
+        "--source", choices=["foxglove", "object_storage"], default="foxglove"
+    )
     args = parser.parse_args()
     if args.framework == "torch":
-        run_torch(args.dataset_id, args.version)
+        run_torch(args.dataset_id, args.version, args.source)
     else:
-        run_ray(args.dataset_id, args.version)
+        run_ray(args.dataset_id, args.version, args.source)
 
 
 if __name__ == "__main__":

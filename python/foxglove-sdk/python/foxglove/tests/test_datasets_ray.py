@@ -6,7 +6,7 @@ import pytest
 from foxglove.datasets import EpisodeReader
 from foxglove.datasets.reader import _plan
 
-from .test_datasets import Client
+from .datasets_helpers import Client
 
 # Use the current test environment, including the locally installed editable SDK,
 # instead of having Ray recreate it with uv for each worker.

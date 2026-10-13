@@ -15,7 +15,7 @@ from foxglove.datasets.reader import _Episode, _plan
 from mcap.decoder import DecoderFactory
 from mcap.records import Channel, Message, Schema
 
-from .test_datasets import Client
+from .datasets_helpers import Client
 
 av = pytest.importorskip("av")
 np = pytest.importorskip("numpy")
