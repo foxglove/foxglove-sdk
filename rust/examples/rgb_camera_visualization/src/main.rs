@@ -1,14 +1,14 @@
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use anyhow::{Context, Result};
 use clap::Parser;
-use foxglove::messages::{RawImage, Timestamp};
 use foxglove::LazyChannel;
+use foxglove::messages::{RawImage, Timestamp};
 use opencv::{
     core::Mat,
     prelude::*,
-    videoio::{VideoCapture, CAP_ANY},
+    videoio::{CAP_ANY, VideoCapture},
 };
 
 /// RGB Camera visualization with Foxglove
@@ -101,7 +101,10 @@ fn camera_loop(mut camera: CameraCapture, done: Arc<AtomicBool>) -> Result<()> {
                 }
             },
             Ok(None) => {
-                eprintln!("Failed to read frame from camera");
+                if !done.load(Ordering::Relaxed) {
+                    eprintln!("No more frames from camera");
+                }
+                break;
             }
             Err(e) => {
                 eprintln!("Error reading frame: {}", e);

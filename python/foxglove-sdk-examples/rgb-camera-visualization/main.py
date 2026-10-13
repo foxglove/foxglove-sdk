@@ -1,11 +1,10 @@
 import argparse
-from typing import Optional
 
 import cv2
 import foxglove
 import numpy as np
 from foxglove.channels import RawImageChannel
-from foxglove.messages import RawImage
+from foxglove.messages import RawImage, Timestamp
 
 
 def parse_args() -> argparse.Namespace:
@@ -29,10 +28,11 @@ def parse_args() -> argparse.Namespace:
 class CameraCapture:
     def __init__(self, camera_id: str):
         self.camera_id = camera_id
-        self.cap: Optional[cv2.VideoCapture] = None
+        self.cap: cv2.VideoCapture | None = None
 
     def connect(self) -> bool:
         try:
+            cam_id: int | str
             try:
                 cam_id = int(self.camera_id)
             except ValueError:
@@ -59,7 +59,7 @@ class CameraCapture:
             print(f"Error connecting to camera: {e}")
             return False
 
-    def read_frame(self) -> Optional[np.ndarray]:
+    def read_frame(self) -> np.ndarray | None:
         """Read a frame from the camera."""
         if not self.cap:
             return None
@@ -82,6 +82,8 @@ def create_raw_image_message(frame: np.ndarray) -> RawImage:
     height, width, channels = frame.shape
 
     return RawImage(
+        timestamp=Timestamp.now(),
+        frame_id="camera",
         data=frame.tobytes(),
         width=width,
         height=height,
@@ -96,7 +98,7 @@ def main():
     camera = CameraCapture(args.camera_id)
     if not camera.connect():
         print("Failed to connect to camera. Exiting.")
-        return 0
+        return 1
 
     server = foxglove.start_server()
     print(f"Foxglove server started at {server.app_url()}")
@@ -110,8 +112,8 @@ def main():
         while True:
             frame = camera.read_frame()
             if frame is None:
-                print("Failed to read frame from camera")
-                continue
+                print("No more frames from camera")
+                break
 
             img_msg = create_raw_image_message(frame)
             image_channel.log(img_msg)
