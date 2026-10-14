@@ -5,7 +5,7 @@ Run either the PyTorch or Ray adapter on a dataset version. The example expects 
 
 Adapt `read_episode` for your own schemas. Install `foxglove-sdk[torch]` for PyTorch
 or `foxglove-sdk[torch,ray]` for this example's Ray-to-PyTorch batches. These extras
-include the object storage dependencies.
+include object storage dependencies and MCAP protobuf/ROS decoders.
 
 ```sh
 export FOXGLOVE_API_TOKEN=your-token

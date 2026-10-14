@@ -1,10 +1,14 @@
+import re
 from collections.abc import Iterator
 from datetime import timedelta
+from pathlib import Path
 from typing import Any
 
 import pytest
 from foxglove.datasets import EpisodeReader
 from foxglove.datasets.reader import _plan
+from foxglove.datasets.storage import _decoder_not_found_hint
+from mcap.exceptions import DecoderNotFoundError
 
 from .datasets_helpers import Client, Page
 
@@ -12,6 +16,48 @@ from .datasets_helpers import Client, Page
 def samples(episode: EpisodeReader) -> Iterator[dict[str, Any]]:
     for _schema, _channel, _message, decoded in episode.iter_messages():
         yield {"id": decoded}
+
+
+def test_torch_and_ray_extras_include_protobuf_decoder() -> None:
+    pyproject = (Path(__file__).resolve().parents[3] / "pyproject.toml").read_text()
+    extras = re.search(
+        r"\[project\.optional-dependencies\](.*?)\[dependency-groups\]",
+        pyproject,
+        re.DOTALL,
+    )
+    assert extras is not None
+    block = extras.group(1)
+    assert '"mcap-protobuf-support"' in block
+    assert 'torch = ["foxglove-sdk[decoders]"' in block
+    assert 'ray = ["foxglove-sdk[decoders]"' in block
+
+
+def test_missing_decoder_error_names_schema_encoding_and_package(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    error = DecoderNotFoundError(
+        "no decoder factory supplied for message encoding protobuf, "
+        "schema Schema(id=1, data=b'', encoding='protobuf', "
+        "name='foxglove.CompressedImage')"
+    )
+    assert _decoder_not_found_hint(error) == (
+        "No decoder for schema encoding 'protobuf'; install mcap-protobuf-support"
+    )
+
+    def iter_messages(*args: Any, **kwargs: Any) -> Iterator[Any]:
+        raise error
+
+    monkeypatch.setattr(Client, "iter_messages", iter_messages)
+    plan = _plan("dataset", 7, ["/camera"], Client)
+    with pytest.raises(
+        RuntimeError,
+        match=(
+            r"Failed to read episode a in dataset dataset version 7: "
+            r"No decoder for schema encoding 'protobuf'; install mcap-protobuf-support"
+        ),
+    ) as wrapped:
+        list(plan.read(plan.episodes, samples))
+    assert wrapped.value.__cause__ is error
 
 
 @pytest.mark.parametrize("seconds", [0, 5])

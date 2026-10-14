@@ -241,7 +241,26 @@ def test_custom_decoders_use_their_own_file_schemas() -> None:
 
 def test_decoder_failure_closes_storage_file() -> None:
     store = Store({LOCATION: mcap_bytes([("/selected", 0, 1)], encoding="custom")})
-    with pytest.raises(DecoderNotFoundError):
+    with pytest.raises(DecoderNotFoundError, match="message encoding 'custom'"):
+        list(_iter_messages(store, [LOCATION], ["/selected"], START, START, []))
+    assert store.files[0].closed
+
+
+def test_missing_protobuf_decoder_names_schema_encoding_and_package() -> None:
+    store = Store(
+        {
+            LOCATION: mcap_bytes(
+                [("/selected", 0, 1)],
+                encoding="protobuf",
+                schema_encoding="protobuf",
+                schema_name="foxglove.CompressedImage",
+            )
+        }
+    )
+    with pytest.raises(
+        DecoderNotFoundError,
+        match="schema encoding 'protobuf'; install mcap-protobuf-support",
+    ):
         list(_iter_messages(store, [LOCATION], ["/selected"], START, START, []))
     assert store.files[0].closed
 
