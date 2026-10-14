@@ -13,7 +13,11 @@
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
+#include <atomic>
+#include <cstdint>
 #include <memory>
+#include <mutex>
+#include <optional>
 #include <string>
 #include <thread>
 #include <vector>
@@ -640,6 +644,74 @@ TEST_CASE("livekit: client unadvertise fires listener callback", "[integration]"
     CHECK(listener.client_unadvertised[0].second == "/joy");
   }
 
+  gw.stop();
+}
+
+TEST_CASE(
+  "livekit: sendStatus from client advertise callback reaches only that client", "[integration]"
+) {
+  auto ctx = foxglove::Context::create();
+  MockListener listener;
+  std::atomic<foxglove::RemoteAccessGateway*> gateway{nullptr};
+  std::mutex send_mutex;
+  std::optional<foxglove::FoxgloveError> send_result;
+
+  TestGatewayOptions opts;
+  opts.callbacks = listener.make_callbacks();
+  auto record_advertise = std::move(opts.callbacks.onClientAdvertise);
+  opts.callbacks.onClientAdvertise =
+    [&](uint32_t client_id, const foxglove::ChannelDescriptor& channel) {
+      if (auto* gateway_ptr = gateway.load()) {
+        auto error = gateway_ptr->sendStatus(
+          client_id,
+          foxglove::RemoteAccessStatusLevel::Error,
+          "Advertisement of " + std::string(channel.topic()) + " rejected",
+          "rejected"
+        );
+        std::lock_guard<std::mutex> lock(send_mutex);
+        send_result = error;
+      }
+      record_advertise(client_id, channel);
+    };
+  opts.capabilities = foxglove::RemoteAccessGatewayCapabilities::ClientPublish;
+  auto gw = TestGateway::start_with_options(ctx, std::move(opts));
+  gateway.store(&gw.gateway());
+
+  auto viewer1 = ViewerConnection::connect(gw.room_name, "viewer-1");
+  viewer1.expect_server_info();
+  auto viewer2 = ViewerConnection::connect(gw.room_name, "viewer-2");
+  viewer2.expect_server_info();
+
+  viewer1.send_client_advertise({{1, "/cmd", "json", ""}});
+  auto status = viewer1.expect_status();
+  CHECK(status["level"].get<int>() == 2);  // Error
+  CHECK(status["message"].get<std::string>() == "Advertisement of /cmd rejected");
+  CHECK(status["id"].get<std::string>() == "rejected");
+
+  poll_until([&] {
+    return listener.client_advertised_count() == 1;
+  });
+  {
+    std::lock_guard<std::mutex> lock(send_mutex);
+    REQUIRE(send_result.has_value());
+    CHECK(*send_result == foxglove::FoxgloveError::Ok);
+  }
+
+  CHECK(
+    gw.gateway().sendStatus(UINT32_MAX, foxglove::RemoteAccessStatusLevel::Error, "unknown") ==
+    foxglove::FoxgloveError::Ok
+  );
+
+  // Neither the targeted status nor the one for an unknown client reached viewer-2, so the next
+  // broadcast is the first status it sees.
+  REQUIRE(
+    gw.gateway().publishStatus(foxglove::RemoteAccessStatusLevel::Error, "fence") ==
+    foxglove::FoxgloveError::Ok
+  );
+  CHECK(viewer2.expect_status()["message"].get<std::string>() == "fence");
+  CHECK(viewer1.expect_status()["message"].get<std::string>() == "fence");
+
+  gateway.store(nullptr);
   gw.stop();
 }
 

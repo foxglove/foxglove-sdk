@@ -574,6 +574,15 @@ impl Server {
         }
     }
 
+    /// Send a status message to a single client. Does nothing if the client is not connected.
+    pub fn send_status(&self, client_id: ClientId, status: Status) {
+        let clients = self.clients.get();
+        match clients.iter().find(|client| client.id() == client_id) {
+            Some(client) => client.send_status(status),
+            None => tracing::debug!("Client {client_id} not connected, dropping status message"),
+        }
+    }
+
     /// Remove status messages by ID from all clients.
     pub fn remove_status(&self, status_ids: Vec<String>) {
         let message = RemoveStatus { status_ids };

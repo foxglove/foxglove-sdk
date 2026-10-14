@@ -825,6 +825,52 @@ pub unsafe extern "C" fn foxglove_server_publish_status(
     FoxgloveError::Ok
 }
 
+/// Sends a status message to a single client.
+///
+/// The client is identified by the `client_id` passed to server callbacks. If the client is
+/// unknown or has disconnected, the status is silently dropped and this function returns
+/// `FOXGLOVE_ERROR_OK`. This is not an error, because a client can disconnect at any time.
+///
+/// This function may be called from within server callbacks, such as `on_client_advertise`.
+///
+/// The caller may optionally provide a message ID, which can be used in a subsequent call to
+/// `foxglove_server_remove_status`.
+///
+/// # Safety
+/// - `message` must be a valid UTF-8 string, which must remain valid for the duration of this
+///   call.
+/// - `id` must either be NULL, or a pointer to a valid UTF-8 string, which must remain valid for
+///   the duration of this call.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_server_send_status(
+    server: Option<&FoxgloveWebSocketServer>,
+    client_id: u32,
+    level: FoxgloveServerStatusLevel,
+    message: FoxgloveString,
+    id: Option<&FoxgloveString>,
+) -> FoxgloveError {
+    let Some(server) = server else {
+        return FoxgloveError::ValueError;
+    };
+    let Some(server) = server.as_ref() else {
+        return FoxgloveError::SinkClosed;
+    };
+    let message = unsafe { message.as_utf8_str() };
+    let Ok(message) = message else {
+        return FoxgloveError::Utf8Error;
+    };
+    let id = id.map(|id| unsafe { id.as_utf8_str() }).transpose();
+    let Ok(id) = id else {
+        return FoxgloveError::Utf8Error;
+    };
+    let mut status = foxglove::websocket::Status::new(level.into(), message);
+    if let Some(id) = id {
+        status = status.with_id(id);
+    }
+    server.send_status(client_id.into(), status);
+    FoxgloveError::Ok
+}
+
 /// Removes status messages from all clients.
 ///
 /// Previously published status messages are referenced by ID.
