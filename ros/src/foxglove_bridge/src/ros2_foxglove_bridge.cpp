@@ -1093,8 +1093,8 @@ void FoxgloveBridge::removeOrDecrementSubscriptionLocked(ChannelId channelId, Cl
   }
 }
 
-bool FoxgloveBridge::admitClientChannel(ClientId clientId, ChannelId channelId,
-                                        const std::string& topicName, bool isGateway) {
+bool FoxgloveBridge::admitClientChannel(ClientTransport transport, ClientId clientId,
+                                        ChannelId channelId, const std::string& topicName) {
   // Match the name the publisher would be created on, so that relative or remapped names can't
   // slip past the patterns.
   const auto resolvedTopicName = this->get_node_topics_interface()->resolve_topic_name(topicName);
@@ -1105,18 +1105,32 @@ bool FoxgloveBridge::admitClientChannel(ClientId clientId, ChannelId channelId,
   const std::string message =
     "Publishing on \"" + resolvedTopicName + "\" is not allowed: the topic does not match " +
     PARAM_CLIENT_TOPIC_WHITELIST + ". Messages on this channel will be dropped.";
-  RCLCPP_WARN(
-    this->get_logger(), "%sRejected advertisement of channel %" PRIu64 " from client %u. %s",
-    isGateway ? "Gateway: " : "", static_cast<uint64_t>(channelId), clientId, message.c_str());
-
   const ChannelAndClientId key = {channelId, clientId};
+  const char* logPrefix = "";
+  auto statusError = foxglove::FoxgloveError::Ok;
+  switch (transport) {
+    case ClientTransport::WebSocket:
+      statusError =
+        _server->sendStatus(clientId, foxglove::WebSocketServerStatusLevel::Error, message);
+      _rejectedClientChannels.insert(key);
+      break;
 #ifdef FOXGLOVE_REMOTE_ACCESS
-  if (isGateway) {
-    _gatewayRejectedClientChannels.insert(key);
-    return false;
-  }
+    case ClientTransport::Gateway:
+      logPrefix = "Gateway: ";
+      statusError =
+        _gateway->sendStatus(clientId, foxglove::RemoteAccessStatusLevel::Error, message);
+      _gatewayRejectedClientChannels.insert(key);
+      break;
 #endif
-  _rejectedClientChannels.insert(key);
+  }
+
+  RCLCPP_WARN(this->get_logger(),
+              "%sRejected advertisement of channel %" PRIu64 " from client %u. %s", logPrefix,
+              static_cast<uint64_t>(channelId), clientId, message.c_str());
+  if (statusError != foxglove::FoxgloveError::Ok) {
+    RCLCPP_WARN(this->get_logger(), "%sFailed to send status to client %u: %s", logPrefix, clientId,
+                foxglove::strerror(statusError));
+  }
   return false;
 }
 
@@ -1228,7 +1242,7 @@ void FoxgloveBridge::clientAdvertise(ClientId clientId, const foxglove::ClientCh
   }
 
   try {
-    if (!admitClientChannel(clientId, channel.id, topicName, false)) {
+    if (!admitClientChannel(ClientTransport::WebSocket, clientId, channel.id, topicName)) {
       return;
     }
     auto ad =
@@ -1824,7 +1838,7 @@ void FoxgloveBridge::gatewayClientAdvertise(uint32_t clientId,
   }
 
   try {
-    if (!admitClientChannel(clientId, channelId, topicName, true)) {
+    if (!admitClientChannel(ClientTransport::Gateway, clientId, channelId, topicName)) {
       return;
     }
     auto ad = createClientPublisher(topicName, topicType, encoding, schemaData, schemaLen);

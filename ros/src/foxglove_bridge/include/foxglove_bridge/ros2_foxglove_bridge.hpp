@@ -251,11 +251,18 @@ private:
   // Shared helpers for client publish (used by both WebSocket and gateway paths).
   // Must be called with _clientAdvertisementsMutex held. May throw.
 
+  enum class ClientTransport {
+    WebSocket,
+#ifdef FOXGLOVE_REMOTE_ACCESS
+    Gateway,
+#endif
+  };
+
   // Returns whether client_topic_whitelist allows a client to publish on the resolved
-  // `topicName`. Otherwise rejects the client channel: logs a warning and records the channel, so
-  // that the message handlers can drop its messages without logging each one.
-  bool admitClientChannel(ClientId clientId, ChannelId channelId, const std::string& topicName,
-                          bool isGateway);
+  // `topicName`. Otherwise rejects the client channel: logs a warning, sends the client an error
+  // status, and records the channel so that the message handlers drop its messages silently.
+  bool admitClientChannel(ClientTransport transport, ClientId clientId, ChannelId channelId,
+                          const std::string& topicName);
   ClientAdvertisement createClientPublisher(const std::string& topicName,
                                             const std::string& topicType,
                                             const std::string& encoding,

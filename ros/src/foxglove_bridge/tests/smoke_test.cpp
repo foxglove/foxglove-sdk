@@ -880,12 +880,15 @@ TEST(SmokeTest, spinReturnsOnContextShutdown) {
 TEST(SmokeTest, clientTopicWhitelistRejectsUnlistedTopics) {
   const std::string allowedTopic = "/client_topic_whitelist_allowed";
   const std::string rejectedTopic = "/client_topic_whitelist_rejected";
+  const std::string noSlashTopic = "/client_topic_whitelist_no_slash";
 
   rclcpp::NodeOptions bridgeOptions;
   bridgeOptions.arguments({"--ros-args", "-r", "__node:=client_topic_whitelist_bridge"});
   bridgeOptions.append_parameter_override("port", 8767);
-  bridgeOptions.append_parameter_override("client_topic_whitelist",
-                                          std::vector<std::string>({allowedTopic}));
+  // Patterns are matched against fully qualified names, so the second one matches nothing.
+  bridgeOptions.append_parameter_override(
+    "client_topic_whitelist",
+    std::vector<std::string>({allowedTopic, "client_topic_whitelist_no_slash"}));
   auto bridge = std::make_shared<foxglove_bridge::FoxgloveBridge>(bridgeOptions);
 
   std::promise<std::string> msgPromise;
@@ -904,17 +907,43 @@ TEST(SmokeTest, clientTopicWhitelistRejectsUnlistedTopics) {
   rejected.encoding = "cdr";
   rejected.schemaName = "std_msgs/msg/String";
   rejected.schema = std::vector<char>(STD_MSGS_STRING_SCHEMA, std::end(STD_MSGS_STRING_SCHEMA));
-  foxglove::test::ClientAdvertisement allowed = rejected;
-  allowed.channelId = 2;
-  allowed.topic = allowedTopic;
+  foxglove::test::ClientAdvertisement noSlash = rejected;
+  noSlash.channelId = 2;
+  noSlash.topic = noSlashTopic;
+  // A relative name is admitted because it resolves to the allowed topic.
+  foxglove::test::ClientAdvertisement relativeAllowed = rejected;
+  relativeAllowed.channelId = 3;
+  relativeAllowed.topic = "client_topic_whitelist_allowed";
 
+  std::mutex statusMutex;
+  std::vector<std::string> errorStatuses;
+  std::promise<void> statusPromise;
+  auto statusFuture = statusPromise.get_future();
   auto client = std::make_shared<foxglove::test::Client<websocketpp::config::asio_client>>();
+  client->setTextMessageHandler([&](const std::string& payload) {
+    const auto msg = nlohmann::json::parse(payload);
+    if (msg.value("op", "") == "status" && msg.value("level", -1) == 2) {
+      std::lock_guard<std::mutex> lock(statusMutex);
+      errorStatuses.push_back(msg.value("message", ""));
+      if (errorStatuses.size() == 2) {
+        statusPromise.set_value();
+      }
+    }
+  });
   ASSERT_EQ(std::future_status::ready,
             client->connect("ws://localhost:8767").wait_for(DEFAULT_TIMEOUT));
-  client->advertise({rejected, allowed});
+  client->advertise({rejected, noSlash, relativeAllowed});
+
+  ASSERT_EQ(std::future_status::ready, statusFuture.wait_for(DEFAULT_TIMEOUT));
+  {
+    std::lock_guard<std::mutex> lock(statusMutex);
+    ASSERT_EQ(2u, errorStatuses.size());
+    EXPECT_NE(std::string::npos, errorStatuses[0].find(rejectedTopic));
+    EXPECT_NE(std::string::npos, errorStatuses[1].find(noSlashTopic));
+  }
 
   // Advertisements are handled in order, so once the allowed topic's publisher exists, the
-  // rejected advertisement has been handled too.
+  // rejected advertisements have been handled too.
   const auto deadline = std::chrono::steady_clock::now() + DEFAULT_TIMEOUT;
   while (sub->get_publisher_count() == 0 && std::chrono::steady_clock::now() < deadline) {
     std::this_thread::sleep_for(std::chrono::milliseconds(20));
@@ -922,11 +951,13 @@ TEST(SmokeTest, clientTopicWhitelistRejectsUnlistedTopics) {
   ASSERT_EQ(1u, sub->get_publisher_count());
 
   EXPECT_EQ(0u, node->count_publishers(rejectedTopic));
+  EXPECT_EQ(0u, node->count_publishers(noSlashTopic));
   EXPECT_EQ(1u, node->count_publishers(allowedTopic));
 
-  client->publish(rejected.channelId, HELLO_WORLD_CDR, sizeof(HELLO_WORLD_CDR));
-  client->publish(allowed.channelId, HELLO_WORLD_CDR, sizeof(HELLO_WORLD_CDR));
-  client->unadvertise({rejected.channelId, allowed.channelId});
+  for (const auto& ad : {rejected, noSlash, relativeAllowed}) {
+    client->publish(ad.channelId, HELLO_WORLD_CDR, sizeof(HELLO_WORLD_CDR));
+  }
+  client->unadvertise({rejected.channelId, noSlash.channelId, relativeAllowed.channelId});
 
   const auto ret = executor.spin_until_future_complete(msgFuture, DEFAULT_TIMEOUT);
   ASSERT_EQ(rclcpp::FutureReturnCode::SUCCESS, ret);
