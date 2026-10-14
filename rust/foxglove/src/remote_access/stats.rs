@@ -449,6 +449,7 @@ mod tests {
     use std::collections::BTreeSet;
 
     use serde_json::json;
+    use tracing_test::traced_test;
 
     use super::*;
 
@@ -661,5 +662,18 @@ mod tests {
 
         publisher.close();
         assert!(ctx.get_channel_by_topic("/custom/stats").is_none());
+    }
+
+    #[test]
+    #[traced_test]
+    fn publisher_warns_when_the_stats_topic_is_in_use() {
+        let ctx = Context::new();
+        let _first = StatsOptions::new().into_publisher(&ctx);
+        assert!(!logs_contain("already in use"));
+
+        let _second = StatsOptions::new().into_publisher(&ctx);
+        assert!(logs_contain(
+            "remote access stats topic /remote_access_stats is already in use in this context"
+        ));
     }
 }
