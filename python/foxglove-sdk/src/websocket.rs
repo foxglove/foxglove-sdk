@@ -708,6 +708,38 @@ impl PyWebSocketServer {
         server.publish_status(status);
     }
 
+    /// Send a status message to a single client.
+    /// If the client is unknown or has disconnected, or the server has been stopped, this has no
+    /// effect.
+    ///
+    /// This method may be called from within :py:class:`ServerListener` callbacks.
+    ///
+    /// :param client_id: The ID of the client, from :py:attr:`Client.id`.
+    /// :type client_id: int
+    /// :param message: The message to send.
+    /// :type message: str
+    /// :param level: The level of the status message.
+    /// :type level: StatusLevel
+    /// :param id: An optional ID for the status message.
+    /// :type id: str | None
+    #[pyo3(signature = (client_id, message, level, id=None))]
+    pub fn send_status(
+        &self,
+        client_id: u32,
+        message: String,
+        level: &PyStatusLevel,
+        id: Option<String>,
+    ) {
+        let Some(server) = &self.0 else {
+            return;
+        };
+        let status = match id {
+            Some(id) => Status::new(level.clone().into(), message).with_id(id),
+            None => Status::new(level.clone().into(), message),
+        };
+        server.send_status(client_id.into(), status);
+    }
+
     /// Remove status messages by ID from all clients.
     /// If the server has been stopped, this has no effect.
     ///

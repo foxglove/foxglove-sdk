@@ -193,6 +193,15 @@ class WebSocketServer:
         """
         ...
 
+    def send_status(
+        self, client_id: int, message: str, level: StatusLevel, id: str | None = None
+    ) -> None:
+        """
+        Send a status message to a single client, identified by :py:attr:`Client.id`. If the
+        client is unknown or has disconnected, or the server has been stopped, this has no effect.
+        """
+        ...
+
     def remove_status(self, ids: list[str]) -> None:
         """
         Remove status messages by ID from all clients. If the server has been stopped, this has no
