@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RemoteAccessStats",
+  "description": "Statistics for a Foxglove remote access gateway. Counters are cumulative over the lifetime of the gateway.",
+  "type": "object",
+  "properties": {
+    "state": {
+      "type": "string",
+      "enum": ["connecting", "connected", "shutting_down"],
+      "description": "The gateway's connection to the Foxglove platform. 'connected' means the gateway is available for remote access, whether or not a viewer session is active. 'shutting_down' is reported in the last message, after the gateway is stopped."
+    },
+    "session_active": {
+      "type": "boolean",
+      "description": "Whether the gateway is joined to a remote access session, which happens when a viewer requests a connection."
+    },
+    "viewer_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "The number of viewers connected to the current session, or 0 if no session is active."
+    },
+    "rtt_ms": {
+      "type": "number",
+      "description": "The most recent ICE round-trip time between the gateway and the remote access server, in milliseconds. It is sampled every 30 seconds during a session, and is omitted if no session is active or the session has not been sampled yet."
+    },
+    "connection_quality": {
+      "type": "string",
+      "enum": ["excellent", "good", "poor", "lost"],
+      "description": "The remote access server's estimate of the quality of the gateway's connection. Omitted if no session is active."
+    },
+    "reconnects": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "The number of times the gateway lost its connection to the Foxglove platform and started reconnecting."
+    },
+    "participant_resets": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "The number of times a viewer was disconnected and reconnected because its control message queue overflowed or a write to it failed."
+    },
+    "data_track_full": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Messages dropped because a data track's send queue was full. Viewers also see these as gaps in the channel's sequence numbers."
+    },
+    "data_track_not_ready": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Messages dropped because a channel's data track was not published. This is expected for a few milliseconds after each channel is advertised, so it is not broken down by topic."
+    },
+    "oversized": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Messages dropped because they exceeded the maximum data track message size."
+    },
+    "video_queue": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Image messages dropped before video encoding because the encoder was slower than the log rate."
+    },
+    "point_cloud_queue": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Point cloud messages dropped before compression because compression was slower than the log rate."
+    },
+    "video_encode_errors": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Image messages that could not be encoded as video, for example because they could not be decoded or were below the minimum encoder size."
+    },
+    "topics": {
+      "type": "array",
+      "description": "Drop counters for each topic with at least one nonzero counter, for every cause except data_track_not_ready. The counters for each topic add up to the gateway-wide counters of the same name.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "topic": {
+            "type": "string",
+            "description": "The channel topic."
+          },
+          "data_track_full": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Messages dropped because the data track's send queue was full."
+          },
+          "oversized": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Messages dropped because they exceeded the maximum data track message size."
+          },
+          "video_queue": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Image messages dropped before video encoding."
+          },
+          "point_cloud_queue": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Point cloud messages dropped before compression."
+          },
+          "video_encode_errors": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Image messages that could not be encoded as video."
+          }
+        }
+      }
+    }
+  }
+}
