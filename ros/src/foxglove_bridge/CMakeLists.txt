@@ -89,14 +89,14 @@ endif()
 # to point at a `make build-cpp-dist`-produced `cpp/dist` tree — the
 # ros/Makefile's FOXGLOVE_CPP_SDK_DIR variable does this for you (see
 # ros/README.md).
-set(FOXGLOVE_SDK_VERSION "0.28.0")
+set(FOXGLOVE_SDK_VERSION "0.29.2")
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
   set(FOXGLOVE_SDK_PLATFORM "aarch64-unknown-linux-gnu")
-  set(FOXGLOVE_SDK_SHA "9c6efdf3bbc491be3fc5f33a6e2467469786ccb3465554c793a59ee2676c9b57")
+  set(FOXGLOVE_SDK_SHA "7fa0d79d63e3362b4e4b85c666227e5974f97d24d662a84b789e326c41246c14")
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
   set(FOXGLOVE_SDK_PLATFORM "x86_64-unknown-linux-gnu")
-  set(FOXGLOVE_SDK_SHA "1a0d8e03a885f01ae7cfb08dc9076090ba2cf8a15b7f46dda11451e2e2758978")
+  set(FOXGLOVE_SDK_SHA "fcb725e24cf5af2f38de536f3d848788ac41956467c569d77f38a21a2a9a4e2e")
 else()
   message(FATAL_ERROR "Unsupported platform/architecture combination: ${CMAKE_SYSTEM_PROCESSOR}-${CMAKE_SYSTEM_NAME}")
 endif()
