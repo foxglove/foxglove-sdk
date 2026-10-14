@@ -2,6 +2,10 @@
 Changelog for package foxglove_bridge
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Enforce the previously ignored ``client_topic_whitelist``; rejected clients get an error status
+
 3.6.0 (2026-09-28)
 ------------------
 * Add ``point_cloud_compression_method`` parameter to select the encoding method for remote access point cloud compression
