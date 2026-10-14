@@ -4,7 +4,7 @@ Changelog for package foxglove_bridge
 
 Forthcoming
 -----------
-* Enforce ``client_topic_whitelist`` and send rejected clients an error status
+* Enforce the previously ignored ``client_topic_whitelist``; rejected clients get an error status
 
 3.6.0 (2026-09-28)
 ------------------
