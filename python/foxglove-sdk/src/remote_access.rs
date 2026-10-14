@@ -727,31 +727,44 @@ impl From<PyQosProfile> for QosProfile {
     }
 }
 
+// Keep this comment in sync with rust/foxglove/src/remote_access/stats.rs
+
 /// Options for the statistics that a remote access gateway publishes.
 ///
 /// Pass these to :py:func:`foxglove.start_gateway` as ``stats`` to have the gateway
 /// periodically log a JSON ``foxglove.RemoteAccessStats`` message to a channel in its context.
-/// The gateway keeps publishing while it is connecting, and logs a last message with the
-/// ``shutting_down`` state when it is stopped. Counters are cumulative over the lifetime of the
-/// gateway.
+/// The gateway keeps publishing while it is dormant or reconnecting, and logs a last message
+/// with the ``shutting_down`` state when it is stopped. Counters are cumulative over the
+/// lifetime of the gateway.
 ///
 /// Each message has these fields:
 ///
-/// - ``state`` (str): ``connecting``, ``connected``, or ``shutting_down``.
-/// - ``session_active`` (bool): Whether a viewer session is active.
+/// - ``state`` (str): ``connecting``, ``connected``, or ``shutting_down``. ``connected`` means
+///   the gateway is available for remote access, whether or not a viewer session is active.
+/// - ``session_active`` (bool): Whether the gateway is joined to a remote access session,
+///   which happens when a viewer requests a connection.
 /// - ``viewer_count`` (int): The number of viewers connected to the current session.
 /// - ``rtt_ms`` (float): The latest ICE round-trip time to the remote access server, sampled
 ///   every 30 seconds. Omitted if no session is active or it has not been sampled yet.
 /// - ``connection_quality`` (str): ``excellent``, ``good``, ``poor``, or ``lost``. Omitted if
 ///   no session is active.
-/// - ``reconnects`` (int): Times the gateway lost its connection and started reconnecting.
-/// - ``participant_resets`` (int): Times a viewer was reset because its control message queue
-///   overflowed or a write to it failed.
-/// - ``data_track_full``, ``data_track_not_ready``, ``oversized``, ``video_queue``,
-///   ``point_cloud_queue``, ``video_encode_errors`` (int): Messages dropped, or not encoded as
-///   video, by cause.
+/// - ``reconnects`` (int): Times the gateway lost its connection to the Foxglove platform and
+///   started reconnecting.
+/// - ``participant_resets`` (int): Times a viewer was disconnected and reconnected because its
+///   control message queue overflowed or a write to it failed. See ``message_backlog_size``.
+/// - ``data_track_full`` (int): Messages dropped because a data track's send queue was full.
+/// - ``data_track_not_ready`` (int): Messages dropped because a channel's data track was not
+///   published, which is expected briefly after each channel is advertised.
+/// - ``oversized`` (int): Messages dropped for exceeding the maximum data track message size.
+/// - ``video_queue`` (int): Image messages dropped because video encoding was too slow.
+/// - ``point_cloud_queue`` (int): Point cloud messages dropped because compression was too
+///   slow.
+/// - ``video_encode_errors`` (int): Image messages that could not be encoded as video.
 /// - ``topics`` (list): The drop counters, except ``data_track_not_ready``, for each topic
 ///   with a nonzero counter.
+///
+/// Only ``data_track_full`` and ``participant_resets`` are logged as warnings. The other causes
+/// are expected in normal operation.
 ///
 /// :param topic: The channel topic. Defaults to ``/remote_access_stats``. Each gateway that
 ///     publishes stats to a context needs its own topic.
