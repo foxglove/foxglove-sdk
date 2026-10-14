@@ -69,6 +69,52 @@ export interface Row {
   main: string | undefined;
   jenkins: string;
   job_url: string;
+  /** Fetch failure for this row, including the request URL. Absent when every fetch succeeded. */
+  error?: string;
+}
+
+export interface ResolvedDistro {
+  name: string;
+  info: Distro;
+}
+
+/**
+ * The only distro-name check. Unknown distros and packages throw; the CLI
+ * prints that message and exits 1.
+ */
+function unknownDistro(name: string): Error {
+  return new Error(`unknown distro '${name}' (one of: ${Object.keys(DISTROS).join(", ")})`);
+}
+
+export function resolveSelection(
+  distros: readonly string[],
+  packages: readonly string[],
+): { distros: ResolvedDistro[]; packages: string[] } {
+  const resolved: ResolvedDistro[] = [];
+  for (const name of distros) {
+    const info = DISTROS[name];
+    if (info == undefined) {
+      throw unknownDistro(name);
+    }
+    resolved.push({ name, info });
+  }
+  for (const pkg of packages) {
+    if (!PACKAGES.includes(pkg)) {
+      throw new Error(`unknown package '${pkg}' (one of: ${PACKAGES.join(", ")})`);
+    }
+  }
+  return { distros: resolved, packages: [...packages] };
+}
+
+/** `err.message` for Error values, otherwise String(err). */
+export function errorText(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
+
+/** Failure text that always names the request URL. */
+export function fetchFailure(url: string, err: unknown): string {
+  const message = errorText(err);
+  return message.startsWith(`GET ${url}:`) ? message : `GET ${url}: ${message}`;
 }
 
 export function debName(distro: string, pkg: string): string {
@@ -78,7 +124,7 @@ export function debName(distro: string, pkg: string): string {
 export function binaryJobName(distro: string, pkg: string, target: Target): string {
   const info = DISTROS[distro];
   if (info == undefined) {
-    throw new Error(`unknown distro '${distro}'`);
+    throw unknownDistro(distro);
   }
   return `${info.prefix}bin_${target.jenkins}__${pkg}__${target.os}_${target.codename}_${target.arch}__binary`;
 }
@@ -189,7 +235,11 @@ export function jenkinsStatusFromApi(body: string | undefined): string {
   return result.toLowerCase();
 }
 
-/** Testing has the released version and the last build succeeded. Main may lag. */
+/** Testing has the released version, the last build succeeded, and no fetch failed. Main may lag. */
 export function rowOk(row: Row): boolean {
-  return aptMatchesRelease(row.testing, row.rosdistro) && row.jenkins === "success";
+  return (
+    row.error == undefined &&
+    aptMatchesRelease(row.testing, row.rosdistro) &&
+    row.jenkins === "success"
+  );
 }

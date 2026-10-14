@@ -9,6 +9,11 @@
 // build succeeded. The main repo is reported but does not gate the result:
 // sync from testing to main lags, and rolling is often absent from main.
 //
+// A failed fetch (timeout, DNS, TLS, or HTTP) does not abort the report. That
+// row records an error status that includes the URL, and the process exits
+// non-zero if any row has an error or is otherwise not ok. HTTP 404 stays
+// "missing": the job or index is absent, not a failed request.
+//
 // Usage:
 //   yarn ros-package-status [--distro humble ...] [--package foxglove_bridge ...] [--json]
 //
@@ -23,10 +28,14 @@ import {
   PACKAGES,
   binaryJobName,
   debName,
+  errorText,
+  fetchFailure,
   jenkinsStatusFromApi,
   parseDistribution,
   parsePackagesIndex,
+  resolveSelection,
   rowOk,
+  type ResolvedDistro,
   type Row,
 } from "./rosPackageStatusReport";
 
@@ -37,19 +46,55 @@ const ROSDISTRO_BASE = "https://raw.githubusercontent.com/ros/rosdistro/master";
 
 const USER_AGENT = "foxglove-ros-package-status/1.0";
 
-/** GET url; undefined on 404. */
+interface Loaded<T> {
+  value?: T;
+  error?: string;
+}
+
+/** GET url; undefined on 404. Network, TLS, and other HTTP failures name the URL. */
 async function get(url: string, timeoutMs: number): Promise<Buffer | undefined> {
-  const res = await fetch(url, {
-    headers: { "User-Agent": USER_AGENT },
-    signal: AbortSignal.timeout(timeoutMs),
-  });
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      headers: { "User-Agent": USER_AGENT },
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+  } catch (err) {
+    throw new Error(fetchFailure(url, err));
+  }
   if (res.status === 404) {
     return undefined;
   }
   if (!res.ok) {
     throw new Error(`GET ${url}: HTTP ${res.status}`);
   }
-  return Buffer.from(await res.arrayBuffer());
+  try {
+    return Buffer.from(await res.arrayBuffer());
+  } catch (err) {
+    throw new Error(fetchFailure(url, err));
+  }
+}
+
+/** Run `read` and return its failure, with the URL, instead of rejecting. */
+async function load<T>(
+  url: string,
+  timeoutMs: number,
+  read: (raw: Buffer) => T,
+): Promise<Loaded<T>> {
+  let raw: Buffer | undefined;
+  try {
+    raw = await get(url, timeoutMs);
+  } catch (err) {
+    return { error: fetchFailure(url, err) };
+  }
+  if (raw == undefined) {
+    return {};
+  }
+  try {
+    return { value: read(raw) };
+  } catch (err) {
+    return { error: fetchFailure(url, err) };
+  }
 }
 
 /** Memoize an async function by the JSON encoding of its arguments. */
@@ -69,13 +114,15 @@ function memoize<A extends unknown[], T>(
 }
 
 /** package -> release version ('3.6.0-1'), or {} if the distro has no distribution.yaml. */
-const rosdistroVersions = memoize(async (distro: string): Promise<Record<string, string>> => {
-  const raw = await get(`${ROSDISTRO_BASE}/${distro}/distribution.yaml`, 120_000);
-  if (!raw) {
-    return {};
-  }
-  return parseDistribution(yaml.load(raw.toString("utf8")));
-});
+const rosdistroVersions = memoize(
+  async (distro: string): Promise<Loaded<Record<string, string>>> => {
+    const url = `${ROSDISTRO_BASE}/${distro}/distribution.yaml`;
+    const loaded = await load(url, 120_000, (raw) =>
+      parseDistribution(yaml.load(raw.toString("utf8"))),
+    );
+    return loaded.value == undefined && loaded.error == undefined ? { value: {} } : loaded;
+  },
+);
 
 /** debian package name -> Version, from <repo>/<os>/<component>/dists/<codename>/main/binary-<arch>/Packages.gz */
 const packagesIndex = memoize(
@@ -84,34 +131,35 @@ const packagesIndex = memoize(
     component: string,
     codename: string,
     arch: string,
-  ): Promise<Record<string, string>> => {
-    const raw = await get(
-      `${REPO_BASE}/${os}/${component}/dists/${codename}/main/binary-${arch}/Packages.gz`,
-      180_000,
+  ): Promise<Loaded<Record<string, string>>> => {
+    const url = `${REPO_BASE}/${os}/${component}/dists/${codename}/main/binary-${arch}/Packages.gz`;
+    const loaded = await load(url, 180_000, (raw) =>
+      parsePackagesIndex(gunzipSync(raw).toString("utf8")),
     );
-    if (!raw) {
-      return {};
-    }
-    return parsePackagesIndex(gunzipSync(raw).toString("utf8"));
+    return loaded.value == undefined && loaded.error == undefined ? { value: {} } : loaded;
   },
 );
 
 /** One-word summary of a Jenkins job: missing / disabled / building / queued / never-built / <result>. */
-const jenkinsStatus = memoize(async (job: string): Promise<string> => {
-  const raw = await get(
-    `${JENKINS_BASE}/job/${job}/api/json?tree=inQueue,disabled,lastBuild[result,building]`,
-    60_000,
-  );
-  return jenkinsStatusFromApi(raw?.toString("utf8"));
+const jenkinsStatus = memoize(async (job: string): Promise<Loaded<string>> => {
+  const url = `${JENKINS_BASE}/job/${job}/api/json?tree=inQueue,disabled,lastBuild[result,building]`;
+  const loaded = await load(url, 60_000, (raw) => jenkinsStatusFromApi(raw.toString("utf8")));
+  return loaded.value == undefined && loaded.error == undefined
+    ? { value: jenkinsStatusFromApi(undefined) }
+    : loaded;
 });
 
-async function rows(distros: string[], packages: string[]): Promise<Row[]> {
+function rowErrors(parts: Loaded<unknown>[]): string | undefined {
+  const messages = parts.flatMap((part) => (part.error == undefined ? [] : [part.error]));
+  return messages.length > 0 ? messages.join("; ") : undefined;
+}
+
+async function rows(
+  distros: readonly ResolvedDistro[],
+  packages: readonly string[],
+): Promise<Row[]> {
   const pending: Promise<Row>[] = [];
-  for (const distro of distros) {
-    const info = DISTROS[distro];
-    if (info == undefined) {
-      throw new Error(`unknown distro '${distro}'`);
-    }
+  for (const { name: distro, info } of distros) {
     for (const pkg of packages) {
       for (const target of info.targets) {
         const deb = debName(distro, pkg);
@@ -124,15 +172,17 @@ async function rows(distros: string[], packages: string[]): Promise<Row[]> {
               packagesIndex(target.os, "main", target.codename, target.arch),
               jenkinsStatus(job),
             ]);
+            const error = rowErrors([expected, testing, mainRepo, status]);
             return {
               distro,
               package: pkg,
               target: `${target.codename}/${target.arch}`,
-              rosdistro: expected[pkg],
-              testing: testing[deb],
-              main: mainRepo[deb],
-              jenkins: status,
+              rosdistro: expected.value?.[pkg],
+              testing: testing.value?.[deb],
+              main: mainRepo.value?.[deb],
+              jenkins: status.value ?? "error",
               job_url: `${JENKINS_BASE}/job/${job}`,
+              ...(error == undefined ? {} : { error }),
             };
           })(),
         );
@@ -143,7 +193,16 @@ async function rows(distros: string[], packages: string[]): Promise<Row[]> {
 }
 
 function printTable(rs: Row[]): void {
-  const cols = ["distro", "package", "target", "rosdistro", "testing", "main", "jenkins"] as const;
+  const cols = [
+    "distro",
+    "package",
+    "target",
+    "rosdistro",
+    "testing",
+    "main",
+    "jenkins",
+    "error",
+  ] as const;
   const vals = rs.map((r) => cols.map((c) => r[c] ?? "-"));
   const widths = cols.map((c, i) => Math.max(c.length, ...vals.map((v) => v[i]!.length)));
   const fmt = (v: readonly string[]) => v.map((s, i) => s.padEnd(widths[i]!)).join("  ");
@@ -164,15 +223,8 @@ function collect(value: string, prev: string[] | undefined): string[] {
 }
 
 async function main(opts: Options): Promise<void> {
-  for (const distro of opts.distro ?? []) {
-    if (!(distro in DISTROS)) {
-      console.error(
-        `Error: unknown distro '${distro}' (one of: ${Object.keys(DISTROS).join(", ")})`,
-      );
-      process.exit(2);
-    }
-  }
-  const rs = await rows(opts.distro ?? Object.keys(DISTROS), opts.package ?? PACKAGES);
+  const selection = resolveSelection(opts.distro ?? Object.keys(DISTROS), opts.package ?? PACKAGES);
+  const rs = await rows(selection.distros, selection.packages);
   if (opts.json === true) {
     console.log(JSON.stringify(rs, undefined, 2));
   } else {
@@ -195,6 +247,6 @@ program
   })
   .parseAsync()
   .catch((err: unknown) => {
-    console.error(`Error: ${(err as Error).message}`);
+    console.error(`Error: ${errorText(err)}`);
     process.exit(1);
   });

@@ -3,9 +3,12 @@ import {
   aptMatchesRelease,
   binaryJobName,
   debName,
+  errorText,
+  fetchFailure,
   jenkinsStatusFromApi,
   parseDistribution,
   parsePackagesIndex,
+  resolveSelection,
   rowOk,
   type Row,
   type Target,
@@ -154,6 +157,40 @@ describe("jenkinsStatusFromApi", () => {
   });
 });
 
+describe("resolveSelection", () => {
+  it("accepts known distros and packages", () => {
+    const selection = resolveSelection(["humble"], ["foxglove_msgs"]);
+    expect(selection.packages).toEqual(["foxglove_msgs"]);
+    expect(selection.distros.map((distro) => distro.name)).toEqual(["humble"]);
+  });
+
+  it("rejects an unknown distro or package with one message", () => {
+    expect(() => resolveSelection(["nope"], ["foxglove_bridge"])).toThrow(
+      /unknown distro 'nope' \(one of: humble, jazzy, kilted, lyrical, rolling\)/,
+    );
+    expect(() => resolveSelection(["humble"], ["foxglove-bridge"])).toThrow(
+      /unknown package 'foxglove-bridge' \(one of: foxglove_bridge, foxglove_msgs\)/,
+    );
+  });
+});
+
+describe("fetchFailure", () => {
+  const url = "https://build.ros2.org/job/example/api/json";
+
+  it("includes the URL for Error and non-Error causes", () => {
+    expect(fetchFailure(url, new Error("The operation was aborted due to timeout"))).toBe(
+      `GET ${url}: The operation was aborted due to timeout`,
+    );
+    expect(fetchFailure(url, "fetch failed")).toBe(`GET ${url}: fetch failed`);
+    expect(errorText("fetch failed")).toBe("fetch failed");
+    expect(errorText(new Error("HTTP 500"))).toBe("HTTP 500");
+  });
+
+  it("does not prefix a message that already names the URL", () => {
+    expect(fetchFailure(url, new Error(`GET ${url}: HTTP 500`))).toBe(`GET ${url}: HTTP 500`);
+  });
+});
+
 describe("rowOk", () => {
   const base: Row = {
     distro: "rolling",
@@ -170,9 +207,16 @@ describe("rowOk", () => {
     expect(rowOk(base)).toBe(true);
   });
 
-  it("is not ok when the testing version or the Jenkins result does not match", () => {
+  it("is not ok when the testing version, the Jenkins result, or a fetch fails", () => {
     expect(rowOk({ ...base, testing: "3.5.0-1resolute.20260101.000000" })).toBe(false);
     expect(rowOk({ ...base, jenkins: "failure" })).toBe(false);
     expect(rowOk({ ...base, rosdistro: undefined })).toBe(false);
+    expect(
+      rowOk({
+        ...base,
+        jenkins: "error",
+        error: "GET https://build.ros2.org/job/example: The operation was aborted due to timeout",
+      }),
+    ).toBe(false);
   });
 });
