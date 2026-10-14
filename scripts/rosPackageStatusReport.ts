@@ -78,14 +78,15 @@ export interface ResolvedDistro {
   info: Distro;
 }
 
-/**
- * The only distro-name check. Unknown distros and packages throw; the CLI
- * prints that message and exits 1.
- */
+/** Error for a distro name that is not in DISTROS. Lists the known names. */
 function unknownDistro(name: string): Error {
   return new Error(`unknown distro '${name}' (one of: ${Object.keys(DISTROS).join(", ")})`);
 }
 
+/**
+ * The CLI's distro and package check. Unknown names throw; the CLI prints
+ * that message and exits 1.
+ */
 export function resolveSelection(
   distros: readonly string[],
   packages: readonly string[],
@@ -235,7 +236,7 @@ export function jenkinsStatusFromApi(body: string | undefined): string {
   return result.toLowerCase();
 }
 
-/** Testing has the released version, the last build succeeded, and no fetch failed. Main may lag. */
+/** Testing has the released version and the last build succeeded. Main may lag or fail to fetch. */
 export function rowOk(row: Row): boolean {
   return (
     row.error == undefined &&

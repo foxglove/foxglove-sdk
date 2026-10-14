@@ -7,12 +7,13 @@
 //
 // A row is "ok" when ros2-testing has the released version and the last binary
 // build succeeded. The main repo is reported but does not gate the result:
-// sync from testing to main lags, and rolling is often absent from main.
+// sync from testing to main lags, rolling is often absent from main, and a
+// main-repo fetch failure is shown in the main column without failing the row.
 //
-// A failed fetch (timeout, DNS, TLS, or HTTP) does not abort the report. That
-// row records an error status that includes the URL, and the process exits
-// non-zero if any row has an error or is otherwise not ok. HTTP 404 stays
-// "missing": the job or index is absent, not a failed request.
+// A failed fetch (timeout, DNS, TLS, or HTTP) does not abort the report.
+// rosdistro, testing, and Jenkins failures are recorded in `error` with the
+// URL, and the process exits non-zero. HTTP 404 stays "missing": the job or
+// index is absent, not a failed request.
 //
 // Usage:
 //   yarn ros-package-status [--distro humble ...] [--package foxglove_bridge ...] [--json]
@@ -75,11 +76,12 @@ async function get(url: string, timeoutMs: number): Promise<Buffer | undefined> 
   }
 }
 
-/** Run `read` and return its failure, with the URL, instead of rejecting. */
+/** Run `read` and return its failure, with the URL, instead of rejecting. A 404 returns `missing`. */
 async function load<T>(
   url: string,
   timeoutMs: number,
   read: (raw: Buffer) => T,
+  missing: T,
 ): Promise<Loaded<T>> {
   let raw: Buffer | undefined;
   try {
@@ -88,7 +90,7 @@ async function load<T>(
     return { error: fetchFailure(url, err) };
   }
   if (raw == undefined) {
-    return {};
+    return { value: missing };
   }
   try {
     return { value: read(raw) };
@@ -117,10 +119,12 @@ function memoize<A extends unknown[], T>(
 const rosdistroVersions = memoize(
   async (distro: string): Promise<Loaded<Record<string, string>>> => {
     const url = `${ROSDISTRO_BASE}/${distro}/distribution.yaml`;
-    const loaded = await load(url, 120_000, (raw) =>
-      parseDistribution(yaml.load(raw.toString("utf8"))),
+    return await load(
+      url,
+      120_000,
+      (raw) => parseDistribution(yaml.load(raw.toString("utf8"))),
+      {},
     );
-    return loaded.value == undefined && loaded.error == undefined ? { value: {} } : loaded;
   },
 );
 
@@ -133,20 +137,19 @@ const packagesIndex = memoize(
     arch: string,
   ): Promise<Loaded<Record<string, string>>> => {
     const url = `${REPO_BASE}/${os}/${component}/dists/${codename}/main/binary-${arch}/Packages.gz`;
-    const loaded = await load(url, 180_000, (raw) =>
-      parsePackagesIndex(gunzipSync(raw).toString("utf8")),
+    return await load(
+      url,
+      180_000,
+      (raw) => parsePackagesIndex(gunzipSync(raw).toString("utf8")),
+      {},
     );
-    return loaded.value == undefined && loaded.error == undefined ? { value: {} } : loaded;
   },
 );
 
 /** One-word summary of a Jenkins job: missing / disabled / building / queued / never-built / <result>. */
 const jenkinsStatus = memoize(async (job: string): Promise<Loaded<string>> => {
   const url = `${JENKINS_BASE}/job/${job}/api/json?tree=inQueue,disabled,lastBuild[result,building]`;
-  const loaded = await load(url, 60_000, (raw) => jenkinsStatusFromApi(raw.toString("utf8")));
-  return loaded.value == undefined && loaded.error == undefined
-    ? { value: jenkinsStatusFromApi(undefined) }
-    : loaded;
+  return await load(url, 60_000, (raw) => jenkinsStatusFromApi(raw.toString("utf8")), "missing");
 });
 
 function rowErrors(parts: Loaded<unknown>[]): string | undefined {
@@ -172,14 +175,15 @@ async function rows(
               packagesIndex(target.os, "main", target.codename, target.arch),
               jenkinsStatus(job),
             ]);
-            const error = rowErrors([expected, testing, mainRepo, status]);
+            const error = rowErrors([expected, testing, status]);
             return {
               distro,
               package: pkg,
               target: `${target.codename}/${target.arch}`,
               rosdistro: expected.value?.[pkg],
               testing: testing.value?.[deb],
-              main: mainRepo.value?.[deb],
+              // A main fetch failure is shown here and does not gate the row.
+              main: mainRepo.error ?? mainRepo.value?.[deb],
               jenkins: status.value ?? "error",
               job_url: `${JENKINS_BASE}/job/${job}`,
               ...(error == undefined ? {} : { error }),

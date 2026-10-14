@@ -203,8 +203,14 @@ describe("rowOk", () => {
     job_url: "https://build.ros2.org/job/example",
   };
 
-  it("is ok when testing matches the release and Jenkins succeeded, even if main has not synced", () => {
+  it("is ok when testing matches and Jenkins succeeded, even if main is missing or its fetch failed", () => {
     expect(rowOk(base)).toBe(true);
+    expect(
+      rowOk({
+        ...base,
+        main: "GET https://repo.ros2.org/ubuntu/main/dists/resolute/main/binary-amd64/Packages.gz: The operation was aborted due to timeout",
+      }),
+    ).toBe(true);
   });
 
   it("is not ok when the testing version, the Jenkins result, or a fetch fails", () => {
