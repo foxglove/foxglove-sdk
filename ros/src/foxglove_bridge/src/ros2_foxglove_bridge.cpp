@@ -1102,31 +1102,34 @@ bool FoxgloveBridge::admitClientChannel(ClientTransport transport, ClientId clie
     return true;
   }
 
-  const std::string message =
-    "Publishing on \"" + resolvedTopicName + "\" is not allowed: the topic does not match " +
-    PARAM_CLIENT_TOPIC_WHITELIST + ". Messages on this channel will be dropped.";
+  // The client-facing status must not reveal the parameter or its patterns; details go to the log.
+  const std::string statusMessage =
+    "Publishing to topic '" + resolvedTopicName + "' is not permitted";
   const ChannelAndClientId key = {channelId, clientId};
   const char* logPrefix = "";
   auto statusError = foxglove::FoxgloveError::Ok;
   switch (transport) {
     case ClientTransport::WebSocket:
       statusError =
-        _server->sendStatus(clientId, foxglove::WebSocketServerStatusLevel::Error, message);
+        _server->sendStatus(clientId, foxglove::WebSocketServerStatusLevel::Error, statusMessage);
       _rejectedClientChannels.insert(key);
       break;
 #ifdef FOXGLOVE_REMOTE_ACCESS
     case ClientTransport::Gateway:
       logPrefix = "Gateway: ";
       statusError =
-        _gateway->sendStatus(clientId, foxglove::RemoteAccessStatusLevel::Error, message);
+        _gateway->sendStatus(clientId, foxglove::RemoteAccessStatusLevel::Error, statusMessage);
       _gatewayRejectedClientChannels.insert(key);
       break;
 #endif
   }
 
   RCLCPP_WARN(this->get_logger(),
-              "%sRejected advertisement of channel %" PRIu64 " from client %u. %s", logPrefix,
-              static_cast<uint64_t>(channelId), clientId, message.c_str());
+              "%sRejected advertisement of channel %" PRIu64
+              " on \"%s\" from client %u: the topic does not match %s. Messages on this "
+              "channel will be dropped.",
+              logPrefix, static_cast<uint64_t>(channelId), resolvedTopicName.c_str(), clientId,
+              PARAM_CLIENT_TOPIC_WHITELIST);
   if (statusError != foxglove::FoxgloveError::Ok) {
     RCLCPP_WARN(this->get_logger(), "%sFailed to send status to client %u: %s", logPrefix, clientId,
                 foxglove::strerror(statusError));

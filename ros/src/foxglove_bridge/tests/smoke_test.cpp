@@ -938,8 +938,8 @@ TEST(SmokeTest, clientTopicWhitelistRejectsUnlistedTopics) {
   {
     std::lock_guard<std::mutex> lock(statusMutex);
     ASSERT_EQ(2u, errorStatuses.size());
-    EXPECT_NE(std::string::npos, errorStatuses[0].find(rejectedTopic));
-    EXPECT_NE(std::string::npos, errorStatuses[1].find(noSlashTopic));
+    EXPECT_EQ("Publishing to topic '" + rejectedTopic + "' is not permitted", errorStatuses[0]);
+    EXPECT_EQ("Publishing to topic '" + noSlashTopic + "' is not permitted", errorStatuses[1]);
   }
 
   // Advertisements are handled in order, so once the allowed topic's publisher exists, the
