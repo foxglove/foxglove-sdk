@@ -3,8 +3,9 @@
 # linked. Without this flag, macOS strips the categories at link time, causing
 # an `unrecognized selector` crash at runtime.
 #
-# Upstream fix: https://github.com/livekit/rust-sdks/pull/847
-# Remove this once a livekit release includes that PR.
+# webrtc-sys emits `cargo:rustc-link-arg=-ObjC` (livekit/rust-sdks#847), but
+# cargo applies link args only to the emitting package's own targets, so the
+# final binary or cdylib must also pass it.
 
 [target.aarch64-apple-darwin]
 rustflags = ["-C", "link-arg=-ObjC"]

@@ -5,11 +5,15 @@
 #include <opencv2/core/mat.hpp>
 #include <opencv2/videoio.hpp>
 
+#include <atomic>
 #include <chrono>
+#include <csignal>
 #include <cstring>
+#include <functional>
 #include <iostream>
 #include <memory>
 #include <string>
+#include <vector>
 
 // Helper to parse command line arguments
 std::string parse_camera_id(int argc, char** argv) {
@@ -126,20 +130,31 @@ int main(int argc, char** argv) {
   }
   auto image_channel = std::move(image_channel_result.value());
 
-  std::cout << "Starting camera feed... Press Ctrl+C to stop." << std::endl;
-  try {
-    while (true) {
-      cv::Mat frame;
-      if (!camera.read_frame(frame)) {
-        std::cerr << "Failed to read frame from camera" << std::endl;
-        continue;
-      }
-      auto img_msg = create_raw_image_message(frame);
-      image_channel.log(img_msg);
+  static std::function<void()> sigint_handler;
+  std::signal(SIGINT, [](int) {
+    if (sigint_handler) {
+      sigint_handler();
     }
-  } catch (...) {
-    std::cout << "\nShutting down camera visualization..." << std::endl;
+  });
+
+  std::atomic_bool done = false;
+  sigint_handler = [&] {
+    done = true;
+  };
+
+  std::cout << "Starting camera feed... Press Ctrl+C to stop." << std::endl;
+  while (!done) {
+    cv::Mat frame;
+    if (!camera.read_frame(frame)) {
+      if (!done) {
+        std::cerr << "No more frames from camera" << std::endl;
+      }
+      break;
+    }
+    auto img_msg = create_raw_image_message(frame);
+    image_channel.log(img_msg);
   }
+  std::cout << "\nShutting down camera visualization..." << std::endl;
   camera.disconnect();
   std::cout << "Camera visualization stopped." << std::endl;
   return 0;

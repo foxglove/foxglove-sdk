@@ -219,7 +219,7 @@ impl PyMessageSchema {
     eq,
     eq_int
 )]
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum PyParameterType {
     /// A byte array, transmitted on the wire as a base64-encoded string. The type hint
     /// distinguishes it from an ordinary string value.
@@ -362,7 +362,7 @@ impl PyParameter {
         kwargs: Option<&Bound<'_, PyDict>>,
     ) -> PyResult<Self> {
         // Use the derived type, unless there's a kwarg override.
-        let mut r#type = value.as_ref().and_then(|tv| tv.0);
+        let mut r#type = value.as_ref().and_then(|tv| tv.0.clone());
         if let Some(dict) = kwargs
             && let Some(kw_type) = dict.get_item("type")?
         {
@@ -385,7 +385,7 @@ impl PyParameter {
     pub fn get_value(&self) -> Option<ParameterTypeValueConverter> {
         self.value
             .clone()
-            .map(|v| ParameterTypeValueConverter(self.r#type, v))
+            .map(|v| ParameterTypeValueConverter(self.r#type.clone(), v))
     }
 }
 

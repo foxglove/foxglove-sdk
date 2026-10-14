@@ -166,6 +166,12 @@ def test_explicit() -> None:
     assert p.get_value() == 1
 
 
+@pytest.mark.parametrize("invalid_type", [0, "Float64", object()])
+def test_parameter_type_rejects_non_enum_values(invalid_type: object) -> None:
+    with pytest.raises(TypeError, match="ParameterType"):
+        Parameter("invalid type", type=invalid_type)  # type: ignore[arg-type]
+
+
 def test_base64_decode_error() -> None:
     p = Parameter(
         "bad bytes",

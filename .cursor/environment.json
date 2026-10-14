@@ -1,0 +1,3 @@
+{
+  "install": "set -euo pipefail\ngit lfs pull\nyarn install\nexport PATH=\"$HOME/.local/bin:$PATH\"\ncommand -v uv >/dev/null || curl -LsSf https://astral.sh/uv/install.sh | sh\nuv sync"
+}

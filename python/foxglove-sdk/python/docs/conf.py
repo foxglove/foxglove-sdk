@@ -32,6 +32,23 @@ extensions: list[str] = [
 ]
 
 nitpicky = True
+nitpick_ignore = [
+    # External types exposed by the dataset adapters have no local API pages.
+    ("py:class", "torch.utils.data.dataset.IterableDataset"),
+    ("py:class", "torch.Tensor"),
+    ("py:class", "ray.data.dataset.Dataset"),
+    ("py:class", "datetime.datetime"),
+    ("py:class", "datetime.timedelta"),
+    ("py:class", "collections.abc.Iterable"),
+    ("py:class", "collections.abc.Iterator"),
+    ("py:class", "collections.abc.Sequence"),
+    ("py:class", "collections.abc.Generator"),
+    ("py:class", "collections.abc.Mapping"),
+    ("py:class", "mcap.decoder.DecoderFactory"),
+    ("py:class", "mcap.records.Schema"),
+    ("py:class", "mcap.records.Channel"),
+    ("py:class", "mcap.records.Message"),
+]
 nitpick_ignore_regex = [
     # Ignore warnings for built-in types from autodoc_typehints
     ("py:data", r"typing.*"),

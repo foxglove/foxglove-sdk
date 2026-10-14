@@ -56,6 +56,8 @@ RUN curl https://apt.llvm.org/llvm.sh -fsS -o llvm.sh \
     && apt-get install -y clang-tidy-21 clang-format-21 \
     && rm -rf /var/lib/apt/lists/*
 ENV PATH="/usr/lib/llvm-21/bin:${PATH}"
+ENV CC=clang
+ENV CXX=clang++
 
 # rust
 ARG MSRV_RUST_VERSION=1.88.0

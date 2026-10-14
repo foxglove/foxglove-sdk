@@ -17,5 +17,9 @@ fn main() {
         println!("cargo:rustc-cdylib-link-arg=-Wl,-soname,libfoxglove.so");
     } else if target_os == "macos" {
         println!("cargo:rustc-cdylib-link-arg=-Wl,-install_name,@rpath/libfoxglove.dylib");
+        // The prebuilt WebRTC library defines ObjC category methods, which the linker only keeps
+        // with `-ObjC` (livekit/rust-sdks#795). `.cargo/config.toml` also sets it, but cargo
+        // ignores that whenever RUSTFLAGS is set, as it is in CI.
+        println!("cargo:rustc-cdylib-link-arg=-ObjC");
     }
 }
