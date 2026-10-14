@@ -4,7 +4,7 @@ use std::time::Duration;
 use foxglove::ChannelDescriptor;
 use foxglove::remote_access::{
     self, Capability, ConnectionStatus, Gateway, GatewayHandle, Listener, QosProfile, Reliability,
-    Status, VideoEncoderBackend,
+    StatsOptions, Status, VideoEncoderBackend,
 };
 use pyo3::prelude::*;
 use pyo3::types::PyBytes;
@@ -727,6 +727,67 @@ impl From<PyQosProfile> for QosProfile {
     }
 }
 
+/// Options for the statistics that a remote access gateway publishes.
+///
+/// Pass these to :py:func:`foxglove.start_gateway` as ``stats`` to have the gateway
+/// periodically log a JSON ``foxglove.RemoteAccessStats`` message to a channel in its context.
+/// The gateway keeps publishing while it is connecting, and logs a last message with the
+/// ``shutting_down`` state when it is stopped. Counters are cumulative over the lifetime of the
+/// gateway.
+///
+/// Each message has these fields:
+///
+/// - ``state`` (str): ``connecting``, ``connected``, or ``shutting_down``.
+/// - ``session_active`` (bool): Whether a viewer session is active.
+/// - ``viewer_count`` (int): The number of viewers connected to the current session.
+/// - ``rtt_ms`` (float): The latest ICE round-trip time to the remote access server, sampled
+///   every 30 seconds. Omitted if no session is active or it has not been sampled yet.
+/// - ``connection_quality`` (str): ``excellent``, ``good``, ``poor``, or ``lost``. Omitted if
+///   no session is active.
+/// - ``reconnects`` (int): Times the gateway lost its connection and started reconnecting.
+/// - ``participant_resets`` (int): Times a viewer was reset because its control message queue
+///   overflowed or a write to it failed.
+/// - ``data_track_full``, ``data_track_not_ready``, ``oversized``, ``video_queue``,
+///   ``point_cloud_queue``, ``video_encode_errors`` (int): Messages dropped, or not encoded as
+///   video, by cause.
+/// - ``topics`` (list): The drop counters, except ``data_track_not_ready``, for each topic
+///   with a nonzero counter.
+///
+/// :param topic: The channel topic. Defaults to ``/remote_access_stats``. Each gateway that
+///     publishes stats to a context needs its own topic.
+/// :type topic: str | None
+/// :param interval: The interval between messages, in seconds. Defaults to ``1.0``, and is
+///     clamped to a minimum of ``0.1``.
+/// :type interval: float | None
+#[pyclass(
+    from_py_object,
+    name = "RemoteAccessStatsOptions",
+    module = "foxglove.remote_access"
+)]
+#[derive(Clone)]
+pub struct PyRemoteAccessStatsOptions(StatsOptions);
+
+#[pymethods]
+impl PyRemoteAccessStatsOptions {
+    #[new]
+    #[pyo3(signature = (*, topic=None, interval=None))]
+    fn new(topic: Option<String>, interval: Option<f64>) -> PyResult<Self> {
+        let mut options = StatsOptions::new();
+        if let Some(topic) = topic {
+            options = options.topic(topic);
+        }
+        if let Some(seconds) = interval {
+            let duration = Duration::try_from_secs_f64(seconds).map_err(|_| {
+                pyo3::exceptions::PyValueError::new_err(format!(
+                    "interval must be a non-negative finite number, got {seconds}"
+                ))
+            })?;
+            options = options.interval(duration);
+        }
+        Ok(Self(options))
+    }
+}
+
 /// A QoS classifier wrapping a Python callable.
 ///
 /// The callable should accept a `ChannelDescriptor` and return a `QosProfile`.
@@ -821,7 +882,7 @@ impl foxglove::remote_access::PointCloudCompressionPolicy for PyPointCloudCompre
 
 /// Start a remote access gateway for live visualization and teleop in Foxglove.
 #[pyfunction]
-#[pyo3(signature = (*, name=None, device_token=None, capabilities=None, listener=None, supported_encodings=None, services=None, asset_handler=None, context=None, channel_filter=None, qos_classifier=None, suppress_video_transcode=None, message_backlog_size=None, foxglove_api_url=None, foxglove_api_timeout=None, video_encoder=None, point_cloud_compression=None))]
+#[pyo3(signature = (*, name=None, device_token=None, capabilities=None, listener=None, supported_encodings=None, services=None, asset_handler=None, context=None, channel_filter=None, qos_classifier=None, suppress_video_transcode=None, message_backlog_size=None, foxglove_api_url=None, foxglove_api_timeout=None, video_encoder=None, point_cloud_compression=None, stats=None))]
 #[allow(clippy::too_many_arguments)]
 pub fn start_gateway(
     py: Python<'_>,
@@ -841,6 +902,7 @@ pub fn start_gateway(
     foxglove_api_timeout: Option<f64>,
     video_encoder: Option<PyVideoEncoderBackend>,
     point_cloud_compression: Option<Py<PyAny>>,
+    stats: Option<PyRemoteAccessStatsOptions>,
 ) -> PyResult<PyRemoteAccessGateway> {
     init_logging(py, None);
 
@@ -931,6 +993,10 @@ pub fn start_gateway(
         )));
     }
 
+    if let Some(stats) = stats {
+        gateway = gateway.stats(stats.0);
+    }
+
     let handle = py
         .detach(|| gateway.start())
         .map_err(PyFoxgloveError::from)?;
@@ -948,6 +1014,7 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<PyConnectionStatus>()?;
     module.add_class::<PyReliability>()?;
     module.add_class::<PyQosProfile>()?;
+    module.add_class::<PyRemoteAccessStatsOptions>()?;
     module.add_class::<PyDracoEncodeOptions>()?;
     module.add_class::<PyDracoMethod>()?;
 

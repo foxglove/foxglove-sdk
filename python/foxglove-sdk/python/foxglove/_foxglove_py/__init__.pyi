@@ -29,6 +29,7 @@ from .remote_access import (
     QosProfile,
     RemoteAccessConnectionStatus,
     RemoteAccessGateway,
+    RemoteAccessStatsOptions,
     VideoEncoderBackend,
 )
 from .websocket import Capability as WebSocketCapability
@@ -387,6 +388,7 @@ def start_gateway(
     point_cloud_compression: (
         Callable[[ChannelDescriptor], DracoEncodeOptions | bool | None] | None
     ) = None,
+    stats: RemoteAccessStatsOptions | None = None,
 ) -> RemoteAccessGateway:
     """
     Start a remote access gateway for live visualization and teleop in Foxglove.

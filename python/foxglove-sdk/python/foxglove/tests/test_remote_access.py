@@ -1,6 +1,10 @@
+import json
 import os
+import time
+from pathlib import Path
 
 import pytest
+from foxglove import Context, open_mcap
 
 # Set FOXGLOVE_TEST_REQUIRE_REMOTE_ACCESS=1 in environments where remote_access
 # is expected to be available (e.g. CI jobs building wheels with the
@@ -16,6 +20,7 @@ try:
         DracoMethod,
         RemoteAccessConnectionStatus,
         RemoteAccessListener,
+        RemoteAccessStatsOptions,
     )
 
     HAS_REMOTE_ACCESS = True
@@ -72,6 +77,48 @@ def test_start_gateway_rejects_non_callable_point_cloud_compression() -> None:
     for value in (False, True, DracoEncodeOptions()):
         with pytest.raises(TypeError, match="must be a callable"):
             start_gateway(point_cloud_compression=value)  # type: ignore[arg-type]
+
+
+def test_start_gateway_publishes_stats(tmp_path: Path) -> None:
+    """
+    A gateway that cannot reach the Foxglove API stays in the connecting state, and logs a
+    last shutting_down message to its stats topic when stopped.
+    """
+    import mcap.reader
+
+    ctx = Context()
+    path = tmp_path / "stats.mcap"
+    with open_mcap(path, context=ctx):
+        gateway = start_gateway(
+            device_token="test-token",
+            foxglove_api_url="http://127.0.0.1:1",
+            context=ctx,
+            stats=RemoteAccessStatsOptions(topic="/gateway_stats", interval=0.1),
+        )
+        time.sleep(0.3)
+        gateway.stop()
+
+    with open(path, "rb") as f:
+        messages = [
+            (schema, json.loads(message.data))
+            for schema, channel, message in mcap.reader.make_reader(f).iter_messages()
+            if channel.topic == "/gateway_stats"
+        ]
+
+    assert messages
+    assert all(
+        schema is not None and schema.name == "foxglove.RemoteAccessStats"
+        for schema, _ in messages
+    )
+    states = [stats["state"] for _, stats in messages]
+    assert set(states[:-1]) == {"connecting"}
+    assert states[-1] == "shutting_down"
+
+
+def test_remote_access_stats_options_reject_invalid_interval() -> None:
+    for interval in (-1.0, float("nan")):
+        with pytest.raises(ValueError, match="interval must be"):
+            RemoteAccessStatsOptions(interval=interval)
 
 
 def test_draco_encode_options_defaults() -> None:
