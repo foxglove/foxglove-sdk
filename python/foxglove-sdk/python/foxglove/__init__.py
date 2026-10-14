@@ -263,6 +263,7 @@ try:
         QosProfile,
         RemoteAccessGateway,
         RemoteAccessListener,
+        RemoteAccessStatsOptions,
         VideoEncoderBackend,
     )
 
@@ -286,6 +287,7 @@ try:
         point_cloud_compression: (
             Callable[[ChannelDescriptor], DracoEncodeOptions | bool | None] | None
         ) = None,
+        stats: RemoteAccessStatsOptions | None = None,
     ) -> RemoteAccessGateway:
         """
         Start a remote access gateway for live visualization and teleop in Foxglove.
@@ -347,6 +349,10 @@ try:
             delivered uncompressed — a throttled warning is sent to the device log and to
             viewers. To deliver clouds untouched, return ``False`` for that channel from
             ``point_cloud_compression``.
+        :param stats: If set, the gateway periodically logs its connection state, viewer count,
+            and cumulative message drop and participant reset counters to a channel in
+            ``context``; see :py:class:`~foxglove.remote_access.RemoteAccessStatsOptions`. If not
+            set, no statistics are published.
         """
         return _foxglove.start_gateway(
             name=name,
@@ -365,6 +371,7 @@ try:
             foxglove_api_timeout=foxglove_api_timeout,
             video_encoder=video_encoder,
             point_cloud_compression=point_cloud_compression,
+            stats=stats,
         )
 
     __all__ += ["start_gateway"]

@@ -60,6 +60,15 @@ class QosProfile:
 
     def __init__(self, *, reliability: Reliability = Reliability.Lossy) -> None: ...
 
+class RemoteAccessStatsOptions:
+    """
+    Options for the statistics that a remote access gateway publishes.
+    """
+
+    def __init__(
+        self, *, topic: str | None = None, interval: float | None = None
+    ) -> None: ...
+
 class Capability(Enum):
     """
     An enumeration of capabilities that the remote access gateway can advertise to its clients.

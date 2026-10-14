@@ -24,6 +24,7 @@ from ._foxglove_py.remote_access import (
     Reliability,
     RemoteAccessConnectionStatus,
     RemoteAccessGateway,
+    RemoteAccessStatsOptions,
     VideoEncoderBackend,
 )
 
@@ -188,6 +189,7 @@ __all__ = [
     "RemoteAccessConnectionStatus",
     "RemoteAccessGateway",
     "RemoteAccessListener",
+    "RemoteAccessStatsOptions",
     "Service",
     "ServiceRequest",
     "ServiceSchema",
