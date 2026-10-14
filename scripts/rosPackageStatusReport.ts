@@ -60,16 +60,24 @@ export const DISTROS: Record<string, Distro> = {
   },
 };
 
+export interface Loaded<T> {
+  value?: T;
+  error?: string;
+}
+
 export interface Row {
   distro: string;
   package: string;
   target: string;
   rosdistro: string | undefined;
   testing: string | undefined;
+  /** Apt version in the main repo. A fetch failure is `main_error`, not this field. */
   main: string | undefined;
   jenkins: string;
   job_url: string;
-  /** Fetch failure for this row, including the request URL. Absent when every fetch succeeded. */
+  /** Main apt index fetch failure, including the URL. Does not gate the row. */
+  main_error?: string;
+  /** rosdistro, testing, or Jenkins fetch failure, including the URL. */
   error?: string;
 }
 
@@ -210,11 +218,11 @@ export function aptMatchesRelease(
   return next === "" || next < "0" || next > "9";
 }
 
-/** One-word summary of a Jenkins job API body: missing / disabled / building / queued / never-built / <result>. */
-export function jenkinsStatusFromApi(body: string | undefined): string {
-  if (body == undefined) {
-    return "missing";
-  }
+/**
+ * One-word summary of a Jenkins job API body: disabled / building / queued / never-built / <result>.
+ * `load` supplies `missing` when the job URL is a 404.
+ */
+export function jenkinsStatusFromApi(body: string): string {
   const parsed: unknown = JSON.parse(body);
   if (!isRecord(parsed)) {
     throw new Error("Jenkins job API response is not a JSON object");
@@ -243,4 +251,62 @@ export function rowOk(row: Row): boolean {
     aptMatchesRelease(row.testing, row.rosdistro) &&
     row.jenkins === "success"
   );
+}
+
+export interface StatusSources {
+  rosdistroVersions: (distro: string) => Promise<Loaded<Record<string, string>>>;
+  packagesIndex: (
+    os: string,
+    component: string,
+    codename: string,
+    arch: string,
+  ) => Promise<Loaded<Record<string, string>>>;
+  jenkinsStatus: (job: string) => Promise<Loaded<string>>;
+}
+
+function rowErrors(parts: Loaded<unknown>[]): string | undefined {
+  const messages = parts.flatMap((part) => (part.error == undefined ? [] : [part.error]));
+  return messages.length > 0 ? messages.join("; ") : undefined;
+}
+
+/** One row per distro, package, and target. A main-repo fetch failure does not gate the row. */
+export async function rows(
+  distros: readonly ResolvedDistro[],
+  packages: readonly string[],
+  sources: StatusSources,
+  jenkinsBase: string,
+): Promise<Row[]> {
+  const pending: Promise<Row>[] = [];
+  for (const { name: distro, info } of distros) {
+    for (const pkg of packages) {
+      for (const target of info.targets) {
+        const deb = debName(distro, pkg);
+        const job = binaryJobName(distro, pkg, target);
+        pending.push(
+          (async (): Promise<Row> => {
+            const [expected, testing, mainRepo, status] = await Promise.all([
+              sources.rosdistroVersions(distro),
+              sources.packagesIndex(target.os, "testing", target.codename, target.arch),
+              sources.packagesIndex(target.os, "main", target.codename, target.arch),
+              sources.jenkinsStatus(job),
+            ]);
+            const error = rowErrors([expected, testing, status]);
+            return {
+              distro,
+              package: pkg,
+              target: `${target.codename}/${target.arch}`,
+              rosdistro: expected.value?.[pkg],
+              testing: testing.value?.[deb],
+              main: mainRepo.value?.[deb],
+              jenkins: status.value ?? "error",
+              job_url: `${jenkinsBase}/job/${job}`,
+              ...(mainRepo.error == undefined ? {} : { main_error: mainRepo.error }),
+              ...(error == undefined ? {} : { error }),
+            };
+          })(),
+        );
+      }
+    }
+  }
+  return await Promise.all(pending);
 }

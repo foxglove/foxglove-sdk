@@ -8,7 +8,7 @@
 // A row is "ok" when ros2-testing has the released version and the last binary
 // build succeeded. The main repo is reported but does not gate the result:
 // sync from testing to main lags, rolling is often absent from main, and a
-// main-repo fetch failure is shown in the main column without failing the row.
+// main-repo fetch failure is shown in `main_error` and does not fail the row.
 //
 // A failed fetch (timeout, DNS, TLS, or HTTP) does not abort the report.
 // rosdistro, testing, and Jenkins failures are recorded in `error` with the
@@ -27,8 +27,6 @@ import { gunzipSync } from "node:zlib";
 import {
   DISTROS,
   PACKAGES,
-  binaryJobName,
-  debName,
   errorText,
   fetchFailure,
   jenkinsStatusFromApi,
@@ -36,7 +34,8 @@ import {
   parsePackagesIndex,
   resolveSelection,
   rowOk,
-  type ResolvedDistro,
+  rows,
+  type Loaded,
   type Row,
 } from "./rosPackageStatusReport";
 
@@ -46,11 +45,6 @@ const JENKINS_BASE = "https://build.ros2.org";
 const ROSDISTRO_BASE = "https://raw.githubusercontent.com/ros/rosdistro/master";
 
 const USER_AGENT = "foxglove-ros-package-status/1.0";
-
-interface Loaded<T> {
-  value?: T;
-  error?: string;
-}
 
 /** GET url; undefined on 404. Network, TLS, and other HTTP failures name the URL. */
 async function get(url: string, timeoutMs: number): Promise<Buffer | undefined> {
@@ -152,50 +146,6 @@ const jenkinsStatus = memoize(async (job: string): Promise<Loaded<string>> => {
   return await load(url, 60_000, (raw) => jenkinsStatusFromApi(raw.toString("utf8")), "missing");
 });
 
-function rowErrors(parts: Loaded<unknown>[]): string | undefined {
-  const messages = parts.flatMap((part) => (part.error == undefined ? [] : [part.error]));
-  return messages.length > 0 ? messages.join("; ") : undefined;
-}
-
-async function rows(
-  distros: readonly ResolvedDistro[],
-  packages: readonly string[],
-): Promise<Row[]> {
-  const pending: Promise<Row>[] = [];
-  for (const { name: distro, info } of distros) {
-    for (const pkg of packages) {
-      for (const target of info.targets) {
-        const deb = debName(distro, pkg);
-        const job = binaryJobName(distro, pkg, target);
-        pending.push(
-          (async (): Promise<Row> => {
-            const [expected, testing, mainRepo, status] = await Promise.all([
-              rosdistroVersions(distro),
-              packagesIndex(target.os, "testing", target.codename, target.arch),
-              packagesIndex(target.os, "main", target.codename, target.arch),
-              jenkinsStatus(job),
-            ]);
-            const error = rowErrors([expected, testing, status]);
-            return {
-              distro,
-              package: pkg,
-              target: `${target.codename}/${target.arch}`,
-              rosdistro: expected.value?.[pkg],
-              testing: testing.value?.[deb],
-              // A main fetch failure is shown here and does not gate the row.
-              main: mainRepo.error ?? mainRepo.value?.[deb],
-              jenkins: status.value ?? "error",
-              job_url: `${JENKINS_BASE}/job/${job}`,
-              ...(error == undefined ? {} : { error }),
-            };
-          })(),
-        );
-      }
-    }
-  }
-  return await Promise.all(pending);
-}
-
 function printTable(rs: Row[]): void {
   const cols = [
     "distro",
@@ -204,6 +154,7 @@ function printTable(rs: Row[]): void {
     "rosdistro",
     "testing",
     "main",
+    "main_error",
     "jenkins",
     "error",
   ] as const;
@@ -228,7 +179,12 @@ function collect(value: string, prev: string[] | undefined): string[] {
 
 async function main(opts: Options): Promise<void> {
   const selection = resolveSelection(opts.distro ?? Object.keys(DISTROS), opts.package ?? PACKAGES);
-  const rs = await rows(selection.distros, selection.packages);
+  const rs = await rows(
+    selection.distros,
+    selection.packages,
+    { rosdistroVersions, packagesIndex, jenkinsStatus },
+    JENKINS_BASE,
+  );
   if (opts.json === true) {
     console.log(JSON.stringify(rs, undefined, 2));
   } else {

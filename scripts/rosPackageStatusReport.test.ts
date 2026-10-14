@@ -10,6 +10,7 @@ import {
   parsePackagesIndex,
   resolveSelection,
   rowOk,
+  rows,
   type Row,
   type Target,
 } from "./rosPackageStatusReport";
@@ -130,7 +131,6 @@ describe("aptMatchesRelease", () => {
 
 describe("jenkinsStatusFromApi", () => {
   it("summarizes job state, preferring disabled over an in-progress build", () => {
-    expect(jenkinsStatusFromApi(undefined)).toBe("missing");
     expect(
       jenkinsStatusFromApi(
         JSON.stringify({ disabled: true, lastBuild: { building: true, result: null } }),
@@ -203,14 +203,8 @@ describe("rowOk", () => {
     job_url: "https://build.ros2.org/job/example",
   };
 
-  it("is ok when testing matches and Jenkins succeeded, even if main is missing or its fetch failed", () => {
+  it("is ok when testing matches the release and Jenkins succeeded, even if main has not synced", () => {
     expect(rowOk(base)).toBe(true);
-    expect(
-      rowOk({
-        ...base,
-        main: "GET https://repo.ros2.org/ubuntu/main/dists/resolute/main/binary-amd64/Packages.gz: The operation was aborted due to timeout",
-      }),
-    ).toBe(true);
   });
 
   it("is not ok when the testing version, the Jenkins result, or a fetch fails", () => {
@@ -224,5 +218,35 @@ describe("rowOk", () => {
         error: "GET https://build.ros2.org/job/example: The operation was aborted due to timeout",
       }),
     ).toBe(false);
+  });
+});
+
+describe("rows", () => {
+  it("does not gate the row when the main repo fetch fails", async () => {
+    const mainError =
+      "GET https://repo.ros2.org/ubuntu/main/dists/noble/main/binary-amd64/Packages.gz: The operation was aborted due to timeout";
+    const selection = resolveSelection(["jazzy"], ["foxglove_bridge"]);
+    const result = await rows(
+      selection.distros,
+      selection.packages,
+      {
+        rosdistroVersions: async () => ({ value: { foxglove_bridge: "3.6.0-1" } }),
+        packagesIndex: async (_os, component) =>
+          component === "main"
+            ? { error: mainError }
+            : { value: { "ros-jazzy-foxglove-bridge": "3.6.0-1noble.20260930.003057" } },
+        jenkinsStatus: async () => ({ value: "success" }),
+      },
+      "https://build.ros2.org",
+    );
+
+    expect(result).toHaveLength(2);
+    for (const row of result) {
+      expect(row.main).toBeUndefined();
+      expect(row.main_error).toBe(mainError);
+      expect(row.error).toBeUndefined();
+      expect(row.jenkins).toBe("success");
+      expect(rowOk(row)).toBe(true);
+    }
   });
 });
