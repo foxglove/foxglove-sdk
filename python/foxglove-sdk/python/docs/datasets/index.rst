@@ -22,9 +22,6 @@ Install the extra for your framework, or both to use Ray with PyTorch:
    pip install 'foxglove-sdk[ray]'        # Ray Data
    pip install 'foxglove-sdk[torch,ray]'  # Both
 
-The ``torch`` and ``ray`` extras include MCAP protobuf and ROS decoder packages
-(also available separately as ``foxglove-sdk[decoders]``).
-
 PyTorch
 -------
 
@@ -196,10 +193,30 @@ Performance and iteration behavior:
 Message formats
 ---------------
 
-JSON decoding is included by default. Protobuf and ROS decoders are installed with the
-``torch``, ``ray``, and ``decoders`` extras. If a decoder is still missing, the error names
-the schema encoding and the package to install (``mcap-protobuf-support``,
-``mcap-ros1-support``, or ``mcap-ros2-support``) on every worker.
+JSON decoding (schema encoding ``jsonschema``) is included by default. Other encodings
+need the matching MCAP decoder package on every worker. Install the package for your
+data's schema encoding:
+
+.. list-table::
+   :header-rows: 1
+
+   * - Schema encoding
+     - Package
+   * - ``jsonschema``
+     - included by default
+   * - ``protobuf``
+     - ``mcap-protobuf-support``
+   * - ``ros1msg``
+     - ``mcap-ros1-support``
+   * - ``ros2msg``
+     - ``mcap-ros2-support``
+
+.. code-block:: bash
+
+   pip install mcap-protobuf-support   # example: protobuf recordings
+
+If a decoder is missing, the error names the schema encoding and the package to
+install.
 
 For custom decoding, create MCAP decoder factories inside your callback and pass
 them to ``episode.iter_messages(decoder_factories=[...])``. Messages arrive in log-time order
@@ -210,8 +227,8 @@ See ``python/foxglove-sdk-examples/dataset-training`` for a complete example.
 H.264 video
 -----------
 
-Install ``foxglove-sdk[video,torch]`` or ``foxglove-sdk[video,ray]``. Those extras
-include MCAP protobuf and ROS decoders (see `Message formats`_).
+Install ``foxglove-sdk[video,torch]`` or ``foxglove-sdk[video,ray]``, plus the
+MCAP decoder for your recording (see `Message formats`_).
 
 Pass ``decode_h264`` as the episode callback to decode every selected camera topic.
 Using equally sized camera images:

@@ -144,8 +144,8 @@ class _MessageIds:
         return output_schema, output_channel
 
 
-# Schema encodings foxglove-client auto-loads, plus message encodings that map
-# to the same packages when the schema encoding is missing from the error text.
+# Schema encodings foxglove-client loads when the matching package is installed.
+# Message encodings are a fallback when the error text has no schema encoding.
 _DECODER_PACKAGES = {
     "protobuf": "mcap-protobuf-support",
     "ros1msg": "mcap-ros1-support",

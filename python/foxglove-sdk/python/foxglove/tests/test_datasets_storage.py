@@ -246,21 +246,40 @@ def test_decoder_failure_closes_storage_file() -> None:
     assert store.files[0].closed
 
 
-def test_missing_protobuf_decoder_names_schema_encoding_and_package() -> None:
+@pytest.mark.parametrize(
+    "schema_encoding,message_encoding,match",
+    [
+        (
+            "protobuf",
+            "protobuf",
+            "schema encoding 'protobuf'; install mcap-protobuf-support",
+        ),
+        (
+            "ros1msg",
+            "ros1",
+            "schema encoding 'ros1msg'.*install mcap-ros1-support",
+        ),
+        (
+            "ros2msg",
+            "cdr",
+            "schema encoding 'ros2msg'.*install mcap-ros2-support",
+        ),
+    ],
+)
+def test_missing_decoder_names_schema_encoding_and_package(
+    schema_encoding: str, message_encoding: str, match: str
+) -> None:
     store = Store(
         {
             LOCATION: mcap_bytes(
                 [("/selected", 0, 1)],
-                encoding="protobuf",
-                schema_encoding="protobuf",
+                encoding=message_encoding,
+                schema_encoding=schema_encoding,
                 schema_name="foxglove.CompressedImage",
             )
         }
     )
-    with pytest.raises(
-        DecoderNotFoundError,
-        match="schema encoding 'protobuf'; install mcap-protobuf-support",
-    ):
+    with pytest.raises(DecoderNotFoundError, match=match):
         list(_iter_messages(store, [LOCATION], ["/selected"], START, START, []))
     assert store.files[0].closed
 
