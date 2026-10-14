@@ -12,10 +12,6 @@
 #include <foxglove/error.hpp>
 #include <foxglove/remote_access.hpp>
 
-#include <algorithm>
-#include <cstdint>
-#include <optional>
-
 #include "callback_forwarders.hpp"
 
 namespace foxglove {
@@ -336,20 +332,6 @@ FoxgloveResult<RemoteAccessGateway> RemoteAccessGateway::create(
     }
     c_options.server_info = server_info.data();
     c_options.server_info_count = server_info.size();
-  }
-
-  foxglove_gateway_stats_options c_stats = {};
-  std::optional<uint64_t> stats_interval_ms;
-  if (options.stats) {
-    if (options.stats->topic) {
-      c_stats.topic = {options.stats->topic->data(), options.stats->topic->length()};
-    }
-    if (options.stats->interval) {
-      stats_interval_ms =
-        static_cast<uint64_t>(std::max<int64_t>(options.stats->interval->count(), 0));
-      c_stats.interval_ms = &*stats_interval_ms;
-    }
-    c_options.stats = &c_stats;
   }
 
   foxglove_gateway* gateway = nullptr;

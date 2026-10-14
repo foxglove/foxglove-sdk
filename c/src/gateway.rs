@@ -744,49 +744,6 @@ impl foxglove::remote_access::Listener for FoxgloveGatewayCallbacks {
 // Options
 // =======
 
-/// Options for the statistics that a remote access gateway publishes, enabled with the
-/// `stats` field of `foxglove_gateway_options`.
-///
-/// The gateway logs a JSON message with the `foxglove.RemoteAccessStats` JSON Schema to a
-/// channel in its context, every `interval_ms`. It keeps publishing while it is dormant or
-/// reconnecting, and publishes a last message with the `shutting_down` state when it is
-/// stopped. Counters are cumulative over the lifetime of the gateway.
-///
-/// To use the default for any field, leave the field zero-initialized.
-///
-/// # Safety
-/// - `topic`, when non-empty, must be a valid UTF-8 string.
-#[repr(C)]
-pub struct FoxgloveGatewayStatsOptions<'a> {
-    /// Optional channel topic name. If `data` is null or `len` is 0, defaults to
-    /// `/remote_access_stats`. Each gateway that publishes stats to a context needs its own
-    /// topic.
-    pub topic: FoxgloveString,
-
-    /// Optional interval between stats messages, in milliseconds.
-    ///
-    /// When null, defaults to 1000 ms. Clamped to a minimum of 100 ms.
-    pub interval_ms: Option<&'a u64>,
-}
-
-impl FoxgloveGatewayStatsOptions<'_> {
-    unsafe fn to_native(
-        &self,
-    ) -> Result<foxglove::remote_access::StatsOptions, foxglove::FoxgloveError> {
-        let mut options = foxglove::remote_access::StatsOptions::new();
-        let topic = unsafe { self.topic.as_utf8_str() }.map_err(|e| {
-            foxglove::FoxgloveError::Utf8Error(format!("stats topic is invalid: {e}"))
-        })?;
-        if !topic.is_empty() {
-            options = options.topic(topic);
-        }
-        if let Some(&interval_ms) = self.interval_ms {
-            options = options.interval(Duration::from_millis(interval_ms));
-        }
-        Ok(options)
-    }
-}
-
 /// Options for creating a remote access gateway.
 ///
 /// # Safety
@@ -798,8 +755,6 @@ impl FoxgloveGatewayStatsOptions<'_> {
 ///   `supported_encodings` must have length equal to `supported_encodings_count`.
 /// - If `server_info` is supplied, all entries must contain valid UTF-8, and `server_info` must
 ///   have length equal to `server_info_count`.
-/// - If `stats` is supplied, it must satisfy the safety requirements of
-///   `foxglove_gateway_stats_options`.
 #[repr(C)]
 pub struct FoxgloveGatewayOptions<'a> {
     /// `context` can be null, or a valid pointer to a context created via `foxglove_context_new`.
@@ -947,13 +902,6 @@ pub struct FoxgloveGatewayOptions<'a> {
             channel: *const FoxgloveChannelDescriptor,
         ) -> FoxglovePointCloudCompression,
     >,
-
-    /// Optional statistics publishing. When null, the gateway does not publish statistics.
-    ///
-    /// When set, the gateway periodically logs its connection state, viewer count, and
-    /// cumulative message drop and participant reset counters to a channel in its context. See
-    /// `foxglove_gateway_stats_options`.
-    pub stats: Option<&'a FoxgloveGatewayStatsOptions<'a>>,
     // New fields are appended last so that adding them preserves the memory offsets of all
     // pre-existing fields.
 }
@@ -1146,10 +1094,6 @@ unsafe fn do_foxglove_gateway_start(
     // `FOXGLOVE_VIDEO_ENCODER` environment variable can still take effect.
     if options.video_encoder != FoxgloveVideoEncoderBackend::Auto {
         gateway = gateway.video_encoder(options.video_encoder.into());
-    }
-
-    if let Some(stats) = options.stats {
-        gateway = gateway.stats(unsafe { stats.to_native() }?);
     }
 
     let handle = gateway.start()?;
@@ -1385,121 +1329,6 @@ pub extern "C" fn foxglove_gateway_publish_connection_graph(
     match handle.publish_connection_graph(graph.0.clone()) {
         Ok(_) => FoxgloveError::Ok,
         Err(e) => FoxgloveError::from(e),
-    }
-}
-
-#[cfg(test)]
-mod stats_tests {
-    use std::time::Duration;
-
-    use foxglove::remote_access::StatsOptions;
-
-    use super::{
-        FoxgloveGatewayOptions, FoxgloveGatewayStatsOptions, foxglove_gateway_start,
-        foxglove_gateway_stop,
-    };
-    use crate::{FoxgloveError, FoxgloveString};
-
-    #[test]
-    fn test_zero_initialized_stats_options_map_to_defaults() {
-        let options: FoxgloveGatewayStatsOptions = unsafe { std::mem::zeroed() };
-        assert_eq!(
-            unsafe { options.to_native() }.expect("valid options"),
-            StatsOptions::new()
-        );
-    }
-
-    #[test]
-    fn test_zero_stats_interval_is_passed_through_to_be_clamped() {
-        let zero = 0;
-        let options = FoxgloveGatewayStatsOptions {
-            topic: FoxgloveString::default(),
-            interval_ms: Some(&zero),
-        };
-        assert_eq!(
-            unsafe { options.to_native() }.expect("valid options"),
-            StatsOptions::new().interval(Duration::ZERO)
-        );
-    }
-
-    #[test]
-    fn test_stats_options_map_topic_and_interval() {
-        let interval_ms = 250;
-        let options = FoxgloveGatewayStatsOptions {
-            topic: FoxgloveString::from("/gateway_stats"),
-            interval_ms: Some(&interval_ms),
-        };
-        assert_eq!(
-            unsafe { options.to_native() }.expect("valid options"),
-            StatsOptions::new()
-                .topic("/gateway_stats")
-                .interval(Duration::from_millis(250))
-        );
-    }
-
-    #[test]
-    fn test_stats_options_reject_invalid_utf8_topic() {
-        let topic = [0xff, 0xfe];
-        let options = FoxgloveGatewayStatsOptions {
-            topic: FoxgloveString {
-                data: topic.as_ptr().cast(),
-                len: topic.len(),
-            },
-            interval_ms: None,
-        };
-        assert!(matches!(
-            unsafe { options.to_native() },
-            Err(foxglove::FoxgloveError::Utf8Error(_))
-        ));
-    }
-
-    #[test]
-    fn test_gateway_start_creates_stats_channel_until_stopped() {
-        let context = foxglove::Context::new();
-        let interval_ms = 100;
-        let stats = FoxgloveGatewayStatsOptions {
-            topic: FoxgloveString::from("/gateway_stats"),
-            interval_ms: Some(&interval_ms),
-        };
-        let mut options: FoxgloveGatewayOptions = unsafe { std::mem::zeroed() };
-        options.context = std::sync::Arc::as_ptr(&context);
-        options.device_token = FoxgloveString::from("test-token");
-        // Nothing listens on this port, so the gateway stays in the connecting state.
-        options.foxglove_api_url = FoxgloveString::from("http://127.0.0.1:1");
-        options.stats = Some(&stats);
-
-        let mut gateway = std::ptr::null_mut();
-        let result = unsafe { foxglove_gateway_start(&options, &raw mut gateway) };
-        assert_eq!(result, FoxgloveError::Ok);
-        assert!(context.get_channel_by_topic("/gateway_stats").is_some());
-
-        assert_eq!(
-            foxglove_gateway_stop(unsafe { gateway.as_mut() }),
-            FoxgloveError::Ok
-        );
-        assert!(context.get_channel_by_topic("/gateway_stats").is_none());
-    }
-
-    #[test]
-    fn test_gateway_start_rejects_invalid_stats_topic() {
-        let context = foxglove::Context::new();
-        let topic = [0xff, 0xfe];
-        let stats = FoxgloveGatewayStatsOptions {
-            topic: FoxgloveString {
-                data: topic.as_ptr().cast(),
-                len: topic.len(),
-            },
-            interval_ms: None,
-        };
-        let mut options: FoxgloveGatewayOptions = unsafe { std::mem::zeroed() };
-        options.context = std::sync::Arc::as_ptr(&context);
-        options.device_token = FoxgloveString::from("test-token");
-        options.stats = Some(&stats);
-
-        let mut gateway = std::ptr::null_mut();
-        let result = unsafe { foxglove_gateway_start(&options, &raw mut gateway) };
-        assert_eq!(result, FoxgloveError::Utf8Error);
-        assert!(gateway.is_null());
     }
 }
 

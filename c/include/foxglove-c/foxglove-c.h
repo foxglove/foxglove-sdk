@@ -2922,37 +2922,6 @@ typedef struct foxglove_point_cloud_compression {
 
 #if defined(FOXGLOVE_REMOTE_ACCESS)
 /**
- * Options for the statistics that a remote access gateway publishes, enabled with the
- * `stats` field of `foxglove_gateway_options`.
- *
- * The gateway logs a JSON message with the `foxglove.RemoteAccessStats` JSON Schema to a
- * channel in its context, every `interval_ms`. It keeps publishing while it is dormant or
- * reconnecting, and publishes a last message with the `shutting_down` state when it is
- * stopped. Counters are cumulative over the lifetime of the gateway.
- *
- * To use the default for any field, leave the field zero-initialized.
- *
- * # Safety
- * - `topic`, when non-empty, must be a valid UTF-8 string.
- */
-typedef struct foxglove_gateway_stats_options {
-  /**
-   * Optional channel topic name. If `data` is null or `len` is 0, defaults to
-   * `/remote_access_stats`. Each gateway that publishes stats to a context needs its own
-   * topic.
-   */
-  struct foxglove_string topic;
-  /**
-   * Optional interval between stats messages, in milliseconds.
-   *
-   * When null, defaults to 1000 ms. Clamped to a minimum of 100 ms.
-   */
-  const uint64_t *interval_ms;
-} foxglove_gateway_stats_options;
-#endif
-
-#if defined(FOXGLOVE_REMOTE_ACCESS)
-/**
  * Options for creating a remote access gateway.
  *
  * # Safety
@@ -2964,8 +2933,6 @@ typedef struct foxglove_gateway_stats_options {
  *   `supported_encodings` must have length equal to `supported_encodings_count`.
  * - If `server_info` is supplied, all entries must contain valid UTF-8, and `server_info` must
  *   have length equal to `server_info_count`.
- * - If `stats` is supplied, it must satisfy the safety requirements of
- *   `foxglove_gateway_stats_options`.
  */
 typedef struct foxglove_gateway_options {
   /**
@@ -3111,14 +3078,6 @@ typedef struct foxglove_gateway_options {
    */
   struct foxglove_point_cloud_compression (*point_cloud_compression)(const void *context,
                                                                      const struct foxglove_channel_descriptor *channel);
-  /**
-   * Optional statistics publishing. When null, the gateway does not publish statistics.
-   *
-   * When set, the gateway periodically logs its connection state, viewer count, and
-   * cumulative message drop and participant reset counters to a channel in its context. See
-   * `foxglove_gateway_stats_options`.
-   */
-  const struct foxglove_gateway_stats_options *stats;
 } foxglove_gateway_options;
 #endif
 
