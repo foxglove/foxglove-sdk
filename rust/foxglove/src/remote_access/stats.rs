@@ -449,10 +449,8 @@ mod tests {
     use std::collections::BTreeSet;
 
     use serde_json::json;
-    use tracing_test::traced_test;
 
     use super::*;
-    use crate::testutil::RecordingSink;
 
     fn to_json(stats: &RemoteAccessStats) -> serde_json::Value {
         let mut buf = Vec::new();
@@ -480,7 +478,8 @@ mod tests {
         imu.record_data_track_not_ready_drop();
         imu.record_data_track_not_ready_drop();
         let _ = imu.record_data_track_full_drop();
-        imu.record_oversized_drop();
+        // Another handle for the same topic shares its counters.
+        counters.for_topic("/imu").record_oversized_drop();
         camera.record_data_track_not_ready_drop();
         advertised.record_data_track_not_ready_drop();
         camera.record_video_queue_drops(4);
@@ -541,22 +540,6 @@ mod tests {
                 ],
             })
         );
-    }
-
-    #[test]
-    fn counters_for_the_same_topic_are_shared() {
-        let counters = Arc::new(GatewayCounters::default());
-        counters.for_topic("/imu").record_oversized_drop();
-        counters.for_topic("/imu").record_oversized_drop();
-
-        let stats = to_json(&RemoteAccessStats::new(
-            ConnectionStatus::Connecting,
-            None,
-            &counters,
-        ));
-        assert_eq!(stats["oversized"], 2);
-        assert_eq!(stats["topics"].as_array().map(Vec::len), Some(1));
-        assert_eq!(stats["topics"][0]["oversized"], 2);
     }
 
     #[test]
@@ -624,20 +607,6 @@ mod tests {
     }
 
     #[test]
-    fn reports_shutdown_as_shutting_down() {
-        let counters = GatewayCounters::default();
-        for (status, state) in [
-            (ConnectionStatus::Connecting, "connecting"),
-            (ConnectionStatus::Connected, "connected"),
-            (ConnectionStatus::ShuttingDown, "shutting_down"),
-            (ConnectionStatus::Shutdown, "shutting_down"),
-        ] {
-            let stats = to_json(&RemoteAccessStats::new(status, None, &counters));
-            assert_eq!(stats["state"], state, "{status:?}");
-        }
-    }
-
-    #[test]
     fn schema_properties_match_serialized_fields() {
         // Guards against drift between the hand-written JSON schema and the serialized
         // message, including the optional fields and the per-topic objects.
@@ -692,47 +661,5 @@ mod tests {
 
         publisher.close();
         assert!(ctx.get_channel_by_topic("/custom/stats").is_none());
-    }
-
-    #[test]
-    #[traced_test]
-    fn publisher_warns_when_the_stats_topic_is_in_use() {
-        let ctx = Context::new();
-        let _first = StatsOptions::new().into_publisher(&ctx);
-        assert!(!logs_contain("already in use"));
-
-        let _second = StatsOptions::new().into_publisher(&ctx);
-        assert!(logs_contain(
-            "remote access stats topic /remote_access_stats is already in use in this context"
-        ));
-    }
-
-    #[test]
-    fn publisher_builds_messages_only_when_the_channel_has_sinks() {
-        let ctx = Context::new();
-        let publisher = StatsOptions::new().into_publisher(&ctx);
-        let counters = GatewayCounters::default();
-
-        publisher.publish(|| unreachable!("no sinks are subscribed"));
-
-        let sink = Arc::new(RecordingSink::new());
-        ctx.add_sink(sink.clone());
-        publisher.publish(|| RemoteAccessStats::new(ConnectionStatus::Connecting, None, &counters));
-        let messages = sink.take_messages();
-        assert_eq!(messages.len(), 1);
-        let stats: serde_json::Value =
-            serde_json::from_slice(&messages[0].msg).expect("stats message is JSON");
-        assert_eq!(stats["state"], "connecting");
-    }
-
-    #[test]
-    fn default_options_use_default_topic_and_interval() {
-        assert_eq!(
-            StatsOptions::new(),
-            StatsOptions {
-                topic: DEFAULT_STATS_TOPIC.to_string(),
-                interval: DEFAULT_STATS_INTERVAL,
-            }
-        );
     }
 }

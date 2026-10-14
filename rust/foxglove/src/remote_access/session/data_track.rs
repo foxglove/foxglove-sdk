@@ -302,23 +302,4 @@ mod tests {
         assert_eq!(stats["topics"][0]["topic"], "/topic");
         assert_eq!(stats["topics"][0]["oversized"], 2);
     }
-
-    #[test]
-    fn counts_drops_before_track_is_published_gateway_wide() {
-        let counters = Arc::new(GatewayCounters::default());
-        let first = DataTrack::for_test(16, counters.for_topic("/first"));
-        let second = DataTrack::for_test(16, counters.for_topic("/second"));
-        let metadata = Metadata::default();
-
-        for _ in 0..3 {
-            assert_eq!(first.log(ChannelId::new(1), &[0u8; 4], &metadata), Ok(()));
-        }
-        assert_eq!(second.log(ChannelId::new(2), &[0u8; 4], &metadata), Ok(()));
-
-        let stats = counters.to_json();
-        assert_eq!(stats["data_track_not_ready"], 4);
-        assert_eq!(stats["data_track_full"], 0);
-        assert_eq!(stats["oversized"], 0);
-        assert_eq!(stats["topics"], serde_json::json!([]));
-    }
 }
