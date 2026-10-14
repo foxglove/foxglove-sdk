@@ -1,0 +1,195 @@
+// Pure parsing and classification for `yarn ros-package-status`.
+// Kept free of network and CLI side effects so it can be unit tested.
+// The command itself is scripts/rosPackageStatus.ts.
+
+// Packages we maintain. Must match rosdistro package names.
+export const PACKAGES = ["foxglove_bridge", "foxglove_msgs"];
+
+export interface Target {
+  os: string;
+  codename: string;
+  arch: string;
+  // The token after "bin_" in the Jenkins job name, e.g.
+  //   Kbin_uN64__foxglove_bridge__ubuntu_noble_amd64__binary
+  // It is irregular across targets, so list it explicitly. To see all jobs:
+  //   curl -sg 'https://build.ros2.org/api/json?tree=jobs[name]'
+  jenkins: string;
+}
+
+export interface Distro {
+  // First letter of buildfarm job names.
+  prefix: string;
+  targets: Target[];
+}
+
+export const DISTROS: Record<string, Distro> = {
+  humble: {
+    prefix: "H",
+    targets: [
+      { os: "ubuntu", codename: "jammy", arch: "amd64", jenkins: "uJ64" },
+      { os: "ubuntu", codename: "jammy", arch: "arm64", jenkins: "ujv8_uJv8" },
+    ],
+  },
+  jazzy: {
+    prefix: "J",
+    targets: [
+      { os: "ubuntu", codename: "noble", arch: "amd64", jenkins: "uN64" },
+      { os: "ubuntu", codename: "noble", arch: "arm64", jenkins: "unv8_uNv8" },
+    ],
+  },
+  kilted: {
+    prefix: "K",
+    targets: [
+      { os: "ubuntu", codename: "noble", arch: "amd64", jenkins: "uN64" },
+      { os: "ubuntu", codename: "noble", arch: "arm64", jenkins: "unv8_uNv8" },
+    ],
+  },
+  lyrical: {
+    prefix: "L",
+    targets: [
+      { os: "ubuntu", codename: "resolute", arch: "amd64", jenkins: "uR64" },
+      { os: "ubuntu", codename: "resolute", arch: "arm64", jenkins: "armv8_uRv8" },
+    ],
+  },
+  rolling: {
+    prefix: "R",
+    targets: [
+      { os: "ubuntu", codename: "resolute", arch: "amd64", jenkins: "uR64" },
+      { os: "ubuntu", codename: "resolute", arch: "arm64", jenkins: "unv8_uRv8" },
+    ],
+  },
+};
+
+export interface Row {
+  distro: string;
+  package: string;
+  target: string;
+  rosdistro: string | undefined;
+  testing: string | undefined;
+  main: string | undefined;
+  jenkins: string;
+  job_url: string;
+}
+
+export function debName(distro: string, pkg: string): string {
+  return `ros-${distro}-${pkg.replace(/_/g, "-")}`;
+}
+
+export function binaryJobName(distro: string, pkg: string, target: Target): string {
+  const info = DISTROS[distro];
+  if (info == undefined) {
+    throw new Error(`unknown distro '${distro}'`);
+  }
+  return `${info.prefix}bin_${target.jenkins}__${pkg}__${target.os}_${target.codename}_${target.arch}__binary`;
+}
+
+/** debian package name -> Version, from a binary Packages index (already decompressed). */
+export function parsePackagesIndex(text: string): Record<string, string> {
+  const out: Record<string, string> = {};
+  let name: string | undefined;
+  for (const line of text.split("\n")) {
+    if (line.startsWith("Package: ")) {
+      name = line.slice("Package: ".length).trim();
+    } else if (line.startsWith("Version: ") && name != undefined) {
+      out[name] = line.slice("Version: ".length).trim();
+    } else if (line.trim() === "") {
+      name = undefined;
+    }
+  }
+  return out;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value != null && !Array.isArray(value);
+}
+
+/**
+ * package -> release version ('3.6.0-1') from a parsed distribution.yaml.
+ * Repositories with an explicit `release.packages` list (foxglove-sdk publishes
+ * both foxglove_bridge and foxglove_msgs) are keyed by those names, not the
+ * repository name.
+ */
+export function parseDistribution(doc: unknown): Record<string, string> {
+  if (!isRecord(doc)) {
+    throw new Error("distribution.yaml is not a mapping");
+  }
+  const repositories = doc.repositories;
+  if (repositories == null) {
+    return {};
+  }
+  if (!isRecord(repositories)) {
+    throw new Error("distribution.yaml repositories is not a mapping");
+  }
+  const out: Record<string, string> = {};
+  for (const [repoName, repo] of Object.entries(repositories)) {
+    if (!isRecord(repo) || !isRecord(repo.release)) {
+      continue;
+    }
+    const version = repo.release.version;
+    if (typeof version !== "string" || version === "") {
+      continue;
+    }
+    const listed = repo.release.packages;
+    const names = Array.isArray(listed) ? listed : [repoName];
+    for (const pkg of names) {
+      if (typeof pkg === "string" && pkg !== "") {
+        out[pkg] = version;
+      }
+    }
+  }
+  return out;
+}
+
+/**
+ * True when `aptVersion` is the rosdistro release plus an optional non-numeric
+ * build suffix. rosdistro stores `3.6.0-1`; apt appends the codename and a
+ * timestamp (`3.6.0-1jammy.20261013.222750`). A longer Debian revision
+ * (`3.6.0-10jammy...`) must not match `3.6.0-1`.
+ */
+export function aptMatchesRelease(
+  aptVersion: string | undefined,
+  releaseVersion: string | undefined,
+): boolean {
+  if (aptVersion == undefined || releaseVersion == undefined || releaseVersion === "") {
+    return false;
+  }
+  const version = /^\d+:/.test(aptVersion)
+    ? aptVersion.slice(aptVersion.indexOf(":") + 1)
+    : aptVersion;
+  if (!version.startsWith(releaseVersion)) {
+    return false;
+  }
+  const next = version.charAt(releaseVersion.length);
+  return next === "" || next < "0" || next > "9";
+}
+
+/** One-word summary of a Jenkins job API body: missing / disabled / building / queued / never-built / <result>. */
+export function jenkinsStatusFromApi(body: string | undefined): string {
+  if (body == undefined) {
+    return "missing";
+  }
+  const parsed: unknown = JSON.parse(body);
+  if (!isRecord(parsed)) {
+    throw new Error("Jenkins job API response is not a JSON object");
+  }
+  const lastBuild = isRecord(parsed.lastBuild) ? parsed.lastBuild : {};
+  if (parsed.disabled === true) {
+    return "disabled";
+  }
+  if (lastBuild.building === true) {
+    return "building";
+  }
+  if (parsed.inQueue === true) {
+    return "queued";
+  }
+  const result = lastBuild.result;
+  if (typeof result !== "string" || result === "") {
+    return "never-built";
+  }
+  return result.toLowerCase();
+}
+
+/** Testing has the released version and the last build succeeded. Main may lag. */
+export function rowOk(row: Row): boolean {
+  return aptMatchesRelease(row.testing, row.rosdistro) && row.jenkins === "success";
+}
