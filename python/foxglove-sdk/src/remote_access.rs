@@ -627,7 +627,7 @@ impl PyRemoteAccessGateway {
     ///
     /// This method may be called from within :py:class:`RemoteAccessListener` callbacks.
     ///
-    /// :param client_id: The ID of the client, from :py:attr:`Client.id`.
+    /// :param client_id: The ``id`` of a :py:class:`Client` passed to a listener callback.
     /// :type client_id: int
     /// :param message: The message to send.
     /// :type message: str

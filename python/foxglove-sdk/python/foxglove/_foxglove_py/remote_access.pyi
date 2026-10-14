@@ -158,8 +158,8 @@ class RemoteAccessGateway:
         self, client_id: int, message: str, level: StatusLevel, id: str | None = None
     ) -> None:
         """
-        Sends a status message to a single connected participant, identified by
-        :py:attr:`Client.id`. If the client is unknown or has disconnected, or there is no active
+        Sends a status message to a single connected participant, identified by the ``id`` of a
+        :py:class:`Client`. If the client is unknown or has disconnected, or there is no active
         session, this has no effect.
         """
         ...
