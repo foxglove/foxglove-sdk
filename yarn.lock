@@ -3193,6 +3193,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/js-yaml@npm:^4.0.9":
+  version: 4.0.9
+  resolution: "@types/js-yaml@npm:4.0.9"
+  checksum: 10c0/24de857aa8d61526bbfbbaa383aa538283ad17363fcd5bb5148e2c7f604547db36646440e739d78241ed008702a8920665d1add5618687b6743858fae00da211
+  languageName: node
+  linkType: hard
+
 "@types/json-schema@npm:^7.0.15, @types/json-schema@npm:^7.0.9":
   version: 7.0.15
   resolution: "@types/json-schema@npm:7.0.15"
@@ -6563,6 +6570,7 @@ __metadata:
     "@foxglove/tsconfig": "npm:2.0.0"
     "@types/glob": "npm:^8.1.0"
     "@types/jest": "npm:30.0.0"
+    "@types/js-yaml": "npm:^4.0.9"
     "@types/node": "npm:24.13.4"
     "@types/semver": "npm:^7"
     ajv: "npm:^8.12.0"
@@ -6571,6 +6579,7 @@ __metadata:
     glob: "npm:^10.5.0"
     globals: "npm:^17.12.0"
     jest: "npm:30.5.1"
+    js-yaml: "npm:^4.3.2"
     prettier: "npm:^3.6.2"
     prettier-plugin-toml: "npm:^2.0.1"
     protobufjs: "npm:^7.5.6"
