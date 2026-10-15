@@ -126,7 +126,8 @@ impl Participant {
                     result = writer.write(&data) => result,
                 };
                 if let Err(e) = write_result {
-                    tracing::warn!(
+                    // The session logs a throttled warning if the reset goes ahead.
+                    tracing::debug!(
                         "control write failed for {:?}, requesting reset: {e:?}",
                         identity_for_task,
                     );
@@ -238,7 +239,9 @@ impl Participant {
         match self.control_tx.try_send(data) {
             Ok(()) => true,
             Err(flume::TrySendError::Full(_)) => {
-                tracing::warn!("control queue full for {}", self.participant_id);
+                // Repeats for every message until the reset runs; the session logs a
+                // throttled warning for the reset itself.
+                tracing::debug!("control queue full for {}", self.participant_id);
                 false
             }
             Err(flume::TrySendError::Disconnected(_)) => {

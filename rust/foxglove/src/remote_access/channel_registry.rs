@@ -1170,6 +1170,8 @@ mod tests {
                 channel_id,
                 "/cloud".to_string(),
                 make_config(),
+                Arc::new(crate::remote_access::stats::GatewayCounters::default())
+                    .for_topic("/cloud"),
             ))
         }
 

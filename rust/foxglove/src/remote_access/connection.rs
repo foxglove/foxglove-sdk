@@ -10,7 +10,10 @@ use std::{
 use indexmap::IndexSet;
 
 use livekit::{Room, RoomEvent, RoomOptions, options::VideoCodec};
-use tokio::{runtime::Handle, sync::OnceCell, sync::mpsc::UnboundedReceiver, task::JoinHandle};
+use tokio::{
+    runtime::Handle, sync::OnceCell, sync::mpsc::UnboundedReceiver, task::JoinHandle,
+    time::MissedTickBehavior,
+};
 use tokio_util::sync::CancellationToken;
 use tracing::{error, info, warn};
 
@@ -28,6 +31,7 @@ use crate::{
         protocol_version::{self, REMOTE_ACCESS_PROTOCOL_VERSION},
         qos::QosClassifier,
         session::{RemoteAccessSession, SessionParams},
+        stats::{GatewayCounters, RemoteAccessStats, StatsPublisher},
         suppress_video_transcode::SuppressVideoTranscode,
         watch::Watch,
         watch_loop::{
@@ -106,6 +110,7 @@ pub(super) struct ConnectionParams {
     pub(super) video_codec_override: Option<VideoCodec>,
     pub(super) video_encoder: super::gateway::VideoEncoderBackend,
     pub(super) point_cloud_compression: Option<Arc<dyn PointCloudCompressionPolicy>>,
+    pub(super) stats: Option<StatsPublisher>,
     pub(super) context: Weak<Context>,
 }
 
@@ -158,6 +163,11 @@ pub(super) struct RemoteAccessConnection {
     /// correlation and for threading through subsequent watch streams as a client-provided
     /// correlation ID.
     remote_access_session_id: OnceLock<String>,
+    /// Drop, reset, and reconnect counters, shared with each session so they accumulate across
+    /// sessions.
+    counters: Arc<GatewayCounters>,
+    /// Publishes the counters, if stats are enabled.
+    stats: Option<StatsPublisher>,
 }
 
 impl RemoteAccessConnection {
@@ -190,6 +200,8 @@ impl RemoteAccessConnection {
             device_context: OnceCell::new(),
             status: AtomicU8::new(ConnectionStatus::Connecting as u8),
             remote_access_session_id: OnceLock::new(),
+            counters: Arc::default(),
+            stats: params.stats,
         }
     }
 
@@ -252,10 +264,14 @@ impl RemoteAccessConnection {
 
     /// Update the connection status, notifying the listener if it changed.
     fn set_status(&self, status: ConnectionStatus) {
-        let prev = self.status.swap(status as u8, Ordering::Relaxed);
-        if prev != status as u8
-            && let Some(listener) = &self.listener
-        {
+        let prev = ConnectionStatus::from_u8(self.status.swap(status as u8, Ordering::Relaxed));
+        if prev == status {
+            return;
+        }
+        if prev == ConnectionStatus::Connected && status == ConnectionStatus::Connecting {
+            self.counters.record_reconnect();
+        }
+        if let Some(listener) = &self.listener {
             listener.on_connection_status_changed(status);
         }
     }
@@ -349,6 +365,7 @@ impl RemoteAccessConnection {
             parameter_handler: self.parameter_handler.clone(),
             server_info,
             device_wait_for_viewer: Some(device_wait_for_viewer),
+            counters: self.counters.clone(),
         };
         Ok((RemoteAccessSession::new(session_params), room_events))
     }
@@ -370,13 +387,50 @@ impl RemoteAccessConnection {
         if let Some(listener) = &self.listener {
             listener.on_connection_status_changed(ConnectionStatus::Connecting);
         }
-        while !self.cancellation_token.is_cancelled() {
-            self.run().await;
+        let run_loop = async {
+            while !self.cancellation_token.is_cancelled() {
+                self.run().await;
+            }
+        };
+        match &self.stats {
+            Some(stats) => {
+                tokio::join!(run_loop, self.publish_stats_until_cancelled(stats));
+            }
+            None => run_loop.await,
         }
         // Always emit ShuttingDown before Shutdown. If run() already set ShuttingDown
         // (e.g. cancelled while connected), this is a no-op since set_status deduplicates.
         self.set_status(ConnectionStatus::ShuttingDown);
+        if let Some(stats) = &self.stats {
+            // The session has been closed, so this last message has the final counts.
+            self.publish_stats(stats);
+            stats.close();
+        }
         self.set_status(ConnectionStatus::Shutdown);
+    }
+
+    /// Publishes stats every interval, starting immediately, until cancelled.
+    async fn publish_stats_until_cancelled(&self, stats: &StatsPublisher) {
+        let mut interval = tokio::time::interval(stats.interval());
+        interval.set_missed_tick_behavior(MissedTickBehavior::Skip);
+        loop {
+            tokio::select! {
+                biased;
+                () = self.cancellation_token.cancelled() => return,
+                _ = interval.tick() => self.publish_stats(stats),
+            }
+        }
+    }
+
+    fn publish_stats(&self, stats: &StatsPublisher) {
+        stats.publish(|| {
+            let session = self.session.lock().clone();
+            RemoteAccessStats::new(
+                self.status(),
+                session.map(|session| session.stats_snapshot()),
+                &self.counters,
+            )
+        });
     }
 
     /// One iteration of the outer control loop: sit dormant on the SSE watch stream until a
@@ -761,5 +815,58 @@ impl RemoteAccessConnection {
 
     pub(super) fn shutdown(&self) {
         self.cancellation_token.cancel();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn make_connection() -> RemoteAccessConnection {
+        let params = ConnectionParams {
+            name: None,
+            device_token: String::new(),
+            foxglove_api_url: None,
+            foxglove_api_timeout: None,
+            listener: None,
+            capabilities: Vec::new(),
+            supported_encodings: None,
+            fetch_asset_handler: None,
+            parameter_handler: None,
+            runtime: Handle::current(),
+            channel_filter: None,
+            qos_classifier: None,
+            suppress_video_transcode: None,
+            server_info: None,
+            message_backlog_size: None,
+            max_data_track_message_size: None,
+            video_codec_override: None,
+            video_encoder: crate::remote_access::VideoEncoderBackend::Auto,
+            point_cloud_compression: None,
+            stats: None,
+            context: Weak::new(),
+        };
+        RemoteAccessConnection::new(params, Arc::default())
+    }
+
+    #[tokio::test]
+    async fn counts_reconnects_when_the_connection_is_lost() {
+        let connection = make_connection();
+
+        // The initial connection is not a reconnect.
+        connection.set_status(ConnectionStatus::Connected);
+        assert_eq!(connection.counters.to_json()["reconnects"], 0);
+
+        connection.set_status(ConnectionStatus::Connecting);
+        connection.set_status(ConnectionStatus::Connecting);
+        connection.set_status(ConnectionStatus::Connected);
+        connection.set_status(ConnectionStatus::Connecting);
+        assert_eq!(connection.counters.to_json()["reconnects"], 2);
+
+        // Shutting down is not a reconnect.
+        connection.set_status(ConnectionStatus::Connected);
+        connection.set_status(ConnectionStatus::ShuttingDown);
+        connection.set_status(ConnectionStatus::Shutdown);
+        assert_eq!(connection.counters.to_json()["reconnects"], 2);
     }
 }

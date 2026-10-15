@@ -55,6 +55,7 @@ use crate::{
         participant::{Participant, ParticipantRegistry, ParticipantWriter},
         protocol_version,
         rtt_tracker::RttTracker,
+        stats::{GatewayCounters, SessionSnapshot, TopicCounters},
     },
 };
 
@@ -80,6 +81,29 @@ fn is_expected_stream_end(e: &std::io::Error) -> bool {
         e.get_ref().and_then(|e| e.downcast_ref::<StreamError>()),
         Some(StreamError::AbnormalEnd(_))
     )
+}
+
+/// Sends a message on a bounded queue without blocking. If the queue is full, the oldest
+/// message is dropped to make room (head-drop for minimal latency on live data).
+///
+/// Returns the number of messages dropped, which can include `msg` itself if another
+/// producer refills the queue first, or an error if the queue is disconnected.
+fn send_head_drop<T>(
+    tx: &flume::Sender<T>,
+    rx: &flume::Receiver<T>,
+    msg: T,
+) -> std::result::Result<u64, flume::SendError<T>> {
+    let msg = match tx.try_send(msg) {
+        Ok(()) => return Ok(0),
+        Err(flume::TrySendError::Full(msg)) => msg,
+        Err(flume::TrySendError::Disconnected(msg)) => return Err(flume::SendError(msg)),
+    };
+    let evicted = u64::from(rx.try_recv().is_ok());
+    match tx.try_send(msg) {
+        Ok(()) => Ok(evicted),
+        Err(flume::TrySendError::Full(_)) => Ok(evicted + 1),
+        Err(flume::TrySendError::Disconnected(msg)) => Err(flume::SendError(msg)),
+    }
 }
 
 #[derive(Debug)]
@@ -366,6 +390,8 @@ pub(super) struct RemoteAccessSession {
     /// to `foxglove.CompressedPointCloud` before delivery to participants. `None` applies
     /// the default: compress every compressible Lossy channel with the default options.
     point_cloud_compression: Option<Arc<dyn PointCloudCompressionPolicy>>,
+    /// Drop and reset counters, owned by the connection so they outlive the session.
+    counters: Arc<GatewayCounters>,
 }
 
 impl Sink for RemoteAccessSession {
@@ -465,9 +491,9 @@ impl Sink for RemoteAccessSession {
         // Track advertised channels, detect video-capable ones, and classify QoS.
         let advertised_ids: std::collections::HashSet<u64> =
             advertise_msg.channels.iter().map(|ch| ch.id).collect();
-        let advertised_channel_ids: SmallVec<[ChannelId; 4]> = {
+        let data_track_channels: SmallVec<[&Arc<RawChannel>; 4]> = {
             let mut state = self.channel_registry.write();
-            let mut ids = SmallVec::new();
+            let mut data_track_channels = SmallVec::new();
             for &ch in &filtered {
                 if advertised_ids.contains(&u64::from(ch.id())) {
                     state.insert_channel(ch);
@@ -512,19 +538,19 @@ impl Sink for RemoteAccessSession {
                     }
                     state.insert_qos_profile(ch.id(), qos);
                     if qos.reliability != Reliability::Reliable {
-                        ids.push(ch.id());
+                        data_track_channels.push(ch);
                     }
                 }
             }
             state.add_metadata_to_advertisement(&mut advertise_msg);
             state.rewrite_point_cloud_advertisements(&mut advertise_msg);
-            ids
+            data_track_channels
         };
 
         self.broadcast_control(encode_json_message(&advertise_msg));
 
         // Eagerly publish a data track for each newly advertised channel.
-        self.publish_data_tracks(&advertised_channel_ids);
+        self.publish_data_tracks(&data_track_channels);
 
         // Clients subscribe asynchronously.
         None
@@ -613,6 +639,7 @@ pub(super) struct SessionParams {
     pub(super) video_codec_override: Option<VideoCodec>,
     pub(super) video_encoder: super::gateway::VideoEncoderBackend,
     pub(super) point_cloud_compression: Option<Arc<dyn PointCloudCompressionPolicy>>,
+    pub(super) counters: Arc<GatewayCounters>,
 }
 
 impl RemoteAccessSession {
@@ -653,6 +680,7 @@ impl RemoteAccessSession {
             active_compression_warnings: parking_lot::Mutex::new(HashMap::new()),
             video_encoder: params.video_encoder,
             point_cloud_compression: params.point_cloud_compression,
+            counters: params.counters,
         })
     }
 
@@ -679,6 +707,15 @@ impl RemoteAccessSession {
             participants: self.participant_registry.participant_count(),
             subscriptions: state.subscription_count(),
             video_tracks: state.video_track_count(),
+        }
+    }
+
+    /// Returns the stats that describe this session.
+    pub(super) fn stats_snapshot(&self) -> SessionSnapshot {
+        SessionSnapshot {
+            viewer_count: self.participant_registry.participant_count(),
+            rtt_ms: self.ice_rtt_tracker.lock().latest_ms(),
+            connection_quality: self.room.local_participant().connection_quality().into(),
         }
     }
 
@@ -2100,14 +2137,27 @@ impl RemoteAccessSession {
             return;
         };
 
-        warn!(
-            remote_access_session_id,
-            participant_identity = %participant_id,
-            sid = %sid,
-            joined_at,
-            version = %version,
-            "resetting participant after control-plane failure",
-        );
+        // Resets are throttled gateway-wide, since a congested link can reset every viewer.
+        if let Some(participant_resets) = self.counters.record_participant_reset() {
+            warn!(
+                remote_access_session_id,
+                participant_identity = %participant_id,
+                sid = %sid,
+                joined_at,
+                version = %version,
+                participant_resets,
+                "resetting participant after control-plane failure",
+            );
+        } else {
+            debug!(
+                remote_access_session_id,
+                participant_identity = %participant_id,
+                sid = %sid,
+                joined_at,
+                version = %version,
+                "resetting participant after control-plane failure",
+            );
+        }
         if let Err(e) = self.add_participant(participant_id, sid, joined_at).await {
             error!(
                 remote_access_session_id,
@@ -2665,23 +2715,25 @@ impl RemoteAccessSession {
     ///
     /// Caller must hold `subscription_lock`.
     fn start_video_tracks(self: &Arc<Self>, first_subscribed: &[ChannelId]) {
-        let to_start: SmallVec<[(ChannelId, VideoInputSchema); 4]> = {
+        let to_start: SmallVec<[(ChannelId, VideoInputSchema, TopicCounters); 4]> = {
             let state = self.channel_registry.read();
             first_subscribed
                 .iter()
                 .filter_map(|&channel_id| {
                     let input_schema = state.get_video_schema(&channel_id)?;
-                    Some((channel_id, input_schema))
+                    let topic = state.get_channel_descriptor(&channel_id)?.topic();
+                    Some((channel_id, input_schema, self.counters.for_topic(topic)))
                 })
                 .collect()
         };
 
-        for (channel_id, input_schema) in to_start {
+        for (channel_id, input_schema, counters) in to_start {
             let video_source = NativeVideoSource::default();
             let publisher = Arc::new(VideoPublisher::new(
                 video_source.clone(),
                 input_schema,
                 self.video_metadata_tx.clone(),
+                counters,
             ));
             let expected_publisher = publisher.clone();
 
@@ -2790,6 +2842,7 @@ impl RemoteAccessSession {
             else {
                 continue;
             };
+            let counters = self.counters.for_topic(&topic);
             state.insert_point_cloud_publisher(
                 channel_id,
                 Arc::new(PointCloudPublisher::new(
@@ -2798,6 +2851,7 @@ impl RemoteAccessSession {
                     channel_id,
                     topic,
                     config,
+                    counters,
                 )),
             );
         }
@@ -2877,18 +2931,19 @@ impl RemoteAccessSession {
     ///
     /// Reliable channels should be excluded by the caller; their data goes via
     /// the control plane instead of data tracks.
-    fn publish_data_tracks(&self, topics: &[ChannelId]) {
-        for channel_id in topics {
+    fn publish_data_tracks(&self, channels: &[&Arc<RawChannel>]) {
+        for channel in channels {
             let data_track = DataTrack::publish(
                 &self.runtime,
                 self.room.local_participant(),
-                *channel_id,
+                channel.id(),
                 self.cancellation_token.clone(),
                 self.max_data_track_message_size,
+                self.counters.for_topic(channel.topic()),
             );
             self.channel_registry
                 .write()
-                .insert_data_track(*channel_id, data_track);
+                .insert_data_track(channel.id(), data_track);
         }
     }
 
@@ -2927,6 +2982,16 @@ mod tests {
 
         let reset = std::io::Error::from(std::io::ErrorKind::ConnectionReset);
         assert!(!is_expected_stream_end(&reset));
+    }
+
+    #[test]
+    fn send_head_drop_evicts_oldest_and_reports_drop_count() {
+        let (tx, rx) = flume::bounded(2);
+        assert_eq!(send_head_drop(&tx, &rx, 1).unwrap(), 0);
+        assert_eq!(send_head_drop(&tx, &rx, 2).unwrap(), 0);
+        assert_eq!(send_head_drop(&tx, &rx, 3).unwrap(), 1);
+        assert_eq!(send_head_drop(&tx, &rx, 4).unwrap(), 1);
+        assert_eq!(rx.drain().collect::<Vec<_>>(), vec![3, 4]);
     }
 
     fn make_participant_with_rx(name: &str) -> (Arc<Participant>, flume::Receiver<Bytes>) {
