@@ -11,4 +11,5 @@ dependencies = ["foxglove-sdk>=0.4.0"]
 dev = ["mypy>=1,<2"]
 
 [tool.uv]
+required-version = "==0.13.*"
 package = false

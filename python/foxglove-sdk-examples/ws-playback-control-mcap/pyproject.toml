@@ -15,4 +15,5 @@ dependencies = [
 dev = ["mypy>=1,<2"]
 
 [tool.uv]
+required-version = "==0.13.*"
 package = false

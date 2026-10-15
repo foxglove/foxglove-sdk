@@ -14,6 +14,8 @@ runs:
         python-version: ${{ inputs.python-version }}
 
     - uses: astral-sh/setup-uv@v10.1.0
+      with:
+        version-file: pyproject.toml
 
     # disable man-db to speed up apt install
     - shell: bash

@@ -204,6 +204,8 @@ jobs:
           python-version: "3.10"
 
       - uses: astral-sh/setup-uv@v10.3.0
+        with:
+          version-file: pyproject.toml
 
       # `yarn generate` runs clang-format over the generated C++, so explicitly
       # install the same clang version as the C/C++ lint job.

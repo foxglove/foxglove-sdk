@@ -23,6 +23,9 @@ dev = ["pytest>=8.3.4,<10"]
 requires = ["uv_build>=0.9.3,<0.10.0"]
 build-backend = "uv_build"
 
+[tool.uv]
+required-version = "==0.13.*"
+
 [tool.uv.build-backend]
 module-root = ""
 source-include = ["tests/**"]

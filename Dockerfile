@@ -77,5 +77,5 @@ RUN corepack enable yarn
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 
 # python
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+COPY --from=ghcr.io/astral-sh/uv:0.13 /uv /uvx /root/.local/bin/
 ENV PATH="/root/.local/bin:${PATH}"

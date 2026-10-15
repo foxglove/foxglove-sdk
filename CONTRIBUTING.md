@@ -22,7 +22,9 @@ This package generates source and interface files for the Foxglove SDK, and reli
 - Rust, installed via [rustup](https://rustup.rs/)
   - Documentation generation requires a recent `nightly` build
 - [Protobuf compiler](https://grpc.io/docs/protoc-installation/)
-- [uv](https://docs.astral.sh/uv/getting-started/installation/)
+- [uv](https://docs.astral.sh/uv/getting-started/installation/) 0.13.x
+  - The `required-version` constraint in each `pyproject.toml` allows compatible patch updates.
+    Keep these constraints and the Docker image tag in sync when upgrading uv.
 
 For more details, refer to the [Python SDK contributing guide](python/foxglove-sdk/CONTRIBUTING.md).
 

@@ -4,5 +4,8 @@ version = "0.0.0"
 requires-python = ">=3.10"
 dependencies = ["foxglove-sdk[torch,ray]", "numpy"]
 
+[tool.uv]
+required-version = "==0.13.*"
+
 [tool.uv.sources]
 foxglove-sdk = { path = "../../foxglove-sdk" }

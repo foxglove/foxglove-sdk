@@ -16,4 +16,5 @@ dev = ["mypy>=1,<2"]
 rgb-camera-visualization = "main:main"
 
 [tool.uv]
+required-version = "==0.13.*"
 package = false
