@@ -145,7 +145,7 @@ class _MessageIds:
 
 
 # Schema encodings foxglove-client loads when the matching package is installed.
-# Message encodings are a fallback when the error text has no schema encoding.
+# Message encodings (ros1, cdr) apply only when the error has no schema encoding.
 _DECODER_PACKAGES = {
     "protobuf": "mcap-protobuf-support",
     "ros1msg": "mcap-ros1-support",
@@ -168,9 +168,10 @@ def _missing_decoder_message(
         detail = f"message encoding {message_encoding!r}"
     else:
         detail = "this message"
-    package = _DECODER_PACKAGES.get(schema_encoding or "") or _DECODER_PACKAGES.get(
-        message_encoding or ""
-    )
+    if schema_encoding:
+        package = _DECODER_PACKAGES.get(schema_encoding)
+    else:
+        package = _DECODER_PACKAGES.get(message_encoding or "")
     if package:
         return f"No decoder for {detail}; install {package}"
     return f"No decoder for {detail}"
@@ -184,6 +185,10 @@ def _decoder_not_found_hint(error: BaseException) -> str | None:
     text = str(error)
     if text.startswith("No decoder for"):
         return text
+    # mcap.reader raises DecoderNotFoundError with
+    # "no decoder factory supplied for message encoding {encoding}, schema {schema}".
+    # That wording is not a public API; parse it only for the client download
+    # path, which we do not control.
     schema_match = _SCHEMA_ENCODING_RE.search(text)
     message_match = _MESSAGE_ENCODING_RE.search(text)
     schema_encoding = None

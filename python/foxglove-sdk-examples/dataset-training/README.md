@@ -46,5 +46,5 @@ encodings, install the matching MCAP decoder package on every worker:
 pip install mcap-protobuf-support   # example: protobuf recordings
 ```
 
-If a decoder is missing, the error names the schema encoding and the package to
-install.
+If a decoder for an encoding in this table is missing, the error names the
+package to install.

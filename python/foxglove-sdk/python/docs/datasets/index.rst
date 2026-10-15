@@ -215,8 +215,8 @@ data's schema encoding:
 
    pip install mcap-protobuf-support   # example: protobuf recordings
 
-If a decoder is missing, the error names the schema encoding and the package to
-install.
+If a decoder for an encoding in this table is missing, the error names the
+package to install.
 
 For custom decoding, create MCAP decoder factories inside your callback and pass
 them to ``episode.iter_messages(decoder_factories=[...])``. Messages arrive in log-time order

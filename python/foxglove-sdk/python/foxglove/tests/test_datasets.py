@@ -36,6 +36,11 @@ def samples(episode: EpisodeReader) -> Iterator[dict[str, Any]]:
             "No decoder for schema encoding 'ros2msg' "
             "(message encoding 'cdr'); install mcap-ros2-support",
         ),
+        (
+            "omgidl",
+            "cdr",
+            "No decoder for schema encoding 'omgidl' (message encoding 'cdr')",
+        ),
     ],
 )
 def test_missing_decoder_message_names_known_encoding_and_package(
@@ -48,6 +53,12 @@ def test_missing_decoder_message_names_known_encoding_and_package(
         f"encoding='{schema_encoding}', name='Example')"
     )
     assert _decoder_not_found_hint(error) == expected
+
+
+def test_missing_decoder_message_uses_message_encoding_without_schema() -> None:
+    assert _missing_decoder_message(None, "cdr") == (
+        "No decoder for message encoding 'cdr'; install mcap-ros2-support"
+    )
 
 
 def test_missing_decoder_error_names_schema_encoding_and_package(
