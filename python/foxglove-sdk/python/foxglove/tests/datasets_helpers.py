@@ -147,6 +147,7 @@ def mcap_bytes(
     *,
     schema_name: str = "Measurement",
     encoding: str = "json",
+    schema_encoding: str = "jsonschema",
     indexed: bool = True,
     message_indexes: bool = True,
 ) -> bytes:
@@ -159,7 +160,7 @@ def mcap_bytes(
         index_types=IndexType.ALL if message_indexes else IndexType.CHUNK,
     )
     writer.start()
-    schema = writer.register_schema(schema_name, "jsonschema", b"{}")
+    schema = writer.register_schema(schema_name, schema_encoding, b"{}")
     channels = {
         topic: writer.register_channel(topic, encoding, schema)
         for topic in dict.fromkeys(topic for topic, _, _ in messages)

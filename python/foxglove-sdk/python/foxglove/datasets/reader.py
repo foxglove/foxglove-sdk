@@ -15,6 +15,7 @@ from .storage import (
     ObjectStore,
     ObjectStoreFactory,
     _CloudObjectStore,
+    _decoder_not_found_hint,
     _MessageIds,
     _validate_location,
 )
@@ -257,10 +258,14 @@ class _Plan:
                 for sample in samples:
                     yield sample
             except Exception as error:
-                raise RuntimeError(
+                message = (
                     f"Failed to read episode {episode.id} in dataset "
                     f"{self.dataset_id} version {self.version}"
-                ) from error
+                )
+                hint = _decoder_not_found_hint(error)
+                if hint is not None:
+                    message = f"{message}: {hint}"
+                raise RuntimeError(message) from error
             finally:
                 try:
                     close = getattr(samples, "close", None)

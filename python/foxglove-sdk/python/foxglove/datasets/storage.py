@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import heapq
+import re
 from collections.abc import Callable, Generator, Sequence
 from contextlib import ExitStack
 from dataclasses import dataclass, replace
@@ -143,6 +144,64 @@ class _MessageIds:
         return output_schema, output_channel
 
 
+# Schema encodings foxglove-client loads when the matching package is installed.
+# Message encodings (ros1, cdr) apply only when the error has no schema encoding.
+_DECODER_PACKAGES = {
+    "protobuf": "mcap-protobuf-support",
+    "ros1msg": "mcap-ros1-support",
+    "ros1": "mcap-ros1-support",
+    "ros2msg": "mcap-ros2-support",
+    "cdr": "mcap-ros2-support",
+}
+_SCHEMA_ENCODING_RE = re.compile(r"schema encoding '([^']*)'|\bencoding='([^']*)'")
+_MESSAGE_ENCODING_RE = re.compile(r"message encoding ([^,\s]+)")
+
+
+def _missing_decoder_message(
+    schema_encoding: str | None, message_encoding: str | None
+) -> str:
+    if schema_encoding:
+        detail = f"schema encoding {schema_encoding!r}"
+        if message_encoding and message_encoding != schema_encoding:
+            detail = f"{detail} (message encoding {message_encoding!r})"
+    elif message_encoding:
+        detail = f"message encoding {message_encoding!r}"
+    else:
+        detail = "this message"
+    if schema_encoding:
+        package = _DECODER_PACKAGES.get(schema_encoding)
+    else:
+        package = _DECODER_PACKAGES.get(message_encoding or "")
+    if package:
+        return f"No decoder for {detail}; install {package}"
+    return f"No decoder for {detail}"
+
+
+def _decoder_not_found_hint(error: BaseException) -> str | None:
+    from mcap.exceptions import DecoderNotFoundError
+
+    if not isinstance(error, DecoderNotFoundError):
+        return None
+    text = str(error)
+    if text.startswith("No decoder for"):
+        return text
+    # mcap.reader raises DecoderNotFoundError with
+    # "no decoder factory supplied for message encoding {encoding}, schema {schema}".
+    # That wording is not a public API; parse it only for the client download
+    # path, which we do not control.
+    schema_match = _SCHEMA_ENCODING_RE.search(text)
+    message_match = _MESSAGE_ENCODING_RE.search(text)
+    schema_encoding = None
+    if schema_match:
+        schema_encoding = next(
+            (group for group in schema_match.groups() if group), None
+        )
+    message_encoding = None
+    if message_match:
+        message_encoding = message_match.group(1).strip("'\"")
+    return _missing_decoder_message(schema_encoding, message_encoding)
+
+
 def _nanoseconds(value: datetime) -> int:
     if value.utcoffset() is None:
         raise ValueError("Episode window boundaries must be timezone-aware")
@@ -264,9 +323,13 @@ def _iter_messages(
                         decoders[output_channel.id] = decoder
                         break
                 else:
+                    schema_encoding = (
+                        output_schema.encoding if output_schema is not None else None
+                    )
                     raise DecoderNotFoundError(
-                        "No decoder for message encoding "
-                        f"{output_channel.message_encoding!r}, schema {output_schema}"
+                        _missing_decoder_message(
+                            schema_encoding, output_channel.message_encoding
+                        )
                     )
             yield (
                 output_schema,

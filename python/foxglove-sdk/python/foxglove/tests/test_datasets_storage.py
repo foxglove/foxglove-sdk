@@ -8,9 +8,14 @@ from unittest.mock import MagicMock
 
 import pytest
 from foxglove.datasets.reader import EpisodeReader, _Episode
-from foxglove.datasets.storage import ObjectLocation, _iter_messages
+from foxglove.datasets.storage import (
+    ObjectLocation,
+    _decoder_not_found_hint,
+    _iter_messages,
+)
 from mcap.decoder import DecoderFactory
 from mcap.exceptions import DecoderNotFoundError
+from mcap.reader import make_reader
 from mcap.records import Schema
 
 from .datasets_helpers import (
@@ -241,9 +246,63 @@ def test_custom_decoders_use_their_own_file_schemas() -> None:
 
 def test_decoder_failure_closes_storage_file() -> None:
     store = Store({LOCATION: mcap_bytes([("/selected", 0, 1)], encoding="custom")})
-    with pytest.raises(DecoderNotFoundError):
+    with pytest.raises(DecoderNotFoundError, match="message encoding 'custom'"):
         list(_iter_messages(store, [LOCATION], ["/selected"], START, START, []))
     assert store.files[0].closed
+
+
+@pytest.mark.parametrize(
+    "schema_encoding,message_encoding,match",
+    [
+        (
+            "protobuf",
+            "protobuf",
+            "schema encoding 'protobuf'; install mcap-protobuf-support",
+        ),
+        (
+            "ros1msg",
+            "ros1",
+            "schema encoding 'ros1msg'.*install mcap-ros1-support",
+        ),
+        (
+            "ros2msg",
+            "cdr",
+            "schema encoding 'ros2msg'.*install mcap-ros2-support",
+        ),
+    ],
+)
+def test_missing_decoder_names_schema_encoding_and_package(
+    schema_encoding: str, message_encoding: str, match: str
+) -> None:
+    store = Store(
+        {
+            LOCATION: mcap_bytes(
+                [("/selected", 0, 1)],
+                encoding=message_encoding,
+                schema_encoding=schema_encoding,
+                schema_name="foxglove.CompressedImage",
+            )
+        }
+    )
+    with pytest.raises(DecoderNotFoundError, match=match):
+        list(_iter_messages(store, [LOCATION], ["/selected"], START, START, []))
+    assert store.files[0].closed
+
+
+def test_decoder_hint_parses_real_mcap_reader_error() -> None:
+    data = mcap_bytes(
+        [("/selected", 0, 1)],
+        encoding="protobuf",
+        schema_encoding="protobuf",
+        schema_name="foxglove.CompressedImage",
+    )
+    with pytest.raises(DecoderNotFoundError) as error:
+        list(
+            make_reader(io.BytesIO(data), decoder_factories=[]).iter_decoded_messages()
+        )
+    assert _decoder_not_found_hint(error.value) == (
+        "No decoder for schema encoding 'protobuf'; install mcap-protobuf-support"
+    )
 
 
 def test_stateful_custom_decoder_runs_in_global_order_and_is_not_copied() -> None:

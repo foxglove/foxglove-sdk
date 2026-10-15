@@ -193,8 +193,30 @@ Performance and iteration behavior:
 Message formats
 ---------------
 
-JSON decoding is included by default. For Protobuf or ROS, install ``mcap-protobuf-support``,
-``mcap-ros1-support``, or ``mcap-ros2-support`` on every worker.
+JSON decoding (schema encoding ``jsonschema``) is included by default. Other encodings
+need the matching MCAP decoder package on every worker. Install the package for your
+data's schema encoding:
+
+.. list-table::
+   :header-rows: 1
+
+   * - Schema encoding
+     - Package
+   * - ``jsonschema``
+     - included by default
+   * - ``protobuf``
+     - ``mcap-protobuf-support``
+   * - ``ros1msg``
+     - ``mcap-ros1-support``
+   * - ``ros2msg``
+     - ``mcap-ros2-support``
+
+.. code-block:: bash
+
+   pip install mcap-protobuf-support   # example: protobuf recordings
+
+If a decoder for an encoding in this table is missing, the error names the
+package to install.
 
 For custom decoding, create MCAP decoder factories inside your callback and pass
 them to ``episode.iter_messages(decoder_factories=[...])``. Messages arrive in log-time order

@@ -5,6 +5,8 @@ from typing import Any
 import pytest
 from foxglove.datasets import EpisodeReader
 from foxglove.datasets.reader import _plan
+from foxglove.datasets.storage import _decoder_not_found_hint, _missing_decoder_message
+from mcap.exceptions import DecoderNotFoundError
 
 from .datasets_helpers import Client, Page
 
@@ -12,6 +14,79 @@ from .datasets_helpers import Client, Page
 def samples(episode: EpisodeReader) -> Iterator[dict[str, Any]]:
     for _schema, _channel, _message, decoded in episode.iter_messages():
         yield {"id": decoded}
+
+
+@pytest.mark.parametrize(
+    "schema_encoding,message_encoding,expected",
+    [
+        (
+            "protobuf",
+            "protobuf",
+            "No decoder for schema encoding 'protobuf'; install mcap-protobuf-support",
+        ),
+        (
+            "ros1msg",
+            "ros1",
+            "No decoder for schema encoding 'ros1msg' "
+            "(message encoding 'ros1'); install mcap-ros1-support",
+        ),
+        (
+            "ros2msg",
+            "cdr",
+            "No decoder for schema encoding 'ros2msg' "
+            "(message encoding 'cdr'); install mcap-ros2-support",
+        ),
+        (
+            "omgidl",
+            "cdr",
+            "No decoder for schema encoding 'omgidl' (message encoding 'cdr')",
+        ),
+    ],
+)
+def test_missing_decoder_message_names_known_encoding_and_package(
+    schema_encoding: str, message_encoding: str, expected: str
+) -> None:
+    assert _missing_decoder_message(schema_encoding, message_encoding) == expected
+    error = DecoderNotFoundError(
+        "no decoder factory supplied for message encoding "
+        f"{message_encoding}, schema Schema(id=1, data=b'', "
+        f"encoding='{schema_encoding}', name='Example')"
+    )
+    assert _decoder_not_found_hint(error) == expected
+
+
+def test_missing_decoder_message_uses_message_encoding_without_schema() -> None:
+    assert _missing_decoder_message(None, "cdr") == (
+        "No decoder for message encoding 'cdr'; install mcap-ros2-support"
+    )
+
+
+def test_missing_decoder_error_names_schema_encoding_and_package(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    error = DecoderNotFoundError(
+        "no decoder factory supplied for message encoding protobuf, "
+        "schema Schema(id=1, data=b'', encoding='protobuf', "
+        "name='foxglove.CompressedImage')"
+    )
+    assert _decoder_not_found_hint(error) == (
+        "No decoder for schema encoding 'protobuf'; install mcap-protobuf-support"
+    )
+
+    def iter_messages(*args: Any, **kwargs: Any) -> Iterator[Any]:
+        raise error
+
+    monkeypatch.setattr(Client, "iter_messages", iter_messages)
+    plan = _plan("dataset", 7, ["/camera"], Client)
+    with pytest.raises(
+        RuntimeError,
+        match=(
+            r"Failed to read episode a in dataset dataset version 7: "
+            r"No decoder for schema encoding 'protobuf'; install mcap-protobuf-support"
+        ),
+    ) as wrapped:
+        list(plan.read(plan.episodes, samples))
+    assert wrapped.value.__cause__ is error
 
 
 @pytest.mark.parametrize("seconds", [0, 5])

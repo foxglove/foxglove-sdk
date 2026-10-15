@@ -29,3 +29,22 @@ the original objects. The Foxglove API token provides dataset metadata access;
 cloud credentials provide object access. Object storage reads require immutable
 MCAP recordings with summary, chunk, and message indexes and raise an error if they
 cannot read the objects.
+
+## Message encodings
+
+This example reads JSON (`jsonschema`), which is decoded by default. For other
+encodings, install the matching MCAP decoder package on every worker:
+
+| Schema encoding | Package |
+| --- | --- |
+| `jsonschema` | included by default |
+| `protobuf` | `mcap-protobuf-support` |
+| `ros1msg` | `mcap-ros1-support` |
+| `ros2msg` | `mcap-ros2-support` |
+
+```sh
+pip install mcap-protobuf-support   # example: protobuf recordings
+```
+
+If a decoder for an encoding in this table is missing, the error names the
+package to install.
