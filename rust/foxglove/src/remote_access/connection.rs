@@ -36,6 +36,7 @@ use crate::{
         },
     },
     remote_common::{
+        ClientId,
         connection_graph::ConnectionGraph,
         parameters::ParameterHandler,
         service::{Service, ServiceId, ServiceMap},
@@ -218,6 +219,16 @@ impl RemoteAccessConnection {
     pub fn publish_status(&self, status: super::Status) {
         if let Some(session) = self.session.lock().clone() {
             session.publish_status(status);
+        }
+    }
+
+    /// Sends a status message to a single connected participant.
+    ///
+    /// If no session is currently active (e.g. while reconnecting), or the client is not
+    /// connected, this is a no-op.
+    pub fn send_status(&self, client_id: ClientId, status: super::Status) {
+        if let Some(session) = self.session.lock().clone() {
+            session.send_status(client_id, status);
         }
     }
 

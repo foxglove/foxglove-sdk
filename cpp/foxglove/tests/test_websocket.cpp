@@ -14,6 +14,7 @@
 
 #include <atomic>
 #include <condition_variable>
+#include <cstdint>
 #include <cstring>
 #include <libwebsockets.h>
 #include <mutex>
@@ -1914,6 +1915,91 @@ TEST_CASE("Publish status") {
       "statusIds": ["id1", "id2"]
     })");
   REQUIRE(parsed == expected);
+
+  REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
+}
+
+TEST_CASE("Send status to a single client from onClientAdvertise") {
+  std::atomic<foxglove::WebSocketServer*> server_ptr{nullptr};
+  std::mutex mutex;
+  std::condition_variable cv;
+  // The following variables are protected by the mutex.
+  bool advertised = false;
+  foxglove::FoxgloveError send_error = foxglove::FoxgloveError::Ok;
+
+  // This callback runs on a server thread, so it only records the result; assertions run on the
+  // main thread.
+  foxglove::WebSocketServerCallbacks callbacks;
+  callbacks.onClientAdvertise = [&](uint32_t client_id, const foxglove::ClientChannel& channel) {
+    auto error = foxglove::FoxgloveError::ValueError;
+    if (auto* server = server_ptr.load()) {
+      error = server->sendStatus(
+        client_id,
+        foxglove::WebSocketServerStatusLevel::Error,
+        "Advertisement of "s + std::string(channel.topic) + " rejected",
+        "rejected"
+      );
+    }
+    std::scoped_lock lock{mutex};
+    advertised = true;
+    send_error = error;
+    cv.notify_all();
+  };
+  auto server = startServer(
+    foxglove::Context::create(),
+    foxglove::WebSocketServerCapabilities::ClientPublish,
+    std::move(callbacks),
+    {"json"}
+  );
+  server_ptr.store(&server);
+
+  WebSocketClient client1;
+  client1.start(server.port());
+  client1.waitForConnection();
+  REQUIRE(Json::parse(client1.recv())["op"] == "serverInfo");
+
+  WebSocketClient client2;
+  client2.start(server.port());
+  client2.waitForConnection();
+  REQUIRE(Json::parse(client2.recv())["op"] == "serverInfo");
+
+  auto is_status = [](const std::string& payload) {
+    return Json::parse(payload)["op"] == "status";
+  };
+
+  client1.send(
+    R"({
+      "op": "advertise",
+      "channels": [{ "id": 1, "topic": "/cmd", "encoding": "json", "schemaName": "" }]
+    })"
+  );
+  auto status = client1.filterRecv(is_status, kTestTimeout);
+  auto expected = Json::parse(R"({
+      "op": "status",
+      "level": 2,
+      "message": "Advertisement of /cmd rejected",
+      "id": "rejected"
+    })");
+  REQUIRE(Json::parse(requireValue(status)) == expected);
+  {
+    std::unique_lock lock{mutex};
+    REQUIRE(cv.wait_for(lock, kTestTimeout, [&] {
+      return advertised;
+    }));
+    REQUIRE(send_error == foxglove::FoxgloveError::Ok);
+  }
+
+  // Sending to an unknown client is a no-op.
+  auto error = server.sendStatus(UINT32_MAX, foxglove::WebSocketServerStatusLevel::Error, "nobody");
+  REQUIRE(error == foxglove::FoxgloveError::Ok);
+
+  // client2 didn't receive the status, so the next broadcast is the first status it sees.
+  error = server.publishStatus(foxglove::WebSocketServerStatusLevel::Error, "fence");
+  REQUIRE(error == foxglove::FoxgloveError::Ok);
+  status = client2.filterRecv(is_status, kTestTimeout);
+  REQUIRE(Json::parse(requireValue(status))["message"] == "fence");
+  status = client1.filterRecv(is_status, kTestTimeout);
+  REQUIRE(Json::parse(requireValue(status))["message"] == "fence");
 
   REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
 }

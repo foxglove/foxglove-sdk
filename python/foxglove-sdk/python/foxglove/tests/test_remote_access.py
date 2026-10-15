@@ -1,6 +1,8 @@
+import inspect
 import os
 
 import pytest
+from foxglove.websocket import WebSocketServer
 
 # Set FOXGLOVE_TEST_REQUIRE_REMOTE_ACCESS=1 in environments where remote_access
 # is expected to be available (e.g. CI jobs building wheels with the
@@ -15,6 +17,7 @@ try:
         DracoEncodeOptions,
         DracoMethod,
         RemoteAccessConnectionStatus,
+        RemoteAccessGateway,
         RemoteAccessListener,
     )
 
@@ -150,6 +153,16 @@ def test_connection_status_enum() -> None:
     assert RemoteAccessConnectionStatus.Connected is not None
     assert RemoteAccessConnectionStatus.ShuttingDown is not None
     assert RemoteAccessConnectionStatus.Shutdown is not None
+
+
+def test_gateway_send_status_matches_websocket_server() -> None:
+    """
+    A gateway can't be started without a device token, so check that send_status is exposed
+    with the same signature as on the WebSocket server, where it is exercised end-to-end.
+    """
+    assert inspect.signature(RemoteAccessGateway.send_status) == inspect.signature(
+        WebSocketServer.send_status
+    )
 
 
 def test_listener_provides_default_implementation() -> None:
