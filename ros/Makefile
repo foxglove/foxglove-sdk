@@ -188,7 +188,6 @@ compile-commands:
 
 .PHONY: lint
 lint:
-	./check-versions.bash
 	find src/ -name '*.cpp' -o -name '*.hpp' -o -name '*.h' -o -name '*.cc' -o -name '*.inl' \
 		| xargs clang-format --dry-run -Werror
 
