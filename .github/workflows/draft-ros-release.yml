@@ -11,6 +11,28 @@ on:
         default: false
 
 jobs:
+  # A release tag must match the version stamped into the bridge's startup
+  # banner, which comes from CMakeLists.txt; both package.xml files must agree.
+  check-version:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check tag against CMakeLists.txt and package.xml
+        run: |
+          set -euo pipefail
+
+          TAG_VERSION="${GITHUB_REF_NAME#ros-v}"
+          CMAKE_VERSION=$(sed -nE 's/^project\(foxglove_bridge .*VERSION ([0-9.]+)\).*/\1/p' ros/src/foxglove_bridge/CMakeLists.txt)
+          BRIDGE_VERSION=$(sed -nE 's|.*<version>(.*)</version>.*|\1|p' ros/src/foxglove_bridge/package.xml)
+          MSGS_VERSION=$(sed -nE 's|.*<version>(.*)</version>.*|\1|p' ros/src/foxglove_msgs/package.xml)
+          echo "tag: ${TAG_VERSION}, CMakeLists.txt: ${CMAKE_VERSION}, foxglove_bridge package.xml: ${BRIDGE_VERSION}, foxglove_msgs package.xml: ${MSGS_VERSION}"
+
+          if [[ "${TAG_VERSION}" != "${CMAKE_VERSION}" || "${TAG_VERSION}" != "${BRIDGE_VERSION}" || "${TAG_VERSION}" != "${MSGS_VERSION}" ]]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match CMakeLists.txt (${CMAKE_VERSION}) and package.xml (${BRIDGE_VERSION}, ${MSGS_VERSION})"
+            exit 1
+          fi
+
   build-cpp-dist:
     # Only needed when overriding the SDK with a branch build; on tag pushes we
     # let FetchContent pull the released SDK.
@@ -48,9 +70,11 @@ jobs:
           retention-days: 1
 
   build-deb:
-    needs: [build-cpp-dist]
-    # Run when build-cpp-dist succeeded (branch-SDK mode) or was skipped (release-SDK mode).
-    if: ${{ always() && (needs.build-cpp-dist.result == 'success' || needs.build-cpp-dist.result == 'skipped') }}
+    needs: [check-version, build-cpp-dist]
+    # Run when build-cpp-dist succeeded (branch-SDK mode) or was skipped
+    # (release-SDK mode), and check-version succeeded (tag push) or was skipped
+    # (manual dispatch).
+    if: ${{ always() && (needs.check-version.result == 'success' || needs.check-version.result == 'skipped') && (needs.build-cpp-dist.result == 'success' || needs.build-cpp-dist.result == 'skipped') }}
     strategy:
       fail-fast: false
       matrix:
@@ -150,7 +174,7 @@ jobs:
 
   status:
     name: status
-    needs: [build-cpp-dist, build-deb, draft-release]
+    needs: [check-version, build-cpp-dist, build-deb, draft-release]
     if: always()
     runs-on: ubuntu-latest
     steps:
