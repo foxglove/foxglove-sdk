@@ -2,6 +2,10 @@
 Changelog for package foxglove_bridge
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+3.6.2 (2026-10-16)
+------------------
+* Fix the bridge reporting its version as 3.6.0
+
 3.6.1 (2026-10-13)
 ------------------
 * Remote access sessions now recover after a network drop instead of staying stuck until the process restarts

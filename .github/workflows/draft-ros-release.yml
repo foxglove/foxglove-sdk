@@ -11,7 +11,15 @@ on:
         default: false
 
 jobs:
+  check-versions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check ROS package versions match the tag
+        run: ros/check-versions.bash ${{ github.event_name == 'push' && format('--tag {0}', github.ref_name) || '' }}
+
   build-cpp-dist:
+    needs: [check-versions]
     # Only needed when overriding the SDK with a branch build; on tag pushes we
     # let FetchContent pull the released SDK.
     if: ${{ inputs.use_branch_sdk }}
@@ -48,9 +56,9 @@ jobs:
           retention-days: 1
 
   build-deb:
-    needs: [build-cpp-dist]
+    needs: [check-versions, build-cpp-dist]
     # Run when build-cpp-dist succeeded (branch-SDK mode) or was skipped (release-SDK mode).
-    if: ${{ always() && (needs.build-cpp-dist.result == 'success' || needs.build-cpp-dist.result == 'skipped') }}
+    if: ${{ always() && needs.check-versions.result == 'success' && (needs.build-cpp-dist.result == 'success' || needs.build-cpp-dist.result == 'skipped') }}
     strategy:
       fail-fast: false
       matrix:
@@ -150,7 +158,7 @@ jobs:
 
   status:
     name: status
-    needs: [build-cpp-dist, build-deb, draft-release]
+    needs: [check-versions, build-cpp-dist, build-deb, draft-release]
     if: always()
     runs-on: ubuntu-latest
     steps:
