@@ -86,6 +86,14 @@ make docker-build FOXGLOVE_CPP_SDK_DIR=/sdk/cpp/dist
 The volume mount maps the repo root to `/sdk` inside the container, so
 `/sdk/cpp/dist` corresponds to `cpp/dist/` on the host.
 
+# Examples
+
+`examples/twist_to_twist_stamped` republishes Foxglove Teleop `geometry_msgs/msg/Twist`
+as `geometry_msgs/msg/TwistStamped` and repeats the last command so a chassis
+watchdog (Dexmate `subscribe_chassis_vel.py`, 100 ms) keeps seeing setpoints.
+It is skipped by the default colcon build via `examples/COLCON_IGNORE`. See
+that package's README to build and run it.
+
 # ROS 1
 
 The ROS 1 bridge lives in its own repository (foxglove_bridge_ros1), where it
