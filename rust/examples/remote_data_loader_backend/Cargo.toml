@@ -9,7 +9,7 @@ workspace = true
 [dependencies]
 axum = "0.8"
 chrono.workspace = true
-foxglove = { path = "../../foxglove", features = [
+foxglove = { workspace = true, default-features = true, features = [
   "remote_data_loader_backend",
   "stream",
   "derive",

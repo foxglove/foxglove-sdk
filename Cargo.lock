@@ -1161,7 +1161,7 @@ name = "example_channelless"
 version = "0.0.0"
 dependencies = [
  "env_logger",
- "foxglove 0.29.2",
+ "foxglove",
  "mcap",
  "schemars 1.2.2",
  "serde",
@@ -1173,7 +1173,7 @@ version = "0.0.0"
 dependencies = [
  "clap",
  "env_logger",
- "foxglove 0.29.2",
+ "foxglove",
  "serde_json",
  "tokio",
  "tokio-util",
@@ -1186,7 +1186,7 @@ dependencies = [
  "clap",
  "ctrlc",
  "env_logger",
- "foxglove 0.29.2",
+ "foxglove",
  "schemars 1.2.2",
  "serde",
 ]
@@ -1197,7 +1197,7 @@ version = "0.0.0"
 dependencies = [
  "ctrlc",
  "env_logger",
- "foxglove 0.29.2",
+ "foxglove",
 ]
 
 [[package]]
@@ -1206,7 +1206,7 @@ version = "0.0.0"
 dependencies = [
  "clap",
  "env_logger",
- "foxglove 0.29.2",
+ "foxglove",
  "log",
  "tokio",
  "tokio-util",
@@ -1216,7 +1216,7 @@ dependencies = [
 name = "example_prost"
 version = "0.0.0"
 dependencies = [
- "foxglove 0.29.2",
+ "foxglove",
  "prost",
  "prost-build",
 ]
@@ -1227,7 +1227,7 @@ version = "0.0.0"
 dependencies = [
  "ctrlc",
  "env_logger",
- "foxglove 0.29.2",
+ "foxglove",
 ]
 
 [[package]]
@@ -1236,7 +1236,7 @@ version = "0.0.0"
 dependencies = [
  "clap",
  "env_logger",
- "foxglove 0.29.2",
+ "foxglove",
  "serde_json",
  "tokio",
  "tracing",
@@ -1247,7 +1247,7 @@ name = "example_remote_access_fetch_asset"
 version = "0.0.0"
 dependencies = [
  "env_logger",
- "foxglove 0.29.2",
+ "foxglove",
  "log",
  "tokio",
 ]
@@ -1258,7 +1258,7 @@ version = "0.0.0"
 dependencies = [
  "clap",
  "env_logger",
- "foxglove 0.29.2",
+ "foxglove",
  "tokio",
  "tracing",
 ]
@@ -1269,7 +1269,7 @@ version = "0.0.0"
 dependencies = [
  "anyhow",
  "env_logger",
- "foxglove 0.29.2",
+ "foxglove",
  "schemars 1.2.2",
  "serde",
  "serde_json",
@@ -1284,7 +1284,7 @@ dependencies = [
  "anyhow",
  "clap",
  "env_logger",
- "foxglove 0.29.2",
+ "foxglove",
  "mcap",
  "tokio",
 ]
@@ -1295,7 +1295,7 @@ version = "0.0.0"
 dependencies = [
  "axum",
  "chrono",
- "foxglove 0.29.2",
+ "foxglove",
  "futures",
  "remote_data_loader_backend_conformance",
  "serde",
@@ -1312,7 +1312,7 @@ dependencies = [
  "bytes",
  "chrono",
  "env_logger",
- "foxglove 0.29.2",
+ "foxglove",
  "schemars 1.2.2",
  "serde",
  "serde_json",
@@ -1324,7 +1324,7 @@ version = "0.0.0"
 dependencies = [
  "clap",
  "env_logger",
- "foxglove 0.29.2",
+ "foxglove",
  "quaternion",
  "tokio",
 ]
@@ -1336,7 +1336,7 @@ dependencies = [
  "clap",
  "ctrlc",
  "env_logger",
- "foxglove 0.29.2",
+ "foxglove",
 ]
 
 [[package]]
@@ -1345,7 +1345,7 @@ version = "0.0.0"
 dependencies = [
  "clap",
  "env_logger",
- "foxglove 0.29.2",
+ "foxglove",
  "log",
  "tokio",
 ]
@@ -1358,7 +1358,7 @@ dependencies = [
  "bytes",
  "clap",
  "env_logger",
- "foxglove 0.29.2",
+ "foxglove",
  "futures",
  "parking_lot",
  "schemars 1.2.2",
@@ -1377,7 +1377,7 @@ dependencies = [
  "clap",
  "ctrlc",
  "env_logger",
- "foxglove 0.29.2",
+ "foxglove",
  "mcap",
  "tracing",
 ]
@@ -1509,7 +1509,7 @@ dependencies = [
  "draco-core",
  "flatbuffers",
  "flume",
- "foxglove_derive 0.29.2",
+ "foxglove_derive",
  "futures",
  "futures-util",
  "hexdump",
@@ -1550,37 +1550,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "foxglove"
-version = "0.29.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "78dc6b5e6c77ec89d0e0a438b98659f82e4944185e88e5e2e48bce040efc0e87"
-dependencies = [
- "arc-swap",
- "bimap",
- "bytes",
- "delegate",
- "foxglove_derive 0.29.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "indexmap 2.14.0",
- "mcap",
- "parking_lot",
- "prost",
- "prost-types",
- "serde",
- "serde_json",
- "smallbytes",
- "smallvec",
- "thiserror 2.0.20",
- "tracing",
- "urlencoding",
-]
-
-[[package]]
 name = "foxglove-sdk-python"
 version = "0.29.2"
 dependencies = [
  "base64 0.23.1",
  "bytes",
- "foxglove 0.29.2",
+ "foxglove",
  "log",
  "pyo3",
  "pyo3-log",
@@ -1597,7 +1572,7 @@ dependencies = [
  "bitflags 2.13.1",
  "cbindgen",
  "env_logger",
- "foxglove 0.29.2",
+ "foxglove",
  "log",
  "maplit",
  "mcap",
@@ -1609,7 +1584,7 @@ name = "foxglove_data_loader"
 version = "0.2.0"
 dependencies = [
  "anyhow",
- "foxglove 0.29.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "foxglove",
  "prost",
  "serde",
  "serde_json",
@@ -1622,7 +1597,7 @@ version = "0.29.2"
 dependencies = [
  "bytes",
  "chrono",
- "foxglove 0.29.2",
+ "foxglove",
  "proc-macro2",
  "prost",
  "prost-reflect",
@@ -1631,17 +1606,6 @@ dependencies = [
  "syn 3.0.3",
  "tracing",
  "tracing-test",
-]
-
-[[package]]
-name = "foxglove_derive"
-version = "0.29.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "73bc80e73fda20318df2b9f7d8bd24e1181bb7ea95b9efbe6abb2447318d0013"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 3.0.3",
 ]
 
 [[package]]
@@ -3831,7 +3795,7 @@ dependencies = [
  "anyhow",
  "axum",
  "dotenvy",
- "foxglove 0.29.2",
+ "foxglove",
  "futures-util",
  "livekit",
  "livekit-api",
@@ -3848,7 +3812,7 @@ dependencies = [
 name = "remote_data_loader_backend_conformance"
 version = "0.0.0"
 dependencies = [
- "foxglove 0.29.2",
+ "foxglove",
  "jsonschema",
  "libtest-mimic",
  "mcap",

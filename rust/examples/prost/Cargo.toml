@@ -7,7 +7,7 @@ publish = false
 workspace = true
 
 [dependencies]
-foxglove = { path = "../../foxglove", default-features = false }
+foxglove = { workspace = true }
 prost = "0.14"
 
 [build-dependencies]

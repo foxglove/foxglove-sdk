@@ -22,6 +22,8 @@ repository = "https://github.com/foxglove/foxglove-sdk"
 license = "MIT"
 
 [workspace.dependencies]
+foxglove = { version = "0.29.2", path = "rust/foxglove", default-features = false }
+foxglove_derive = { version = "0.29.2", path = "rust/foxglove_derive" }
 base64 = "0.23.1"
 bytes = "1.11.1"
 chrono = { version = "0.4.39" }
