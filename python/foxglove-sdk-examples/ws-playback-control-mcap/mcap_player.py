@@ -45,7 +45,7 @@ class McapPlayer(PlaybackSource):
                 mcap.records.Channel,
                 mcap.records.Message,
             ]
-        ] = self._reader.iter_messages(start_time=self._current_time)
+        ] = self._reader.iter_messages(starting_at=self._current_time)
         self._pending: Optional[
             tuple[
                 Optional[mcap.records.Schema],
@@ -80,7 +80,7 @@ class McapPlayer(PlaybackSource):
         self._file.close()
         self._file = open(self._path, "rb")
         self._reader = mcap.reader.make_reader(self._file)
-        self._iter = self._reader.iter_messages(start_time=start_time)
+        self._iter = self._reader.iter_messages(starting_at=start_time)
         self._current_time = start_time
         self._time_tracker = None
         self._pending = None

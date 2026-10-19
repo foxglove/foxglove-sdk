@@ -291,7 +291,7 @@ def _iter_messages(
                         return
                 channels: dict[int, tuple[Schema | None, Channel]] = {}
                 for schema, channel, message in reader.iter_messages(
-                    topics=topics, start_time=start_ns, end_time=end_ns
+                    topics=topics, starting_at=start_ns, ending_before=end_ns
                 ):
                     mapped = channels.get(channel.id)
                     if mapped is None:
