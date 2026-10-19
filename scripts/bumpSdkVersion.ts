@@ -4,7 +4,9 @@ import { appendFile, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import semver from "semver";
 
+// Captures the quoted value of the first version assignment at the start of a line.
 const versionRegex = /^version\s*=\s*"([^"]*)"/m;
+// Matches each inline foxglove or foxglove_derive version and captures the prefix to preserve it during replacement.
 const dependencyVersionRegex = /^(foxglove(?:_derive)?\s*=\s*\{[^\n]*?version\s*=\s*)"[^"]*"/gm;
 
 async function main(
