@@ -494,6 +494,9 @@ name = "foxglove-sdk"
 source = { virtual = "." }
 
 [package.optional-dependencies]
+datasets = [
+    { name = "mcap" },
+]
 notebook = [
     { name = "anywidget" },
     { name = "mcap" },
@@ -501,11 +504,13 @@ notebook = [
 ]
 ray = [
     { name = "foxglove-client" },
+    { name = "mcap" },
     { name = "pyarrow" },
     { name = "ray", extra = ["data"] },
 ]
 torch = [
     { name = "foxglove-client" },
+    { name = "mcap" },
     { name = "pyarrow" },
     { name = "torch", version = "2.14.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform == 'darwin'" },
     { name = "torch", version = "2.14.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform != 'darwin'" },
@@ -543,8 +548,11 @@ requires-dist = [
     { name = "av", marker = "extra == 'video'", specifier = ">=16,<17" },
     { name = "foxglove-client", marker = "extra == 'ray'", specifier = ">=0.21.1" },
     { name = "foxglove-client", marker = "extra == 'torch'", specifier = ">=0.21.1" },
+    { name = "mcap", marker = "extra == 'datasets'", specifier = ">=1.6,<2" },
     { name = "mcap", marker = "extra == 'notebook'" },
-    { name = "mcap", marker = "extra == 'video'", specifier = ">=1.3,<2" },
+    { name = "mcap", marker = "extra == 'ray'", specifier = ">=1.6,<2" },
+    { name = "mcap", marker = "extra == 'torch'", specifier = ">=1.6,<2" },
+    { name = "mcap", marker = "extra == 'video'", specifier = ">=1.6,<2" },
     { name = "numpy", marker = "extra == 'video'", specifier = ">=1.23,<3" },
     { name = "pyarrow", marker = "extra == 'ray'", specifier = ">=16" },
     { name = "pyarrow", marker = "extra == 'torch'", specifier = ">=16" },
@@ -552,7 +560,7 @@ requires-dist = [
     { name = "torch", marker = "extra == 'torch'", specifier = ">=2.5,<3", index = "https://download.pytorch.org/whl/cpu" },
     { name = "traitlets", marker = "extra == 'notebook'" },
 ]
-provides-extras = ["notebook", "ray", "torch", "video"]
+provides-extras = ["datasets", "notebook", "ray", "torch", "video"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -561,7 +569,7 @@ dev = [
     { name = "flake8", specifier = ">=7.0.0,<8" },
     { name = "isort", specifier = ">=6.0.0,<7" },
     { name = "maturin", specifier = ">=1.14.1,<2" },
-    { name = "mcap", specifier = ">=1.3.0,<2" },
+    { name = "mcap", specifier = ">=1.6.0,<2" },
     { name = "mypy", specifier = ">=1.13.0,<2" },
     { name = "pytest", specifier = ">=8.3.4,<10" },
     { name = "pytest-benchmark", specifier = ">=5.1.0,<6" },
@@ -923,15 +931,15 @@ wheels = [
 
 [[package]]
 name = "mcap"
-version = "1.3.0"
+version = "1.6.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "lz4" },
     { name = "zstandard" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a2/ca/9b0f31eddb3c3261d25059e5f70cc2021e5ce0fe85c1d8012f6cdda50afa/mcap-1.3.0.tar.gz", hash = "sha256:5f0d5826ba3b8418508c1d992bada4c5744073f1b3e6d685579f0aca0389fb2f", size = 21593, upload-time = "2025-06-19T04:48:24.068Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ca/6a/5039c5204c30478a27c9bd28ef2b5d1e947cae35b2636fae786ff777c1c6/mcap-1.6.0.tar.gz", hash = "sha256:d9aa1d9706ada964740536c7598b735a5aab677493d52c2be59fbd7467ec5664", size = 25657, upload-time = "2026-10-19T17:48:51.008Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e2/8e/e974e3883872d9a255eb549e6a3c31db9f8fa8a130fb644487511cbf7a4b/mcap-1.3.0-py3-none-any.whl", hash = "sha256:6262a68cd5a9ed7f8fe8fa6330412a87949842782ab42a4800cd033d0f38e4cd", size = 20634, upload-time = "2025-06-19T04:48:22.837Z" },
+    { url = "https://files.pythonhosted.org/packages/cd/15/fa7ff687a128ec51084a48fb1e039b247a9add47b974c125278d97f370be/mcap-1.6.0-py3-none-any.whl", hash = "sha256:7cd37fba2cf51d033f2139ca837d2ed3024dcec3cd9f8ecdf3d4d15930df6e17", size = 21955, upload-time = "2026-10-19T17:48:49.61Z" },
 ]
 
 [[package]]

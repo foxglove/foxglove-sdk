@@ -14,13 +14,16 @@ to convert each episode into training samples.
 Installation
 ------------
 
-Install the extra for your framework, or both to use Ray with PyTorch:
+Install the extra for your framework, or both to use Ray with PyTorch. The
+``datasets`` extra installs only the MCAP reader, for ``EpisodeReader`` without
+a framework adapter:
 
 .. code-block:: bash
 
    pip install 'foxglove-sdk[torch]'      # PyTorch
    pip install 'foxglove-sdk[ray]'        # Ray Data
    pip install 'foxglove-sdk[torch,ray]'  # Both
+   pip install 'foxglove-sdk[datasets]'   # EpisodeReader only
 
 PyTorch
 -------
