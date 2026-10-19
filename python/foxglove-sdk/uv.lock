@@ -494,9 +494,6 @@ name = "foxglove-sdk"
 source = { virtual = "." }
 
 [package.optional-dependencies]
-datasets = [
-    { name = "mcap" },
-]
 notebook = [
     { name = "anywidget" },
     { name = "mcap" },
@@ -548,7 +545,6 @@ requires-dist = [
     { name = "av", marker = "extra == 'video'", specifier = ">=16,<17" },
     { name = "foxglove-client", marker = "extra == 'ray'", specifier = ">=0.21.1" },
     { name = "foxglove-client", marker = "extra == 'torch'", specifier = ">=0.21.1" },
-    { name = "mcap", marker = "extra == 'datasets'", specifier = ">=1.6,<2" },
     { name = "mcap", marker = "extra == 'notebook'" },
     { name = "mcap", marker = "extra == 'ray'", specifier = ">=1.6,<2" },
     { name = "mcap", marker = "extra == 'torch'", specifier = ">=1.6,<2" },
@@ -560,7 +556,7 @@ requires-dist = [
     { name = "torch", marker = "extra == 'torch'", specifier = ">=2.5,<3", index = "https://download.pytorch.org/whl/cpu" },
     { name = "traitlets", marker = "extra == 'notebook'" },
 ]
-provides-extras = ["datasets", "notebook", "ray", "torch", "video"]
+provides-extras = ["notebook", "ray", "torch", "video"]
 
 [package.metadata.requires-dev]
 dev = [
