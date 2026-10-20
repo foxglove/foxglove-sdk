@@ -150,6 +150,14 @@ jobs:
             echo "Expected version '$expected_version' but got '$version'"
             exit 1
           fi
+      - run: corepack enable
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: yarn
+      - run: yarn install --immutable
+      - name: Check loader release compatibility
+        run: yarn run ts-node scripts/checkDataLoaderRelease.ts
       - name: Publish foxglove_data_loader
         run: cargo publish --package foxglove_data_loader
         env:

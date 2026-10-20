@@ -7,7 +7,7 @@ publish = false
 workspace = true
 
 [dependencies]
-foxglove = { path = "../foxglove", features = ["remote_data_loader_backend"] }
+foxglove = { workspace = true, default-features = true, features = ["remote_data_loader_backend"] }
 jsonschema = { version = "0.42", default-features = false }
 libtest-mimic = "0.8"
 mcap.workspace = true

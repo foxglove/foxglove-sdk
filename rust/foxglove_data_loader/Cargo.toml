@@ -12,8 +12,7 @@ wit-bindgen = "0.49.0"
 anyhow = "1.0.98"
 
 [dependencies.foxglove]
-version = "0.9.0"
-default-features = false
+workspace = true
 features = ["derive"]
 
 [dev-dependencies]

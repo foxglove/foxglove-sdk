@@ -18,7 +18,7 @@ syn = { version = "3.0", features = ["full"] }
 [dev-dependencies]
 bytes = "1.4"
 chrono = "0.4"
-foxglove = { path = "../foxglove", features = ["chrono"] }
+foxglove = { workspace = true, default-features = true, features = ["chrono"] }
 prost.workspace = true
 prost-reflect = "0.16.3"
 prost-types.workspace = true
