@@ -47,6 +47,11 @@ jobs:
       - id: bump-version
         run: yarn bump-sdk-version "${{ env.SDK_VERSION }}"
 
+      # foxglove_derive is published before foxglove, so its packaged manifest must resolve
+      # without the new foxglove version. Catch that here, before anything is released.
+      - name: Check that foxglove_derive can be published
+        run: cargo publish --dry-run --package foxglove_derive
+
       - name: Commit and push branch
         run: |
           git config user.name "Foxglove"
