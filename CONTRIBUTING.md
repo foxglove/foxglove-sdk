@@ -78,6 +78,8 @@ The following is a modified version of [bloom release instructions](https://wiki
 3. Push the newly created commit and tag
 4. Run `ros/release-to-ros.bash --tag <tag> --distro <ros-distro>`, for each distro you want to publish the release to. Follow the prompts, and the script will automatically make a PR to the [ros/rosdistro](https://github.com/ros/rosdistro) repo. Pass `--dry-run` to walk through the workflow without pushing LFS objects or letting bloom publish. See the comment block at the top of `ros/release-to-ros.bash` for prerequisites (bloom config, GitHub token, etc.).
 
+Run `yarn ros-package-status` to check the rosdistro, apt, and Jenkins status for each distro.
+
 Packages will be available via apt after the [next sync](https://discourse.ros.org/c/release/16). View package build status prior to the sync at:
 [humble](http://repo.ros2.org/status_page/ros_humble_default.html?q=foxglove),
 [jazzy](http://repo.ros2.org/status_page/ros_jazzy_default.html?q=foxglove),

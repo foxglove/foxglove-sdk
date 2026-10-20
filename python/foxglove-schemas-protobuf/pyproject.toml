@@ -10,7 +10,11 @@ classifiers = [
   "Programming Language :: Python :: 3",
 ]
 requires-python = ">=3.10"
-dependencies = ["protobuf (>=3.20)"]
+# This floor must match the protoc version CI pins (the arduino/setup-protoc `version` in
+# .github/workflows/ci.yml and python.yml). The generated code is not committed: it is built at
+# publish time, and protoc emits a runtime assertion for its own version, so a wheel built with
+# protoc 29.6 refuses to import on any protobuf older than 5.29.6. Bump both together.
+dependencies = ["protobuf (>=5.29.6)"]
 
 [project.urls]
 repository = "https://github.com/foxglove/foxglove-sdk"

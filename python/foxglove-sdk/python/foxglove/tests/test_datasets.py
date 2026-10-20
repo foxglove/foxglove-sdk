@@ -1,88 +1,92 @@
-import json
-from collections.abc import Generator, Iterator
-from datetime import datetime, timedelta, timezone
+from collections.abc import Iterator
+from datetime import timedelta
 from typing import Any
 
 import pytest
 from foxglove.datasets import EpisodeReader
 from foxglove.datasets.reader import _plan
-from mcap.decoder import DecoderFactory
-from mcap.records import Channel, Message, Schema
+from foxglove.datasets.storage import _decoder_not_found_hint, _missing_decoder_message
+from mcap.exceptions import DecoderNotFoundError
 
-
-class Page:
-    def auto_paging_iter(self) -> Iterator[dict[str, Any]]:
-        # Deliberately non-sorted, spanning more than one yielded batch.
-        for ids in (("c", "a"), ("d", "b")):
-            for episode_id in ids:
-                yield {
-                    "has_missing_recordings": False,
-                    "episode": {
-                        "id": episode_id,
-                        "start_time": datetime(2026, 1, 1, tzinfo=timezone.utc),
-                        "end_time": datetime(2026, 1, 2, tzinfo=timezone.utc),
-                        "metadata": {"label": episode_id},
-                    },
-                }
-
-
-class Client:
-    def __init__(self) -> None:
-        self.calls: list[tuple[str, list[str]]] = []
-        self.closed: list[str] = []
-        self.time_ranges: list[tuple[datetime | None, datetime | None]] = []
-
-    def get_dataset_version(
-        self, *, dataset_id: str, version_number: int
-    ) -> dict[str, Any]:
-        assert (dataset_id, version_number) == ("dataset", 7)
-        return {"committed_at": "2026-01-01", "has_missing_recordings": False}
-
-    def get_dataset_version_episodes(
-        self, *, dataset_id: str, version_number: int, limit: int
-    ) -> Page:
-        assert (dataset_id, version_number, limit) == ("dataset", 7, 2000)
-        return Page()
-
-    def iter_messages(
-        self,
-        *,
-        episode_id: str,
-        topics: list[str],
-        decoder_factories: list[DecoderFactory] | None = None,
-        start: datetime | None = None,
-        end: datetime | None = None,
-    ) -> Generator[tuple[Schema | None, Channel, Message, Any], None, None]:
-        assert decoder_factories is None
-        self.calls.append((episode_id, topics))
-        self.time_ranges.append((start, end))
-        try:
-            yield (
-                Schema(id=1, data=b"{}", encoding="jsonschema", name="Episode"),
-                Channel(
-                    id=1,
-                    schema_id=1,
-                    topic=topics[0],
-                    message_encoding="json",
-                    metadata={},
-                ),
-                Message(
-                    channel_id=1,
-                    log_time=0,
-                    publish_time=0,
-                    sequence=0,
-                    data=json.dumps(episode_id).encode(),
-                ),
-                episode_id,
-            )
-            raise AssertionError("Read past the requested sample")
-        finally:
-            self.closed.append(episode_id)
+from .datasets_helpers import Client, Page
 
 
 def samples(episode: EpisodeReader) -> Iterator[dict[str, Any]]:
     for _schema, _channel, _message, decoded in episode.iter_messages():
         yield {"id": decoded}
+
+
+@pytest.mark.parametrize(
+    "schema_encoding,message_encoding,expected",
+    [
+        (
+            "protobuf",
+            "protobuf",
+            "No decoder for schema encoding 'protobuf'; install mcap-protobuf-support",
+        ),
+        (
+            "ros1msg",
+            "ros1",
+            "No decoder for schema encoding 'ros1msg' "
+            "(message encoding 'ros1'); install mcap-ros1-support",
+        ),
+        (
+            "ros2msg",
+            "cdr",
+            "No decoder for schema encoding 'ros2msg' "
+            "(message encoding 'cdr'); install mcap-ros2-support",
+        ),
+        (
+            "omgidl",
+            "cdr",
+            "No decoder for schema encoding 'omgidl' (message encoding 'cdr')",
+        ),
+    ],
+)
+def test_missing_decoder_message_names_known_encoding_and_package(
+    schema_encoding: str, message_encoding: str, expected: str
+) -> None:
+    assert _missing_decoder_message(schema_encoding, message_encoding) == expected
+    error = DecoderNotFoundError(
+        "no decoder factory supplied for message encoding "
+        f"{message_encoding}, schema Schema(id=1, data=b'', "
+        f"encoding='{schema_encoding}', name='Example')"
+    )
+    assert _decoder_not_found_hint(error) == expected
+
+
+def test_missing_decoder_message_uses_message_encoding_without_schema() -> None:
+    assert _missing_decoder_message(None, "cdr") == (
+        "No decoder for message encoding 'cdr'; install mcap-ros2-support"
+    )
+
+
+def test_missing_decoder_error_names_schema_encoding_and_package(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    error = DecoderNotFoundError(
+        "no decoder factory supplied for message encoding protobuf, "
+        "schema Schema(id=1, data=b'', encoding='protobuf', "
+        "name='foxglove.CompressedImage')"
+    )
+    assert _decoder_not_found_hint(error) == (
+        "No decoder for schema encoding 'protobuf'; install mcap-protobuf-support"
+    )
+
+    def iter_messages(*args: Any, **kwargs: Any) -> Iterator[Any]:
+        raise error
+
+    monkeypatch.setattr(Client, "iter_messages", iter_messages)
+    plan = _plan("dataset", 7, ["/camera"], Client)
+    with pytest.raises(
+        RuntimeError,
+        match=(
+            r"Failed to read episode a in dataset dataset version 7: "
+            r"No decoder for schema encoding 'protobuf'; install mcap-protobuf-support"
+        ),
+    ) as wrapped:
+        list(plan.read(plan.episodes, samples))
+    assert wrapped.value.__cause__ is error
 
 
 @pytest.mark.parametrize("seconds", [0, 5])

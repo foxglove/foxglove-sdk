@@ -906,24 +906,34 @@ int main(int argc, char** argv) {
   testing::InitGoogleTest(&argc, argv);
   rclcpp::init(argc, argv);
 
-  rclcpp::executors::SingleThreadedExecutor executor;
-  rclcpp::NodeOptions nodeOptions;
-  // Explicitly allow file:// asset URIs for testing purposes.
-  nodeOptions.append_parameter_override("asset_uri_allowlist",
-                                        std::vector<std::string>({"file://.*"}));
-  foxglove_bridge::FoxgloveBridge node(nodeOptions);
-  g_bridge = &node;
-  executor.add_node(node.get_node_base_interface());
+  int testResult = 0;
+  {
+    rclcpp::executors::SingleThreadedExecutor executor;
+    rclcpp::NodeOptions nodeOptions;
+    // Explicitly allow file:// asset URIs for testing purposes.
+    nodeOptions.append_parameter_override("asset_uri_allowlist",
+                                          std::vector<std::string>({"file://.*"}));
+    foxglove_bridge::FoxgloveBridge node(nodeOptions);
+    g_bridge = &node;
+    executor.add_node(node.get_node_base_interface());
 
-  std::thread spinnerThread([&executor]() {
-    executor.spin();
-  });
+    std::thread spinnerThread([&executor]() {
+      executor.spin();
+    });
 
-  const auto testResult = RUN_ALL_TESTS();
+    testResult = RUN_ALL_TESTS();
 
-  executor.cancel();
-  spinnerThread.join();
-  executor.remove_node(node.get_node_base_interface());
+    executor.cancel();
+    spinnerThread.join();
+    executor.remove_node(node.get_node_base_interface());
+    g_bridge = nullptr;
+  }
+
+  // The global context must be shut down before returning. Otherwise its static destructor shuts
+  // it down during exit(), after this thread's thread_locals are destroyed, which crashes with
+  // rclcpp releases that track in-progress shutdowns in a thread_local (ros2/rclcpp#3219) once
+  // any context has been shut down on this thread (see spinReturnsOnContextShutdown).
+  rclcpp::shutdown();
 
   return testResult;
 }

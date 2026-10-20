@@ -72,24 +72,28 @@ Remote access support adds the `RemoteAccessGateway` class for live visualizatio
 
 ### Supported platforms and ABI requirements
 
-The remote access shared library has strict ABI requirements inherited from the prebuilt LiveKit/WebRTC native library. **Your application must be built with a compatible compiler and runtime**, or you will encounter linker errors or undefined behavior.
+The remote access shared library embeds the prebuilt LiveKit/WebRTC native library. On macOS and Windows, that library's ABI requirements carry over to your application: **it must be built with a compatible compiler and runtime**, or you will encounter linker errors or undefined behavior. On Linux, WebRTC is built against its own private copy of libc++, which the shared library does not export or depend on at runtime, so your application can be built with either GCC or Clang.
 
-| Platform        | Compiler | C++ stdlib | CRT            | Notes                            |
-| --------------- | -------- | ---------- | -------------- | -------------------------------- |
-| Linux x86_64    | GCC      | libstdc++  | —              | glibc >= 2.35 (Ubuntu 22.04+)    |
-| Linux aarch64   | GCC      | libstdc++  | —              | glibc >= 2.35 (Ubuntu 22.04+)    |
-| macOS x86_64    | Clang    | libc++     | —              | Default Xcode toolchain          |
-| macOS aarch64   | Clang    | libc++     | —              | Default Xcode toolchain          |
-| Windows x86_64  | MSVC     | MSVC STL   | `/MT` (static) | Your project must also use `/MT` |
-| Windows aarch64 | MSVC     | MSVC STL   | `/MT` (static) | Your project must also use `/MT` |
+| Platform        | Compiler     | C++ stdlib | CRT            | Notes                            |
+| --------------- | ------------ | ---------- | -------------- | -------------------------------- |
+| Linux x86_64    | GCC or Clang | libstdc++  | —              | glibc >= 2.35 (Ubuntu 22.04+)    |
+| Linux aarch64   | GCC or Clang | libstdc++  | —              | glibc >= 2.35 (Ubuntu 22.04+)    |
+| macOS x86_64    | Clang        | libc++     | —              | Default Xcode toolchain          |
+| macOS aarch64   | Clang        | libc++     | —              | Default Xcode toolchain          |
+| Windows x86_64  | MSVC         | MSVC STL   | `/MT` (static) | Your project must also use `/MT` |
+| Windows aarch64 | MSVC         | MSVC STL   | `/MT` (static) | Your project must also use `/MT` |
 
-**Not supported:** Clang/libc++ on Linux, `/MD` (dynamic CRT) on Windows.
+**Not supported:** `/MD` (dynamic CRT) on Windows.
+
+**Not tested:** Clang with libc++ (`-stdlib=libc++`) on Linux.
 
 ### Building locally
 
 ```
 make build FOXGLOVE_REMOTE_ACCESS=ON
 ```
+
+On Linux, building remote access from source requires clang 21 or later, because the WebRTC bindings compile against WebRTC's bundled libc++. Select it with `CC=clang CXX=clang++`, as the development Docker image does.
 
 ### Consuming the library
 
