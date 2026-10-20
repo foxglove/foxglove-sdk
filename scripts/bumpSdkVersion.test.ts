@@ -160,18 +160,37 @@ describe("SDK workspace dependencies", () => {
         for (const kind of ["dependencies", "dev-dependencies", "build-dependencies"]) {
           const dependencies = ((section as TomlTable)[kind] ?? {}) as TomlTable;
           for (const name of ["foxglove", "foxglove_derive"]) {
-            const dependency = dependencies[name];
-            if (dependency != undefined) {
-              expect({ filename, workspace: (dependency as TomlTable).workspace }).toEqual({
-                filename,
-                workspace: true,
-              });
-              expect(dependency).not.toHaveProperty("version");
-              expect(dependency).not.toHaveProperty("path");
+            const dependency = dependencies[name] as TomlTable | undefined;
+            if (dependency == undefined) {
+              continue;
             }
+            expect(dependency).not.toHaveProperty("version");
+            // A dev-dependency may be a bare path dependency instead. Cargo strips those when
+            // packaging, which a crate published before its dev-dependency (foxglove_derive
+            // before foxglove) relies on; a workspace-inherited one would carry the new version.
+            if (kind === "dev-dependencies" && dependency.workspace == undefined) {
+              expect({ filename, path: dependency.path }).toEqual({
+                filename,
+                path: `../${name}`,
+              });
+              continue;
+            }
+            expect({ filename, workspace: dependency.workspace }).toEqual({
+              filename,
+              workspace: true,
+            });
+            expect(dependency).not.toHaveProperty("path");
           }
         }
       }
     }
+  });
+
+  it("keeps foxglove_derive's dev-dependency on foxglove path-only so it can be published first", async () => {
+    const manifest = await readManifest(path.join(root, "rust/foxglove_derive/Cargo.toml"));
+    const dependency = (manifest["dev-dependencies"] as TomlTable).foxglove as TomlTable;
+    expect(dependency).toMatchObject({ path: "../foxglove" });
+    expect(dependency).not.toHaveProperty("workspace");
+    expect(dependency).not.toHaveProperty("version");
   });
 });
