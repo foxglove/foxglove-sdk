@@ -118,7 +118,7 @@ async fn mcap_playback(path: &Path) -> Result<()> {
 
     let mut reader = IndexedReader::new_with_options(
         &summary,
-        IndexedReaderOptions::new().log_time_on_or_after(stats.message_start_time),
+        IndexedReaderOptions::new().starting_at(stats.message_start_time),
     )
     .map_err(|e| anyhow!("failed to create indexed reader: {e}"))?;
 
