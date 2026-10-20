@@ -15,15 +15,15 @@ members = [
 exclude = ["rust/examples/rgb_camera_visualization"]
 
 [workspace.package]
-version = "0.30.0"
+version = "0.30.1"
 edition = "2024"
 rust-version = "1.88.0"
 repository = "https://github.com/foxglove/foxglove-sdk"
 license = "MIT"
 
 [workspace.dependencies]
-foxglove = { version = "0.30.0", path = "rust/foxglove", default-features = false }
-foxglove_derive = { version = "0.30.0", path = "rust/foxglove_derive" }
+foxglove = { version = "0.30.1", path = "rust/foxglove", default-features = false }
+foxglove_derive = { version = "0.30.1", path = "rust/foxglove_derive" }
 base64 = "0.23.1"
 bytes = "1.11.1"
 chrono = { version = "0.4.39" }
