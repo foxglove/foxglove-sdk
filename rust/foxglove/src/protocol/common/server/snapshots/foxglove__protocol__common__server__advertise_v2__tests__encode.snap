@@ -1,0 +1,48 @@
+---
+source: rust/foxglove/src/protocol/common/server/advertise_v2.rs
+expression: message()
+---
+{
+  "op": "advertise",
+  "schemas": [
+    {
+      "id": 1,
+      "name": "t2-schema",
+      "encoding": "jsonschema",
+      "data": "{\"type\": \"object\"}"
+    },
+    {
+      "id": 2,
+      "name": "t3-schema",
+      "encoding": "protobuf",
+      "data": "3q2+7w=="
+    }
+  ],
+  "channels": [
+    {
+      "id": 10,
+      "topic": "/t1",
+      "encoding": "json"
+    },
+    {
+      "id": 20,
+      "topic": "/t2",
+      "encoding": "json",
+      "schemaId": 1
+    },
+    {
+      "id": 30,
+      "topic": "/t3",
+      "encoding": "protobuf",
+      "schemaId": 2
+    },
+    {
+      "id": 40,
+      "topic": "/t4",
+      "encoding": "json",
+      "metadata": {
+        "foxglove.hasVideoTrack": "true"
+      }
+    }
+  ]
+}

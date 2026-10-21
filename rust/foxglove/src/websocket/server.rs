@@ -632,7 +632,7 @@ impl Server {
             }
         };
 
-        let Ok(mut ws_stream) = handshake::do_handshake(stream).await else {
+        let Ok((mut ws_stream, subprotocol)) = handshake::do_handshake(stream).await else {
             tracing::error!("Dropping client {addr}: handshake failed");
             return;
         };
@@ -648,6 +648,7 @@ impl Server {
             &self.context,
             &self.weak_self,
             ws_stream,
+            subprotocol,
             addr,
             self.message_backlog_size as usize,
             self.channel_filter.clone(),

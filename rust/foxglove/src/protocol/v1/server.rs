@@ -10,6 +10,7 @@ mod message_data;
 // Re-export common messages for consumers using v1
 pub use crate::protocol::common::server::advertise;
 pub use crate::protocol::common::server::advertise_services;
+pub use crate::protocol::common::server::advertise_v2;
 pub use crate::protocol::common::server::connection_graph_update;
 pub use crate::protocol::common::server::fetch_asset_response;
 #[doc(hidden)]
@@ -20,7 +21,7 @@ pub use crate::protocol::common::server::status;
 #[doc(hidden)]
 pub use crate::protocol::common::server::PlaybackState;
 pub use crate::protocol::common::server::{
-    Advertise, AdvertiseServices, Channel, ConnectionGraphUpdate, FetchAssetResponse,
+    Advertise, AdvertiseServices, AdvertiseV2, Channel, ConnectionGraphUpdate, FetchAssetResponse,
     ParameterValues, RemoveStatus, ServerInfo, ServiceCallFailure, ServiceCallResponse, Status,
     Time, Unadvertise, UnadvertiseServices,
 };
@@ -147,6 +148,40 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_json_advertise_v1() {
+        let json = r#"{"op":"advertise","channels":[
+            {"id":1,"topic":"/t","encoding":"json","schemaName":"","schema":""}
+        ]}"#;
+        let parsed = ServerMessage::parse_json(json).unwrap();
+        assert_matches!(parsed, ServerMessage::Advertise(msg) => {
+            assert_eq!(msg.channels.len(), 1);
+            assert_eq!(msg.channels[0].topic, "/t");
+        });
+    }
+
+    #[test]
+    fn test_parse_json_advertise_v2() {
+        let json = r#"{"op":"advertise",
+            "schemas":[{"id":1,"name":"S","encoding":"jsonschema","data":"{}"}],
+            "channels":[{"id":1,"topic":"/t","encoding":"json","schemaId":1}]
+        }"#;
+        let parsed = ServerMessage::parse_json(json).unwrap();
+        assert_matches!(parsed, ServerMessage::AdvertiseV2(msg) => {
+            assert_eq!(msg.schemas.len(), 1);
+            assert_eq!(msg.schemas[0].id, 1);
+            assert_eq!(msg.channels[0].schema_id, Some(1));
+        });
+
+        // A v2 advertisement whose schemas were all sent previously carries no schema table.
+        let json = r#"{"op":"advertise","channels":[{"id":1,"topic":"/t","encoding":"json"}]}"#;
+        let parsed = ServerMessage::parse_json(json).unwrap();
+        assert_matches!(parsed, ServerMessage::AdvertiseV2(msg) => {
+            assert!(msg.schemas.is_empty());
+            assert_eq!(msg.channels[0].schema_id, None);
+        });
+    }
+
+    #[test]
     fn test_parse_binary_empty() {
         assert_matches!(
             ServerMessage::parse_binary(b""),
@@ -171,6 +206,7 @@ pub enum ServerMessage<'a> {
     Status(Status),
     RemoveStatus(RemoveStatus),
     Advertise(Advertise<'a>),
+    AdvertiseV2(AdvertiseV2<'a>),
     Unadvertise(Unadvertise),
     MessageData(MessageData<'a>),
     Time(Time),
@@ -224,6 +260,7 @@ impl<'a> ServerMessage<'a> {
             ServerMessage::Status(m) => ServerMessage::Status(m),
             ServerMessage::RemoveStatus(m) => ServerMessage::RemoveStatus(m),
             ServerMessage::Advertise(m) => ServerMessage::Advertise(m.into_owned()),
+            ServerMessage::AdvertiseV2(m) => ServerMessage::AdvertiseV2(m.into_owned()),
             ServerMessage::Unadvertise(m) => ServerMessage::Unadvertise(m),
             ServerMessage::MessageData(m) => ServerMessage::MessageData(m.into_owned()),
             ServerMessage::Time(m) => ServerMessage::Time(m),
@@ -250,7 +287,7 @@ enum JsonMessage<'a> {
     Status(Status),
     RemoveStatus(RemoveStatus),
     #[serde(borrow)]
-    Advertise(Advertise<'a>),
+    Advertise(AnyAdvertise<'a>),
     Unadvertise(Unadvertise),
     ParameterValues(ParameterValues),
     #[serde(borrow)]
@@ -260,13 +297,27 @@ enum JsonMessage<'a> {
     ServiceCallFailure(ServiceCallFailure),
 }
 
+/// The `advertise` op has two shapes, selected by the negotiated subprotocol.
+///
+/// The v1 shape is tried first: its required `schemaName` and `schema` fields are absent from v2
+/// channels, so a v2 message never matches it.
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum AnyAdvertise<'a> {
+    #[serde(borrow)]
+    V1(Advertise<'a>),
+    #[serde(borrow)]
+    V2(AdvertiseV2<'a>),
+}
+
 impl<'a> From<JsonMessage<'a>> for ServerMessage<'a> {
     fn from(m: JsonMessage<'a>) -> Self {
         match m {
             JsonMessage::ServerInfo(m) => Self::ServerInfo(m),
             JsonMessage::Status(m) => Self::Status(m),
             JsonMessage::RemoveStatus(m) => Self::RemoveStatus(m),
-            JsonMessage::Advertise(m) => Self::Advertise(m),
+            JsonMessage::Advertise(AnyAdvertise::V1(m)) => Self::Advertise(m),
+            JsonMessage::Advertise(AnyAdvertise::V2(m)) => Self::AdvertiseV2(m),
             JsonMessage::Unadvertise(m) => Self::Unadvertise(m),
             JsonMessage::ParameterValues(m) => Self::ParameterValues(m),
             JsonMessage::AdvertiseServices(m) => Self::AdvertiseServices(m.into_owned()),

@@ -39,7 +39,7 @@ use crate::testutil::{
 use crate::testutil::{WebSocketClient, WebSocketClientError};
 #[cfg(feature = "websocket-tls")]
 use crate::websocket::TlsIdentity;
-use crate::websocket::handshake::SUBPROTOCOL;
+use crate::websocket::handshake::{SUBPROTOCOL_V1, SUBPROTOCOL_V2, Subprotocol};
 use crate::websocket::server::{ServerOptions, create_server as do_create_server};
 use crate::websocket::service::{CallId, Service, ServiceSchema};
 use crate::websocket::{
@@ -263,8 +263,9 @@ async fn test_handshake_with_multiple_subprotocols() {
         .into_client_request()
         .expect("Failed to build request");
 
+    // The server prefers v2 regardless of the order in which the client lists subprotocols.
     let mut req1 = request.clone();
-    let header = format!("{SUBPROTOCOL}, foxglove.sdk.v2");
+    let header = format!("{SUBPROTOCOL_V1}, {SUBPROTOCOL_V2}");
     req1.headers_mut().insert(
         "sec-websocket-protocol",
         HeaderValue::from_str(&header).unwrap(),
@@ -276,12 +277,12 @@ async fn test_handshake_with_multiple_subprotocols() {
 
     assert_eq!(
         response.headers().get("sec-websocket-protocol"),
-        Some(&HeaderValue::from_static(SUBPROTOCOL))
+        Some(&HeaderValue::from_static(SUBPROTOCOL_V2))
     );
 
     // In req2, the client's preferred (initial) subprotocol is not valid
     let mut req2 = request.clone();
-    let header = format!("unknown, {SUBPROTOCOL}, another");
+    let header = format!("unknown, {SUBPROTOCOL_V1}, another");
     req2.headers_mut().insert(
         "sec-websocket-protocol",
         HeaderValue::from_str(&header).unwrap(),
@@ -293,8 +294,138 @@ async fn test_handshake_with_multiple_subprotocols() {
 
     assert_eq!(
         response.headers().get("sec-websocket-protocol"),
-        Some(&HeaderValue::from_static(SUBPROTOCOL))
+        Some(&HeaderValue::from_static(SUBPROTOCOL_V1))
     );
+
+    // A client that only speaks v2 is accepted as well.
+    let mut req3 = request.clone();
+    req3.headers_mut().insert(
+        "sec-websocket-protocol",
+        HeaderValue::from_static(SUBPROTOCOL_V2),
+    );
+
+    let (_, response) = tokio_tungstenite::connect_async(req3)
+        .await
+        .expect("Failed to connect");
+
+    assert_eq!(
+        response.headers().get("sec-websocket-protocol"),
+        Some(&HeaderValue::from_static(SUBPROTOCOL_V2))
+    );
+
+    let _ = server.stop();
+}
+
+#[traced_test]
+#[tokio::test]
+async fn test_advertise_v2_deduplicates_schemas() {
+    let ctx = Context::new();
+    let server = create_server(&ctx, ServerOptions::default());
+    let addr = server
+        .start("127.0.0.1", 0)
+        .await
+        .expect("Failed to start server");
+
+    let schema_a = Schema::new("A", "jsonschema", br#"{"type":"object"}"#);
+    let schema_b = Schema::new("B", "protobuf", &[0xde, 0xad, 0xbe, 0xef]);
+    let make_channel = |topic: &str, schema: Option<Schema>| {
+        let mut builder = ChannelBuilder::new(topic)
+            .message_encoding("json")
+            .context(&ctx);
+        if let Some(schema) = schema {
+            builder = builder.schema(schema);
+        }
+        builder.build_raw().expect("Failed to create channel")
+    };
+
+    // Channels that exist before the client connects are advertised in one batch.
+    let ch_a1 = make_channel("/a1", Some(schema_a.clone()));
+    let ch_a2 = make_channel("/a2", Some(schema_a.clone()));
+    let ch_none = make_channel("/none", None);
+
+    let mut client = WebSocketClient::connect_v2(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
+    assert_eq!(client.subprotocol(), Subprotocol::V2);
+    expect_recv!(client, ServerMessage::ServerInfo);
+
+    let msg = expect_recv!(client, ServerMessage::AdvertiseV2);
+    assert_eq!(msg.schemas.len(), 1);
+    assert_eq!(msg.schemas[0].id, 1);
+    assert_eq!(msg.schemas[0].name, "A");
+    assert_eq!(msg.schemas[0].encoding, "jsonschema");
+    assert_eq!(msg.schemas[0].data, r#"{"type":"object"}"#);
+    let by_id: HashMap<u64, _> = msg.channels.iter().map(|c| (c.id, c)).collect();
+    assert_eq!(by_id.len(), 3);
+    assert_eq!(by_id[&ch_a1.id().into()].schema_id, Some(1));
+    assert_eq!(by_id[&ch_a2.id().into()].schema_id, Some(1));
+    assert_eq!(by_id[&ch_none.id().into()].schema_id, None);
+    assert_eq!(by_id[&ch_none.id().into()].topic, "/none");
+
+    // A later channel with an already-sent schema references it without resending it.
+    let ch_a3 = make_channel("/a3", Some(schema_a.clone()));
+    let msg = expect_recv!(client, ServerMessage::AdvertiseV2);
+    assert!(msg.schemas.is_empty());
+    assert_eq!(msg.channels.len(), 1);
+    assert_eq!(msg.channels[0].id, u64::from(ch_a3.id()));
+    assert_eq!(msg.channels[0].schema_id, Some(1));
+
+    // A new schema gets the next connection-local ID, with binary data base64-encoded.
+    let ch_b = make_channel("/b", Some(schema_b.clone()));
+    let msg = expect_recv!(client, ServerMessage::AdvertiseV2);
+    assert_eq!(msg.schemas.len(), 1);
+    assert_eq!(msg.schemas[0].id, 2);
+    assert_eq!(msg.schemas[0].name, "B");
+    assert_eq!(msg.schemas[0].data, "3q2+7w==");
+    assert_eq!(msg.channels[0].id, u64::from(ch_b.id()));
+    assert_eq!(msg.channels[0].schema_id, Some(2));
+
+    // Unadvertising every channel for a schema does not free its ID: the schema remains cached
+    // for the connection, so re-adding a channel reuses the ID without resending the schema.
+    ctx.remove_channel(ch_b.id());
+    let msg = expect_recv!(client, ServerMessage::Unadvertise);
+    assert_eq!(msg.channel_ids, vec![u64::from(ch_b.id())]);
+    let ch_b2 = make_channel("/b2", Some(schema_b.clone()));
+    let msg = expect_recv!(client, ServerMessage::AdvertiseV2);
+    assert!(msg.schemas.is_empty());
+    assert_eq!(msg.channels[0].id, u64::from(ch_b2.id()));
+    assert_eq!(msg.channels[0].schema_id, Some(2));
+
+    // Subscriptions and message data work the same as with v1.
+    let subscribe_msg = Subscribe::new([Subscription::new(7, ch_a1.id().into())]);
+    client.send(&subscribe_msg).await.expect("Failed to send");
+    assert_eventually(|| ch_a1.num_sinks() == 1).await;
+    ch_a1.log(b"{}");
+    let msg = expect_recv!(client, ServerMessage::MessageData);
+    assert_eq!(msg.subscription_id, 7);
+
+    // Schema tables are per connection: a second v2 client starts from ID 1 and receives every
+    // schema, while a v1 client still receives inline schemas.
+    let mut client2 = WebSocketClient::connect_v2(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
+    expect_recv!(client2, ServerMessage::ServerInfo);
+    let msg = expect_recv!(client2, ServerMessage::AdvertiseV2);
+    let mut schema_ids: Vec<_> = msg.schemas.iter().map(|s| s.id).collect();
+    schema_ids.sort_unstable();
+    assert_eq!(schema_ids, [1, 2]);
+    assert_eq!(msg.channels.len(), 5);
+
+    let mut client_v1 = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
+    assert_eq!(client_v1.subprotocol(), Subprotocol::V1);
+    expect_recv!(client_v1, ServerMessage::ServerInfo);
+    let msg = expect_recv!(client_v1, ServerMessage::Advertise);
+    assert_eq!(msg.channels.len(), 5);
+    let inline = msg
+        .channels
+        .iter()
+        .find(|c| c.id == u64::from(ch_a1.id()))
+        .expect("channel advertised");
+    assert_eq!(inline.schema_name, "A");
+    assert_eq!(inline.schema_encoding.as_deref(), Some("jsonschema"));
+    assert_eq!(inline.schema, r#"{"type":"object"}"#);
 
     let _ = server.stop();
 }

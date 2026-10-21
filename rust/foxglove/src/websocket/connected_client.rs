@@ -16,10 +16,12 @@ use crate::websocket::PlaybackControlRequest;
 use crate::websocket::streams::ServerStream;
 use crate::{ChannelId, Context, FoxgloveError, Metadata, RawChannel, Sink, SinkId};
 
+use self::ws_protocol::server::advertise_v2::SchemaTable;
 use self::ws_protocol::server::{
     FetchAssetResponse, ParameterValues, ServiceCallFailure, Unadvertise,
 };
 
+use super::handshake::Subprotocol;
 use super::server::Server;
 use super::service::{self, CallId, ServiceId};
 use super::subscription::{Subscription, SubscriptionId};
@@ -60,11 +62,18 @@ pub(super) struct ConnectedClient {
     addr: SocketAddr,
     weak_self: Weak<Self>,
     sink_id: SinkId,
+    /// The subprotocol negotiated during the handshake.
+    subprotocol: Subprotocol,
     channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     context: Weak<Context>,
     poller: parking_lot::Mutex<Option<Poller>>,
     /// A cache of channels for `on_subscribe` and `on_unsubscribe` callbacks.
     channels: parking_lot::RwLock<HashMap<ChannelId, Arc<RawChannel>>>,
+    /// Schemas already sent to this client. Only used with [`Subprotocol::V2`].
+    ///
+    /// Held while enqueuing an advertise message, so that a schema's definition is always
+    /// enqueued before any message that references it by ID.
+    schema_table: parking_lot::Mutex<SchemaTable>,
     data_plane_tx: flume::Sender<Message>,
     data_plane_rx: flume::Receiver<Message>,
     control_plane_tx: flume::Sender<Message>,
@@ -157,6 +166,7 @@ impl ConnectedClient {
         context: &Weak<Context>,
         server: &Weak<Server>,
         websocket: WebSocketStream<ServerStream<TcpStream>>,
+        subprotocol: Subprotocol,
         addr: SocketAddr,
         message_backlog_size: usize,
         channel_filter: Option<Arc<dyn SinkChannelFilter>>,
@@ -169,6 +179,7 @@ impl ConnectedClient {
             addr,
             weak_self: weak_self.clone(),
             sink_id: SinkId::next(),
+            subprotocol,
             context: context.clone(),
             channel_filter,
             poller: parking_lot::Mutex::new(Some(Poller::new(
@@ -178,6 +189,7 @@ impl ConnectedClient {
                 shutdown_rx,
             ))),
             channels: parking_lot::RwLock::default(),
+            schema_table: parking_lot::Mutex::default(),
             data_plane_tx,
             data_plane_rx,
             control_plane_tx,
@@ -212,7 +224,6 @@ impl ConnectedClient {
     pub fn addr(&self) -> SocketAddr {
         self.addr
     }
-
     /// Runs the client's poll loop to completion.
     ///
     /// The poll loop may exit either due to the client closing the connection, or due to an
@@ -817,26 +828,37 @@ impl ConnectedClient {
             return;
         }
 
-        if self.send_control_msg(&message) {
-            let advertised_ids = message
-                .channels
-                .iter()
-                .map(|c| c.id)
-                .collect::<HashSet<_>>();
-            let mut advertised_channels = self.channels.write();
-            for &channel in channels {
-                if !advertised_ids.contains(&channel.id().into()) {
-                    continue;
-                }
-
-                tracing::debug!(
-                    "Advertised channel {} with id {} to client {}",
-                    channel.topic(),
-                    channel.id(),
-                    self.addr
-                );
-                advertised_channels.insert(channel.id(), channel.clone());
+        let sent = match self.subprotocol {
+            Subprotocol::V1 => self.send_control_msg(&message),
+            Subprotocol::V2 => {
+                // Hold the schema table lock until the message is enqueued, so that concurrent
+                // advertisements cannot reference a schema ID before its definition is sent.
+                let mut schema_table = self.schema_table.lock();
+                self.send_control_msg(&schema_table.deduplicate(&message))
             }
+        };
+        if !sent {
+            return;
+        }
+
+        let advertised_ids = message
+            .channels
+            .iter()
+            .map(|c| c.id)
+            .collect::<HashSet<_>>();
+        let mut advertised_channels = self.channels.write();
+        for &channel in channels {
+            if !advertised_ids.contains(&channel.id().into()) {
+                continue;
+            }
+
+            tracing::debug!(
+                "Advertised channel {} with id {} to client {}",
+                channel.topic(),
+                channel.id(),
+                self.addr
+            );
+            advertised_channels.insert(channel.id(), channel.clone());
         }
     }
 

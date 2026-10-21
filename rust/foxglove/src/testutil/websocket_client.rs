@@ -11,7 +11,7 @@ use tokio_tungstenite::tungstenite::http::HeaderValue;
 use tokio_tungstenite::tungstenite::{self, Message};
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
 
-use crate::websocket::handshake::SUBPROTOCOL;
+use crate::websocket::handshake::{SUBPROTOCOL_V1, SUBPROTOCOL_V2, Subprotocol};
 
 use crate::ws_protocol::ParseError;
 use crate::ws_protocol::server::ServerMessage;
@@ -34,9 +34,15 @@ pub enum WebSocketClientError {
     Rustls(#[from] rustls::Error),
 }
 
+/// Subprotocols offered by a client that only speaks `foxglove.sdk.v1`.
+const OFFER_V1: &str = SUBPROTOCOL_V1;
+/// Subprotocols offered by a client that prefers `foxglove.sdk.v2` but accepts `foxglove.sdk.v1`.
+const OFFER_V2: &str = "foxglove.sdk.v2, foxglove.sdk.v1";
+
 #[doc(hidden)]
 pub struct WebSocketClient {
     stream: WebSocketStream<MaybeTlsStream<TcpStream>>,
+    subprotocol: Subprotocol,
 }
 
 impl WebSocketClient {
@@ -50,10 +56,9 @@ impl WebSocketClient {
             .into_client_request()
             .expect("Failed to build request");
 
-        request.headers_mut().insert(
-            "sec-websocket-protocol",
-            HeaderValue::from_static(SUBPROTOCOL),
-        );
+        request
+            .headers_mut()
+            .insert("sec-websocket-protocol", HeaderValue::from_static(OFFER_V1));
 
         let mut root_cert_store = rustls::RootCertStore::empty();
         root_cert_store
@@ -70,36 +75,62 @@ impl WebSocketClient {
                 .await
                 .map_err(WebSocketClientError::from)?;
 
-        if response.headers().get("sec-websocket-protocol")
-            != Some(&HeaderValue::from_static(SUBPROTOCOL))
-        {
-            return Err(WebSocketClientError::InvalidSubprotocol);
-        }
-
-        Ok(Self { stream })
+        let subprotocol = Self::negotiated_subprotocol(&response)?;
+        Ok(Self {
+            stream,
+            subprotocol,
+        })
     }
 
+    /// Connects to a server, offering only the `foxglove.sdk.v1` subprotocol.
     pub async fn connect(addr: impl AsRef<str>) -> Result<Self, WebSocketClientError> {
+        Self::connect_with_offer(addr, OFFER_V1).await
+    }
+
+    /// Connects to a server, offering both subprotocols with `foxglove.sdk.v2` preferred.
+    pub async fn connect_v2(addr: impl AsRef<str>) -> Result<Self, WebSocketClientError> {
+        Self::connect_with_offer(addr, OFFER_V2).await
+    }
+
+    async fn connect_with_offer(
+        addr: impl AsRef<str>,
+        offer: &'static str,
+    ) -> Result<Self, WebSocketClientError> {
         let mut request = format!("ws://{addr}/", addr = addr.as_ref())
             .into_client_request()
             .expect("Failed to build request");
 
-        request.headers_mut().insert(
-            "sec-websocket-protocol",
-            HeaderValue::from_static(SUBPROTOCOL),
-        );
+        request
+            .headers_mut()
+            .insert("sec-websocket-protocol", HeaderValue::from_static(offer));
 
         let (stream, response) = tokio_tungstenite::connect_async(request)
             .await
             .map_err(WebSocketClientError::from)?;
 
-        if response.headers().get("sec-websocket-protocol")
-            != Some(&HeaderValue::from_static(SUBPROTOCOL))
-        {
-            return Err(WebSocketClientError::InvalidSubprotocol);
-        }
+        let subprotocol = Self::negotiated_subprotocol(&response)?;
+        Ok(Self {
+            stream,
+            subprotocol,
+        })
+    }
 
-        Ok(Self { stream })
+    fn negotiated_subprotocol(
+        response: &tungstenite::handshake::client::Response,
+    ) -> Result<Subprotocol, WebSocketClientError> {
+        let header = response.headers().get("sec-websocket-protocol");
+        if header == Some(&HeaderValue::from_static(SUBPROTOCOL_V1)) {
+            Ok(Subprotocol::V1)
+        } else if header == Some(&HeaderValue::from_static(SUBPROTOCOL_V2)) {
+            Ok(Subprotocol::V2)
+        } else {
+            Err(WebSocketClientError::InvalidSubprotocol)
+        }
+    }
+
+    /// Returns the subprotocol selected by the server.
+    pub(crate) fn subprotocol(&self) -> Subprotocol {
+        self.subprotocol
     }
 
     /// Receives a message from the server.
