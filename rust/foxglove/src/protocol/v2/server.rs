@@ -10,12 +10,13 @@ mod message_data;
 #[allow(unused_imports)]
 pub use crate::protocol::common::server::advertise;
 pub use crate::protocol::common::server::advertise_services;
+pub use crate::protocol::common::server::advertise_v2;
 pub use crate::protocol::common::server::server_info;
 pub use crate::protocol::common::server::status;
 pub use crate::protocol::common::server::{
-    Advertise, AdvertiseServices, ConnectionGraphUpdate, FetchAssetResponse, ParameterValues,
-    PlaybackState, Pong, RemoveStatus, ServerInfo, ServiceCallFailure, ServiceCallResponse, Status,
-    Time, Unadvertise, UnadvertiseServices,
+    Advertise, AdvertiseServices, AdvertiseV2, ConnectionGraphUpdate, FetchAssetResponse,
+    ParameterValues, PlaybackState, Pong, RemoveStatus, ServerInfo, ServiceCallFailure,
+    ServiceCallResponse, Status, Time, Unadvertise, UnadvertiseServices,
 };
 pub use message_data::MessageData;
 
