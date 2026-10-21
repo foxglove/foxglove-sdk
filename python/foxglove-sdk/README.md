@@ -8,7 +8,7 @@ with the Foxglove app.
 
 ## Get Started
 
-See https://foxglove-sdk-api-docs.pages.dev/python/
+See https://sdk-docs.foxglove.dev/python/
 
 ## Requirements
 
