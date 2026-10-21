@@ -96,7 +96,7 @@ if(FOXGLOVE_BUILD_EXAMPLES)
 
   find_or_fetch(mcap
     GIT_REPOSITORY https://github.com/foxglove/mcap.git
-    GIT_TAG releases/cpp/v2.1.2
+    GIT_TAG releases/cpp/v2.2.0
   )
 
   set(LZ4_BUILD_CLI OFF CACHE BOOL "" FORCE)
