@@ -2,6 +2,10 @@
 Changelog for package foxglove_msgs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+3.6.3 (2026-10-21)
+------------------
+* Version bump for foxglove_bridge 3.6.3 release
+
 3.6.2 (2026-10-16)
 ------------------
 * Version bump for foxglove_bridge 3.6.2 release
