@@ -45,3 +45,19 @@ for name, bframes in [("h264", 0), ("h264_b_frames", 2)]:
 
 Tests use pixel tolerances rather than exact RGB hashes to allow differences in FFmpeg
 color conversion, and compare windowed decoding with full decoding pixel-for-pixel.
+
+# TLS fixtures
+
+`tls_cert.pem` and `tls_key.pem` are a self-signed X.509 certificate and matching PKCS#8
+private key used only to exercise the WebSocket server's TLS support in tests. They are
+valid for `127.0.0.1` and `localhost` and are not trusted by anything outside these tests.
+
+Generated with:
+
+```sh
+openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 -nodes -days 36500 \
+  -subj "/CN=foxglove-sdk-test" \
+  -addext "subjectAltName=IP:127.0.0.1,DNS:localhost" \
+  -addext "basicConstraints=critical,CA:TRUE" \
+  -keyout tls_key.pem -out tls_cert.pem
+```
