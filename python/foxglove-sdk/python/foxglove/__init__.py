@@ -161,7 +161,7 @@ try:
         :param message_backlog_size: The maximum number of outgoing messages to buffer per client.
             The oldest data-plane message is dropped when the buffer fills. The control-plane queue
             is the same size; if it fills, the slow client is disconnected. Defaults to 1024.
-        :param tls_cert: A PEM-encoded X.509 certificate chain for the server. Must be provided
+        :param tls_cert: A PEM-encoded X.509 certificate for the server. Must be provided
             together with ``tls_key``. When set, the server only accepts ``wss://`` connections.
         :param tls_key: A PEM-encoded PKCS#8 private key matching ``tls_cert``.
         """
