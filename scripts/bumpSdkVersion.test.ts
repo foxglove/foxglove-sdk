@@ -27,6 +27,7 @@ describe("bumpSdkVersion", () => {
     await rm(directory, { recursive: true, force: true });
   });
 
+  // Two `cargo tree` runs can exceed Jest's default limit on a cold runner.
   it("bumps SDK packages and shared dependencies together while preserving the loader version", async () => {
     const files = new Map([
       [
@@ -114,7 +115,7 @@ foxglove.workspace = true
     expect(await readFile(path.join(directory, "output"), "utf8")).toBe(
       "prev-version=0.29.2\nnew-version=0.30.0\nprev-version=0.30.0\nnew-version=0.31.0\n",
     );
-  });
+  }, 60_000);
 });
 
 describe("SDK workspace dependencies", () => {
