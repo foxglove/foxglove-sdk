@@ -84,9 +84,7 @@ void McapPlayer::resetMessageView(uint64_t start_time) {
   message_view_.reset();
 
   mcap::ReadMessageOptions opts;
-  opts.startTime = start_time;
-  // Add 1ns to the end_time since ReadMessageOptions treats endTime as an exclusive upper bound
-  opts.endTime = time_range_.second + 1;
+  opts.startingAt(start_time).endingAt(time_range_.second);
 
   message_view_ = std::make_unique<mcap::LinearMessageView>(reader_.readMessages(
     [](const mcap::Status& problem) {
