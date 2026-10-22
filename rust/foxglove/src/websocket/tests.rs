@@ -400,8 +400,8 @@ async fn test_advertise_schema_table_deduplicates_schemas() {
     let msg = expect_recv!(client, ServerMessage::MessageData);
     assert_eq!(msg.subscription_id, 7);
 
-    // Schema tables are per connection: a second v2 client starts from ID 1 and receives every
-    // schema, while a v1 client still receives inline schemas.
+    // Schema tables are per connection: a second foxglove.sdk.v1.1 client starts from ID 1 and
+    // receives every schema, while a foxglove.sdk.v1 client still receives inline schemas.
     let mut client2 = WebSocketClient::connect_v1_1(format!("{addr}"))
         .await
         .expect("Failed to connect");

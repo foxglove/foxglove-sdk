@@ -172,7 +172,7 @@ mod tests {
             assert_eq!(msg.channels[0].schema_id, Some(1));
         });
 
-        // A v2 advertisement whose schemas were all sent previously carries no schema table.
+        // A deduplicated advertisement whose schemas were all sent previously carries no schema table.
         let json = r#"{"op":"advertise","channels":[{"id":1,"topic":"/t","encoding":"json"}]}"#;
         let parsed = ServerMessage::parse_json(json).unwrap();
         assert_matches!(parsed, ServerMessage::AdvertiseWithSchemaTable(msg) => {
