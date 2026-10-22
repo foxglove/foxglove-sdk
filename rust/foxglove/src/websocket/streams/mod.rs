@@ -23,6 +23,8 @@ pub(crate) trait Acceptor {
 }
 
 /// TLS configuration for a WebSocket server.
+///
+/// Pass this to [`WebSocketServer::tls`](crate::WebSocketServer::tls).
 pub struct TlsIdentity {
     /// A PEM-encoded X.509 certificate.
     pub cert: Vec<u8>,
