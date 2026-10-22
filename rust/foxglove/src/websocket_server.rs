@@ -108,7 +108,6 @@ impl WebSocketServer {
     ///
     /// If the certificate or key cannot be parsed, starting the server returns an error.
     #[cfg(feature = "websocket-tls")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "websocket-tls")))]
     pub fn tls(mut self, tls_identity: TlsIdentity) -> Self {
         self.options.tls_identity = Some(tls_identity);
         self
