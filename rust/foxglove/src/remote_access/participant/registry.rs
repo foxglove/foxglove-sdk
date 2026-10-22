@@ -21,6 +21,7 @@ use tokio_util::sync::CancellationToken;
 
 use super::collection::Participants;
 use super::{Participant, ParticipantWriter};
+use crate::remote_common::ClientId;
 
 /// Owns the participant membership state machine: add / remove / lookup, plus
 /// the `pending_resets` channel that lets a flush-task request its own reset.
@@ -204,6 +205,21 @@ impl ParticipantRegistry {
         self.participants.read().get_by_identity(id).cloned()
     }
 
+    /// Returns the participant with the given client ID, if any.
+    ///
+    /// Takes only the read lock, so it's safe to call while holding the
+    /// session's `subscription_lock`.
+    pub(crate) fn get_participant_by_client_id(
+        &self,
+        client_id: ClientId,
+    ) -> Option<Arc<Participant>> {
+        self.participants
+            .read()
+            .iter()
+            .find(|p| p.client_id() == client_id)
+            .cloned()
+    }
+
     /// Returns `true` if a participant with the given `ParticipantSid` is
     /// currently registered.
     pub(crate) fn is_sid_registered(&self, sid: &ParticipantSid) -> bool {
@@ -304,6 +320,69 @@ mod tests {
 
         assert!(registry.remove_participant(&sid).is_some());
         assert!(registry.get_participant(&id).is_none());
+    }
+
+    /// A client ID resolves only to the connection instance it was assigned
+    /// to: it misses once that instance is removed, and never resolves to a
+    /// same-identity reconnect, which gets a fresh client ID.
+    #[tokio::test]
+    async fn get_participant_by_client_id_matches_only_that_instance() {
+        let registry = make_registry();
+        let cancel = CancellationToken::new();
+        let alice = ParticipantIdentity("alice".to_string());
+        let bob = ParticipantIdentity("bob".to_string());
+        let alice_sid_1 = test_sid("alice-1");
+
+        registry.register_participant(
+            alice.clone(),
+            alice_sid_1.clone(),
+            1_000,
+            test_writer(),
+            &cancel,
+            [],
+        );
+        registry.register_participant(
+            bob.clone(),
+            test_sid("bob-1"),
+            1_000,
+            test_writer(),
+            &cancel,
+            [],
+        );
+
+        let alice_client_id = registry.get_participant(&alice).unwrap().client_id();
+        let bob_client_id = registry.get_participant(&bob).unwrap().client_id();
+        let found = registry
+            .get_participant_by_client_id(alice_client_id)
+            .expect("alice should resolve by client ID");
+        assert_eq!(found.participant_id(), &alice);
+        let found = registry
+            .get_participant_by_client_id(bob_client_id)
+            .expect("bob should resolve by client ID");
+        assert_eq!(found.participant_id(), &bob);
+
+        assert!(registry.remove_participant(&alice_sid_1).is_some());
+        assert!(
+            registry
+                .get_participant_by_client_id(alice_client_id)
+                .is_none()
+        );
+
+        registry.register_participant(
+            alice.clone(),
+            test_sid("alice-2"),
+            2_000,
+            test_writer(),
+            &cancel,
+            [],
+        );
+        assert!(registry.get_participant(&alice).is_some());
+        assert!(
+            registry
+                .get_participant_by_client_id(alice_client_id)
+                .is_none(),
+            "a stale client ID must not resolve to a same-identity reconnect",
+        );
     }
 
     /// `register_participant` for a same-identity, **different**-SID call must

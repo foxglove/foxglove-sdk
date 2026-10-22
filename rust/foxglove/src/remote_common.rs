@@ -32,7 +32,7 @@ pub use crate::protocol::common::parameter::{
 };
 pub use crate::protocol::common::server::status::{Level as StatusLevel, Status};
 
-/// Identifies a client connection. Unique for the duration of the server's lifetime.
+/// Identifies a client connection. Unique within the process; IDs are never reused.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub struct ClientId(pub(crate) u32);
 
@@ -48,6 +48,17 @@ impl ClientId {
 impl From<ClientId> for u32 {
     fn from(client: ClientId) -> Self {
         client.0
+    }
+}
+
+/// Converts a raw client ID, such as one received in a C or C++ callback, back into a
+/// [`ClientId`]. An ID that doesn't belong to a connected client refers to no client.
+///
+/// This is public for the language bindings, but not intended for end-users.
+#[doc(hidden)]
+impl From<u32> for ClientId {
+    fn from(id: u32) -> Self {
+        Self(id)
     }
 }
 

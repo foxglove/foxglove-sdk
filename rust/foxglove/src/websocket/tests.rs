@@ -8,8 +8,8 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 
 use indexmap::IndexSet;
-use std::sync::Arc;
 use std::sync::Mutex;
+use std::sync::{Arc, OnceLock, Weak};
 use std::time::Duration;
 use tokio_tungstenite::tungstenite::{self, Message, http::HeaderValue};
 use tracing_test::traced_test;
@@ -43,7 +43,8 @@ use crate::websocket::handshake::SUBPROTOCOL;
 use crate::websocket::server::{ServerOptions, create_server as do_create_server};
 use crate::websocket::service::{CallId, Service, ServiceSchema};
 use crate::websocket::{
-    BlockingAssetHandlerFn, Capability, ClientChannelId, ConnectionGraph, Parameter, Server,
+    BlockingAssetHandlerFn, Capability, Client, ClientChannel, ClientChannelId, ClientId,
+    ConnectionGraph, Parameter, Server,
 };
 use crate::websocket::{
     PlaybackCommand, PlaybackControlRequest, PlaybackState, PlaybackStatus, ServerListener,
@@ -984,6 +985,144 @@ async fn test_remove_status() {
         let msg = expect_recv!(client, ServerMessage::RemoveStatus);
         assert_eq!(msg.status_ids, ids);
     }
+}
+
+#[traced_test]
+#[tokio::test]
+async fn test_send_status_to_single_client() {
+    let recording_listener = Arc::new(RecordingServerListener::new());
+    let ctx = Context::new();
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            capabilities: Some(IndexSet::from([Capability::ClientPublish])),
+            supported_encodings: Some(IndexSet::from(["json".to_string()])),
+            listener: Some(recording_listener.clone()),
+            ..Default::default()
+        },
+    );
+    let addr = server
+        .start("127.0.0.1", 0)
+        .await
+        .expect("Failed to start server");
+
+    let mut client1 = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
+    let mut client2 = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
+    expect_recv!(client1, ServerMessage::ServerInfo);
+    expect_recv!(client2, ServerMessage::ServerInfo);
+
+    // Advertise a channel from client1 to learn its client ID.
+    let advertise =
+        client::Advertise::new([client::advertise::Channel::builder(1, "/test", "json")
+            .build()
+            .unwrap()]);
+    client1
+        .send(&advertise)
+        .await
+        .expect("Failed to send advertisement");
+    assert_eventually(|| recording_listener.client_advertise_len() == 1).await;
+    let client1_id = recording_listener.take_client_advertise()[0].0;
+
+    let status = Status::warning("Only for client 1").with_id("c1");
+    server.send_status(client1_id, status.clone());
+    let msg = expect_recv!(client1, ServerMessage::Status);
+    assert_eq!(msg, status);
+
+    // client2 didn't receive the status, so the next broadcast is the first status it sees.
+    let fence = Status::error("fence 1");
+    server.publish_status(fence.clone());
+    let msg = expect_recv!(client2, ServerMessage::Status);
+    assert_eq!(msg, fence);
+    let msg = expect_recv!(client1, ServerMessage::Status);
+    assert_eq!(msg, fence);
+
+    // Disconnected and unknown clients are ignored.
+    client1.close().await.expect("Failed to close");
+    assert_eventually(|| server.client_count() == 1).await;
+    server.send_status(client1_id, Status::error("client 1 is gone"));
+    server.send_status(ClientId::from(u32::MAX), Status::error("nobody"));
+    let fence = Status::error("fence 2");
+    server.publish_status(fence.clone());
+    let msg = expect_recv!(client2, ServerMessage::Status);
+    assert_eq!(msg, fence);
+
+    let _ = server.stop();
+}
+
+/// Replies to each client advertisement with an error status sent only to the advertising client.
+#[derive(Default)]
+struct StatusOnAdvertiseListener {
+    server: OnceLock<Weak<Server>>,
+}
+
+impl ServerListener for StatusOnAdvertiseListener {
+    fn on_client_advertise(&self, client: Client, channel: &ClientChannel) {
+        let server = self
+            .server
+            .get()
+            .and_then(Weak::upgrade)
+            .expect("server should be alive");
+        server.send_status(
+            client.id(),
+            Status::error(format!("Advertisement of {} rejected", channel.topic)),
+        );
+    }
+}
+
+#[traced_test]
+#[tokio::test]
+async fn test_send_status_from_client_advertise_callback() {
+    let listener = Arc::new(StatusOnAdvertiseListener::default());
+    let ctx = Context::new();
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            capabilities: Some(IndexSet::from([Capability::ClientPublish])),
+            supported_encodings: Some(IndexSet::from(["json".to_string()])),
+            listener: Some(listener.clone()),
+            ..Default::default()
+        },
+    );
+    listener
+        .server
+        .set(Arc::downgrade(&server))
+        .expect("server should only be set once");
+    let addr = server
+        .start("127.0.0.1", 0)
+        .await
+        .expect("Failed to start server");
+
+    let mut client1 = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
+    let mut client2 = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
+    expect_recv!(client1, ServerMessage::ServerInfo);
+    expect_recv!(client2, ServerMessage::ServerInfo);
+
+    let advertise =
+        client::Advertise::new([client::advertise::Channel::builder(1, "/test", "json")
+            .build()
+            .unwrap()]);
+    client1
+        .send(&advertise)
+        .await
+        .expect("Failed to send advertisement");
+    let msg = expect_recv!(client1, ServerMessage::Status);
+    assert_eq!(msg, Status::error("Advertisement of /test rejected"));
+
+    // client2 didn't receive the status, so the next broadcast is the first status it sees.
+    let fence = Status::error("fence");
+    server.publish_status(fence.clone());
+    let msg = expect_recv!(client2, ServerMessage::Status);
+    assert_eq!(msg, fence);
+
+    let _ = server.stop();
 }
 
 #[traced_test]

@@ -1269,6 +1269,54 @@ pub unsafe extern "C" fn foxglove_gateway_publish_status(
     FoxgloveError::Ok
 }
 
+/// Sends a status message to a single connected participant.
+///
+/// The participant is identified by the `client_id` passed to gateway callbacks. If the client is
+/// unknown or has disconnected, or there is no active session, the status is silently dropped and
+/// this function returns `FOXGLOVE_ERROR_OK`. This is not an error, because a client can
+/// disconnect at any time.
+///
+/// This function may be called from within gateway callbacks, such as `on_client_advertise`.
+///
+/// The caller may optionally provide a message ID, which can be used in a subsequent call to
+/// `foxglove_gateway_remove_status`.
+///
+/// # Safety
+/// - `gateway` must be a valid pointer to a gateway started with `foxglove_gateway_start`.
+/// - `message` must be a valid UTF-8 string, which must remain valid for the duration of this
+///   call.
+/// - `id` must either be NULL, or a pointer to a valid UTF-8 string, which must remain valid for
+///   the duration of this call.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_gateway_send_status(
+    gateway: Option<&FoxgloveGateway>,
+    client_id: u32,
+    level: FoxgloveServerStatusLevel,
+    message: FoxgloveString,
+    id: Option<&FoxgloveString>,
+) -> FoxgloveError {
+    let Some(gateway) = gateway else {
+        return FoxgloveError::ValueError;
+    };
+    let Some(handle) = gateway.as_ref() else {
+        return FoxgloveError::SinkClosed;
+    };
+    let message = unsafe { message.as_utf8_str() };
+    let Ok(message) = message else {
+        return FoxgloveError::Utf8Error;
+    };
+    let id = id.map(|id| unsafe { id.as_utf8_str() }).transpose();
+    let Ok(id) = id else {
+        return FoxgloveError::Utf8Error;
+    };
+    let mut status = foxglove::remote_access::Status::new(level.into(), message);
+    if let Some(id) = id {
+        status = status.with_id(id);
+    }
+    handle.send_status(client_id.into(), status);
+    FoxgloveError::Ok
+}
+
 /// Removes status messages from all connected participants.
 ///
 /// Previously published status messages are referenced by ID.

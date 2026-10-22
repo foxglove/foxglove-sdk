@@ -1,3 +1,8 @@
+import base64
+import json
+import os
+import socket
+import struct
 import time
 import typing
 from urllib.parse import parse_qs, urlparse
@@ -12,7 +17,76 @@ from foxglove import (
     StatusLevel,
     start_server,
 )
-from foxglove.websocket import Capability, PlaybackState, PlaybackStatus
+from foxglove.websocket import (
+    Capability,
+    ChannelView,
+    Client,
+    PlaybackState,
+    PlaybackStatus,
+)
+
+
+def _recv_exact(sock: socket.socket, size: int) -> bytes:
+    buf = b""
+    while len(buf) < size:
+        chunk = sock.recv(size - len(buf))
+        if not chunk:
+            raise ConnectionError("socket closed")
+        buf += chunk
+    return buf
+
+
+def _ws_connect(port: int) -> socket.socket:
+    """Opens a minimal WebSocket client connection using the Foxglove subprotocol."""
+    sock = socket.create_connection(("127.0.0.1", port), timeout=5)
+    key = base64.b64encode(os.urandom(16)).decode()
+    sock.sendall(
+        (
+            "GET / HTTP/1.1\r\n"
+            f"Host: 127.0.0.1:{port}\r\n"
+            "Upgrade: websocket\r\n"
+            "Connection: Upgrade\r\n"
+            f"Sec-WebSocket-Key: {key}\r\n"
+            "Sec-WebSocket-Version: 13\r\n"
+            "Sec-WebSocket-Protocol: foxglove.sdk.v1\r\n"
+            "\r\n"
+        ).encode()
+    )
+    response = b""
+    # Read byte-by-byte so no frame data following the handshake is consumed.
+    while not response.endswith(b"\r\n\r\n"):
+        response += _recv_exact(sock, 1)
+    assert response.startswith(b"HTTP/1.1 101")
+    return sock
+
+
+def _ws_recv_json(sock: socket.socket) -> typing.Any:
+    """Returns the next text frame from the server as JSON, skipping other frames."""
+    while True:
+        b0, b1 = _recv_exact(sock, 2)
+        size = b1 & 0x7F
+        if size == 126:
+            (size,) = struct.unpack("!H", _recv_exact(sock, 2))
+        elif size == 127:
+            (size,) = struct.unpack("!Q", _recv_exact(sock, 8))
+        payload = _recv_exact(sock, size)
+        if b0 & 0x0F == 0x1:
+            return json.loads(payload)
+
+
+def _ws_send_json(sock: socket.socket, message: typing.Any) -> None:
+    payload = json.dumps(message).encode()
+    assert len(payload) < 126
+    mask = os.urandom(4)
+    masked = bytes(b ^ mask[i % 4] for i, b in enumerate(payload))
+    sock.sendall(bytes([0x81, 0x80 | len(payload)]) + mask + masked)
+
+
+def _ws_recv_op(sock: socket.socket, op: str) -> typing.Any:
+    while True:
+        message = _ws_recv_json(sock)
+        if message["op"] == op:
+            return message
 
 
 def test_server_interface() -> None:
@@ -61,6 +135,50 @@ def test_server_interface() -> None:
     server.remove_status(["some-id"])
     server.clear_session("new-session")
     server.stop()
+
+
+def test_send_status_targets_single_client() -> None:
+    """
+    send_status, called from a listener callback, reaches only the given client. Unknown
+    clients and a stopped server are ignored.
+    """
+    ctx = Context()
+    channel = Channel("/test", context=ctx)
+
+    class Listener(ServerListener):
+        def on_subscribe(self, client: Client, channel: ChannelView) -> None:
+            server.send_status(client.id, "rejected", StatusLevel.Warning, "status-id")
+
+    server = start_server(port=0, context=ctx, server_listener=Listener())
+    target = _ws_connect(server.port)
+    bystander = _ws_connect(server.port)
+    try:
+        _ws_send_json(
+            target,
+            {
+                "op": "subscribe",
+                "subscriptions": [{"id": 1, "channelId": channel.id()}],
+            },
+        )
+        assert _ws_recv_op(target, "status") == {
+            "op": "status",
+            "level": 1,
+            "message": "rejected",
+            "id": "status-id",
+        }
+
+        server.send_status(2**32 - 1, "unknown client", StatusLevel.Error)
+
+        # Per-client messages are delivered in order, so the bystander's first status is the
+        # broadcast unless the targeted status was misdelivered.
+        server.publish_status("broadcast", StatusLevel.Info)
+        assert _ws_recv_op(bystander, "status")["message"] == "broadcast"
+    finally:
+        target.close()
+        bystander.close()
+        server.stop()
+
+    server.send_status(0, "stopped", StatusLevel.Info)
 
 
 def test_status_level_enum() -> None:

@@ -621,6 +621,37 @@ impl PyRemoteAccessGateway {
         }
     }
 
+    /// Send a status message to a single connected participant.
+    /// If the client is unknown or has disconnected, or there is no active session, this has no
+    /// effect.
+    ///
+    /// This method may be called from within :py:class:`RemoteAccessListener` callbacks.
+    ///
+    /// :param client_id: The ``id`` of a :py:class:`Client` passed to a listener callback.
+    /// :type client_id: int
+    /// :param message: The message to send.
+    /// :type message: str
+    /// :param level: The level of the status message.
+    /// :type level: StatusLevel
+    /// :param id: An optional ID for the status message.
+    /// :type id: str | None
+    #[pyo3(signature = (client_id, message, level, id=None))]
+    pub fn send_status(
+        &self,
+        client_id: u32,
+        message: String,
+        level: &PyStatusLevel,
+        id: Option<String>,
+    ) {
+        if let Some(handle) = &self.0 {
+            let status = match id {
+                Some(id) => Status::new(level.clone().into(), message).with_id(id),
+                None => Status::new(level.clone().into(), message),
+            };
+            handle.send_status(client_id.into(), status);
+        }
+    }
+
     /// Remove status messages by ID from all connected participants.
     ///
     /// :param ids: The IDs of the status messages to remove.

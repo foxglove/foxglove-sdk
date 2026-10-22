@@ -154,6 +154,16 @@ class RemoteAccessGateway:
         """Publishes a status message to all connected participants."""
         ...
 
+    def send_status(
+        self, client_id: int, message: str, level: StatusLevel, id: str | None = None
+    ) -> None:
+        """
+        Sends a status message to a single connected participant, identified by the ``id`` of a
+        :py:class:`Client`. If the client is unknown or has disconnected, or there is no active
+        session, this has no effect.
+        """
+        ...
+
     def remove_status(self, ids: list[str]) -> None:
         """Removes status messages by ID from all connected participants."""
         ...
