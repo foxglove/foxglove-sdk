@@ -433,6 +433,61 @@ async fn test_advertise_schema_table_deduplicates_schemas() {
 
 #[traced_test]
 #[tokio::test]
+async fn test_clear_session_resends_schema_definition() {
+    let ctx = Context::new();
+    let server = create_server(&ctx, ServerOptions::default());
+    let addr = server
+        .start("127.0.0.1", 0)
+        .await
+        .expect("Failed to start server");
+
+    let schema = Schema::new("A", "jsonschema", br#"{"type":"object"}"#);
+    let ch1 = ChannelBuilder::new("/first")
+        .message_encoding("json")
+        .schema(schema.clone())
+        .context(&ctx)
+        .build_raw()
+        .expect("Failed to create channel");
+
+    let mut client = WebSocketClient::connect_v1_1(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
+    expect_recv!(client, ServerMessage::ServerInfo);
+    let msg = expect_recv!(client, ServerMessage::AdvertiseWithSchemaTable);
+    assert_eq!(msg.schemas.len(), 1);
+    assert_eq!(msg.schemas[0].id, 1);
+    assert_eq!(msg.schemas[0].name, "A");
+    assert_eq!(msg.channels[0].id, u64::from(ch1.id()));
+    assert_eq!(msg.channels[0].schema_id, Some(1));
+
+    server.clear_session(Some("session-2".into()));
+    let info = expect_recv!(client, ServerMessage::ServerInfo);
+    assert_eq!(info.session_id.as_deref(), Some("session-2"));
+
+    let ch2 = ChannelBuilder::new("/second")
+        .message_encoding("json")
+        .schema(schema)
+        .context(&ctx)
+        .build_raw()
+        .expect("Failed to create channel");
+    let msg = expect_recv!(client, ServerMessage::AdvertiseWithSchemaTable);
+    assert_eq!(
+        msg.schemas.len(),
+        1,
+        "the schema is defined again after serverInfo"
+    );
+    assert_eq!(msg.schemas[0].id, 1);
+    assert_eq!(msg.schemas[0].name, "A");
+    assert_eq!(msg.schemas[0].data, r#"{"type":"object"}"#);
+    assert_eq!(msg.channels.len(), 1);
+    assert_eq!(msg.channels[0].id, u64::from(ch2.id()));
+    assert_eq!(msg.channels[0].schema_id, Some(1));
+
+    let _ = server.stop();
+}
+
+#[traced_test]
+#[tokio::test]
 async fn test_advertise_to_client() {
     let recording_listener = Arc::new(RecordingServerListener::new());
 

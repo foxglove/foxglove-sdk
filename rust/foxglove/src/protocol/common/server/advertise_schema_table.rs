@@ -196,8 +196,10 @@ fn schema_digest(name: &str, encoding: &str, data: &str) -> SchemaDigest {
 
 /// The schemas that have already been sent to one client, keyed for deduplication.
 ///
-/// Schema IDs are connection-local, start at 1, and are never reused: entries are never removed,
-/// even when every channel referencing a schema has been unadvertised.
+/// Schema IDs are connection-local and start at 1. Entries stay until [`SchemaTable::clear`],
+/// including after every channel that referenced a schema is unadvertised, so an ID is not reused
+/// until the table is cleared. The server clears the table when it sends `serverInfo`, which is
+/// when the client drops its own table.
 ///
 /// Entries are keyed by a SHA-256 digest of `(name, encoding, encoded data)` rather than by the
 /// schema bytes. The table lives for the whole connection, and the schemas this exists to
@@ -218,6 +220,11 @@ impl SchemaTable {
     /// Returns true if no schemas have been sent yet.
     pub fn is_empty(&self) -> bool {
         self.ids.is_empty()
+    }
+
+    /// Drops every schema. The next advertisement allocates ID 1 again.
+    pub fn clear(&mut self) {
+        self.ids.clear();
     }
 
     /// Returns the ID for a schema, allocating a new one if it has not been seen before.

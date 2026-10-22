@@ -605,14 +605,17 @@ impl Server {
     }
 
     /// Sets a new session ID and notifies all clients, causing them to reset their state.
-    /// If no session ID is provided, generates a new one based on the current timestamp.
+    ///
+    /// Each client's schema table is cleared, and its `serverInfo` is enqueued while that lock
+    /// is held, so a channel advertised afterwards carries its schema again. If no session ID is
+    /// provided, generates a new one based on the current timestamp.
     pub fn clear_session(&self, new_session_id: Option<String>) {
         *self.session_id.write() = new_session_id.unwrap_or_else(Self::generate_session_id);
 
         let message = self.server_info();
         let clients = self.clients.get();
         for client in clients.iter() {
-            client.send_control_msg(&message);
+            client.send_server_info(&message);
         }
     }
 

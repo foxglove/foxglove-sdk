@@ -18,7 +18,7 @@ use crate::{ChannelId, Context, FoxgloveError, Metadata, RawChannel, Sink, SinkI
 
 use self::ws_protocol::server::advertise_schema_table::SchemaTable;
 use self::ws_protocol::server::{
-    FetchAssetResponse, ParameterValues, ServiceCallFailure, Unadvertise,
+    FetchAssetResponse, ParameterValues, ServerInfo, ServiceCallFailure, Unadvertise,
 };
 
 use super::handshake::Subprotocol;
@@ -72,7 +72,8 @@ pub(super) struct ConnectedClient {
     /// Schemas already sent to this client. Only used with [`Subprotocol::V1_1`].
     ///
     /// Held while enqueuing an advertise message, so that a schema's definition is always
-    /// enqueued before any message that references it by ID.
+    /// enqueued before any message that references it by ID. Also held across clearing the
+    /// table and enqueuing `serverInfo`, so an advertisement cannot land between them.
     schema_table: parking_lot::Mutex<SchemaTable>,
     data_plane_tx: flume::Sender<Message>,
     data_plane_rx: flume::Receiver<Message>,
@@ -307,6 +308,17 @@ impl ConnectedClient {
             message.into(),
             retries,
         )
+    }
+
+    /// Clears this client's schema table and enqueues `serverInfo` while holding the table lock.
+    ///
+    /// A client drops its schema table when it receives `serverInfo`. The lock stays held until
+    /// the message is enqueued so a concurrent advertisement cannot be queued with a schema id
+    /// the client no longer knows.
+    pub fn send_server_info(&self, info: &ServerInfo) {
+        let mut schema_table = self.schema_table.lock();
+        schema_table.clear();
+        self.send_control_msg(info);
     }
 
     /// Send the message on the control plane, disconnecting the client if the channel is full.
