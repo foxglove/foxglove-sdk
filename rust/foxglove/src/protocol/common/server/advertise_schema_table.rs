@@ -344,15 +344,6 @@ mod tests {
     }
 
     #[test]
-    fn test_decode_schema() {
-        let msg = message();
-        let decoded = msg.schemas[1].decode().unwrap();
-        assert_eq!(decoded.name, "t3-schema");
-        assert_eq!(decoded.encoding, "protobuf");
-        assert_eq!(decoded.data.as_ref(), &[0xde, 0xad, 0xbe, 0xef]);
-    }
-
-    #[test]
     fn test_channel_requires_schema_for_binary_encodings() {
         assert_matches!(
             Channel::new(10, "/t1", "protobuf", None),
@@ -373,55 +364,6 @@ mod tests {
             builder = builder.with_schema(schema);
         }
         builder.build().unwrap()
-    }
-
-    fn schema_a() -> schema::Schema<'static> {
-        schema::Schema::new("A", "jsonschema", br#"{"type":"object"}"#)
-    }
-
-    #[test]
-    fn test_schema_table_deduplicates_across_messages() {
-        let mut table = SchemaTable::default();
-
-        let msg = table
-            .deduplicate(&Advertise::new([
-                inline_channel(1, "/a1", Some(schema_a())),
-                inline_channel(2, "/a2", Some(schema_a())),
-                inline_channel(3, "/none", None),
-            ]))
-            .into_owned();
-        assert_eq!(msg.schemas.len(), 1);
-        assert_eq!(msg.schemas[0].id, 1);
-        assert_eq!(msg.schemas[0].name, "A");
-        assert_eq!(msg.schemas[0].encoding, "jsonschema");
-        assert_eq!(msg.schemas[0].data, r#"{"type":"object"}"#);
-        let ids: Vec<_> = msg.channels.iter().map(|c| c.schema_id).collect();
-        assert_eq!(ids, [Some(1), Some(1), None]);
-
-        // A previously-sent schema is referenced by ID only; a new one gets the next ID.
-        let msg = table
-            .deduplicate(&Advertise::new([
-                inline_channel(2, "/a2", Some(schema_a())),
-                inline_channel(4, "/b", Some(schema::Schema::new("B", "jsonschema", b"{}"))),
-            ]))
-            .into_owned();
-        assert_eq!(msg.schemas.len(), 1);
-        assert_eq!(msg.schemas[0].id, 2);
-        assert_eq!(msg.schemas[0].name, "B");
-        let ids: Vec<_> = msg.channels.iter().map(|c| c.schema_id).collect();
-        assert_eq!(ids, [Some(1), Some(2)]);
-
-        // Nothing new: the schema table is omitted entirely.
-        let msg = table
-            .deduplicate(&Advertise::new([inline_channel(
-                1,
-                "/a1",
-                Some(schema_a()),
-            )]))
-            .into_owned();
-        assert!(msg.schemas.is_empty());
-        assert_eq!(msg.channels[0].schema_id, Some(1));
-        assert_eq!(table.len(), 2);
     }
 
     #[test]

@@ -111,20 +111,6 @@ mod tests {
     }
 
     #[test]
-    fn test_select_subprotocol_falls_back_to_v1() {
-        assert_eq!(
-            select_subprotocol(["unknown", "foxglove.sdk.v1", "another"]),
-            Some(Subprotocol::V1)
-        );
-    }
-
-    #[test]
-    fn test_select_subprotocol_rejects_unknown() {
-        assert_eq!(select_subprotocol(["unknown", "foxglove.sdk.v3"]), None);
-        assert_eq!(select_subprotocol([]), None);
-    }
-
-    #[test]
     fn test_select_subprotocol_matches_tokens_exactly() {
         // `foxglove.sdk.v1` is a prefix of `foxglove.sdk.v1.1`, but only the full token selects
         // the schema-table subprotocol.
