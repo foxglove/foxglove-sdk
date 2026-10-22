@@ -606,8 +606,8 @@ impl Server {
 
     /// Sets a new session ID and notifies all clients, causing them to reset their state.
     ///
-    /// Each client's schema table is cleared, and its `serverInfo` is enqueued while that lock
-    /// is held, so a channel advertised afterwards carries its schema again. If no session ID is
+    /// Clients that negotiated `foxglove.sdk.v1.1` also reset their schema table, so channels
+    /// advertised after this call carry their schema definitions again. If no session ID is
     /// provided, generates a new one based on the current timestamp.
     pub fn clear_session(&self, new_session_id: Option<String>) {
         *self.session_id.write() = new_session_id.unwrap_or_else(Self::generate_session_id);
