@@ -101,11 +101,14 @@ impl WebSocketServer {
         self
     }
 
-    /// Configure TLS with a PEM-formatted x509 certificate chain and pkcs8 private key.
-    /// If enabled, the server will only accept connections using wss://.
-    /// If TLS configuration fails, starting the server will result in an error.
-    #[doc(hidden)]
+    /// Configure TLS with a PEM-encoded X.509 certificate and PKCS#8 private key.
+    ///
+    /// When set, the server only accepts `wss://` connections. Only the first certificate in the
+    /// PEM data is used, so intermediate certificates are not sent to clients.
+    ///
+    /// If the certificate or key cannot be parsed, starting the server returns an error.
     #[cfg(feature = "websocket-tls")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "websocket-tls")))]
     pub fn tls(mut self, tls_identity: TlsIdentity) -> Self {
         self.options.tls_identity = Some(tls_identity);
         self
