@@ -15,6 +15,17 @@ pub fn livekit_url() -> String {
 ///
 /// The token grants room join access to the specified room.
 pub fn generate_token(room_name: &str, identity: &str) -> Result<String> {
+    generate_token_with_attributes(room_name, identity, std::iter::empty::<(&str, &str)>())
+}
+
+/// Generates a LiveKit access token that also sets participant attributes.
+///
+/// Attributes are present at join, which is when the gateway reads `protocolVersion`.
+pub fn generate_token_with_attributes(
+    room_name: &str,
+    identity: &str,
+    attributes: impl IntoIterator<Item = (impl Into<String>, impl Into<String>)>,
+) -> Result<String> {
     let grants = VideoGrants {
         room_join: true,
         room: room_name.to_string(),
@@ -23,6 +34,7 @@ pub fn generate_token(room_name: &str, identity: &str) -> Result<String> {
     let token = AccessToken::with_api_key(DEV_API_KEY, DEV_API_SECRET)
         .with_identity(identity)
         .with_grants(grants)
+        .with_attributes(attributes)
         .to_jwt()?;
     Ok(token)
 }

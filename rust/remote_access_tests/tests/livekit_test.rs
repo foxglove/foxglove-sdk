@@ -96,6 +96,76 @@ async fn livekit_viewer_receives_channel_advertisement() -> Result<()> {
     Ok(())
 }
 
+/// A viewer at protocol version 2.3.0 receives deduplicated advertisements, and the schema
+/// table built for the initial advertisement is the one later advertisements reuse.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_viewer_2_3_deduplicates_schemas_across_advertisements() -> Result<()> {
+    let ctx = foxglove::Context::new();
+
+    let schema_a = Schema::new("schema-a", "jsonschema", br#"{"type":"object"}"#);
+    let _first = ctx
+        .channel_builder("/first")
+        .message_encoding("json")
+        .schema(schema_a.clone())
+        .build_raw()
+        .context("create first channel")?;
+
+    let gw = TestGateway::start(&ctx).await?;
+    let mut viewer =
+        ViewerConnection::connect_with_protocol_version(&gw.room_name, "viewer-1", "2.3.0").await?;
+
+    let _server_info = viewer.expect_server_info().await?;
+    let initial = viewer.expect_advertise_v2().await?;
+    assert_eq!(
+        initial.schemas.len(),
+        1,
+        "initial advertisement defines the schema"
+    );
+    assert_eq!(initial.schemas[0].id, 1);
+    assert_eq!(initial.schemas[0].name, "schema-a");
+    assert_eq!(initial.schemas[0].encoding, "jsonschema");
+    assert_eq!(initial.schemas[0].data, r#"{"type":"object"}"#);
+    assert_eq!(initial.channels.len(), 1);
+    assert_eq!(initial.channels[0].topic, "/first");
+    assert_eq!(initial.channels[0].schema_id, Some(1));
+
+    let _second = ctx
+        .channel_builder("/second")
+        .message_encoding("json")
+        .schema(Schema::new("schema-b", "jsonschema", b"{}"))
+        .build_raw()
+        .context("create second channel")?;
+    let added = viewer.expect_advertise_v2().await?;
+    assert_eq!(added.schemas.len(), 1);
+    assert_eq!(added.schemas[0].id, 2);
+    assert_eq!(added.schemas[0].name, "schema-b");
+    assert_eq!(added.channels.len(), 1);
+    assert_eq!(added.channels[0].topic, "/second");
+    assert_eq!(added.channels[0].schema_id, Some(2));
+
+    let _third = ctx
+        .channel_builder("/third")
+        .message_encoding("json")
+        .schema(schema_a)
+        .build_raw()
+        .context("create channel reusing schema-a")?;
+    let reused = viewer.expect_advertise_v2().await?;
+    assert!(
+        reused.schemas.is_empty(),
+        "a schema defined in the initial advertisement is not sent again"
+    );
+    assert_eq!(reused.channels.len(), 1);
+    assert_eq!(reused.channels[0].topic, "/third");
+    assert_eq!(reused.channels[0].schema_id, Some(1));
+
+    viewer.close().await?;
+    gw.stop().await?;
+    Ok(())
+}
+
 /// Test the full subscribe-and-receive-data flow: after subscribing to a channel
 /// the viewer receives multiple sequential MessageData frames on the same
 /// per-channel byte stream.

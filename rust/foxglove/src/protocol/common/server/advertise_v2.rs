@@ -1,14 +1,17 @@
-//! Server advertise message types for the `foxglove.sdk.v2` WebSocket subprotocol.
+//! Server advertise message types with a connection-scoped schema table.
 //!
-//! Under this subprotocol, schemas are sent at most once per connection: each `advertise` message
-//! carries a table of newly introduced schemas, and channels refer to schemas by a connection-local
-//! ID rather than inlining the schema data.
+//! Schemas are sent at most once per connection: each `advertise` message carries a table of newly
+//! introduced schemas, and channels refer to schemas by a connection-local ID rather than inlining
+//! the schema data. WebSocket clients receive this form after negotiating the `foxglove.sdk.v2`
+//! subprotocol. Remote access viewers receive it when their advertised protocol version is 2.3.0
+//! or later.
 
 use std::borrow::Cow;
 use std::collections::hash_map::Entry;
 use std::collections::{BTreeMap, HashMap};
 
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 
 use crate::protocol::JsonMessage;
 use crate::protocol::common::server::advertise::Advertise;
@@ -16,7 +19,8 @@ use crate::protocol::schema::{self, DecodeError, EncodeError};
 
 /// Server advertise message with a connection-scoped schema table.
 ///
-/// Sent only on connections that negotiated the `foxglove.sdk.v2` subprotocol.
+/// Sent on WebSocket connections that negotiated `foxglove.sdk.v2`, and to remote access
+/// viewers at protocol version 2.3.0 or later.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "op", rename = "advertise", rename_all = "camelCase")]
 pub struct AdvertiseV2<'a> {
@@ -172,19 +176,37 @@ impl<'a> Channel<'a> {
     }
 }
 
-/// Identifies a schema for deduplication: name, encoding, and protocol-encoded data.
+/// SHA-256 digest of a schema's deduplication key.
+type SchemaDigest = [u8; 32];
+
+/// Digests `(name, encoding, protocol-encoded data)` for [`SchemaTable`].
 ///
-/// The protocol encoding of schema data is deterministic, so comparing encoded data is equivalent
-/// to comparing the raw schema bytes.
-type SchemaKey = (String, String, String);
+/// Each field is length-prefixed so the encoding is unambiguous. The protocol encoding of schema
+/// data is deterministic, so digesting the encoded data is equivalent to digesting the raw bytes
+/// for a given encoding.
+fn schema_digest(name: &str, encoding: &str, data: &str) -> SchemaDigest {
+    let mut hasher = Sha256::new();
+    for field in [name, encoding, data] {
+        let len = u64::try_from(field.len()).expect("schema field length fits in u64");
+        hasher.update(len.to_le_bytes());
+        hasher.update(field.as_bytes());
+    }
+    hasher.finalize().into()
+}
 
 /// The schemas that have already been sent to one client, keyed for deduplication.
 ///
 /// Schema IDs are connection-local, start at 1, and are never reused: entries are never removed,
 /// even when every channel referencing a schema has been unadvertised.
+///
+/// Entries are keyed by a SHA-256 digest of `(name, encoding, encoded data)` rather than by the
+/// schema bytes. The table lives for the whole connection, and the schemas this exists to
+/// deduplicate (protobuf descriptor sets) are large, so retaining them would keep a full extra
+/// copy per client. A lookup hashes the schema in place and stores 32 bytes. A collision would
+/// alias two schemas to one id; SHA-256 makes that negligible for data a connection will see.
 #[derive(Debug, Default)]
 pub struct SchemaTable {
-    ids: HashMap<SchemaKey, u64>,
+    ids: HashMap<SchemaDigest, u64>,
 }
 
 impl SchemaTable {
@@ -202,11 +224,9 @@ impl SchemaTable {
     ///
     /// The boolean is true if the ID was newly allocated.
     fn get_or_insert(&mut self, name: &str, encoding: &str, data: &str) -> (u64, bool) {
+        let digest = schema_digest(name, encoding, data);
         let next_id = self.ids.len() as u64 + 1;
-        match self
-            .ids
-            .entry((name.to_string(), encoding.to_string(), data.to_string()))
-        {
+        match self.ids.entry(digest) {
             Entry::Occupied(entry) => (*entry.get(), false),
             Entry::Vacant(entry) => (*entry.insert(next_id), true),
         }

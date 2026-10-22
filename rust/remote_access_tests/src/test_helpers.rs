@@ -221,19 +221,46 @@ impl ViewerConnection {
     /// byte stream to open. Retries the connection if the gateway hasn't
     /// joined the room yet (no ByteStreamOpened within a short window).
     pub async fn connect(room_name: &str, viewer_identity: &str) -> Result<Self> {
-        Self::connect_with_timeout(room_name, viewer_identity, EVENT_TIMEOUT).await
+        Self::connect_with_timeout(room_name, viewer_identity, EVENT_TIMEOUT, None).await
+    }
+
+    /// Connects a viewer that advertises `protocol_version` as its LiveKit `protocolVersion`
+    /// attribute, so the gateway negotiates the remote access protocol version at join.
+    pub async fn connect_with_protocol_version(
+        room_name: &str,
+        viewer_identity: &str,
+        protocol_version: &str,
+    ) -> Result<Self> {
+        Self::connect_with_timeout(
+            room_name,
+            viewer_identity,
+            EVENT_TIMEOUT,
+            Some(protocol_version),
+        )
+        .await
     }
 
     /// Like [`connect`](Self::connect), but with an explicit overall timeout.
     /// Use [`NETEM_EVENT_TIMEOUT`] for tests running under network impairment.
+    ///
+    /// `protocol_version`, when set, is written into the join token as the `protocolVersion`
+    /// participant attribute.
     pub async fn connect_with_timeout(
         room_name: &str,
         viewer_identity: &str,
         timeout: Duration,
+        protocol_version: Option<&str>,
     ) -> Result<Self> {
         let outer_deadline = tokio::time::Instant::now() + timeout;
         loop {
-            let token = livekit_token::generate_token(room_name, viewer_identity)?;
+            let token = match protocol_version {
+                Some(version) => livekit_token::generate_token_with_attributes(
+                    room_name,
+                    viewer_identity,
+                    [("protocolVersion", version)],
+                )?,
+                None => livekit_token::generate_token(room_name, viewer_identity)?,
+            };
             let connect_result = Room::connect(
                 &livekit_token::livekit_url(),
                 &token,
@@ -327,7 +354,7 @@ impl ViewerConnection {
             // a prior iteration's `close().await` pushed us past the deadline.
             let remaining = deadline.saturating_duration_since(tokio::time::Instant::now());
             let mut viewer =
-                Self::connect_with_timeout(room_name, viewer_identity, remaining).await?;
+                Self::connect_with_timeout(room_name, viewer_identity, remaining, None).await?;
             let startup = async {
                 let server_info = viewer.expect_server_info().await?;
                 let advertise = if expect_advertise {
@@ -372,6 +399,17 @@ impl ViewerConnection {
         match msg {
             ServerMessage::Advertise(adv) => Ok(adv),
             other => anyhow::bail!("expected Advertise, got: {other:?}"),
+        }
+    }
+
+    /// Reads and returns the next deduplicated (protocol version 2.3.0) Advertise message.
+    pub async fn expect_advertise_v2(
+        &mut self,
+    ) -> Result<foxglove::protocol::v2::server::AdvertiseV2<'static>> {
+        let msg = self.frame_reader.next_server_message().await?;
+        match msg {
+            ServerMessage::AdvertiseV2(adv) => Ok(adv),
+            other => anyhow::bail!("expected deduplicated Advertise, got: {other:?}"),
         }
     }
 

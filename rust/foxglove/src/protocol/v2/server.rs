@@ -62,6 +62,7 @@ pub enum ServerMessage<'a> {
     Status(Status),
     RemoveStatus(RemoveStatus),
     Advertise(Advertise<'a>),
+    AdvertiseV2(AdvertiseV2<'a>),
     Unadvertise(Unadvertise),
     MessageData(MessageData<'a>),
     Time(Time),
@@ -117,6 +118,7 @@ impl<'a> ServerMessage<'a> {
             ServerMessage::Status(m) => ServerMessage::Status(m),
             ServerMessage::RemoveStatus(m) => ServerMessage::RemoveStatus(m),
             ServerMessage::Advertise(m) => ServerMessage::Advertise(m.into_owned()),
+            ServerMessage::AdvertiseV2(m) => ServerMessage::AdvertiseV2(m.into_owned()),
             ServerMessage::Unadvertise(m) => ServerMessage::Unadvertise(m),
             ServerMessage::MessageData(m) => ServerMessage::MessageData(m.into_owned()),
             ServerMessage::Time(m) => ServerMessage::Time(m),
@@ -144,7 +146,7 @@ enum JsonMessage<'a> {
     Status(Status),
     RemoveStatus(RemoveStatus),
     #[serde(borrow)]
-    Advertise(Advertise<'a>),
+    Advertise(AnyAdvertise<'a>),
     Unadvertise(Unadvertise),
     ParameterValues(ParameterValues),
     #[serde(borrow)]
@@ -154,13 +156,28 @@ enum JsonMessage<'a> {
     ServiceCallFailure(ServiceCallFailure),
 }
 
+/// The `advertise` op has two shapes. Remote access selects one from the viewer's protocol
+/// version: inline schemas below 2.3.0, and a connection-scoped schema table at 2.3.0 or later.
+///
+/// The inline shape is tried first: its required `schemaName` and `schema` fields are absent from
+/// deduplicated channels, so a deduplicated message never matches it.
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum AnyAdvertise<'a> {
+    #[serde(borrow)]
+    Inline(Advertise<'a>),
+    #[serde(borrow)]
+    Deduplicated(AdvertiseV2<'a>),
+}
+
 impl<'a> From<JsonMessage<'a>> for ServerMessage<'a> {
     fn from(m: JsonMessage<'a>) -> Self {
         match m {
             JsonMessage::ServerInfo(m) => Self::ServerInfo(m),
             JsonMessage::Status(m) => Self::Status(m),
             JsonMessage::RemoveStatus(m) => Self::RemoveStatus(m),
-            JsonMessage::Advertise(m) => Self::Advertise(m),
+            JsonMessage::Advertise(AnyAdvertise::Inline(m)) => Self::Advertise(m),
+            JsonMessage::Advertise(AnyAdvertise::Deduplicated(m)) => Self::AdvertiseV2(m),
             JsonMessage::Unadvertise(m) => Self::Unadvertise(m),
             JsonMessage::ParameterValues(m) => Self::ParameterValues(m),
             JsonMessage::AdvertiseServices(m) => Self::AdvertiseServices(m),
@@ -277,6 +294,41 @@ mod tests {
         let message = Pong::new(b"short");
         let buf = message.to_bytes();
         assert!(ServerMessage::parse_binary(&buf).is_err());
+    }
+
+    #[test]
+    fn test_parse_json_advertise_inline() {
+        let json = r#"{"op":"advertise","channels":[
+            {"id":1,"topic":"/t","encoding":"json","schemaName":"","schema":""}
+        ]}"#;
+        let parsed = ServerMessage::parse_json(json).unwrap();
+        assert_matches!(parsed, ServerMessage::Advertise(msg) => {
+            assert_eq!(msg.channels.len(), 1);
+            assert_eq!(msg.channels[0].topic, "/t");
+        });
+    }
+
+    #[test]
+    fn test_parse_json_advertise_v2() {
+        let json = r#"{"op":"advertise",
+            "schemas":[{"id":1,"name":"S","encoding":"jsonschema","data":"{}"}],
+            "channels":[{"id":1,"topic":"/t","encoding":"json","schemaId":1}]
+        }"#;
+        let parsed = ServerMessage::parse_json(json).unwrap();
+        assert_matches!(parsed, ServerMessage::AdvertiseV2(msg) => {
+            assert_eq!(msg.schemas.len(), 1);
+            assert_eq!(msg.schemas[0].id, 1);
+            assert_eq!(msg.channels[0].schema_id, Some(1));
+        });
+
+        // A deduplicated advertisement whose schemas were all sent previously carries no schema
+        // table.
+        let json = r#"{"op":"advertise","channels":[{"id":1,"topic":"/t","encoding":"json"}]}"#;
+        let parsed = ServerMessage::parse_json(json).unwrap();
+        assert_matches!(parsed, ServerMessage::AdvertiseV2(msg) => {
+            assert!(msg.schemas.is_empty());
+            assert_eq!(msg.channels[0].schema_id, None);
+        });
     }
 
     #[test]
