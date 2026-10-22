@@ -1,8 +1,8 @@
 //! Server messages.
 
 pub mod advertise;
+pub mod advertise_schema_table;
 pub mod advertise_services;
-pub mod advertise_v2;
 pub mod connection_graph_update;
 pub mod fetch_asset_response;
 mod parameter_values;
@@ -19,8 +19,8 @@ mod unadvertise;
 mod unadvertise_services;
 
 pub use advertise::{Advertise, Channel};
+pub use advertise_schema_table::AdvertiseWithSchemaTable;
 pub use advertise_services::AdvertiseServices;
-pub use advertise_v2::AdvertiseV2;
 pub use connection_graph_update::ConnectionGraphUpdate;
 pub use fetch_asset_response::FetchAssetResponse;
 pub use parameter_values::ParameterValues;

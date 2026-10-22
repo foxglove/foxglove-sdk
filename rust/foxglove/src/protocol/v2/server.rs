@@ -9,14 +9,14 @@ mod message_data;
 
 #[allow(unused_imports)]
 pub use crate::protocol::common::server::advertise;
+pub use crate::protocol::common::server::advertise_schema_table;
 pub use crate::protocol::common::server::advertise_services;
-pub use crate::protocol::common::server::advertise_v2;
 pub use crate::protocol::common::server::server_info;
 pub use crate::protocol::common::server::status;
 pub use crate::protocol::common::server::{
-    Advertise, AdvertiseServices, AdvertiseV2, ConnectionGraphUpdate, FetchAssetResponse,
-    ParameterValues, PlaybackState, Pong, RemoveStatus, ServerInfo, ServiceCallFailure,
-    ServiceCallResponse, Status, Time, Unadvertise, UnadvertiseServices,
+    Advertise, AdvertiseServices, AdvertiseWithSchemaTable, ConnectionGraphUpdate,
+    FetchAssetResponse, ParameterValues, PlaybackState, Pong, RemoveStatus, ServerInfo,
+    ServiceCallFailure, ServiceCallResponse, Status, Time, Unadvertise, UnadvertiseServices,
 };
 pub use message_data::MessageData;
 
@@ -62,7 +62,7 @@ pub enum ServerMessage<'a> {
     Status(Status),
     RemoveStatus(RemoveStatus),
     Advertise(Advertise<'a>),
-    AdvertiseV2(AdvertiseV2<'a>),
+    AdvertiseWithSchemaTable(AdvertiseWithSchemaTable<'a>),
     Unadvertise(Unadvertise),
     MessageData(MessageData<'a>),
     Time(Time),
@@ -118,7 +118,9 @@ impl<'a> ServerMessage<'a> {
             ServerMessage::Status(m) => ServerMessage::Status(m),
             ServerMessage::RemoveStatus(m) => ServerMessage::RemoveStatus(m),
             ServerMessage::Advertise(m) => ServerMessage::Advertise(m.into_owned()),
-            ServerMessage::AdvertiseV2(m) => ServerMessage::AdvertiseV2(m.into_owned()),
+            ServerMessage::AdvertiseWithSchemaTable(m) => {
+                ServerMessage::AdvertiseWithSchemaTable(m.into_owned())
+            }
             ServerMessage::Unadvertise(m) => ServerMessage::Unadvertise(m),
             ServerMessage::MessageData(m) => ServerMessage::MessageData(m.into_owned()),
             ServerMessage::Time(m) => ServerMessage::Time(m),
@@ -167,7 +169,7 @@ enum AnyAdvertise<'a> {
     #[serde(borrow)]
     Inline(Advertise<'a>),
     #[serde(borrow)]
-    Deduplicated(AdvertiseV2<'a>),
+    Deduplicated(AdvertiseWithSchemaTable<'a>),
 }
 
 impl<'a> From<JsonMessage<'a>> for ServerMessage<'a> {
@@ -177,7 +179,9 @@ impl<'a> From<JsonMessage<'a>> for ServerMessage<'a> {
             JsonMessage::Status(m) => Self::Status(m),
             JsonMessage::RemoveStatus(m) => Self::RemoveStatus(m),
             JsonMessage::Advertise(AnyAdvertise::Inline(m)) => Self::Advertise(m),
-            JsonMessage::Advertise(AnyAdvertise::Deduplicated(m)) => Self::AdvertiseV2(m),
+            JsonMessage::Advertise(AnyAdvertise::Deduplicated(m)) => {
+                Self::AdvertiseWithSchemaTable(m)
+            }
             JsonMessage::Unadvertise(m) => Self::Unadvertise(m),
             JsonMessage::ParameterValues(m) => Self::ParameterValues(m),
             JsonMessage::AdvertiseServices(m) => Self::AdvertiseServices(m),
@@ -309,13 +313,13 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_json_advertise_v2() {
+    fn test_parse_json_advertise_schema_table() {
         let json = r#"{"op":"advertise",
             "schemas":[{"id":1,"name":"S","encoding":"jsonschema","data":"{}"}],
             "channels":[{"id":1,"topic":"/t","encoding":"json","schemaId":1}]
         }"#;
         let parsed = ServerMessage::parse_json(json).unwrap();
-        assert_matches!(parsed, ServerMessage::AdvertiseV2(msg) => {
+        assert_matches!(parsed, ServerMessage::AdvertiseWithSchemaTable(msg) => {
             assert_eq!(msg.schemas.len(), 1);
             assert_eq!(msg.schemas[0].id, 1);
             assert_eq!(msg.channels[0].schema_id, Some(1));
@@ -325,7 +329,7 @@ mod tests {
         // table.
         let json = r#"{"op":"advertise","channels":[{"id":1,"topic":"/t","encoding":"json"}]}"#;
         let parsed = ServerMessage::parse_json(json).unwrap();
-        assert_matches!(parsed, ServerMessage::AdvertiseV2(msg) => {
+        assert_matches!(parsed, ServerMessage::AdvertiseWithSchemaTable(msg) => {
             assert!(msg.schemas.is_empty());
             assert_eq!(msg.channels[0].schema_id, None);
         });

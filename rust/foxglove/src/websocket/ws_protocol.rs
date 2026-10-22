@@ -20,15 +20,15 @@ pub mod schema {
 
 pub mod server {
     pub use crate::protocol::v1::server::advertise;
+    pub use crate::protocol::v1::server::advertise_schema_table;
     pub use crate::protocol::v1::server::advertise_services;
-    pub use crate::protocol::v1::server::advertise_v2;
     pub use crate::protocol::v1::server::connection_graph_update;
     pub use crate::protocol::v1::server::fetch_asset_response;
     pub use crate::protocol::v1::server::playback_state;
     pub use crate::protocol::v1::server::server_info;
     pub use crate::protocol::v1::server::status;
     pub use crate::protocol::v1::server::{
-        Advertise, AdvertiseServices, AdvertiseV2, Channel, ConnectionGraphUpdate,
+        Advertise, AdvertiseServices, AdvertiseWithSchemaTable, Channel, ConnectionGraphUpdate,
         FetchAssetResponse, MessageData, ParameterValues, PlaybackState, RemoveStatus, ServerInfo,
         ServerMessage, ServiceCallFailure, ServiceCallResponse, Status, Time, Unadvertise,
         UnadvertiseServices,

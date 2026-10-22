@@ -20,8 +20,10 @@ pub(super) const DEFAULT_PROTOCOL_VERSION: semver::Version = semver::Version::ne
 /// The first protocol version in which viewers accept channel advertisements with a
 /// connection-scoped schema table (`schemas` + `schemaId`) instead of inline schemas.
 ///
-/// Remote access has no WebSocket subprotocol to negotiate with, so the participant's advertised
-/// protocol version plays the role that `foxglove.sdk.v2` plays for the WebSocket server.
+/// Remote access has no WebSocket subprotocol. Viewers at this version receive the same
+/// deduplicated advertise JSON that a WebSocket client receives after negotiating
+/// `foxglove.sdk.v1.1`. `foxglove.sdk.v2` is reserved for the remote-access v2 protocol and is not
+/// a WebSocket subprotocol.
 const DEDUPLICATED_SCHEMAS_MIN_VERSION: semver::Version = semver::Version::new(2, 3, 0);
 
 /// Returns true if a participant running `version` accepts channel advertisements with a

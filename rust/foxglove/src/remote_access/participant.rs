@@ -18,7 +18,7 @@ use tokio_util::sync::CancellationToken;
 
 use crate::protocol::v2::server::FetchAssetResponse;
 use crate::protocol::v2::server::advertise::Advertise;
-use crate::protocol::v2::server::advertise_v2::SchemaTable;
+use crate::protocol::v2::server::advertise_schema_table::SchemaTable;
 use crate::remote_access::RemoteAccessError;
 use crate::remote_access::session::{encode_binary_message, encode_json_message};
 use crate::remote_common::ClientId;

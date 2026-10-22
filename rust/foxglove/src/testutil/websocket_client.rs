@@ -11,7 +11,7 @@ use tokio_tungstenite::tungstenite::http::HeaderValue;
 use tokio_tungstenite::tungstenite::{self, Message};
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
 
-use crate::websocket::handshake::{SUBPROTOCOL_V1, SUBPROTOCOL_V2, Subprotocol};
+use crate::websocket::handshake::{SUBPROTOCOL_V1, SUBPROTOCOL_V1_1, Subprotocol};
 
 use crate::ws_protocol::ParseError;
 use crate::ws_protocol::server::ServerMessage;
@@ -36,8 +36,8 @@ pub enum WebSocketClientError {
 
 /// Subprotocols offered by a client that only speaks `foxglove.sdk.v1`.
 const OFFER_V1: &str = SUBPROTOCOL_V1;
-/// Subprotocols offered by a client that prefers `foxglove.sdk.v2` but accepts `foxglove.sdk.v1`.
-const OFFER_V2: &str = "foxglove.sdk.v2, foxglove.sdk.v1";
+/// Subprotocols offered by a client that prefers `foxglove.sdk.v1.1` but accepts `foxglove.sdk.v1`.
+const OFFER_V1_1: &str = "foxglove.sdk.v1.1, foxglove.sdk.v1";
 
 #[doc(hidden)]
 pub struct WebSocketClient {
@@ -87,9 +87,9 @@ impl WebSocketClient {
         Self::connect_with_offer(addr, OFFER_V1).await
     }
 
-    /// Connects to a server, offering both subprotocols with `foxglove.sdk.v2` preferred.
-    pub async fn connect_v2(addr: impl AsRef<str>) -> Result<Self, WebSocketClientError> {
-        Self::connect_with_offer(addr, OFFER_V2).await
+    /// Connects to a server, offering both subprotocols with `foxglove.sdk.v1.1` preferred.
+    pub async fn connect_v1_1(addr: impl AsRef<str>) -> Result<Self, WebSocketClientError> {
+        Self::connect_with_offer(addr, OFFER_V1_1).await
     }
 
     async fn connect_with_offer(
@@ -121,8 +121,8 @@ impl WebSocketClient {
         let header = response.headers().get("sec-websocket-protocol");
         if header == Some(&HeaderValue::from_static(SUBPROTOCOL_V1)) {
             Ok(Subprotocol::V1)
-        } else if header == Some(&HeaderValue::from_static(SUBPROTOCOL_V2)) {
-            Ok(Subprotocol::V2)
+        } else if header == Some(&HeaderValue::from_static(SUBPROTOCOL_V1_1)) {
+            Ok(Subprotocol::V1_1)
         } else {
             Err(WebSocketClientError::InvalidSubprotocol)
         }

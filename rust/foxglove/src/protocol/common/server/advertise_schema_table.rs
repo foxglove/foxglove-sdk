@@ -2,9 +2,9 @@
 //!
 //! Schemas are sent at most once per connection: each `advertise` message carries a table of newly
 //! introduced schemas, and channels refer to schemas by a connection-local ID rather than inlining
-//! the schema data. WebSocket clients receive this form after negotiating the `foxglove.sdk.v2`
-//! subprotocol. Remote access viewers receive it when their advertised protocol version is 2.3.0
-//! or later.
+//! the schema data. WebSocket clients receive this form after negotiating `foxglove.sdk.v1.1`.
+//! Remote access viewers receive it when their advertised protocol version is 2.3.0 or later.
+//! `foxglove.sdk.v2` is not this subprotocol; it is reserved for the remote-access v2 protocol.
 
 use std::borrow::Cow;
 use std::collections::hash_map::Entry;
@@ -19,11 +19,11 @@ use crate::protocol::schema::{self, DecodeError, EncodeError};
 
 /// Server advertise message with a connection-scoped schema table.
 ///
-/// Sent on WebSocket connections that negotiated `foxglove.sdk.v2`, and to remote access
+/// Sent on WebSocket connections that negotiated `foxglove.sdk.v1.1`, and to remote access
 /// viewers at protocol version 2.3.0 or later.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "op", rename = "advertise", rename_all = "camelCase")]
-pub struct AdvertiseV2<'a> {
+pub struct AdvertiseWithSchemaTable<'a> {
     /// Schemas that have not previously been sent on this connection.
     ///
     /// Every schema referenced by [`Channel::schema_id`] is either listed here, or was listed in an
@@ -35,7 +35,7 @@ pub struct AdvertiseV2<'a> {
     pub channels: Vec<Channel<'a>>,
 }
 
-impl<'a> AdvertiseV2<'a> {
+impl<'a> AdvertiseWithSchemaTable<'a> {
     /// Creates a new advertise message.
     pub fn new(
         schemas: impl IntoIterator<Item = Schema<'a>>,
@@ -48,15 +48,15 @@ impl<'a> AdvertiseV2<'a> {
     }
 
     /// Returns an owned version of this message.
-    pub fn into_owned(self) -> AdvertiseV2<'static> {
-        AdvertiseV2 {
+    pub fn into_owned(self) -> AdvertiseWithSchemaTable<'static> {
+        AdvertiseWithSchemaTable {
             schemas: self.schemas.into_iter().map(|s| s.into_owned()).collect(),
             channels: self.channels.into_iter().map(|c| c.into_owned()).collect(),
         }
     }
 }
 
-impl JsonMessage for AdvertiseV2<'_> {}
+impl JsonMessage for AdvertiseWithSchemaTable<'_> {}
 
 /// A schema table entry.
 ///
@@ -237,7 +237,10 @@ impl SchemaTable {
     /// Schemas that have not been sent to this client before are added to the table and listed
     /// in the returned message; channels reference schemas by ID. The caller must enqueue the
     /// returned message before any later message that references the newly allocated IDs.
-    pub fn deduplicate<'a>(&mut self, advertise: &'a Advertise<'_>) -> AdvertiseV2<'a> {
+    pub fn deduplicate<'a>(
+        &mut self,
+        advertise: &'a Advertise<'_>,
+    ) -> AdvertiseWithSchemaTable<'a> {
         let mut schemas = Vec::new();
         let mut channels = Vec::with_capacity(advertise.channels.len());
         for channel in &advertise.channels {
@@ -266,7 +269,7 @@ impl SchemaTable {
                 metadata: channel.metadata.clone(),
             });
         }
-        AdvertiseV2 { schemas, channels }
+        AdvertiseWithSchemaTable { schemas, channels }
     }
 }
 #[cfg(test)]
@@ -274,8 +277,8 @@ mod tests {
     use super::*;
     use assert_matches::assert_matches;
 
-    fn message() -> AdvertiseV2<'static> {
-        AdvertiseV2::new(
+    fn message() -> AdvertiseWithSchemaTable<'static> {
+        AdvertiseWithSchemaTable::new(
             [
                 Schema::new(
                     1,
@@ -309,7 +312,7 @@ mod tests {
 
     #[test]
     fn test_encode_without_schemas() {
-        insta::assert_json_snapshot!(AdvertiseV2::new(
+        insta::assert_json_snapshot!(AdvertiseWithSchemaTable::new(
             [],
             [Channel::new(20, "/t2", "json", Some(1)).unwrap()]
         ));
@@ -319,13 +322,13 @@ mod tests {
     fn test_roundtrip() {
         let orig = message();
         let buf = orig.to_string();
-        let parsed: AdvertiseV2 = serde_json::from_str(&buf).unwrap();
+        let parsed: AdvertiseWithSchemaTable = serde_json::from_str(&buf).unwrap();
         assert_eq!(parsed, orig);
     }
 
     #[test]
     fn test_parse_without_schemas() {
-        let parsed: AdvertiseV2 = serde_json::from_str(
+        let parsed: AdvertiseWithSchemaTable = serde_json::from_str(
             r#"{"op":"advertise","channels":[{"id":20,"topic":"/t2","encoding":"json","schemaId":1}]}"#,
         )
         .unwrap();

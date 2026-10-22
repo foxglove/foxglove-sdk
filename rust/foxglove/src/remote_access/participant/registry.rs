@@ -21,7 +21,7 @@ use tokio_util::sync::CancellationToken;
 
 use super::collection::Participants;
 use super::{Participant, ParticipantWriter};
-use crate::protocol::v2::server::advertise_v2::SchemaTable;
+use crate::protocol::v2::server::advertise_schema_table::SchemaTable;
 
 /// Owns the participant membership state machine: add / remove / lookup, plus
 /// the `pending_resets` channel that lets a flush-task request its own reset.

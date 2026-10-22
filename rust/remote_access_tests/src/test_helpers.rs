@@ -402,13 +402,38 @@ impl ViewerConnection {
         }
     }
 
+    /// Replaces the control-stream reader with the next `control` byte stream the gateway opens.
+    ///
+    /// A participant reset closes the current stream and opens another. `serverInfo` is the first
+    /// message on that stream.
+    pub async fn accept_next_control_stream(&mut self) -> Result<()> {
+        let deadline = tokio::time::Instant::now() + EVENT_TIMEOUT;
+        loop {
+            let event = tokio::time::timeout_at(deadline, self.events.recv())
+                .await
+                .context("timeout waiting for a new control stream")?
+                .context("room events channel closed")?;
+            match event {
+                RoomEvent::ByteStreamOpened { reader, topic, .. } if topic == "control" => {
+                    let reader = reader.take().context("reader already taken")?;
+                    self.frame_reader = FrameReader::new(reader);
+                    return Ok(());
+                }
+                RoomEvent::DataTrackPublished(track) => {
+                    self.pending_data_tracks.push(track);
+                }
+                _ => continue,
+            }
+        }
+    }
+
     /// Reads and returns the next deduplicated (protocol version 2.3.0) Advertise message.
-    pub async fn expect_advertise_v2(
+    pub async fn expect_advertise_schema_table(
         &mut self,
-    ) -> Result<foxglove::protocol::v2::server::AdvertiseV2<'static>> {
+    ) -> Result<foxglove::protocol::v2::server::AdvertiseWithSchemaTable<'static>> {
         let msg = self.frame_reader.next_server_message().await?;
         match msg {
-            ServerMessage::AdvertiseV2(adv) => Ok(adv),
+            ServerMessage::AdvertiseWithSchemaTable(adv) => Ok(adv),
             other => anyhow::bail!("expected deduplicated Advertise, got: {other:?}"),
         }
     }
@@ -909,6 +934,7 @@ pub struct TestGatewayOptions {
     pub qos_classifier: Option<QosClassifierFn>,
     pub suppress_video_transcode: Option<SuppressVideoTranscodeFn>,
     pub max_data_track_message_size: Option<usize>,
+    pub message_backlog_size: Option<usize>,
     pub point_cloud_compression: Option<Option<foxglove::remote_access::PointCloudCompression>>,
 }
 
@@ -998,6 +1024,9 @@ impl TestGateway {
         }
         if let Some(size) = options.max_data_track_message_size {
             gateway = gateway.max_data_track_message_size(size);
+        }
+        if let Some(size) = options.message_backlog_size {
+            gateway = gateway.message_backlog_size(size);
         }
         if let Some(compression) = options.point_cloud_compression {
             gateway = gateway.point_cloud_compression_fn(move |_| compression);

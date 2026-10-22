@@ -39,7 +39,7 @@ use crate::testutil::{
 use crate::testutil::{WebSocketClient, WebSocketClientError};
 #[cfg(feature = "websocket-tls")]
 use crate::websocket::TlsIdentity;
-use crate::websocket::handshake::{SUBPROTOCOL_V1, SUBPROTOCOL_V2, Subprotocol};
+use crate::websocket::handshake::{SUBPROTOCOL_V1, SUBPROTOCOL_V1_1, Subprotocol};
 use crate::websocket::server::{ServerOptions, create_server as do_create_server};
 use crate::websocket::service::{CallId, Service, ServiceSchema};
 use crate::websocket::{
@@ -263,9 +263,10 @@ async fn test_handshake_with_multiple_subprotocols() {
         .into_client_request()
         .expect("Failed to build request");
 
-    // The server prefers v2 regardless of the order in which the client lists subprotocols.
+    // The server prefers foxglove.sdk.v1.1 regardless of the order in which the client lists
+    // subprotocols.
     let mut req1 = request.clone();
-    let header = format!("{SUBPROTOCOL_V1}, {SUBPROTOCOL_V2}");
+    let header = format!("{SUBPROTOCOL_V1}, {SUBPROTOCOL_V1_1}");
     req1.headers_mut().insert(
         "sec-websocket-protocol",
         HeaderValue::from_str(&header).unwrap(),
@@ -277,7 +278,7 @@ async fn test_handshake_with_multiple_subprotocols() {
 
     assert_eq!(
         response.headers().get("sec-websocket-protocol"),
-        Some(&HeaderValue::from_static(SUBPROTOCOL_V2))
+        Some(&HeaderValue::from_static(SUBPROTOCOL_V1_1))
     );
 
     // In req2, the client's preferred (initial) subprotocol is not valid
@@ -297,11 +298,11 @@ async fn test_handshake_with_multiple_subprotocols() {
         Some(&HeaderValue::from_static(SUBPROTOCOL_V1))
     );
 
-    // A client that only speaks v2 is accepted as well.
+    // A client that only offers foxglove.sdk.v1.1 is accepted as well.
     let mut req3 = request.clone();
     req3.headers_mut().insert(
         "sec-websocket-protocol",
-        HeaderValue::from_static(SUBPROTOCOL_V2),
+        HeaderValue::from_static(SUBPROTOCOL_V1_1),
     );
 
     let (_, response) = tokio_tungstenite::connect_async(req3)
@@ -310,7 +311,7 @@ async fn test_handshake_with_multiple_subprotocols() {
 
     assert_eq!(
         response.headers().get("sec-websocket-protocol"),
-        Some(&HeaderValue::from_static(SUBPROTOCOL_V2))
+        Some(&HeaderValue::from_static(SUBPROTOCOL_V1_1))
     );
 
     let _ = server.stop();
@@ -318,7 +319,7 @@ async fn test_handshake_with_multiple_subprotocols() {
 
 #[traced_test]
 #[tokio::test]
-async fn test_advertise_v2_deduplicates_schemas() {
+async fn test_advertise_schema_table_deduplicates_schemas() {
     let ctx = Context::new();
     let server = create_server(&ctx, ServerOptions::default());
     let addr = server
@@ -343,13 +344,13 @@ async fn test_advertise_v2_deduplicates_schemas() {
     let ch_a2 = make_channel("/a2", Some(schema_a.clone()));
     let ch_none = make_channel("/none", None);
 
-    let mut client = WebSocketClient::connect_v2(format!("{addr}"))
+    let mut client = WebSocketClient::connect_v1_1(format!("{addr}"))
         .await
         .expect("Failed to connect");
-    assert_eq!(client.subprotocol(), Subprotocol::V2);
+    assert_eq!(client.subprotocol(), Subprotocol::V1_1);
     expect_recv!(client, ServerMessage::ServerInfo);
 
-    let msg = expect_recv!(client, ServerMessage::AdvertiseV2);
+    let msg = expect_recv!(client, ServerMessage::AdvertiseWithSchemaTable);
     assert_eq!(msg.schemas.len(), 1);
     assert_eq!(msg.schemas[0].id, 1);
     assert_eq!(msg.schemas[0].name, "A");
@@ -364,7 +365,7 @@ async fn test_advertise_v2_deduplicates_schemas() {
 
     // A later channel with an already-sent schema references it without resending it.
     let ch_a3 = make_channel("/a3", Some(schema_a.clone()));
-    let msg = expect_recv!(client, ServerMessage::AdvertiseV2);
+    let msg = expect_recv!(client, ServerMessage::AdvertiseWithSchemaTable);
     assert!(msg.schemas.is_empty());
     assert_eq!(msg.channels.len(), 1);
     assert_eq!(msg.channels[0].id, u64::from(ch_a3.id()));
@@ -372,7 +373,7 @@ async fn test_advertise_v2_deduplicates_schemas() {
 
     // A new schema gets the next connection-local ID, with binary data base64-encoded.
     let ch_b = make_channel("/b", Some(schema_b.clone()));
-    let msg = expect_recv!(client, ServerMessage::AdvertiseV2);
+    let msg = expect_recv!(client, ServerMessage::AdvertiseWithSchemaTable);
     assert_eq!(msg.schemas.len(), 1);
     assert_eq!(msg.schemas[0].id, 2);
     assert_eq!(msg.schemas[0].name, "B");
@@ -386,7 +387,7 @@ async fn test_advertise_v2_deduplicates_schemas() {
     let msg = expect_recv!(client, ServerMessage::Unadvertise);
     assert_eq!(msg.channel_ids, vec![u64::from(ch_b.id())]);
     let ch_b2 = make_channel("/b2", Some(schema_b.clone()));
-    let msg = expect_recv!(client, ServerMessage::AdvertiseV2);
+    let msg = expect_recv!(client, ServerMessage::AdvertiseWithSchemaTable);
     assert!(msg.schemas.is_empty());
     assert_eq!(msg.channels[0].id, u64::from(ch_b2.id()));
     assert_eq!(msg.channels[0].schema_id, Some(2));
@@ -401,11 +402,11 @@ async fn test_advertise_v2_deduplicates_schemas() {
 
     // Schema tables are per connection: a second v2 client starts from ID 1 and receives every
     // schema, while a v1 client still receives inline schemas.
-    let mut client2 = WebSocketClient::connect_v2(format!("{addr}"))
+    let mut client2 = WebSocketClient::connect_v1_1(format!("{addr}"))
         .await
         .expect("Failed to connect");
     expect_recv!(client2, ServerMessage::ServerInfo);
-    let msg = expect_recv!(client2, ServerMessage::AdvertiseV2);
+    let msg = expect_recv!(client2, ServerMessage::AdvertiseWithSchemaTable);
     let mut schema_ids: Vec<_> = msg.schemas.iter().map(|s| s.id).collect();
     schema_ids.sort_unstable();
     assert_eq!(schema_ids, [1, 2]);

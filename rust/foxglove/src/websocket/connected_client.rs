@@ -16,7 +16,7 @@ use crate::websocket::PlaybackControlRequest;
 use crate::websocket::streams::ServerStream;
 use crate::{ChannelId, Context, FoxgloveError, Metadata, RawChannel, Sink, SinkId};
 
-use self::ws_protocol::server::advertise_v2::SchemaTable;
+use self::ws_protocol::server::advertise_schema_table::SchemaTable;
 use self::ws_protocol::server::{
     FetchAssetResponse, ParameterValues, ServiceCallFailure, Unadvertise,
 };
@@ -69,7 +69,7 @@ pub(super) struct ConnectedClient {
     poller: parking_lot::Mutex<Option<Poller>>,
     /// A cache of channels for `on_subscribe` and `on_unsubscribe` callbacks.
     channels: parking_lot::RwLock<HashMap<ChannelId, Arc<RawChannel>>>,
-    /// Schemas already sent to this client. Only used with [`Subprotocol::V2`].
+    /// Schemas already sent to this client. Only used with [`Subprotocol::V1_1`].
     ///
     /// Held while enqueuing an advertise message, so that a schema's definition is always
     /// enqueued before any message that references it by ID.
@@ -830,7 +830,7 @@ impl ConnectedClient {
 
         let sent = match self.subprotocol {
             Subprotocol::V1 => self.send_control_msg(&message),
-            Subprotocol::V2 => {
+            Subprotocol::V1_1 => {
                 // Hold the schema table lock until the message is enqueued, so that concurrent
                 // advertisements cannot reference a schema ID before its definition is sent.
                 let mut schema_table = self.schema_table.lock();

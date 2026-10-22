@@ -118,7 +118,7 @@ async fn livekit_viewer_2_3_deduplicates_schemas_across_advertisements() -> Resu
         ViewerConnection::connect_with_protocol_version(&gw.room_name, "viewer-1", "2.3.0").await?;
 
     let _server_info = viewer.expect_server_info().await?;
-    let initial = viewer.expect_advertise_v2().await?;
+    let initial = viewer.expect_advertise_schema_table().await?;
     assert_eq!(
         initial.schemas.len(),
         1,
@@ -138,7 +138,7 @@ async fn livekit_viewer_2_3_deduplicates_schemas_across_advertisements() -> Resu
         .schema(Schema::new("schema-b", "jsonschema", b"{}"))
         .build_raw()
         .context("create second channel")?;
-    let added = viewer.expect_advertise_v2().await?;
+    let added = viewer.expect_advertise_schema_table().await?;
     assert_eq!(added.schemas.len(), 1);
     assert_eq!(added.schemas[0].id, 2);
     assert_eq!(added.schemas[0].name, "schema-b");
@@ -152,7 +152,7 @@ async fn livekit_viewer_2_3_deduplicates_schemas_across_advertisements() -> Resu
         .schema(schema_a)
         .build_raw()
         .context("create channel reusing schema-a")?;
-    let reused = viewer.expect_advertise_v2().await?;
+    let reused = viewer.expect_advertise_schema_table().await?;
     assert!(
         reused.schemas.is_empty(),
         "a schema defined in the initial advertisement is not sent again"
@@ -160,6 +160,90 @@ async fn livekit_viewer_2_3_deduplicates_schemas_across_advertisements() -> Resu
     assert_eq!(reused.channels.len(), 1);
     assert_eq!(reused.channels[0].topic, "/third");
     assert_eq!(reused.channels[0].schema_id, Some(1));
+
+    viewer.close().await?;
+    gw.stop().await?;
+    Ok(())
+}
+
+/// A participant reset opens a new control stream with a fresh schema table. The session id stays
+/// the same, `serverInfo` is the first message, and schema ids start at 1 again.
+#[traced_test]
+#[ignore]
+#[tokio::test]
+#[serial(livekit)]
+async fn livekit_viewer_2_3_resets_schema_ids_on_new_control_stream() -> Result<()> {
+    let ctx = foxglove::Context::new();
+    let schema_a = Schema::new("schema-a", "jsonschema", br#"{"type":"object"}"#);
+    let schema_b = Schema::new("schema-b", "jsonschema", b"{}");
+    let _first = ctx
+        .channel_builder("/first")
+        .message_encoding("json")
+        .schema(schema_a)
+        .build_raw()
+        .context("create first channel")?;
+
+    // Two queued messages (serverInfo and the initial advertise) fit. A later burst that exceeds
+    // the backlog asks the gateway to reset the participant.
+    let gw = TestGateway::start_with_options(
+        &ctx,
+        TestGatewayOptions {
+            message_backlog_size: Some(2),
+            ..Default::default()
+        },
+    )
+    .await?;
+    let mut viewer =
+        ViewerConnection::connect_with_protocol_version(&gw.room_name, "viewer-1", "2.3.0").await?;
+
+    let server_info = viewer.expect_server_info().await?;
+    let session_id = server_info.session_id.clone();
+    assert!(session_id.is_some(), "session_id should be present");
+    let initial = viewer.expect_advertise_schema_table().await?;
+    assert_eq!(initial.schemas.len(), 1);
+    assert_eq!(initial.schemas[0].id, 1);
+    assert_eq!(initial.schemas[0].name, "schema-a");
+
+    // Advance the table past id 1 so a reset that reused it would not define schema-a again.
+    let _second = ctx
+        .channel_builder("/second")
+        .message_encoding("json")
+        .schema(schema_b)
+        .build_raw()
+        .context("create second channel")?;
+    let added = viewer.expect_advertise_schema_table().await?;
+    assert_eq!(added.schemas.len(), 1);
+    assert_eq!(added.schemas[0].id, 2);
+    assert_eq!(added.schemas[0].name, "schema-b");
+
+    // Queue more control messages than the backlog without yielding, so the flush task cannot
+    // drain them. The message that does not fit requests a participant reset.
+    for index in 0..3 {
+        ctx.channel_builder(format!("/overflow-{index}"))
+            .message_encoding("json")
+            .build_raw()
+            .context("create overflow channel")?;
+    }
+
+    viewer.accept_next_control_stream().await?;
+    let restarted = viewer.expect_server_info().await?;
+    assert_eq!(
+        restarted.session_id, session_id,
+        "a reset keeps the session id and opens a new control stream"
+    );
+    let again = viewer.expect_advertise_schema_table().await?;
+    let mut schema_ids: Vec<_> = again.schemas.iter().map(|schema| schema.id).collect();
+    schema_ids.sort_unstable();
+    assert_eq!(
+        schema_ids,
+        vec![1, 2],
+        "schema ids start at 1 on the new stream"
+    );
+    assert!(
+        again.schemas.iter().any(|schema| schema.name == "schema-a"),
+        "schema-a is defined again; the previous stream's table was not reused"
+    );
+    assert!(again.schemas.iter().any(|schema| schema.name == "schema-b"));
 
     viewer.close().await?;
     gw.stop().await?;

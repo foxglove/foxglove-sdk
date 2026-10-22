@@ -43,8 +43,8 @@ use crate::{
         client::{self, ClientMessage},
         server::{
             AdvertiseServices, MessageData, Pong, RemoveStatus, ServerInfo, ServiceCallFailure,
-            Status, Unadvertise, UnadvertiseServices, advertise, advertise_services,
-            advertise_v2::SchemaTable,
+            Status, Unadvertise, UnadvertiseServices, advertise,
+            advertise_schema_table::SchemaTable, advertise_services,
         },
     },
     remote_access::qos::{QosClassifier, Reliability},
@@ -3401,7 +3401,7 @@ mod tests {
     // ---- channel advertisement tests ----
 
     use crate::protocol::common::schema::Schema as ProtocolSchema;
-    use crate::protocol::v2::server::{Advertise, AdvertiseV2};
+    use crate::protocol::v2::server::{Advertise, AdvertiseWithSchemaTable};
 
     /// Decode a framed JSON control message (see [`recv_json`]) as an inline advertisement.
     fn recv_advertise(rx: &flume::Receiver<Bytes>) -> Advertise<'static> {
@@ -3418,11 +3418,13 @@ mod tests {
     }
 
     /// Decode a framed JSON control message (see [`recv_json`]) as a deduplicated advertisement.
-    fn recv_advertise_v2(rx: &flume::Receiver<Bytes>) -> AdvertiseV2<'static> {
+    fn recv_advertise_schema_table(
+        rx: &flume::Receiver<Bytes>,
+    ) -> AdvertiseWithSchemaTable<'static> {
         let bytes = rx.try_recv().expect("expected control message");
         let (opcode, payload) = split_json_frame(&bytes);
         assert_eq!(opcode, 1, "expected JSON opcode (1), got {opcode}");
-        serde_json::from_slice::<AdvertiseV2>(payload)
+        serde_json::from_slice::<AdvertiseWithSchemaTable>(payload)
             .expect("failed to decode advertise")
             .into_owned()
     }
@@ -3485,7 +3487,7 @@ mod tests {
         for participant in [&alice, &carol] {
             participant.send_advertisement(&first, &inline_encoded);
         }
-        let msg = recv_advertise_v2(&alice_rx);
+        let msg = recv_advertise_schema_table(&alice_rx);
         assert_eq!(msg.schemas.len(), 1);
         assert_eq!(msg.schemas[0].id, 1);
         assert_eq!(msg.schemas[0].name, "A");
@@ -3504,14 +3506,14 @@ mod tests {
         for participant in [&alice, &bob] {
             participant.send_advertisement(&second, &inline_encoded);
         }
-        let msg = recv_advertise_v2(&alice_rx);
+        let msg = recv_advertise_schema_table(&alice_rx);
         assert_eq!(msg.schemas.len(), 1);
         assert_eq!(msg.schemas[0].id, 2);
         assert_eq!(msg.schemas[0].name, "B");
         let ids: Vec<_> = msg.channels.iter().map(|c| c.schema_id).collect();
         assert_eq!(ids, [Some(1), Some(2)]);
 
-        let msg = recv_advertise_v2(&bob_rx);
+        let msg = recv_advertise_schema_table(&bob_rx);
         let mut names: Vec<_> = msg
             .schemas
             .iter()

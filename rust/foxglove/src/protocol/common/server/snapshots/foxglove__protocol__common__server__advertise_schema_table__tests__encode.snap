@@ -1,5 +1,5 @@
 ---
-source: rust/foxglove/src/protocol/common/server/advertise_v2.rs
+source: rust/foxglove/src/protocol/common/server/advertise_schema_table.rs
 expression: message()
 ---
 {
