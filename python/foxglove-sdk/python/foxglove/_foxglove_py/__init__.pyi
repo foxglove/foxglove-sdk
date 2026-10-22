@@ -408,6 +408,8 @@ def start_server(
     channel_filter: SinkChannelFilter | None = None,
     playback_time_range: tuple[int, int] | None = None,
     message_backlog_size: int | None = None,
+    tls_cert: bytes | None = None,
+    tls_key: bytes | None = None,
 ) -> WebSocketServer:
     """
     Start a WebSocket server for live visualization.

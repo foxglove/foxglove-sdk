@@ -385,6 +385,9 @@
 //!   version.
 //! - `websocket`: enables the WebSocket server and client for live visualization. Enabled by
 //!   default.
+//! - `websocket-tls`: enables TLS (`wss://`) for the WebSocket server via
+//!   `WebSocketServer::tls`. Requires `websocket` and a crypto backend; see
+//!   [Crypto backend](#crypto-backend).
 //! - `zstd`: enables support for the zstd compression algorithm for mcap files. Enabled by
 //!   default.
 //!
