@@ -7,7 +7,7 @@ const EWMA_ALPHA: f64 = 0.3;
 pub(super) struct RttTracker {
     label: &'static str,
     first_sample_excluded: bool,
-    /// Most recent raw RTT sample, retained for future stats/diagnostics reporting.
+    /// Most recent raw RTT sample, reported in the gateway stats.
     latest_ms: Option<f64>,
     ewma_ms: Option<f64>,
     ewma_variance: f64,
@@ -52,6 +52,11 @@ impl RttTracker {
         };
 
         debug!("{label} RTT: {rtt_ms:.1}ms | ewma: {ewma:.1}ms | stddev: {std_dev:.1}ms");
+    }
+
+    /// Returns the most recent raw RTT sample, including the one excluded from the EWMA.
+    pub fn latest_ms(&self) -> Option<f64> {
+        self.latest_ms
     }
 }
 

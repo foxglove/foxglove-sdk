@@ -30,6 +30,13 @@
 //! `None` for a channel delivers it untouched. See [`Gateway::point_cloud_compression`] for
 //! details, including the exact list of dropped fields, and [`PointCloudCompressionPolicy`] for the
 //! policy trait.
+//!
+//! # Statistics
+//!
+//! The gateway counts the messages it drops, by cause and by topic, and the viewers it resets.
+//! To publish these counters along with the gateway's connection state, viewer count, and link
+//! quality on a channel in the gateway's context, enable [`Gateway::stats`]. See
+//! [`StatsOptions`] for the published fields.
 
 mod capability;
 mod channel_registry;
@@ -47,6 +54,7 @@ mod rtt_tracker;
 pub mod service;
 mod session;
 mod sse;
+mod stats;
 mod suppress_video_transcode;
 mod watch;
 mod watch_loop;
@@ -63,6 +71,7 @@ pub use gateway::{Gateway, GatewayHandle, VideoEncoderBackend};
 pub use listener::Listener;
 pub use point_cloud_compression::{PointCloudCompression, PointCloudCompressionPolicy};
 pub use qos::{QosClassifier, QosProfile, QosProfileBuilder, Reliability};
+pub use stats::{DEFAULT_STATS_INTERVAL, DEFAULT_STATS_TOPIC, StatsOptions};
 pub use suppress_video_transcode::SuppressVideoTranscode;
 
 use reqwest::StatusCode;

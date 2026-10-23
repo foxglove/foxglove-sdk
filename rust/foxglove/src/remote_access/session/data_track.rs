@@ -2,12 +2,15 @@ use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
-use livekit::prelude::{DataTrackFrame, LocalDataTrack, LocalParticipant, PublishError};
+use livekit::prelude::{
+    DataTrackFrame, LocalDataTrack, LocalParticipant, PublishError, PushFrameErrorReason,
+};
 use tokio::runtime::Handle;
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, warn};
 
+use crate::remote_access::stats::TopicCounters;
 use crate::{ChannelId, Metadata};
 
 const FRAME_HEADER_SIZE: usize = 8; // u16 LE flags + u16 LE data_offset + u32 LE sequence
@@ -51,6 +54,8 @@ pub(crate) struct DataTrack {
     oversized_dropped: AtomicU64,
     /// Throttles warnings emitted when oversized messages are dropped.
     oversized_throttler: parking_lot::Mutex<crate::throttler::Throttler>,
+    /// Gateway-lifetime drop counters for the channel's topic.
+    counters: TopicCounters,
 }
 
 impl DataTrack {
@@ -69,6 +74,7 @@ impl DataTrack {
         channel_id: ChannelId,
         session_cancel: CancellationToken,
         max_message_size: usize,
+        counters: TopicCounters,
     ) -> Self {
         let track = Arc::new(OnceLock::new());
         let track_clone = Arc::clone(&track);
@@ -130,14 +136,17 @@ impl DataTrack {
             oversized_throttler: parking_lot::Mutex::new(crate::throttler::Throttler::new(
                 OVERSIZED_WARN_INTERVAL,
             )),
+            counters,
         }
     }
 
     /// Build a sequenced frame and push it to the data track.
     ///
     /// Drops the message (with a throttled warning) if it exceeds
-    /// [`max_message_size`](Self::max_message_size), or with a throttled debug
-    /// log if the track is not ready or full.
+    /// [`max_message_size`](Self::max_message_size), with a throttled
+    /// gateway-wide warning if the track's send queue is full, or with a
+    /// throttled debug log if the track is not published. Every drop is counted
+    /// in the gateway stats.
     ///
     /// Returns `Err(OversizedDropReport)` only when an oversized-drop warning
     /// fires. All other delivered or dropped messages return `Ok(())`.
@@ -148,6 +157,7 @@ impl DataTrack {
         metadata: &Metadata,
     ) -> Result<(), OversizedDropReport> {
         if msg.len() > self.max_message_size {
+            self.counters.record_oversized_drop();
             if self.oversized_throttler.lock().try_acquire() {
                 let dropped = 1 + self.oversized_dropped.swap(0, Ordering::Relaxed);
                 warn!(
@@ -165,6 +175,7 @@ impl DataTrack {
             return Ok(());
         }
         let Some(track) = self.track.get() else {
+            self.counters.record_data_track_not_ready_drop();
             if self.drop_throttler.lock().try_acquire() {
                 debug!("data track not ready, dropping message for channel {channel_id:?}");
             }
@@ -180,10 +191,25 @@ impl DataTrack {
         payload.extend_from_slice(&seq.to_le_bytes());
         payload.extend_from_slice(msg);
         let frame = DataTrackFrame::new(payload).with_user_timestamp(metadata.log_time);
-        if let Err(e) = track.try_push(frame)
-            && self.drop_throttler.lock().try_acquire()
-        {
-            debug!("data track message dropped for channel {channel_id:?}: {e:?}");
+        if let Err(e) = track.try_push(frame) {
+            match e.reason() {
+                // LiveKit also reports a full queue while the track is being republished.
+                PushFrameErrorReason::QueueFull => {
+                    if let Some(total) = self.counters.record_data_track_full_drop() {
+                        warn!(
+                            "data track send queue full, dropping message on channel \
+                             {channel_id:?} ({total} dropped across all channels since \
+                             the gateway started)"
+                        );
+                    }
+                }
+                PushFrameErrorReason::TrackUnpublished => {
+                    self.counters.record_data_track_not_ready_drop();
+                    if self.drop_throttler.lock().try_acquire() {
+                        debug!("data track message dropped for channel {channel_id:?}: {e:?}");
+                    }
+                }
+            }
         }
         Ok(())
     }
@@ -217,11 +243,13 @@ impl Drop for DataTrack {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::remote_access::stats::GatewayCounters;
 
     impl DataTrack {
-        /// Builds a `DataTrack` with no live LiveKit track, so the size gate in
-        /// [`log`](Self::log) can be exercised without a room or participant.
-        fn for_test(max_message_size: usize) -> Self {
+        /// Builds a `DataTrack` with no live LiveKit track, so the size gate and
+        /// not-ready path in [`log`](Self::log) can be exercised without a room or
+        /// participant.
+        fn for_test(max_message_size: usize, counters: TopicCounters) -> Self {
             Self {
                 track: Arc::new(OnceLock::new()),
                 close: CancellationToken::new(),
@@ -235,13 +263,15 @@ mod tests {
                 oversized_throttler: parking_lot::Mutex::new(crate::throttler::Throttler::new(
                     OVERSIZED_WARN_INTERVAL,
                 )),
+                counters,
             }
         }
     }
 
     #[test]
     fn drops_oversized_message_and_counts_it() {
-        let track = DataTrack::for_test(16);
+        let counters = Arc::new(GatewayCounters::default());
+        let track = DataTrack::for_test(16, counters.for_topic("/topic"));
         let channel_id = ChannelId::new(1);
         let metadata = Metadata::default();
 
@@ -263,5 +293,13 @@ mod tests {
         // An at-limit message takes the normal path: no report, not counted.
         assert_eq!(track.log(channel_id, &[0u8; 16], &metadata), Ok(()));
         assert_eq!(track.oversized_dropped(), 1);
+
+        // The stats counter is cumulative and is not reset by the warning. The
+        // at-limit message was dropped only because the track is not published.
+        let stats = counters.to_json();
+        assert_eq!(stats["oversized"], 2);
+        assert_eq!(stats["data_track_not_ready"], 1);
+        assert_eq!(stats["topics"][0]["topic"], "/topic");
+        assert_eq!(stats["topics"][0]["oversized"], 2);
     }
 }

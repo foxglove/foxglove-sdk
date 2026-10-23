@@ -9,6 +9,8 @@ use tracing::warn;
 use crate::ChannelId;
 use crate::remote_access::point_cloud_compression::PointCloudCompressionConfig;
 use crate::remote_access::point_cloud_transcode::transcode_point_cloud_message;
+use crate::remote_access::session::send_head_drop;
+use crate::remote_access::stats::TopicCounters;
 
 use super::RemoteAccessSession;
 
@@ -27,6 +29,8 @@ use super::RemoteAccessSession;
 pub(crate) struct PointCloudPublisher {
     tx: flume::Sender<(Bytes, u64)>,
     rx: flume::Receiver<(Bytes, u64)>,
+    /// Gateway-lifetime drop counters for the channel's topic.
+    counters: TopicCounters,
 }
 
 impl PointCloudPublisher {
@@ -43,6 +47,7 @@ impl PointCloudPublisher {
         channel_id: ChannelId,
         topic: String,
         config: PointCloudCompressionConfig,
+        counters: TopicCounters,
     ) -> Self {
         let (tx, rx) = flume::bounded::<(Bytes, u64)>(Self::CHANNEL_CAPACITY);
         let consumer_rx = rx.clone();
@@ -88,24 +93,18 @@ impl PointCloudPublisher {
                 }
             }
         });
-        Self { tx, rx }
+        Self { tx, rx, counters }
     }
 
     /// Send a message for transcoding. Non-blocking: if the channel is full, the oldest
-    /// message is dropped to make room (head-drop for minimal latency on live data).
+    /// message is dropped to make room (head-drop for minimal latency on live data), and
+    /// counted in the gateway stats.
     ///
     /// `log_time` is the message log time in nanoseconds since epoch.
     pub fn send(&self, data: Bytes, log_time: u64) {
-        let msg = (data, log_time);
-        match self.tx.try_send(msg) {
-            Ok(()) => {}
-            Err(flume::TrySendError::Full(msg)) => {
-                let _ = self.rx.try_recv();
-                let _ = self.tx.try_send(msg);
-            }
-            Err(flume::TrySendError::Disconnected(_)) => {
-                warn!("point cloud publisher channel closed");
-            }
+        match send_head_drop(&self.tx, &self.rx, (data, log_time)) {
+            Ok(dropped) => self.counters.record_point_cloud_queue_drops(dropped),
+            Err(_) => warn!("point cloud publisher channel closed"),
         }
     }
 }
