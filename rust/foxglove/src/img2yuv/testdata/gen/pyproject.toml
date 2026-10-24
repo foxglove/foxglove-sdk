@@ -6,5 +6,5 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "numpy>=2.3.3",
-    "pillow>=11.3.0",
+    "pillow>=13.0.0",
 ]
