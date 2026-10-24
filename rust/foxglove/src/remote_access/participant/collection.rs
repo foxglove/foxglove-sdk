@@ -123,6 +123,7 @@ mod tests {
         Arc::new(Participant::new(
             identity,
             sid,
+            None,
             tx,
             pending_resets,
             reset_notify,

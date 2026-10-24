@@ -21,6 +21,7 @@ use tokio_util::sync::CancellationToken;
 
 use super::collection::Participants;
 use super::{Participant, ParticipantWriter};
+use crate::protocol::v2::server::advertise_schema_table::SchemaTable;
 
 /// Owns the participant membership state machine: add / remove / lookup, plus
 /// the `pending_resets` channel that lets a flush-task request its own reset.
@@ -70,6 +71,10 @@ impl ParticipantRegistry {
     /// epoch) for this connection instance — it disambiguates two
     /// same-identity registrations independently of arrival order.
     ///
+    /// `schema_table` is the per-connection schema table used to build the
+    /// channel advertisements in `initial_messages`, or `None` if the viewer
+    /// requires inline schemas; see [`Participant::send_advertisement`].
+    ///
     /// `session_cancel` is the session's cancellation token; the spawned
     /// flush-task takes a child of it so the task exits on session close.
     ///
@@ -110,6 +115,7 @@ impl ParticipantRegistry {
         id: ParticipantIdentity,
         participant_sid: ParticipantSid,
         joined_at: i64,
+        schema_table: Option<SchemaTable>,
         writer: ParticipantWriter,
         session_cancel: &CancellationToken,
         initial_messages: I,
@@ -121,6 +127,7 @@ impl ParticipantRegistry {
             id,
             participant_sid,
             joined_at,
+            schema_table,
             writer,
             self.message_backlog_size,
             self.pending_resets.clone(),
@@ -295,6 +302,7 @@ mod tests {
             id.clone(),
             sid.clone(),
             1_000,
+            None,
             test_writer(),
             &cancel,
             [],
@@ -319,7 +327,15 @@ mod tests {
 
         assert!(
             registry
-                .register_participant(id.clone(), sid_1.clone(), 1_000, test_writer(), &cancel, [],)
+                .register_participant(
+                    id.clone(),
+                    sid_1.clone(),
+                    1_000,
+                    None,
+                    test_writer(),
+                    &cancel,
+                    [],
+                )
                 .is_none()
         );
         let original = registry.get_participant(&id).expect("first present");
@@ -327,7 +343,15 @@ mod tests {
         drop(original);
 
         let prior = registry
-            .register_participant(id.clone(), sid_2.clone(), 2_000, test_writer(), &cancel, [])
+            .register_participant(
+                id.clone(),
+                sid_2.clone(),
+                2_000,
+                None,
+                test_writer(),
+                &cancel,
+                [],
+            )
             .expect("prior registration must be returned for cleanup");
         assert_eq!(prior.client_id(), original_client_id);
         assert_eq!(prior.participant_sid(), &sid_1);
@@ -349,7 +373,15 @@ mod tests {
 
         assert!(
             registry
-                .register_participant(id.clone(), sid.clone(), 1_000, test_writer(), &cancel, [],)
+                .register_participant(
+                    id.clone(),
+                    sid.clone(),
+                    1_000,
+                    None,
+                    test_writer(),
+                    &cancel,
+                    [],
+                )
                 .is_none()
         );
         let original = registry.get_participant(&id).expect("first present");
@@ -360,6 +392,7 @@ mod tests {
             id.clone(),
             sid.clone(),
             1_000,
+            None,
             test_writer(),
             &cancel,
             [],
@@ -405,7 +438,15 @@ mod tests {
         // Step 1: attempt 1 joins.
         assert!(
             registry
-                .register_participant(id.clone(), sid_1.clone(), 1_000, test_writer(), &cancel, [],)
+                .register_participant(
+                    id.clone(),
+                    sid_1.clone(),
+                    1_000,
+                    None,
+                    test_writer(),
+                    &cancel,
+                    [],
+                )
                 .is_none()
         );
         let attempt_1 = registry.get_participant(&id).expect("attempt 1 present");
@@ -421,7 +462,15 @@ mod tests {
         assert!(registry.remove_participant(&sid_1).is_some());
         assert!(
             registry
-                .register_participant(id.clone(), sid_2.clone(), 2_000, test_writer(), &cancel, [],)
+                .register_participant(
+                    id.clone(),
+                    sid_2.clone(),
+                    2_000,
+                    None,
+                    test_writer(),
+                    &cancel,
+                    [],
+                )
                 .is_none()
         );
 
@@ -477,6 +526,7 @@ mod tests {
             id.clone(),
             sid_1.clone(),
             1_000,
+            None,
             test_writer(),
             &cancel,
             [],
@@ -491,7 +541,15 @@ mod tests {
         // `register_participant` for the new instance; the registry must
         // atomically replace the prior registration and return it.
         let prior = registry
-            .register_participant(id.clone(), sid_2.clone(), 2_000, test_writer(), &cancel, [])
+            .register_participant(
+                id.clone(),
+                sid_2.clone(),
+                2_000,
+                None,
+                test_writer(),
+                &cancel,
+                [],
+            )
             .expect("prior registration must be returned for cleanup");
         assert_eq!(prior.participant_sid(), &sid_1);
         assert_eq!(prior.client_id(), client_id_1);
@@ -528,6 +586,7 @@ mod tests {
                     id.clone(),
                     sid_new.clone(),
                     2_000,
+                    None,
                     test_writer(),
                     &cancel,
                     [],
@@ -545,6 +604,7 @@ mod tests {
             id.clone(),
             sid_old.clone(),
             1_000,
+            None,
             test_writer(),
             &cancel,
             [],
@@ -583,6 +643,7 @@ mod tests {
             id.clone(),
             sid_1.clone(),
             1_000,
+            None,
             test_writer(),
             &cancel,
             [],
@@ -593,6 +654,7 @@ mod tests {
             id.clone(),
             sid_2.clone(),
             1_000,
+            None,
             test_writer(),
             &cancel,
             [],
@@ -614,6 +676,7 @@ mod tests {
             id.clone(),
             sid_3.clone(),
             2_000,
+            None,
             test_writer(),
             &cancel,
             [],

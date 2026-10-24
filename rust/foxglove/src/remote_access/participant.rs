@@ -5,6 +5,7 @@ mod registry;
 
 pub(super) use registry::ParticipantRegistry;
 
+use std::cell::OnceCell;
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -16,8 +17,10 @@ use livekit::{
 use tokio_util::sync::CancellationToken;
 
 use crate::protocol::v2::server::FetchAssetResponse;
+use crate::protocol::v2::server::advertise::Advertise;
+use crate::protocol::v2::server::advertise_schema_table::SchemaTable;
 use crate::remote_access::RemoteAccessError;
-use crate::remote_access::session::encode_binary_message;
+use crate::remote_access::session::{encode_binary_message, encode_json_message};
 use crate::remote_common::ClientId;
 use crate::remote_common::semaphore::Semaphore;
 
@@ -54,6 +57,14 @@ pub(super) struct Participant {
     /// Per-participant control plane queue. The receiving end is owned by the
     /// flush-task.
     control_tx: flume::Sender<Bytes>,
+    /// Schemas already sent to this participant, for viewers whose protocol version accepts
+    /// channel advertisements with a schema table instead of inline schemas. `None` for
+    /// viewers that require inline schemas.
+    ///
+    /// Scoped to this connection instance: a reconnect creates a new `Participant` and starts
+    /// over with an empty table, matching the viewer, which discards its table on every
+    /// transport open.
+    schema_table: Option<parking_lot::Mutex<SchemaTable>>,
     /// Shared set of `ParticipantSid`s pending a reset. Inserting into this
     /// set and notifying is how we signal `handle_room_events` to disconnect
     /// us. Keyed by `ParticipantSid` (unique per physical connection) rather
@@ -86,6 +97,10 @@ impl Participant {
     /// the per-participant cancellation token fires (queue overflow or session
     /// shutdown) or when all `control_tx` senders are dropped.
     ///
+    /// `schema_table` is the table used to build any advertisements already queued for this
+    /// participant (see [`Participant::send_advertisement`]), or `None` if the viewer requires
+    /// inline schemas.
+    ///
     /// Returns the participant (wrapped in `Arc` for shared ownership) and the
     /// flush-task's `JoinHandle` (for teardown awaiting).
     #[allow(clippy::too_many_arguments)]
@@ -93,6 +108,7 @@ impl Participant {
         identity: ParticipantIdentity,
         participant_sid: ParticipantSid,
         joined_at: i64,
+        schema_table: Option<SchemaTable>,
         writer: ParticipantWriter,
         queue_size: usize,
         pending_resets: Arc<parking_lot::Mutex<HashSet<ParticipantSid>>>,
@@ -143,6 +159,7 @@ impl Participant {
             participant_sid,
             joined_at,
             control_tx,
+            schema_table: schema_table.map(parking_lot::Mutex::new),
             pending_resets,
             reset_notify,
             cancel,
@@ -164,6 +181,7 @@ impl Participant {
     pub fn new(
         identity: ParticipantIdentity,
         participant_sid: ParticipantSid,
+        schema_table: Option<SchemaTable>,
         control_tx: flume::Sender<Bytes>,
         pending_resets: Arc<parking_lot::Mutex<HashSet<ParticipantSid>>>,
         reset_notify: Arc<tokio::sync::Notify>,
@@ -175,6 +193,7 @@ impl Participant {
             participant_sid,
             joined_at: 0,
             control_tx,
+            schema_table: schema_table.map(parking_lot::Mutex::new),
             pending_resets,
             reset_notify,
             cancel,
@@ -263,6 +282,31 @@ impl Participant {
                 .lock()
                 .insert(self.participant_sid.clone());
             self.reset_notify.notify_one();
+        }
+    }
+
+    /// Queue a channel advertisement in the shape this participant's protocol version accepts.
+    ///
+    /// `advertise` carries inline schemas. Viewers that accept a schema table receive it
+    /// deduplicated against the schemas already sent on this connection; the table lock is held
+    /// until the message is queued, so a schema's definition always precedes any reference to its
+    /// ID. Other viewers receive `inline_encoded`, which is initialized on first use so that a
+    /// broadcast serializes the inline form at most once.
+    pub(super) fn send_advertisement(
+        &self,
+        advertise: &Advertise<'_>,
+        inline_encoded: &OnceCell<Bytes>,
+    ) {
+        match &self.schema_table {
+            Some(schema_table) => {
+                let mut schema_table = schema_table.lock();
+                let deduplicated = schema_table.deduplicate(advertise);
+                self.send_control(encode_json_message(&deduplicated));
+            }
+            None => {
+                let encoded = inline_encoded.get_or_init(|| encode_json_message(advertise));
+                self.send_control(encoded.clone());
+            }
         }
     }
 

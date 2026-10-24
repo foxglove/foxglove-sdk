@@ -1,3 +1,4 @@
+use std::cell::OnceCell;
 use std::collections::HashMap;
 use std::sync::{Arc, Weak};
 use std::time::Duration;
@@ -42,7 +43,8 @@ use crate::{
         client::{self, ClientMessage},
         server::{
             AdvertiseServices, MessageData, Pong, RemoveStatus, ServerInfo, ServiceCallFailure,
-            Status, Unadvertise, UnadvertiseServices, advertise, advertise_services,
+            Status, Unadvertise, UnadvertiseServices, advertise,
+            advertise_schema_table::SchemaTable, advertise_services,
         },
     },
     remote_access::qos::{QosClassifier, Reliability},
@@ -521,7 +523,7 @@ impl Sink for RemoteAccessSession {
             ids
         };
 
-        self.broadcast_control(encode_json_message(&advertise_msg));
+        self.broadcast_advertisement(&advertise_msg);
 
         // Eagerly publish a data track for each newly advertised channel.
         self.publish_data_tracks(&advertised_channel_ids);
@@ -1562,11 +1564,16 @@ impl RemoteAccessSession {
     /// `on_client_unadvertise` callbacks fire). This handles the case where
     /// LiveKit emits the reconnect's `ParticipantActive` *before* the
     /// prior instance's `ParticipantDisconnected`.
+    ///
+    /// `protocol_version` is the participant's validated remote access protocol version; it
+    /// selects whether channel advertisements carry inline schemas or a per-connection schema
+    /// table.
     pub(super) async fn add_participant(
         self: &Arc<Self>,
         participant_id: ParticipantIdentity,
         participant_sid: ParticipantSid,
         joined_at: i64,
+        protocol_version: &semver::Version,
     ) -> Result<(), Box<RemoteAccessError>> {
         // Gate on the registry *before* opening the stream: `stream_bytes`
         // is an RPC that should not be wasted on an already-registered
@@ -1610,8 +1617,14 @@ impl RemoteAccessSession {
         // participant's control-plane channel before inserting the
         // participant into state, so these are the first bytes the viewer
         // receives.
+        //
+        // The schema table used for the initial advertisement becomes the
+        // participant's table, so later advertisements only carry schemas it
+        // has not yet received.
+        let mut schema_table = protocol_version::supports_deduplicated_schemas(protocol_version)
+            .then(SchemaTable::default);
         let mut initial_messages = vec![encode_json_message(&self.server_info)];
-        initial_messages.extend(self.encode_channel_advertisements());
+        initial_messages.extend(self.encode_channel_advertisements(schema_table.as_mut()));
         initial_messages.extend(self.encode_service_advertisements());
 
         info!(
@@ -1626,6 +1639,7 @@ impl RemoteAccessSession {
             participant_id.clone(),
             participant_sid.clone(),
             joined_at,
+            schema_table,
             ParticipantWriter::Livekit(stream),
             &self.cancellation_token,
             initial_messages,
@@ -1836,7 +1850,7 @@ impl RemoteAccessSession {
                     "participant active in room"
                 );
                 if let Err(e) = self
-                    .add_participant(participant_identity, sid, joined_at)
+                    .add_participant(participant_identity, sid, joined_at, &version)
                     .await
                 {
                     error!(remote_access_session_id, error = %e, "failed to add participant: {e}");
@@ -2108,7 +2122,10 @@ impl RemoteAccessSession {
             version = %version,
             "resetting participant after control-plane failure",
         );
-        if let Err(e) = self.add_participant(participant_id, sid, joined_at).await {
+        if let Err(e) = self
+            .add_participant(participant_id, sid, joined_at, &version)
+            .await
+        {
             error!(
                 remote_access_session_id,
                 error = %e,
@@ -2177,7 +2194,13 @@ impl RemoteAccessSession {
 
     /// Returns the currently-cached channel advertisements encoded as a single
     /// framed control-plane message, or `None` if no channels are advertised.
-    fn encode_channel_advertisements(&self) -> Option<Bytes> {
+    ///
+    /// With a `schema_table`, schemas are deduplicated against (and recorded in) the table;
+    /// otherwise they are inlined into each channel.
+    fn encode_channel_advertisements(
+        &self,
+        schema_table: Option<&mut SchemaTable>,
+    ) -> Option<Bytes> {
         let state = self.channel_registry.read();
         let msg = state.with_channels(|channels| {
             let msg = advertise::advertise_channels(channels.values());
@@ -2189,7 +2212,19 @@ impl RemoteAccessSession {
             state.rewrite_point_cloud_advertisements(&mut msg);
             Some(msg)
         })??;
-        Some(encode_json_message(&msg))
+        match schema_table {
+            Some(schema_table) => Some(encode_json_message(&schema_table.deduplicate(&msg))),
+            None => Some(encode_json_message(&msg)),
+        }
+    }
+
+    /// Enqueue a channel advertisement for all currently connected participants, in the shape
+    /// each participant's protocol version accepts.
+    fn broadcast_advertisement(&self, advertise: &advertise::Advertise<'_>) {
+        let inline_encoded = OnceCell::new();
+        for participant in self.participant_registry.collect_participants() {
+            participant.send_advertisement(advertise, &inline_encoded);
+        }
     }
 
     /// Returns the currently-cached service advertisements encoded as a single
@@ -2656,7 +2691,7 @@ impl RemoteAccessSession {
         };
 
         if let Some(Some(msg)) = advertise_msg {
-            self.broadcast_control(encode_json_message(&msg));
+            self.broadcast_advertisement(&msg);
         }
     }
 
@@ -2930,6 +2965,13 @@ mod tests {
     }
 
     fn make_participant_with_rx(name: &str) -> (Arc<Participant>, flume::Receiver<Bytes>) {
+        make_participant_with_schema_table(name, None)
+    }
+
+    fn make_participant_with_schema_table(
+        name: &str,
+        schema_table: Option<SchemaTable>,
+    ) -> (Arc<Participant>, flume::Receiver<Bytes>) {
         use std::sync::atomic::{AtomicUsize, Ordering};
         static COUNTER: AtomicUsize = AtomicUsize::new(0);
         let n = COUNTER.fetch_add(1, Ordering::Relaxed);
@@ -2942,6 +2984,7 @@ mod tests {
         let participant = Arc::new(Participant::new(
             identity,
             sid,
+            schema_table,
             tx,
             pending_resets,
             reset_notify,
@@ -3164,6 +3207,7 @@ mod tests {
             ParticipantIdentity("test".to_string()),
             test_sid("flush-test"),
             0,
+            None,
             ParticipantWriter::Test(writer.clone()),
             DEFAULT_MESSAGE_BACKLOG_SIZE,
             pending_resets,
@@ -3262,6 +3306,7 @@ mod tests {
             ParticipantIdentity("test-viewer".to_string()),
             sid.clone(),
             0,
+            None,
             ParticipantWriter::Test(writer),
             DEFAULT_MESSAGE_BACKLOG_SIZE,
             pending_resets.clone(),
@@ -3302,6 +3347,7 @@ mod tests {
         let participant = Participant::new(
             ParticipantIdentity("alice".to_string()),
             crate::remote_access::participant::test_sid("alice"),
+            None,
             tx,
             pending_resets,
             reset_notify,
@@ -3350,6 +3396,137 @@ mod tests {
         let len = u32::from_le_bytes([bytes[1], bytes[2], bytes[3], bytes[4]]) as usize;
         let payload = &bytes[5..5 + len];
         serde_json::from_slice(payload).expect("failed to decode control msg payload")
+    }
+
+    // ---- channel advertisement tests ----
+
+    use crate::protocol::common::schema::Schema as ProtocolSchema;
+    use crate::protocol::v2::server::{Advertise, AdvertiseWithSchemaTable};
+
+    /// Decode a framed JSON control message (see [`recv_json`]) as an inline advertisement.
+    fn recv_advertise(rx: &flume::Receiver<Bytes>) -> Advertise<'static> {
+        let bytes = rx.try_recv().expect("expected control message");
+        decode_advertise(&bytes)
+    }
+
+    fn decode_advertise(bytes: &Bytes) -> Advertise<'static> {
+        let (opcode, payload) = split_json_frame(bytes);
+        assert_eq!(opcode, 1, "expected JSON opcode (1), got {opcode}");
+        serde_json::from_slice::<Advertise>(payload)
+            .expect("failed to decode advertise")
+            .into_owned()
+    }
+
+    /// Decode a framed JSON control message (see [`recv_json`]) as a deduplicated advertisement.
+    fn recv_advertise_schema_table(
+        rx: &flume::Receiver<Bytes>,
+    ) -> AdvertiseWithSchemaTable<'static> {
+        let bytes = rx.try_recv().expect("expected control message");
+        let (opcode, payload) = split_json_frame(&bytes);
+        assert_eq!(opcode, 1, "expected JSON opcode (1), got {opcode}");
+        serde_json::from_slice::<AdvertiseWithSchemaTable>(payload)
+            .expect("failed to decode advertise")
+            .into_owned()
+    }
+
+    fn split_json_frame(bytes: &[u8]) -> (u8, &[u8]) {
+        let len = u32::from_le_bytes([bytes[1], bytes[2], bytes[3], bytes[4]]) as usize;
+        (bytes[0], &bytes[5..5 + len])
+    }
+
+    fn inline_advertisement(
+        channels: &[(u64, &'static str, Option<Schema>)],
+    ) -> Advertise<'static> {
+        Advertise::new(channels.iter().map(|(id, topic, schema)| {
+            let mut builder = advertise::Channel::builder(*id, *topic, "json");
+            if let Some(schema) = schema {
+                builder = builder.with_schema(ProtocolSchema::new(
+                    schema.name.clone(),
+                    schema.encoding.clone(),
+                    schema.data.clone(),
+                ));
+            }
+            builder.build().unwrap()
+        }))
+    }
+
+    #[test]
+    fn send_advertisement_inlines_schemas_without_schema_table() {
+        let (participant, rx) = make_participant_with_rx("alice");
+        let schema = Schema::new("A", "jsonschema", b"{}");
+        let advertise = inline_advertisement(&[(1, "/a", Some(schema))]);
+
+        let inline_encoded = OnceCell::new();
+        participant.send_advertisement(&advertise, &inline_encoded);
+
+        // The pre-encoded inline form is what gets queued, byte for byte.
+        let msg = rx.try_recv().unwrap();
+        assert_eq!(msg, encode_json_message(&advertise));
+        assert_eq!(inline_encoded.get(), Some(&msg));
+        let parsed = decode_advertise(&msg);
+        assert_eq!(parsed.channels[0].schema_name, "A");
+        assert_eq!(parsed.channels[0].schema, "{}");
+    }
+
+    #[test]
+    fn send_advertisement_deduplicates_schemas_per_participant() {
+        let (alice, alice_rx) =
+            make_participant_with_schema_table("alice", Some(SchemaTable::default()));
+        let (bob, bob_rx) = make_participant_with_schema_table("bob", Some(SchemaTable::default()));
+        let (carol, carol_rx) = make_participant_with_rx("carol");
+        let schema_a = Schema::new("A", "jsonschema", b"{}");
+        let schema_b = Schema::new("B", "jsonschema", b"{}");
+
+        // First broadcast: Alice receives the schema table; Carol receives inline schemas.
+        let first = inline_advertisement(&[
+            (1, "/a1", Some(schema_a.clone())),
+            (2, "/a2", Some(schema_a.clone())),
+            (3, "/none", None),
+        ]);
+        let inline_encoded = OnceCell::new();
+        for participant in [&alice, &carol] {
+            participant.send_advertisement(&first, &inline_encoded);
+        }
+        let msg = recv_advertise_schema_table(&alice_rx);
+        assert_eq!(msg.schemas.len(), 1);
+        assert_eq!(msg.schemas[0].id, 1);
+        assert_eq!(msg.schemas[0].name, "A");
+        let ids: Vec<_> = msg.channels.iter().map(|c| c.schema_id).collect();
+        assert_eq!(ids, [Some(1), Some(1), None]);
+        let msg = recv_advertise(&carol_rx);
+        assert_eq!(msg.channels[0].schema_name, "A");
+
+        // Second broadcast: Alice only receives the new schema; Bob, who joined later with his
+        // own table, receives both schemas with IDs allocated from 1 on his connection.
+        let second = inline_advertisement(&[
+            (4, "/a3", Some(schema_a.clone())),
+            (5, "/b", Some(schema_b.clone())),
+        ]);
+        let inline_encoded = OnceCell::new();
+        for participant in [&alice, &bob] {
+            participant.send_advertisement(&second, &inline_encoded);
+        }
+        let msg = recv_advertise_schema_table(&alice_rx);
+        assert_eq!(msg.schemas.len(), 1);
+        assert_eq!(msg.schemas[0].id, 2);
+        assert_eq!(msg.schemas[0].name, "B");
+        let ids: Vec<_> = msg.channels.iter().map(|c| c.schema_id).collect();
+        assert_eq!(ids, [Some(1), Some(2)]);
+
+        let msg = recv_advertise_schema_table(&bob_rx);
+        let mut names: Vec<_> = msg
+            .schemas
+            .iter()
+            .map(|s| (s.id, s.name.as_ref()))
+            .collect();
+        names.sort();
+        assert_eq!(names, [(1, "A"), (2, "B")]);
+        let ids: Vec<_> = msg.channels.iter().map(|c| c.schema_id).collect();
+        assert_eq!(ids, [Some(1), Some(2)]);
+
+        // No inline encoding was needed for this broadcast.
+        assert!(inline_encoded.get().is_none());
+        assert!(carol_rx.try_recv().is_err());
     }
 
     #[test]
