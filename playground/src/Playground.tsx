@@ -100,7 +100,7 @@ export function Playground(): React.JSX.Element {
         },
   );
   const [ready, setReady] = useState(false);
-  const [mcapFilename, setMcapFilename] = useState<string | undefined>();
+  const [mcapFilenames, setMcapFilenames] = useState<string[]>([]);
   const [dataSource, setDataSource] = useState<DataSource | undefined>();
   const layoutInputRef = useRef<HTMLInputElement>(null);
 
@@ -111,7 +111,7 @@ export function Playground(): React.JSX.Element {
       setReady(true);
     });
     runner.on("run-completed", (value) => {
-      setMcapFilename(value);
+      setMcapFilenames(value);
     });
     runner.on("set-layout", (layoutJson) => {
       try {
@@ -145,8 +145,12 @@ export function Playground(): React.JSX.Element {
       await runner.run(code, window.location.href);
 
       try {
-        const { name, data } = await runner.readFile();
-        setDataSource({ type: "file", file: new File([data], name) });
+        const files = await runner.readFiles();
+        setDataSource({
+          type: "file",
+          file: files.map(({ name, data }) => new File([data], name)),
+          compare: files.length > 1,
+        });
       } catch (err) {
         toast.error(`Run failed: ${String(err)}`);
       }
@@ -210,20 +214,22 @@ export function Playground(): React.JSX.Element {
       return;
     }
     try {
-      const { name, data } = await runner.readFile();
+      const files = await runner.readFiles();
 
-      const link = document.createElement("a");
-      link.style.display = "none";
-      document.body.appendChild(link);
+      for (const { name, data } of files) {
+        const link = document.createElement("a");
+        link.style.display = "none";
+        document.body.appendChild(link);
 
-      const url = URL.createObjectURL(new Blob([data], { type: "application/octet-stream" }));
-      link.setAttribute("download", name);
-      link.setAttribute("href", url);
-      link.click();
-      requestAnimationFrame(() => {
-        link.remove();
-        URL.revokeObjectURL(url);
-      });
+        const url = URL.createObjectURL(new Blob([data], { type: "application/octet-stream" }));
+        link.setAttribute("download", name);
+        link.setAttribute("href", url);
+        link.click();
+        requestAnimationFrame(() => {
+          link.remove();
+          URL.revokeObjectURL(url);
+        });
+      }
     } catch (err) {
       toast.error(`Download failed: ${String(err)}`);
     }
@@ -256,8 +262,8 @@ export function Playground(): React.JSX.Element {
             Foxglove SDK Playground
           </Typography>
           <div className={classes.controls}>
-            {mcapFilename && (
-              <Tooltip title={`Download ${mcapFilename}`}>
+            {mcapFilenames.length > 0 && (
+              <Tooltip title={`Download ${new Intl.ListFormat("en-US").format(mcapFilenames)}`}>
                 <IconButton onClick={() => void download()}>
                   <DocumentDownload />
                 </IconButton>
