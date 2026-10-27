@@ -6,7 +6,7 @@
 set -euo pipefail
 
 for attempt in 1 2 3; do
-  if sudo apt-get update && sudo apt-get install -y "$@"; then
+  if sudo apt-get update --error-on=any && sudo apt-get install -y "$@"; then
     exit 0
   fi
   if [ "$attempt" -eq 3 ]; then
