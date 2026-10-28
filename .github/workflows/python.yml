@@ -391,7 +391,10 @@ jobs:
 
       - name: Install NASM
         if: ${{ matrix.platform.target == 'x86_64' }}
-        uses: ilammy/setup-nasm@v1
+        shell: pwsh
+        run: |
+          choco install nasm --version 2.16.01 --no-progress -y
+          echo "C:\Program Files\NASM" | Out-File -FilePath $env:GITHUB_PATH -Append
 
       - name: Download sdist
         uses: actions/download-artifact@v8
