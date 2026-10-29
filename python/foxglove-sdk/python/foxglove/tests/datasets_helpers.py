@@ -31,6 +31,7 @@ class Page:
                 yield {
                     "has_missing_recordings": False,
                     "episode": {
+                        "version": 2,
                         "id": episode_id,
                         "start_time": datetime(2026, 1, 1, tzinfo=timezone.utc),
                         "end_time": datetime(2026, 1, 2, tzinfo=timezone.utc),
@@ -66,11 +67,13 @@ class Client:
         self,
         *,
         episode_id: str,
+        episode_version: int,
         topics: list[str],
         decoder_factories: list[DecoderFactory] | None = None,
         start: datetime | None = None,
         end: datetime | None = None,
     ) -> Generator[tuple[Schema | None, Channel, Message, Any], None, None]:
+        assert episode_version == 2
         assert decoder_factories is None
         self.calls.append((episode_id, topics))
         self.time_ranges.append((start, end))
@@ -180,6 +183,7 @@ def plan_client(recordings: Any) -> MagicMock:
             [
                 {
                     "episode": {
+                        "version": 2,
                         "id": "episode",
                         "start_time": START,
                         "end_time": START,

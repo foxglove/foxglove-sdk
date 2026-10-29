@@ -81,6 +81,8 @@ def test_real_client_pagination_filtering_and_incremental_mcap(
                         "addedAt": stamp,
                         "addedInVersion": 7,
                         "episode": {
+                            "version": 2,
+                            "latestVersion": 3,
                             "id": "b" if cursor else "a",
                             "projectId": "project",
                             "startTime": stamp,
@@ -96,6 +98,7 @@ def test_real_client_pagination_filtering_and_incremental_mcap(
         elif url.endswith("/data/stream"):
             assert kwargs["json"]["topics"] == ["/camera"]
             assert kwargs["json"]["episodeId"] == "a"
+            assert kwargs["json"]["episodeVersion"] == 2
             if lookback:
                 assert datetime.fromisoformat(kwargs["json"]["start"]) == datetime(
                     2025, 12, 31, 23, 59, 55, tzinfo=timezone.utc
@@ -210,6 +213,8 @@ def test_real_client_object_storage_locations_and_cursor_pagination(
                         "addedAt": stamp,
                         "addedInVersion": 7,
                         "episode": {
+                            "version": 2,
+                            "latestVersion": 3,
                             "id": "a" if cursor else "b",
                             "projectId": "project",
                             "startTime": stamp,
@@ -278,3 +283,169 @@ def test_real_client_object_storage_locations_and_cursor_pagination(
     assert store.locations == [locations[1], locations[0]]
     assert all(file.closed for file in store.files)
     assert len(calls) == planning_requests == 3
+
+
+@pytest.mark.parametrize("edit", ["window", "recordings"])
+@pytest.mark.parametrize("lookback", [timedelta(0), timedelta(seconds=5)])
+def test_committed_dataset_streams_pinned_episode_after_edits(
+    monkeypatch: pytest.MonkeyPatch, edit: str, lookback: timedelta
+) -> None:
+    import pickle
+
+    import requests
+
+    from .datasets_helpers import START, START_NS, mcap_bytes
+
+    committed_end = START + timedelta(seconds=256)
+    snapshots: dict[int, dict[str, Any]] = {
+        1: {"end": committed_end, "recording": "original"}
+    }
+    latest_version = 1
+    committed_version: int | None = None
+    requests_seen: list[dict[str, Any]] = []
+    streams: dict[str, bytes] = {}
+    recordings: dict[str, list[tuple[str, int, Any]]] = {
+        "original": [
+            ("/camera", index * 1_000_000_000, index) for index in range(-5, 257)
+        ]
+        + [("/other", 0, "unselected")],
+        "replacement": [
+            ("/camera", index * 1_000_000_000, 1000 + index) for index in range(157)
+        ],
+    }
+    stamp = START.isoformat()
+    dataset_version = {
+        "versionNumber": 7,
+        "committedAt": stamp,
+        "createdAt": stamp,
+        "episodeCount": 1,
+        "addedEpisodeCount": 1,
+        "removedEpisodeCount": 0,
+    }
+
+    def request(
+        session: requests.Session, method: str, url: str, **kwargs: Any
+    ) -> requests.Response:
+        nonlocal latest_version, committed_version
+        response = requests.Response()
+        response.status_code = 200
+        response.url = url
+        payload: dict[str, Any]
+        if url in streams:
+            response.raw = io.BytesIO(streams[url])
+            return response
+        if url.endswith("/commit"):
+            assert method.upper() == "POST"
+            committed_version = latest_version
+            payload = {"committed": dataset_version, "editableVersionNumber": 8}
+        elif url.endswith("/v1/episodes"):
+            assert method.upper() == "PATCH"
+            change = kwargs["json"]["episodes"][0]
+            assert change["id"] == "episode"
+            snapshot = dict(snapshots[latest_version])
+            if "endTime" in change:
+                snapshot["end"] = datetime.fromisoformat(change["endTime"])
+            if "recordings" in change:
+                assert change["recordings"] == {
+                    "add": ["replacement"],
+                    "remove": ["original"],
+                }
+                snapshot["recording"] = "replacement"
+            latest_version += 1
+            snapshots[latest_version] = snapshot
+            payload = {"episodes": [{"id": "episode", "version": latest_version}]}
+        elif url.endswith("/episodes"):
+            assert committed_version is not None
+            snapshot = snapshots[committed_version]
+            payload = {
+                "episodes": [
+                    {
+                        "addedAt": stamp,
+                        "addedInVersion": 7,
+                        "episode": {
+                            "id": "episode",
+                            "projectId": "project",
+                            "version": committed_version,
+                            "latestVersion": latest_version,
+                            "startTime": stamp,
+                            "endTime": snapshot["end"].isoformat(),
+                            "metadata": {"recording": snapshot["recording"]},
+                            "createdAt": stamp,
+                        },
+                    }
+                ]
+            }
+        elif url.endswith("/data/stream"):
+            params = kwargs["json"]
+            requests_seen.append(params)
+            snapshot = snapshots[params.get("episodeVersion", latest_version)]
+            start = (
+                datetime.fromisoformat(params["start"]) if "start" in params else START
+            )
+            end = (
+                datetime.fromisoformat(params["end"])
+                if "end" in params
+                else snapshot["end"]
+            )
+            selected = [
+                message
+                for message in recordings[snapshot["recording"]]
+                if message[0] in params["topics"]
+                and start <= START + timedelta(microseconds=message[1] // 1000) <= end
+            ]
+            link = f"https://signed.example/{len(streams)}"
+            streams[link] = mcap_bytes(selected)
+            payload = {"link": link}
+        else:
+            assert committed_version is not None
+            payload = dataset_version
+        response._content = json.dumps(payload).encode()
+        return response
+
+    monkeypatch.setattr(requests.Session, "request", request)
+
+    def make_client() -> Any:
+        return client_module.Client(token="test")
+
+    client = make_client()
+    client.commit_dataset(dataset_id="dataset")
+    plan = _plan("dataset", 7, ["/camera", "/other"], make_client)
+    change: dict[str, Any] = {"id": "episode"}
+    if edit == "window":
+        change["end_time"] = START + timedelta(seconds=156)
+    else:
+        change["recordings"] = {"add": ["replacement"], "remove": ["original"]}
+    client.update_episodes(episodes=[change])
+
+    def samples(reader: EpisodeReader) -> Iterator[int]:
+        assert reader.start_time == START
+        assert reader.end_time == committed_end
+        assert reader.metadata == {"recording": "original"}
+        for _, channel, message, decoded in reader.iter_messages(
+            topics=["/camera"], lookback=lookback
+        ):
+            assert channel.topic == "/camera"
+            assert message.log_time == START_NS + decoded * 1_000_000_000
+            if message.log_time >= START_NS:
+                yield decoded
+
+    for _epoch in range(2):
+        # Episode snapshots must retain their pin when transported to workers.
+        episodes = pickle.loads(pickle.dumps(plan.episodes))
+        assert list(plan.read(episodes, samples)) == list(range(257))
+    replanned = _plan("dataset", 7, ["/camera"], make_client)
+    assert list(replanned.read(replanned.episodes, samples)) == list(range(257))
+    assert all(params["episodeVersion"] == 1 for params in requests_seen)
+    assert all(params["topics"] == ["/camera"] for params in requests_seen)
+    if lookback:
+        assert all(
+            datetime.fromisoformat(params["start"]) == START - lookback
+            for params in requests_seen
+        )
+    latest_values = [
+        decoded
+        for _, _, _, decoded in client.iter_messages(
+            episode_id="episode", topics=["/camera"]
+        )
+    ]
+    assert latest_values == list(range(157) if edit == "window" else range(1000, 1157))

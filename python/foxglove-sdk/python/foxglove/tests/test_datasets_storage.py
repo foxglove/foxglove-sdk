@@ -125,6 +125,7 @@ def test_lookback_and_repeated_streams_open_fresh_files() -> None:
         START + timedelta(seconds=2),
         {},
         (LOCATION,),
+        version=2,
     )
     reader = EpisodeReader(episode, ("/selected",), None, store)
 
@@ -148,7 +149,12 @@ def test_cancellation_closes_all_split_recordings() -> None:
     data = mcap_bytes([("/selected", 0, 1), ("/selected", 1, 2)])
     store = Store({LOCATION: data, second: data})
     episode = _Episode(
-        "episode", START, START + timedelta(seconds=1), {}, (LOCATION, second)
+        "episode",
+        START,
+        START + timedelta(seconds=1),
+        {},
+        (LOCATION, second),
+        version=2,
     )
     reader = EpisodeReader(episode, ("/selected",), None, store)
     stream = reader.iter_messages(decoder_factories=[JsonDecoder()])
@@ -430,7 +436,12 @@ def test_episode_ids_stay_consistent_across_topic_streams(
         }
     )
     episode = _Episode(
-        "episode", START, START + timedelta(microseconds=1), {}, (LOCATION, second)
+        "episode",
+        START,
+        START + timedelta(microseconds=1),
+        {},
+        (LOCATION, second),
+        version=2,
     )
     reader = EpisodeReader(episode, ("/a", "/b"), None, store)
     factory = CachingDecoder()
