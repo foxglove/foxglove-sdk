@@ -215,3 +215,39 @@ def test_reader_rejects_invalid_topic_subset(topics: Any) -> None:
     with pytest.raises(ValueError, match="topics"):
         next(reader.iter_messages(topics=topics))
     assert not client.calls
+
+
+def test_older_client_cannot_stream_latest_in_place_of_pin(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def iter_messages(
+        *, episode_id: str, topics: list[str], decoder_factories: Any = None
+    ) -> Any:
+        raise AssertionError("An unsupported client must not open a stream")
+
+    client = Client()
+    monkeypatch.setattr(client, "iter_messages", iter_messages)
+    plan = _plan("dataset", 7, ["/camera"], lambda: client)
+    with pytest.raises(RuntimeError) as error:
+        list(plan.read(plan.episodes, samples))
+    assert isinstance(error.value.__cause__, RuntimeError)
+    assert "episode_version support; upgrade foxglove-client" in str(
+        error.value.__cause__
+    )
+
+
+def test_missing_episode_pin_does_not_fall_back_to_latest(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    original = Page.auto_paging_iter
+
+    def unversioned(page: Page) -> Iterator[dict[str, Any]]:
+        for entry in original(page):
+            del entry["episode"]["version"]
+            yield entry
+
+    monkeypatch.setattr(Page, "auto_paging_iter", unversioned)
+    with pytest.raises(
+        ValueError, match="pinned episode versions; upgrade foxglove-client"
+    ):
+        _plan("dataset", 7, ["/camera"], Client)

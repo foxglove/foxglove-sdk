@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from collections.abc import Callable, Generator, Iterable, Iterator, Mapping, Sequence
 from contextlib import ExitStack
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any, Literal, Protocol, TypeVar, cast
 
@@ -50,6 +50,7 @@ class _Client(Protocol):
         self,
         *,
         episode_id: str,
+        episode_version: int,
         topics: list[str],
         decoder_factories: list[DecoderFactory] | None = None,
         start: datetime | None = None,
@@ -75,6 +76,7 @@ class _Episode:
     start_time: datetime
     end_time: datetime
     locations: tuple[ObjectLocation, ...] = ()
+    version: int = field(kw_only=True)
 
 
 class EpisodeReader:
@@ -183,14 +185,23 @@ class EpisodeReader:
             if lookback
             else {}
         )
-        stream = self._client.iter_messages(
-            episode_id=self.id,
-            topics=list(selected_topics),
-            decoder_factories=(
-                None if decoder_factories is None else list(decoder_factories)
-            ),
-            **time_range,
-        )
+        try:
+            stream = self._client.iter_messages(
+                episode_id=self.id,
+                episode_version=self._episode.version,
+                topics=list(selected_topics),
+                decoder_factories=(
+                    None if decoder_factories is None else list(decoder_factories)
+                ),
+                **time_range,
+            )
+        except TypeError as error:
+            if "episode_version" in str(error):
+                raise RuntimeError(
+                    "Dataset streaming requires a foxglove-client version with "
+                    "episode_version support; upgrade foxglove-client"
+                ) from error
+            raise
         yield from self._manage(stream)
 
     def _manage(self, stream: Generator[_T, None, None]) -> Generator[_T, None, None]:
@@ -312,6 +323,11 @@ def _plan(
     )
     for entry in page.auto_paging_iter():
         episode = entry["episode"]
+        if "version" not in episode:
+            raise ValueError(
+                "Dataset membership must include pinned episode versions; "
+                "upgrade foxglove-client"
+            )
         if entry.get("has_missing_recordings", False):
             raise ValueError(f"Episode {episode['id']} contains missing recordings")
         episodes.append(
@@ -324,6 +340,7 @@ def _plan(
                     if make_store is not None
                     else ()
                 ),
+                version=episode["version"],
             )
         )
     # Make rank/worker partitioning independent of pagination order and sort ties.

@@ -476,17 +476,18 @@ wheels = [
 
 [[package]]
 name = "foxglove-client"
-version = "0.21.1"
+version = "0.23.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "arrow" },
+    { name = "certifi" },
     { name = "mcap" },
     { name = "requests" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e8/ed/3edc96a993d4fc64c6262b8199afb253414c734170df7c55849b6e8b31b5/foxglove_client-0.21.1.tar.gz", hash = "sha256:08bcc0d4f7107bbb8b8ea6cccb5ff0819fba0ba15331f0060b14827fa7b3b4a3", size = 35646, upload-time = "2026-10-09T22:50:59.581Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/a3/ee/cdae183bebdbd8e0d665cf0b7a4e4d40cef78e13a0f16891b9f9718be155/foxglove_client-0.23.0.tar.gz", hash = "sha256:8bcb68406fdbf583280434c2729041a2adcc0348a86eb81a5016a3d7a1f8e67c", size = 54885, upload-time = "2026-11-04T19:34:45.952Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a8/1f/16bc6f472d73fcf2c90b877abbf4dcc1e16871a10b97826acdd3ab90881f/foxglove_client-0.21.1-py3-none-any.whl", hash = "sha256:ed4126de5c877f355c8d94d035cfb45236d1a68b07b57715d9ea3a09cbddda55", size = 20897, upload-time = "2026-10-09T22:50:58.127Z" },
+    { url = "https://files.pythonhosted.org/packages/c6/78/77d6d9ddc01a8d8b41ca077df90e460e31088e946a35f8eaa4e038b06b96/foxglove_client-0.23.0-py3-none-any.whl", hash = "sha256:6a9e181eb5573081c399487ce2ee82d365d5beef77dff1285107e3c973f4e709", size = 31144, upload-time = "2026-11-04T19:34:44.821Z" },
 ]
 
 [[package]]
@@ -543,8 +544,8 @@ dev = [
 requires-dist = [
     { name = "anywidget", marker = "extra == 'notebook'" },
     { name = "av", marker = "extra == 'video'", specifier = ">=16,<17" },
-    { name = "foxglove-client", marker = "extra == 'ray'", specifier = ">=0.21.1" },
-    { name = "foxglove-client", marker = "extra == 'torch'", specifier = ">=0.21.1" },
+    { name = "foxglove-client", marker = "extra == 'ray'", specifier = ">=0.23.0" },
+    { name = "foxglove-client", marker = "extra == 'torch'", specifier = ">=0.23.0" },
     { name = "mcap", marker = "extra == 'notebook'" },
     { name = "mcap", marker = "extra == 'ray'", specifier = ">=1.6,<2" },
     { name = "mcap", marker = "extra == 'torch'", specifier = ">=1.6,<2" },
