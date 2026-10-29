@@ -44,6 +44,8 @@ package = false
 # Resolve torch from the CPU-only index for development and CI. This does not affect
 # the published package metadata.
 [tool.uv.sources]
+# Draft dependency: replace with the released client minimum before merging.
+foxglove-client = { git = "https://github.com/foxglove/foxglove-python", rev = "a4229f2" }
 torch = { index = "pytorch-cpu" }
 
 [[tool.uv.index]]

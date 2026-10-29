@@ -303,6 +303,7 @@ class VideoClient(Client):
         self,
         *,
         episode_id: str,
+        episode_version: int,
         topics: list[str],
         decoder_factories: list[DecoderFactory] | None = None,
         start: datetime | None = None,
@@ -326,7 +327,11 @@ def video_reader(
 ) -> tuple[EpisodeReader, VideoClient]:
     client = VideoClient()
     episode = _Episode(
-        "a", START + timedelta(seconds=start), START + timedelta(seconds=end), {}
+        "a",
+        START + timedelta(seconds=start),
+        START + timedelta(seconds=end),
+        {},
+        version=2,
     )
     return EpisodeReader(episode, topics or ("/camera",), client), client
 
