@@ -170,7 +170,7 @@ def test_callback_lifecycle_closes_resources(outcome: str) -> None:
     readers = []
     retained = []
 
-    def read_episode(episode: EpisodeReader) -> Iterator[tuple[str, str]]:
+    def read_episode(episode: EpisodeReader) -> Iterator[str]:
         readers.append(episode)
         messages = episode.iter_messages()
         retained.append(messages)
@@ -178,7 +178,7 @@ def test_callback_lifecycle_closes_resources(outcome: str) -> None:
         try:
             if outcome == "error":
                 raise ValueError("bad schema")
-            yield (episode.id, episode.metadata["label"])
+            yield episode.id
         finally:
             events.append(episode.id)
 
@@ -192,11 +192,11 @@ def test_callback_lifecycle_closes_resources(outcome: str) -> None:
         assert isinstance(error.value.__cause__, ValueError)
         expected = ["a"]
     elif outcome == "cancel":
-        assert next(stream) == ("a", "a")
+        assert next(stream) == "a"
         stream.close()
         expected = ["a"]
     else:
-        assert list(stream) == [(name, name) for name in ("a", "b", "c", "d")]
+        assert list(stream) == ["a", "b", "c", "d"]
         expected = ["a", "b", "c", "d"]
     assert events == expected
     assert client.closed == expected

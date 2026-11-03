@@ -34,7 +34,6 @@ class Page:
                         "id": episode_id,
                         "start_time": datetime(2026, 1, 1, tzinfo=timezone.utc),
                         "end_time": datetime(2026, 1, 2, tzinfo=timezone.utc),
-                        "metadata": {"label": episode_id},
                     },
                 }
 
@@ -183,7 +182,6 @@ def plan_client(recordings: Any) -> MagicMock:
                         "id": "episode",
                         "start_time": START,
                         "end_time": START,
-                        "metadata": {},
                         "recordings": recordings,
                     }
                 }

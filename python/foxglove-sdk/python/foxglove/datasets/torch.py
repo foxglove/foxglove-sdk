@@ -72,8 +72,9 @@ def read_dataset(
         ways as we continue development and incorporate user feedback.
 
     ``read_episode`` yields samples, such as tensors, tuples, or dictionaries.
-    Use DataLoader's ``collate_fn`` for custom sample types. Only metadata is fetched
-    here. Each new iteration rereads data. The default client reads
+    Use DataLoader's ``collate_fn`` for custom sample types. Planning fetches
+    only the episode list (ids, time windows, and, for object storage, recording
+    locations). Each new iteration rereads data. The default client reads
     ``FOXGLOVE_API_TOKEN`` from the environment; override ``client_factory`` for
     custom authentication or endpoints.
 

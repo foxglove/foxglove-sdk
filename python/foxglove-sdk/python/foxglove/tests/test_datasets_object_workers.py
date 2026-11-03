@@ -25,7 +25,6 @@ class ObjectPage:
                     "id": str(index),
                     "start_time": START + timedelta(seconds=index),
                     "end_time": START + timedelta(seconds=index, microseconds=1),
-                    "metadata": {},
                     "recordings": [
                         {
                             "id": "recording",

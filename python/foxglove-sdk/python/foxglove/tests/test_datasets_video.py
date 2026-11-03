@@ -326,7 +326,7 @@ def video_reader(
 ) -> tuple[EpisodeReader, VideoClient]:
     client = VideoClient()
     episode = _Episode(
-        "a", START + timedelta(seconds=start), START + timedelta(seconds=end), {}
+        "a", START + timedelta(seconds=start), START + timedelta(seconds=end)
     )
     return EpisodeReader(episode, topics or ("/camera",), client), client
 

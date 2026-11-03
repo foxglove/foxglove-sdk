@@ -77,7 +77,7 @@ Object storage
 
 The default ``source="foxglove"`` downloads messages through Foxglove. For
 customer-managed indexed storage, pass ``source="object_storage"`` to either adapter.
-Foxglove supplies episode metadata and recording locations; workers read MCAP
+Foxglove supplies the episode list and recording locations; workers read MCAP
 files directly with their cloud credentials. The same callback works for both
 sources:
 
@@ -164,7 +164,7 @@ discovery. Configure TLS and credentials for that endpoint in the factory.
 
 Performance and iteration behavior:
 
-* Planning requests recording locations with the paginated episode metadata;
+* Planning requests recording locations with the paginated episode list;
   it does not open objects. Storage clients are created once per worker iteration
   or Ray read task, after episode sharding. Object storage workers do not need
   to call the Foxglove API, and the planning client factory is not serialized.

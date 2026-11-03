@@ -7,7 +7,6 @@ from collections.abc import Callable, Generator, Iterable, Iterator, Mapping, Se
 from contextlib import ExitStack
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, Literal, Protocol, TypeVar, cast
 
 from .storage import (
@@ -75,7 +74,6 @@ class _Episode:
     id: str
     start_time: datetime
     end_time: datetime
-    metadata: dict[str, Any]
     locations: tuple[ObjectLocation, ...] = ()
 
 
@@ -123,11 +121,6 @@ class EpisodeReader:
     def end_time(self) -> datetime:
         """End of the episode's time window."""
         return self._episode.end_time
-
-    @property
-    def metadata(self) -> Mapping[str, Any]:
-        """User-defined episode metadata."""
-        return MappingProxyType(self._episode.metadata)
 
     def iter_messages(
         self,
@@ -326,7 +319,6 @@ def _plan(
                 episode["id"],
                 episode["start_time"],
                 episode["end_time"],
-                dict(episode["metadata"]),
                 (
                     _locations(episode, validate=object_store_factory is None)
                     if make_store is not None
