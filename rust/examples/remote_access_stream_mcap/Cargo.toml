@@ -7,9 +7,9 @@ publish = false
 workspace = true
 
 [dependencies]
-foxglove = { path = "../../foxglove", features = ["remote-access"] }
+foxglove = { workspace = true, default-features = true, features = ["remote-access"] }
 tokio = { version = "1.47", features = ["full"] }
 clap = { version = "4.5", features = ["derive"] }
 env_logger = "0.11.5"
 anyhow = "1"
-mcap = "0.25"
+mcap = { workspace = true, features = ["lz4", "zstd"] }

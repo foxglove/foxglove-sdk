@@ -18,6 +18,9 @@ syn = { version = "3.0", features = ["full"] }
 [dev-dependencies]
 bytes = "1.4"
 chrono = "0.4"
+# Keep this a bare path dependency. foxglove_derive is published before foxglove, and cargo only
+# strips path-only dev-dependencies when packaging: a versioned one would make the packaged crate
+# require a foxglove version that does not exist on crates.io yet.
 foxglove = { path = "../foxglove", features = ["chrono"] }
 prost.workspace = true
 prost-reflect = "0.16.3"

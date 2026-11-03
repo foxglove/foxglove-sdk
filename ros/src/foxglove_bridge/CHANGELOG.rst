@@ -2,6 +2,11 @@
 Changelog for package foxglove_bridge
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+3.6.3 (2026-10-21)
+------------------
+* Remote access no longer trusts compromised eMudhra certificate intermediates
+* Update Foxglove SDK version to 0.30.2
+
 3.6.2 (2026-10-16)
 ------------------
 * Fix the bridge reporting its version as 3.6.0

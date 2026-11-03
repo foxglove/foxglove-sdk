@@ -221,19 +221,46 @@ impl ViewerConnection {
     /// byte stream to open. Retries the connection if the gateway hasn't
     /// joined the room yet (no ByteStreamOpened within a short window).
     pub async fn connect(room_name: &str, viewer_identity: &str) -> Result<Self> {
-        Self::connect_with_timeout(room_name, viewer_identity, EVENT_TIMEOUT).await
+        Self::connect_with_timeout(room_name, viewer_identity, EVENT_TIMEOUT, None).await
+    }
+
+    /// Connects a viewer that advertises `protocol_version` as its LiveKit `protocolVersion`
+    /// attribute, so the gateway negotiates the remote access protocol version at join.
+    pub async fn connect_with_protocol_version(
+        room_name: &str,
+        viewer_identity: &str,
+        protocol_version: &str,
+    ) -> Result<Self> {
+        Self::connect_with_timeout(
+            room_name,
+            viewer_identity,
+            EVENT_TIMEOUT,
+            Some(protocol_version),
+        )
+        .await
     }
 
     /// Like [`connect`](Self::connect), but with an explicit overall timeout.
     /// Use [`NETEM_EVENT_TIMEOUT`] for tests running under network impairment.
+    ///
+    /// `protocol_version`, when set, is written into the join token as the `protocolVersion`
+    /// participant attribute.
     pub async fn connect_with_timeout(
         room_name: &str,
         viewer_identity: &str,
         timeout: Duration,
+        protocol_version: Option<&str>,
     ) -> Result<Self> {
         let outer_deadline = tokio::time::Instant::now() + timeout;
         loop {
-            let token = livekit_token::generate_token(room_name, viewer_identity)?;
+            let token = match protocol_version {
+                Some(version) => livekit_token::generate_token_with_attributes(
+                    room_name,
+                    viewer_identity,
+                    [("protocolVersion", version)],
+                )?,
+                None => livekit_token::generate_token(room_name, viewer_identity)?,
+            };
             let connect_result = Room::connect(
                 &livekit_token::livekit_url(),
                 &token,
@@ -327,7 +354,7 @@ impl ViewerConnection {
             // a prior iteration's `close().await` pushed us past the deadline.
             let remaining = deadline.saturating_duration_since(tokio::time::Instant::now());
             let mut viewer =
-                Self::connect_with_timeout(room_name, viewer_identity, remaining).await?;
+                Self::connect_with_timeout(room_name, viewer_identity, remaining, None).await?;
             let startup = async {
                 let server_info = viewer.expect_server_info().await?;
                 let advertise = if expect_advertise {
@@ -372,6 +399,42 @@ impl ViewerConnection {
         match msg {
             ServerMessage::Advertise(adv) => Ok(adv),
             other => anyhow::bail!("expected Advertise, got: {other:?}"),
+        }
+    }
+
+    /// Replaces the control-stream reader with the next `control` byte stream the gateway opens.
+    ///
+    /// A participant reset closes the current stream and opens another. `serverInfo` is the first
+    /// message on that stream.
+    pub async fn accept_next_control_stream(&mut self) -> Result<()> {
+        let deadline = tokio::time::Instant::now() + EVENT_TIMEOUT;
+        loop {
+            let event = tokio::time::timeout_at(deadline, self.events.recv())
+                .await
+                .context("timeout waiting for a new control stream")?
+                .context("room events channel closed")?;
+            match event {
+                RoomEvent::ByteStreamOpened { reader, topic, .. } if topic == "control" => {
+                    let reader = reader.take().context("reader already taken")?;
+                    self.frame_reader = FrameReader::new(reader);
+                    return Ok(());
+                }
+                RoomEvent::DataTrackPublished(track) => {
+                    self.pending_data_tracks.push(track);
+                }
+                _ => continue,
+            }
+        }
+    }
+
+    /// Reads and returns the next deduplicated (protocol version 2.3.0) Advertise message.
+    pub async fn expect_advertise_schema_table(
+        &mut self,
+    ) -> Result<foxglove::protocol::v2::server::AdvertiseWithSchemaTable<'static>> {
+        let msg = self.frame_reader.next_server_message().await?;
+        match msg {
+            ServerMessage::AdvertiseWithSchemaTable(adv) => Ok(adv),
+            other => anyhow::bail!("expected deduplicated Advertise, got: {other:?}"),
         }
     }
 
@@ -871,6 +934,7 @@ pub struct TestGatewayOptions {
     pub qos_classifier: Option<QosClassifierFn>,
     pub suppress_video_transcode: Option<SuppressVideoTranscodeFn>,
     pub max_data_track_message_size: Option<usize>,
+    pub message_backlog_size: Option<usize>,
     pub point_cloud_compression: Option<Option<foxglove::remote_access::PointCloudCompression>>,
 }
 
@@ -960,6 +1024,9 @@ impl TestGateway {
         }
         if let Some(size) = options.max_data_track_message_size {
             gateway = gateway.max_data_track_message_size(size);
+        }
+        if let Some(size) = options.message_backlog_size {
+            gateway = gateway.message_backlog_size(size);
         }
         if let Some(compression) = options.point_cloud_compression {
             gateway = gateway.point_cloud_compression_fn(move |_| compression);

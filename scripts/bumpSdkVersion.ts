@@ -1,14 +1,18 @@
-import { spawnSync } from "child_process";
-import { appendFile, readFile, writeFile } from "fs/promises";
 import { glob } from "glob";
-import path from "path";
+import { spawnSync } from "node:child_process";
+import { appendFile, readFile, writeFile } from "node:fs/promises";
+import path from "node:path";
 import semver from "semver";
 
+// Captures the quoted value of the first version assignment at the start of a line.
 const versionRegex = /^version\s*=\s*"([^"]*)"/m;
-const deriveVersionRegex = /^(?<Prefix>foxglove_derive\s=\s.+version\s*=\s*)"([^"]*)"/m;
+// Matches each inline foxglove or foxglove_derive version and captures the prefix to preserve it during replacement.
+const dependencyVersionRegex = /^(foxglove(?:_derive)?\s*=\s*\{[^\n]*?version\s*=\s*)"[^"]*"/gm;
 
-async function main() {
-  const newVersionV = process.argv[2];
+async function main(
+  newVersionV = process.argv[2],
+  workspaceRoot = path.resolve(__dirname, ".."),
+): Promise<void> {
   if (newVersionV?.startsWith("v") !== true) {
     console.log("Usage: bumpSdkVersion.ts <version>");
     console.log("<version> must start with 'v'");
@@ -24,7 +28,6 @@ async function main() {
   }
 
   // Find all Cargo.toml files in the workspace
-  const workspaceRoot = path.resolve(__dirname, "..");
   const cargoFiles = await glob("**/Cargo.toml", {
     // foxglove_data_loader is versioned separately
     ignore: ["**/target/**", "**/node_modules/**", "cpp/build/**", "rust/foxglove_data_loader/**"],
@@ -38,19 +41,6 @@ async function main() {
   for (const cargoFile of cargoFiles) {
     console.log(`Checking ${cargoFile}...`);
     const content = await readFile(cargoFile, "utf8");
-
-    // Bump the foxglove_derive dependency to match. Do this before checking the package version,
-    // which inherits from the workspace.
-    if (deriveVersionRegex.test(content)) {
-      const updatedContent = content.replace(deriveVersionRegex, `$<Prefix>"${newVersion}"`);
-      if (content === updatedContent) {
-        console.error(`  ❌ foxglove_derive could not be updated to "${newVersion}"`);
-        success = false;
-      } else {
-        await writeFile(cargoFile, updatedContent);
-        console.log(`  ✅ Updated foxglove_derive in ${cargoFile} to ${newVersion}`);
-      }
-    }
 
     if (!versionRegex.test(content)) {
       console.log(`  ℹ️ Skipped Cargo version update; does not contain version field`);
@@ -68,7 +58,9 @@ async function main() {
       continue;
     }
 
-    const updatedContent = content.replace(versionRegex, `version = "${newVersion}"`);
+    const updatedContent = content
+      .replace(versionRegex, `version = "${newVersion}"`)
+      .replace(dependencyVersionRegex, `$1"${newVersion}"`);
     if (content === updatedContent) {
       console.error(`  ❌ Version could not be updated from "${prevVersion}" to "${newVersion}"`);
       success = false;
@@ -147,7 +139,11 @@ async function main() {
   }
 }
 
-main().catch((err: unknown) => {
-  console.error(err);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((err: unknown) => {
+    console.error(err);
+    process.exit(1);
+  });
+}
+
+export const testOnlyExports = { main };

@@ -37,10 +37,10 @@ workspace = true
 tracing.workspace = true
 
 [target.'cfg(target_family = "wasm")'.dependencies]
-foxglove = { path = "../rust/foxglove", default-features = false }
+foxglove = { workspace = true }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
-foxglove = { path = "../rust/foxglove", default-features = false, features = [
+foxglove = { workspace = true, features = [
   "lz4",
   "sysinfo",
   "websocket",

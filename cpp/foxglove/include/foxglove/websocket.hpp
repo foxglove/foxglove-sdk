@@ -252,15 +252,15 @@ struct WebSocketServerCallbacks {
 #pragma warning(pop)
 #endif
 
-/// @cond foxglove_internal
 /// @brief TLS configuration for a WebSocket server.
 struct TlsIdentity {
-  /// @brief PEM-formatted x509 certificate for the server.
+  /// @brief PEM-encoded X.509 certificate for the server.
+  ///
+  /// Only the first certificate in the PEM data is used.
   std::vector<std::byte> cert;
-  /// @brief PEM-formatted pkcs8 private key for the server.
+  /// @brief PEM-encoded PKCS#8 private key for the server.
   std::vector<std::byte> key;
 };
-/// @endcond
 
 /// @brief Options for a WebSocket server.
 struct WebSocketServerOptions {
@@ -304,9 +304,11 @@ struct WebSocketServerOptions {
   /// required when a handler is supplied; setting only one returns
   /// `FoxgloveError::ValueError` from `WebSocketServer::create`.
   ParameterHandler parameter_handler;
-  /// @brief (internal) TLS configuration for the server.
+  /// @brief TLS configuration for the server.
   ///
-  /// This option is under active development and may change.
+  /// When set, the server only accepts `wss://` connections. If the
+  /// certificate or key cannot be parsed, `WebSocketServer::create` returns an
+  /// error.
   std::optional<TlsIdentity> tls_identity = std::nullopt;
   /// @cond foxglove_internal
   /// @brief (internal) Information about the server, which is shared with clients.

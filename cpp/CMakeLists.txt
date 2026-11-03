@@ -4,7 +4,7 @@
 # includes to include paths.
 
 cmake_minimum_required(VERSION 3.22)
-project(foxglove-sdk VERSION 0.29.2)
+project(foxglove-sdk VERSION 0.30.3)
 
 # Enable ccache if available
 find_program(CCACHE_PROGRAM ccache)
@@ -96,7 +96,7 @@ if(FOXGLOVE_BUILD_EXAMPLES)
 
   find_or_fetch(mcap
     GIT_REPOSITORY https://github.com/foxglove/mcap.git
-    GIT_TAG releases/cpp/v2.1.2
+    GIT_TAG releases/cpp/v2.2.0
   )
 
   set(LZ4_BUILD_CLI OFF CACHE BOOL "" FORCE)

@@ -4,7 +4,7 @@ edition = "2024"
 publish = false
 
 [dependencies]
-foxglove = { path = "../../foxglove" }
+foxglove = { workspace = true, default-features = true }
 tokio = { version = "1.47", features = ["full"] }
 clap = { version = "4.5", features = ["derive"] }
 env_logger = "0.11.5"

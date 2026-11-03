@@ -56,7 +56,7 @@ impl McapPlayer {
         // Create the indexed reader
         let reader = IndexedReader::new_with_options(
             &summary,
-            IndexedReaderOptions::new().log_time_on_or_after(current_time),
+            IndexedReaderOptions::new().starting_at(current_time),
         )
         .map_err(|e| anyhow!("failed to create indexed reader: {e}"))?;
 
@@ -79,7 +79,7 @@ impl McapPlayer {
     fn reset_reader(&mut self, start_time: Nanoseconds) -> Result<()> {
         self.reader = IndexedReader::new_with_options(
             &self.summary,
-            IndexedReaderOptions::new().log_time_on_or_after(start_time),
+            IndexedReaderOptions::new().starting_at(start_time),
         )
         .map_err(|e| anyhow!("failed to create indexed reader: {e}"))?;
         self.current_time = start_time;

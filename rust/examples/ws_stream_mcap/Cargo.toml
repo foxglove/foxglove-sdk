@@ -11,6 +11,6 @@ anyhow = "1.0"
 clap = { version = "4.5", features = ["derive"] }
 ctrlc = "3.4"
 env_logger = "0.11"
-foxglove = { path = "../../foxglove" }
-mcap = "0.25"
+foxglove = { workspace = true, default-features = true }
+mcap = { workspace = true, features = ["lz4", "zstd"] }
 tracing = { version = "0.1", features = ["log"] }

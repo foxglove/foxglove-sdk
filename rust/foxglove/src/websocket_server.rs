@@ -101,10 +101,12 @@ impl WebSocketServer {
         self
     }
 
-    /// Configure TLS with a PEM-formatted x509 certificate chain and pkcs8 private key.
-    /// If enabled, the server will only accept connections using wss://.
-    /// If TLS configuration fails, starting the server will result in an error.
-    #[doc(hidden)]
+    /// Configure TLS with a PEM-encoded X.509 certificate and PKCS#8 private key.
+    ///
+    /// When set, the server only accepts `wss://` connections. Only the first certificate in the
+    /// PEM data is used, so intermediate certificates are not sent to clients.
+    ///
+    /// If the certificate or key cannot be parsed, starting the server returns an error.
     #[cfg(feature = "websocket-tls")]
     pub fn tls(mut self, tls_identity: TlsIdentity) -> Self {
         self.options.tls_identity = Some(tls_identity);
@@ -350,7 +352,10 @@ impl WebSocketServerHandle {
     }
 
     /// Sets a new session ID and notifies all clients, causing them to reset their state.
-    /// If no session ID is provided, generates a new one based on the current timestamp.
+    ///
+    /// Clients that negotiated `foxglove.sdk.v1.1` also reset their schema table, so channels
+    /// advertised after this call carry their schema definitions again. If no session ID is
+    /// provided, generates a new one based on the current timestamp.
     pub fn clear_session(&self, new_session_id: Option<String>) {
         self.0.clear_session(new_session_id);
     }

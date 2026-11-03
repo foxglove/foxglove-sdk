@@ -6,10 +6,10 @@ use crate::remote_common::{
 use crate::{PyContext, PySinkChannelFilter};
 use foxglove::websocket::{
     ChannelView, Client, ClientChannel, PlaybackCommand, PlaybackControlRequest, PlaybackState,
-    PlaybackStatus, ServerListener, Status,
+    PlaybackStatus, ServerListener, Status, TlsIdentity,
 };
 use foxglove::{WebSocketServer, WebSocketServerHandle};
-use pyo3::exceptions::PyTypeError;
+use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::types::{PyBytes, PyTuple};
 use pyo3::{prelude::*, types::PyString};
 use std::sync::Arc;
@@ -525,7 +525,7 @@ impl PyServerListener {
 
 /// Start a new Foxglove WebSocket server.
 #[pyfunction]
-#[pyo3(signature = (*, name = None, host="127.0.0.1", port=8765, capabilities=None, server_listener=None, supported_encodings=None, services=None, asset_handler=None, context=None, session_id=None, channel_filter=None, playback_time_range = None, message_backlog_size=None))]
+#[pyo3(signature = (*, name = None, host="127.0.0.1", port=8765, capabilities=None, server_listener=None, supported_encodings=None, services=None, asset_handler=None, context=None, session_id=None, channel_filter=None, playback_time_range = None, message_backlog_size=None, tls_cert=None, tls_key=None))]
 #[allow(clippy::too_many_arguments)]
 pub fn start_server(
     py: Python<'_>,
@@ -542,6 +542,8 @@ pub fn start_server(
     channel_filter: Option<Py<PyAny>>,
     playback_time_range: Option<Py<PyTuple>>,
     message_backlog_size: Option<usize>,
+    tls_cert: Option<Vec<u8>>,
+    tls_key: Option<Vec<u8>>,
 ) -> PyResult<PyWebSocketServer> {
     init_logging(py, None);
 
@@ -600,6 +602,23 @@ pub fn start_server(
 
     if let Some(size) = message_backlog_size {
         server = server.message_backlog_size(size);
+    }
+
+    match (tls_cert, tls_key) {
+        (None, None) => {}
+        (Some(cert), Some(key)) => {
+            if cert.is_empty() || key.is_empty() {
+                return Err(PyValueError::new_err(
+                    "tls_cert and tls_key must not be empty",
+                ));
+            }
+            server = server.tls(TlsIdentity { cert, key });
+        }
+        _ => {
+            return Err(PyValueError::new_err(
+                "tls_cert and tls_key must be provided together",
+            ));
+        }
     }
 
     let handle = py

@@ -1,6 +1,6 @@
 [package]
 name = "foxglove_data_loader"
-version = "0.1.0"
+version = "0.2.1"
 description = "Generate wasm to use as a Foxglove data loader"
 edition.workspace = true
 rust-version.workspace = true
@@ -12,8 +12,7 @@ wit-bindgen = "0.49.0"
 anyhow = "1.0.98"
 
 [dependencies.foxglove]
-version = "0.9.0"
-default-features = false
+workspace = true
 features = ["derive"]
 
 [dev-dependencies]

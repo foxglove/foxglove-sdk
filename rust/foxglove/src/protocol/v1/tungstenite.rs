@@ -118,6 +118,12 @@ impl From<&server::Advertise<'_>> for Message {
     }
 }
 
+impl From<&server::AdvertiseWithSchemaTable<'_>> for Message {
+    fn from(value: &server::AdvertiseWithSchemaTable<'_>) -> Self {
+        Message::Text(value.to_string().into())
+    }
+}
+
 impl From<&server::AdvertiseServices<'_>> for Message {
     fn from(value: &server::AdvertiseServices<'_>) -> Self {
         Message::Text(value.to_string().into())

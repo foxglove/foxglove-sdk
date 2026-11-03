@@ -576,7 +576,7 @@ impl RemoteAccessConnection {
             let sid = participant.sid();
             let joined_at = participant.joined_at();
             if let Err(e) = session
-                .add_participant(identity.clone(), sid, joined_at)
+                .add_participant(identity.clone(), sid, joined_at, &version)
                 .await
             {
                 error!(

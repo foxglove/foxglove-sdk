@@ -47,14 +47,22 @@ jobs:
       - id: bump-version
         run: yarn bump-sdk-version "${{ env.SDK_VERSION }}"
 
-      - name: Commit and push branch
+      - name: Commit release branch
         run: |
           git config user.name "Foxglove"
           git config user.email "support@foxglove.dev"
           git checkout -b "${{ env.SDK_BRANCH }}"
           git add .
           git commit -m "Release '${{ env.SDK_TAG }}'"
-          git push -f origin "${{ env.SDK_BRANCH }}"
+
+      # foxglove_derive is published before foxglove, so its packaged manifest must resolve
+      # without the new foxglove version. Catch that here, before the branch is pushed. This
+      # runs after the commit because cargo refuses to package an uncommitted working tree.
+      - name: Check that foxglove_derive can be published
+        run: cargo publish --dry-run --package foxglove_derive
+
+      - name: Push release branch
+        run: git push -f origin "${{ env.SDK_BRANCH }}"
     outputs:
       prev-version: ${{ steps.bump-version.outputs.prev-version }}
       sdk-branch: ${{ env.SDK_BRANCH }}

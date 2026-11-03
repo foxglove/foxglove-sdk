@@ -1,6 +1,7 @@
 //! Server messages.
 
 pub mod advertise;
+pub mod advertise_schema_table;
 pub mod advertise_services;
 pub mod connection_graph_update;
 pub mod fetch_asset_response;
@@ -18,6 +19,7 @@ mod unadvertise;
 mod unadvertise_services;
 
 pub use advertise::{Advertise, Channel};
+pub use advertise_schema_table::AdvertiseWithSchemaTable;
 pub use advertise_services::AdvertiseServices;
 pub use connection_graph_update::ConnectionGraphUpdate;
 pub use fetch_asset_response::FetchAssetResponse;

@@ -9,13 +9,24 @@ use tracing::error;
 pub(super) const PROTOCOL_VERSION_ATTRIBUTE: &str = "protocolVersion";
 
 /// The remote access protocol version supported by this SDK build.
-pub(super) const REMOTE_ACCESS_PROTOCOL_VERSION: semver::Version = semver::Version::new(2, 2, 0);
+pub(super) const REMOTE_ACCESS_PROTOCOL_VERSION: semver::Version = semver::Version::new(2, 3, 0);
 
 /// The minimum remote access protocol version this SDK will accept from a connecting participant.
 const REMOTE_ACCESS_MIN_SUPPORTED_PROTOCOL_VERSION: semver::Version = semver::Version::new(2, 2, 0);
 
 /// The protocol version assumed when a participant does not advertise one.
 pub(super) const DEFAULT_PROTOCOL_VERSION: semver::Version = semver::Version::new(2, 2, 0);
+
+/// The first protocol version in which viewers accept channel advertisements with a
+/// connection-scoped schema table (`schemas` + `schemaId`). Viewers at earlier versions receive
+/// inline schemas.
+const DEDUPLICATED_SCHEMAS_MIN_VERSION: semver::Version = semver::Version::new(2, 3, 0);
+
+/// Returns true if a participant running `version` accepts channel advertisements with a
+/// connection-scoped schema table rather than inline schemas.
+pub(super) fn supports_deduplicated_schemas(version: &semver::Version) -> bool {
+    *version >= DEDUPLICATED_SCHEMAS_MIN_VERSION
+}
 
 /// Parse the remote access protocol version from a LiveKit participant's attributes.
 ///
@@ -154,5 +165,24 @@ mod tests {
     fn check_garbage_string_returns_none() {
         let result = check_participant_protocol_version(&identity(), &attrs("garbage"), None);
         assert_eq!(result, None);
+    }
+
+    // --- supports_deduplicated_schemas ---
+
+    #[test]
+    fn deduplicated_schemas_require_2_3() {
+        assert!(!supports_deduplicated_schemas(&DEFAULT_PROTOCOL_VERSION));
+        assert!(!supports_deduplicated_schemas(&semver::Version::new(
+            2, 2, 9
+        )));
+        assert!(supports_deduplicated_schemas(&semver::Version::new(
+            2, 3, 0
+        )));
+        assert!(supports_deduplicated_schemas(&semver::Version::new(
+            2, 4, 0
+        )));
+        assert!(supports_deduplicated_schemas(
+            &REMOTE_ACCESS_PROTOCOL_VERSION
+        ));
     }
 }

@@ -1,5 +1,8 @@
+import socket
+import ssl
 import time
 import typing
+from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 import pytest
@@ -146,3 +149,86 @@ def test_server_with_invalid_playback_time_range() -> None:
     with pytest.raises(TypeError):
         # Tuple with too many elements
         start_server(port=0, playback_time_range=(123, 456, 789))
+
+
+def _tls_fixture(name: str) -> bytes:
+    return (Path(__file__).parent / "fixtures" / name).read_bytes()
+
+
+def test_server_with_tls_accepts_secure_connections() -> None:
+    cert = _tls_fixture("tls_cert.pem")
+    key = _tls_fixture("tls_key.pem")
+    server = start_server(port=0, tls_cert=cert, tls_key=key)
+    try:
+        raw_url = server.app_url()
+        assert raw_url is not None
+        assert parse_qs(urlparse(raw_url).query)["ds.url"] == [
+            f"wss://127.0.0.1:{server.port}"
+        ]
+
+        # Perform a TLS handshake against the server, trusting the self-signed
+        # certificate, then complete a WebSocket upgrade over the secure stream.
+        ssl_context = ssl.create_default_context(cadata=cert.decode())
+        with socket.create_connection(("127.0.0.1", server.port), timeout=5) as sock:
+            with ssl_context.wrap_socket(sock, server_hostname="127.0.0.1") as tls:
+                assert tls.version() is not None
+                tls.sendall(
+                    (
+                        f"GET / HTTP/1.1\r\n"
+                        f"Host: 127.0.0.1:{server.port}\r\n"
+                        "Upgrade: websocket\r\n"
+                        "Connection: Upgrade\r\n"
+                        "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n"
+                        "Sec-WebSocket-Version: 13\r\n"
+                        "Sec-WebSocket-Protocol: foxglove.sdk.v1\r\n"
+                        "\r\n"
+                    ).encode()
+                )
+                response = tls.recv(4096)
+                assert response.startswith(b"HTTP/1.1 101")
+    finally:
+        server.stop()
+
+
+def test_server_with_tls_rejects_plaintext_connections() -> None:
+    server = start_server(
+        port=0,
+        tls_cert=_tls_fixture("tls_cert.pem"),
+        tls_key=_tls_fixture("tls_key.pem"),
+    )
+    try:
+        with socket.create_connection(("127.0.0.1", server.port), timeout=5) as sock:
+            sock.sendall(
+                (
+                    f"GET / HTTP/1.1\r\nHost: 127.0.0.1:{server.port}\r\n"
+                    "Upgrade: websocket\r\nConnection: Upgrade\r\n"
+                    "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n"
+                    "Sec-WebSocket-Version: 13\r\n\r\n"
+                ).encode()
+            )
+            # A plaintext request is not a TLS ClientHello; the server closes the connection
+            # without completing a WebSocket upgrade.
+            response = sock.recv(4096)
+            assert not response.startswith(b"HTTP/1.1 101")
+    finally:
+        server.stop()
+
+
+def test_server_with_invalid_tls_config() -> None:
+    cert = _tls_fixture("tls_cert.pem")
+    key = _tls_fixture("tls_key.pem")
+
+    with pytest.raises(ValueError):
+        start_server(port=0, tls_cert=cert)
+
+    with pytest.raises(ValueError):
+        start_server(port=0, tls_key=key)
+
+    with pytest.raises(ValueError):
+        start_server(port=0, tls_cert=b"", tls_key=key)
+
+    with pytest.raises(RuntimeError):
+        start_server(port=0, tls_cert=b"not a certificate", tls_key=key)
+
+    with pytest.raises(RuntimeError):
+        start_server(port=0, tls_cert=cert, tls_key=b"not a key")
