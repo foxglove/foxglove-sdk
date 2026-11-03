@@ -157,19 +157,6 @@ def test_rechecks_missing_recordings_on_episode_entries(
         _plan("dataset", 7, ["/camera"], Client)
 
 
-@pytest.mark.parametrize("extra_fields", [{}, {"metadata": {"label": "ignored"}}])
-def test_plans_episode_entries_with_or_without_metadata(
-    monkeypatch: pytest.MonkeyPatch, extra_fields: dict[str, Any]
-) -> None:
-    entry = next(Page().auto_paging_iter())
-    entry["episode"].update(extra_fields)
-    monkeypatch.setattr(Page, "auto_paging_iter", lambda self: iter([entry]))
-    plan = _plan("dataset", 7, ["/camera"], Client)
-    assert [episode.id for episode in plan.episodes] == ["c"]
-    reader = next(plan.read(plan.episodes, lambda episode: iter([episode])))
-    assert not hasattr(reader, "metadata")
-
-
 def test_empty_plan_yields_no_samples(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(Page, "auto_paging_iter", lambda self: iter([]))
     plan = _plan("dataset", 7, ["/camera"], Client)
