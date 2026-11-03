@@ -72,10 +72,10 @@ def read_dataset(
         ways as we continue development and incorporate user feedback.
 
     ``read_episode`` yields samples, such as tensors, tuples, or dictionaries.
-    Use DataLoader's ``collate_fn`` for custom sample types. Only metadata is fetched
-    here. Each new iteration rereads data. The default client reads
-    ``FOXGLOVE_API_TOKEN`` from the environment; override ``client_factory`` for
-    custom authentication or endpoints.
+    Use DataLoader's ``collate_fn`` for custom sample types. Planning fetches
+    only the episode list (ids and time windows). Each new iteration rereads
+    data. The default client reads ``FOXGLOVE_API_TOKEN`` from the environment;
+    override ``client_factory`` for custom authentication or endpoints.
 
     ``source="object_storage"`` reads indexed MCAPs from S3, GCS, or Azure using recording
     locations and the worker's cloud credentials. No filesystem configuration is

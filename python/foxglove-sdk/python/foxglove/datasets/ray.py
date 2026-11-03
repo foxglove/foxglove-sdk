@@ -147,8 +147,8 @@ def read_dataset(
         This API is experimental and unstable. It may change in backward-incompatible
         ways as we continue development and incorporate user feedback.
 
-    Only episode metadata is fetched during planning. Workers stream selected
-    topics and execute ``read_episode``. Factories and callbacks must be serializable
+    Planning fetches only the episode list (ids and time windows). Workers stream
+    selected topics and execute ``read_episode``. Factories and callbacks must be serializable
     and their dependencies available on every worker. Use consistent column types
     containing scalars, NumPy arrays, or other Arrow-compatible values.
 

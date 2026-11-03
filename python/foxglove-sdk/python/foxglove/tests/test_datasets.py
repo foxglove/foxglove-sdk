@@ -157,6 +157,19 @@ def test_rechecks_missing_recordings_on_episode_entries(
         _plan("dataset", 7, ["/camera"], Client)
 
 
+@pytest.mark.parametrize("extra_fields", [{}, {"metadata": {"label": "ignored"}}])
+def test_plans_episode_entries_with_or_without_metadata(
+    monkeypatch: pytest.MonkeyPatch, extra_fields: dict[str, Any]
+) -> None:
+    entry = next(Page().auto_paging_iter())
+    entry["episode"].update(extra_fields)
+    monkeypatch.setattr(Page, "auto_paging_iter", lambda self: iter([entry]))
+    plan = _plan("dataset", 7, ["/camera"], Client)
+    assert [episode.id for episode in plan.episodes] == ["c"]
+    reader = next(plan.read(plan.episodes, lambda episode: iter([episode])))
+    assert not hasattr(reader, "metadata")
+
+
 def test_empty_plan_yields_no_samples(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(Page, "auto_paging_iter", lambda self: iter([]))
     plan = _plan("dataset", 7, ["/camera"], Client)
@@ -170,7 +183,7 @@ def test_callback_lifecycle_closes_resources(outcome: str) -> None:
     readers = []
     retained = []
 
-    def read_episode(episode: EpisodeReader) -> Iterator[tuple[str, str]]:
+    def read_episode(episode: EpisodeReader) -> Iterator[str]:
         readers.append(episode)
         messages = episode.iter_messages()
         retained.append(messages)
@@ -178,7 +191,7 @@ def test_callback_lifecycle_closes_resources(outcome: str) -> None:
         try:
             if outcome == "error":
                 raise ValueError("bad schema")
-            yield (episode.id, episode.metadata["label"])
+            yield episode.id
         finally:
             events.append(episode.id)
 
@@ -192,11 +205,11 @@ def test_callback_lifecycle_closes_resources(outcome: str) -> None:
         assert isinstance(error.value.__cause__, ValueError)
         expected = ["a"]
     elif outcome == "cancel":
-        assert next(stream) == ("a", "a")
+        assert next(stream) == "a"
         stream.close()
         expected = ["a"]
     else:
-        assert list(stream) == [(name, name) for name in ("a", "b", "c", "d")]
+        assert list(stream) == ["a", "b", "c", "d"]
         expected = ["a", "b", "c", "d"]
     assert events == expected
     assert client.closed == expected
