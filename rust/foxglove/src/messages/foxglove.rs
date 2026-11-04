@@ -656,7 +656,7 @@ pub struct LocationFix {
     /// Longitude in degrees
     #[prost(double, tag = "2")]
     pub longitude: f64,
-    /// Altitude in meters
+    /// Altitude in meters above the WGS84 ellipsoid
     #[prost(double, tag = "3")]
     pub altitude: f64,
     /// Position covariance (m^2) defined relative to a tangential plane through the reported position. The components are East, North, and Up (ENU), in row-major order.
