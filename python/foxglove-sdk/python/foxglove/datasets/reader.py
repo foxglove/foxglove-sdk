@@ -198,8 +198,8 @@ class EpisodeReader:
         except TypeError as error:
             if "episode_version" in str(error):
                 raise RuntimeError(
-                    "Dataset streaming requires a foxglove-client version with "
-                    "episode_version support; upgrade foxglove-client"
+                    "Dataset streaming requires foxglove-client>=0.23.0; "
+                    "upgrade foxglove-client"
                 ) from error
             raise
         yield from self._manage(stream)
@@ -326,7 +326,7 @@ def _plan(
         if "version" not in episode:
             raise ValueError(
                 "Dataset membership must include pinned episode versions; "
-                "upgrade foxglove-client"
+                "upgrade to foxglove-client>=0.23.0"
             )
         if entry.get("has_missing_recordings", False):
             raise ValueError(f"Episode {episode['id']} contains missing recordings")

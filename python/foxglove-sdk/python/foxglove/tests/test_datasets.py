@@ -231,7 +231,7 @@ def test_older_client_cannot_stream_latest_in_place_of_pin(
     with pytest.raises(RuntimeError) as error:
         list(plan.read(plan.episodes, samples))
     assert isinstance(error.value.__cause__, RuntimeError)
-    assert "episode_version support; upgrade foxglove-client" in str(
+    assert "foxglove-client>=0.23.0; upgrade foxglove-client" in str(
         error.value.__cause__
     )
 
@@ -248,6 +248,7 @@ def test_missing_episode_pin_does_not_fall_back_to_latest(
 
     monkeypatch.setattr(Page, "auto_paging_iter", unversioned)
     with pytest.raises(
-        ValueError, match="pinned episode versions; upgrade foxglove-client"
+        ValueError,
+        match=r"pinned episode versions; upgrade to foxglove-client>=0\.23\.0",
     ):
         _plan("dataset", 7, ["/camera"], Client)
