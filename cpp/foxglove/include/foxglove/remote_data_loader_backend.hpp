@@ -60,10 +60,12 @@ struct Schema {
 /// fetch the URL and read the response body as a stream of MCAP bytes.
 struct StreamedSource {
   /// @brief URL to fetch the data from. Can be absolute or relative.
-  /// If `id` is absent, this must uniquely identify the data.
+  /// If `id` is absent, this must identify the same data for every user, because the remote
+  /// data loader shares its cache across users.
   std::string url;
-  /// @brief Identifier for the data source. If present, must be unique.
-  /// If absent, the URL is used as the identifier.
+  /// @brief Identifier for the data source, used as the cache key. This must identify the same
+  /// data for every user, because the remote data loader shares its cache across users.
+  /// If absent, the URL is the cache key.
   std::optional<std::string> id;
   /// @brief Topics present in the data.
   std::vector<Topic> topics;

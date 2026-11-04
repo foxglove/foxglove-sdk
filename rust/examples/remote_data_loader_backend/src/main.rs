@@ -94,10 +94,13 @@ async fn manifest_handler(headers: HeaderMap, Query(params): Query<FlightParams>
         // We're providing the data from this service in this example, but in principle this could
         // be any URL.
         url: format!("{DATA_ROUTE}?{query}"),
-        // `id` must unique to this data source. Otherwise, incorrect data may be served from cache.
+        // The remote data loader shares its cache across users, so `id` must identify the same
+        // data for every user.
         //
-        // Here we reuse the query string to make sure we don't forget any parameters. We also
-        // include a version number we increment whenever we change the data handler.
+        // Here we reuse the query string to make sure we don't forget any parameters. This is only
+        // safe if the same query string means the same data for every user. If flight IDs are only
+        // unique within each organization, add the organization ID. We also include a version
+        // number we increment whenever we change the data handler.
         id: Some(format!("flight-v1-{query}")),
         topics,
         schemas,

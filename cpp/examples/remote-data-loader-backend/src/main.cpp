@@ -173,10 +173,13 @@ void manifestHandler(const httplib::Request& req, httplib::Response& res) {
   // We're providing the data from this service in this example, but in principle this could
   // be any URL.
   source.url = kDataRoute + std::string("?") + query;
-  // `id` must be unique to this data source. Otherwise, incorrect data may be served from cache.
+  // The remote data loader shares its cache across users, so `id` must identify the same data
+  // for every user.
   //
-  // Here we reuse the query string to make sure we don't forget any parameters. We also
-  // include a version number we increment whenever we change the data handler.
+  // Here we reuse the query string to make sure we don't forget any parameters. This is only safe
+  // if the same query string means the same data for every user. If flight IDs are only unique
+  // within each organization, add the organization ID. We also include a version number we
+  // increment whenever we change the data handler.
   source.id = "flight-v1-" + query;
   source.topics = std::move(channels.topics);
   source.schemas = std::move(channels.schemas);
