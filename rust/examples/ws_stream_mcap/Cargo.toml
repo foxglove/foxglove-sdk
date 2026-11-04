@@ -14,3 +14,4 @@ env_logger = "0.11"
 foxglove = { workspace = true, default-features = true }
 mcap = { workspace = true, features = ["lz4", "zstd"] }
 tracing = { version = "0.1", features = ["log"] }
+

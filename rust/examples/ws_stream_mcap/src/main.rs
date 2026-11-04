@@ -15,23 +15,36 @@ use anyhow::Result;
 use clap::Parser;
 use foxglove::WebSocketServer;
 use foxglove::websocket::{
-    Capability, PlaybackCommand, PlaybackControlRequest, PlaybackState, PlaybackStatus,
-    ServerListener,
+    Capability, ChannelView, Client, PlaybackCommand, PlaybackControlRequest, PlaybackState,
+    PlaybackStatus, ServerListener,
 };
 use tracing::info;
 
 struct Listener {
     player: Arc<Mutex<dyn Send + PlaybackSource>>,
+    autoplay: bool,
 }
 
 impl Listener {
-    fn new(player: Arc<Mutex<dyn Send + PlaybackSource>>) -> Self {
-        Self { player }
+    fn new(player: Arc<Mutex<dyn Send + PlaybackSource>>, autoplay: bool) -> Self {
+        Self { player, autoplay }
     }
 }
 
 /// Implement PlaybackControl-specific listener logic for responding to PlaybackControlRequests
 impl ServerListener for Listener {
+    /// In autoplay mode, start playing as soon as the first channel subscription arrives.
+    /// This ensures messages are not emitted before the client is ready to receive them.
+    fn on_subscribe(&self, _client: Client, _channel: ChannelView) {
+        if self.autoplay {
+            let mut player = self.player.lock().unwrap();
+            if player.status() == PlaybackStatus::Paused {
+                info!("Starting stream");
+                player.play();
+            }
+        }
+    }
+
     /// Respond to a PlaybackControlRequest from Foxglove and send an updated PlaybackState.
     /// First we process the fields in the request (seeking, updating the playback speed, and
     /// handling play/pause PlaybackCommands by calling functions on our MCAP-specific PlaybackSource.
@@ -54,11 +67,11 @@ impl ServerListener for Listener {
         // for the data you're playing back.
         let mut did_seek = request.seek_time.is_some();
 
-        if let Some(seek_time) = request.seek_time
-            && let Err(err) = player.seek(seek_time)
-        {
-            did_seek = false;
-            tracing::warn!("failed to seek: {err:?}");
+        if let Some(seek_time) = request.seek_time {
+            if let Err(err) = player.seek(seek_time) {
+                did_seek = false;
+                tracing::warn!("failed to seek: {err:?}");
+            }
         }
 
         player.set_playback_speed(request.playback_speed);
@@ -89,6 +102,10 @@ struct Cli {
     /// MCAP file to read.
     #[arg(short, long)]
     file: PathBuf,
+    /// Start playback immediately without waiting for a PlaybackControl request.
+    /// When playback finishes, the server shuts down automatically.
+    #[arg(long)]
+    autoplay: bool,
 }
 
 fn main() -> Result<()> {
@@ -117,7 +134,7 @@ fn main() -> Result<()> {
     let (start_time, end_time) = mcap_player.time_range();
 
     let mcap_player = Arc::new(Mutex::new(mcap_player));
-    let listener = Arc::new(Listener::new(mcap_player.clone()));
+    let listener = Arc::new(Listener::new(mcap_player.clone(), args.autoplay));
 
     let server = WebSocketServer::new()
         .name(file_name)
@@ -131,7 +148,10 @@ fn main() -> Result<()> {
     info!("Waiting for client");
     std::thread::sleep(Duration::from_secs(1));
 
-    info!("Starting stream");
+    if !args.autoplay {
+        info!("Starting stream");
+    }
+
     let mut last_status = PlaybackStatus::Paused;
     while !done.load(Ordering::Relaxed) {
         let status = {
@@ -152,6 +172,11 @@ fn main() -> Result<()> {
             status
         };
         last_status = status;
+
+        // In autoplay mode, shut down once playback ends.
+        if args.autoplay && status == PlaybackStatus::Ended {
+            break;
+        }
 
         if status != PlaybackStatus::Playing {
             std::thread::sleep(Duration::from_millis(10));
