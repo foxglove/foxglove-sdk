@@ -146,6 +146,8 @@ set(ROS_BUILD_TYPE "ament_cmake")
 
 find_package(ament_cmake REQUIRED)
 find_package(ament_index_cpp REQUIRED)
+find_package(diagnostic_msgs REQUIRED)
+find_package(diagnostic_updater REQUIRED)
 find_package(rcl_interfaces REQUIRED)
 find_package(rcpputils REQUIRED)
 find_package(rcutils REQUIRED)
@@ -161,6 +163,7 @@ find_package(std_msgs REQUIRED)
 configure_file(include/foxglove_bridge/version.hpp.in include/foxglove_bridge/version.hpp @ONLY)
 
 add_library(foxglove_bridge_component SHARED
+  src/diagnostics.cpp
   src/message_definition_cache.cpp
   src/param_utils.cpp
   src/ros2_foxglove_bridge.cpp
@@ -188,6 +191,8 @@ endif()
 
 target_link_libraries(foxglove_bridge_component
   foxglove_cpp_shared
+  ${diagnostic_msgs_TARGETS}
+  diagnostic_updater::diagnostic_updater
   ${rcl_interfaces_TARGETS}
   ${rosgraph_msgs_TARGETS}
   ${std_msgs_TARGETS}
@@ -237,6 +242,7 @@ if(BUILD_TESTING)
   target_compile_definitions(smoke_test PRIVATE ASIO_STANDALONE)
   target_link_libraries(smoke_test
     foxglove_bridge_component
+    ${diagnostic_msgs_TARGETS}
     nlohmann_json::nlohmann_json
     ${std_msgs_TARGETS}
     ${std_srvs_TARGETS}
@@ -256,6 +262,10 @@ if(BUILD_TESTING)
   ament_add_gtest(message_definition_cache_test tests/message_definition_cache_test.cpp)
   target_link_libraries(message_definition_cache_test foxglove_bridge_component)
   enable_strict_compiler_warnings(message_definition_cache_test)
+
+  ament_add_gtest(diagnostics_test tests/diagnostics_test.cpp)
+  target_link_libraries(diagnostics_test foxglove_bridge_component)
+  enable_strict_compiler_warnings(diagnostics_test)
 endif()
 
 install(FILES include/foxglove_bridge/ros2_foxglove_bridge.hpp

@@ -13,6 +13,7 @@
 #include <unordered_set>
 #include <variant>
 
+#include <diagnostic_updater/diagnostic_updater.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <rmw/types.h>
 #include <rosgraph_msgs/msg/clock.hpp>
@@ -27,6 +28,7 @@
 #ifdef FOXGLOVE_REMOTE_ACCESS
 #include <foxglove/remote_access.hpp>
 #endif
+#include <foxglove_bridge/diagnostics.hpp>
 #include <foxglove_bridge/generic_client.hpp>
 #include <foxglove_bridge/message_definition_cache.hpp>
 #include <foxglove_bridge/param_utils.hpp>
@@ -161,6 +163,12 @@ private:
   foxglove::Context _serverContext;
 
   rclcpp::Publisher<std_msgs::msg::UInt32>::SharedPtr _clientCountPublisher;
+
+  BridgeDiagnostics _diagnostics;
+  // Declared after everything its tasks read, so it is destroyed first.
+  std::unique_ptr<diagnostic_updater::Updater> _diagnosticUpdater;
+
+  void setupDiagnostics();
 
   void subscribeConnectionGraph(bool subscribe);
 
