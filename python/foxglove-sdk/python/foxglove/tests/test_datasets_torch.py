@@ -240,3 +240,177 @@ def test_image_tensor_rejects_converting_channels_first_twice(
     converted = to_image_tensor({"image": torch.zeros(shape)})
     with pytest.raises(ValueError, match="channels-last RGB"):
         to_image_tensor({"image": converted})
+
+
+def test_seeded_episode_order_and_epoch_replay() -> None:
+    from foxglove.datasets.torch import TorchDataset, read_dataset
+
+    dataset = read_dataset(
+        "dataset",
+        version=7,
+        topics=["/camera"],
+        read_episode=first_sample,
+        client_factory=Client,
+        shuffle=True,
+        seed=17,
+    )
+    assert isinstance(dataset, TorchDataset)
+    orders = []
+    for epoch in (0, 1, 2, 0):
+        dataset.set_epoch(epoch)
+        rows = [row["id"] for row in dataset]
+        assert sorted(rows) == ["a", "b", "c", "d"]
+        orders.append(rows)
+    assert orders[0] == orders[3]
+    assert len({tuple(order) for order in orders[:3]}) == 3
+    replica = read_dataset(
+        "dataset",
+        version=7,
+        topics=["/camera"],
+        read_episode=first_sample,
+        client_factory=Client,
+        shuffle=True,
+        seed=17,
+    )
+    assert [row["id"] for row in replica] == orders[0]
+
+
+def test_epoch_change_preserves_active_iterator_and_unshuffled_order() -> None:
+    from foxglove.datasets.torch import read_dataset
+
+    for shuffle in (False, True):
+        dataset = read_dataset(
+            "dataset",
+            version=7,
+            topics=["/camera"],
+            read_episode=first_sample,
+            client_factory=Client,
+            shuffle=shuffle,
+            seed=17,
+        )
+        expected = list(dataset)
+        active = iter(dataset)
+        dataset.set_epoch(1)
+        assert list(active) == expected
+        if not shuffle:
+            assert list(dataset) == expected == [{"id": name} for name in "abcd"]
+
+
+def test_persistent_spawned_workers_receive_epoch_updates() -> None:
+    from foxglove.datasets.torch import read_dataset
+    from torch.utils.data import DataLoader
+
+    dataset = read_dataset(
+        "dataset",
+        version=7,
+        topics=["/camera"],
+        read_episode=first_sample,
+        client_factory=Client,
+        shuffle=True,
+        seed=17,
+    )
+    loader = DataLoader(
+        dataset,
+        batch_size=None,
+        num_workers=2,
+        multiprocessing_context="spawn",
+        persistent_workers=True,
+    )
+    orders = []
+    for epoch in (0, 1, 2, 0):
+        dataset.set_epoch(epoch)
+        expected = list(dataset)
+        rows = list(loader)
+        assert rows == expected
+        assert sorted(row["id"] for row in rows) == list("abcd")
+        orders.append(rows)
+    assert orders[0] == orders[3]
+    assert orders[0] != orders[1]
+
+
+@pytest.mark.parametrize(
+    "world_size, worker_counts", [(2, [1, 2]), (5, [0, 1, 2, 0, 1])]
+)
+def test_shuffled_rank_first_partitioning_with_unequal_workers(
+    world_size: int,
+    worker_counts: list[int],
+) -> None:
+    from foxglove.datasets.torch import read_dataset
+    from torch.utils.data import DataLoader
+
+    combined: list[str] = []
+    for rank, num_workers in enumerate(worker_counts):
+        dataset = read_dataset(
+            "dataset",
+            version=7,
+            topics=["/camera"],
+            read_episode=first_sample,
+            client_factory=Client,
+            shuffle=True,
+            seed=17,
+            rank=rank,
+            world_size=world_size,
+        )
+        dataset.set_epoch(2)
+        loader = DataLoader(
+            dataset,
+            batch_size=None,
+            num_workers=num_workers,
+            **({"multiprocessing_context": "spawn"} if num_workers else {}),
+        )
+        rows = list(loader)
+        assert rows == list(dataset)
+        if rank >= 4:
+            assert rows == []
+        combined.extend(row["id"] for row in rows)
+    assert sorted(combined) == list("abcd")
+
+
+@pytest.mark.parametrize("epoch", [-1, 2**63, 1.5, "1", True])
+def test_invalid_epoch(epoch: Any) -> None:
+    from foxglove.datasets.torch import read_dataset
+
+    dataset = read_dataset(
+        "dataset",
+        version=7,
+        topics=["/camera"],
+        read_episode=first_sample,
+        client_factory=Client,
+    )
+    with pytest.raises((TypeError, ValueError), match="epoch"):
+        dataset.set_epoch(epoch)
+
+
+@pytest.mark.parametrize("kwargs", [{"shuffle": 1}, {"seed": 1.5}, {"seed": True}])
+def test_invalid_shuffle_configuration(kwargs: dict[str, Any]) -> None:
+    from foxglove.datasets.torch import read_dataset
+
+    with pytest.raises(TypeError):
+        read_dataset(
+            "dataset",
+            version=7,
+            topics=["/camera"],
+            read_episode=first_sample,
+            client_factory=Client,
+            **kwargs,
+        )
+
+
+def test_unshuffled_dataset_does_not_allocate_shared_memory(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from foxglove.datasets.torch import read_dataset
+
+    def fail_shared_memory(_self: Any) -> None:
+        raise AssertionError("unshuffled datasets do not require shared memory")
+
+    monkeypatch.setattr(torch.Tensor, "share_memory_", fail_shared_memory)
+    dataset = read_dataset(
+        "dataset",
+        version=7,
+        topics=["/camera"],
+        read_episode=first_sample,
+        client_factory=Client,
+    )
+    dataset.set_epoch(1)
+    assert list(dataset) == [{"id": name} for name in "abcd"]
