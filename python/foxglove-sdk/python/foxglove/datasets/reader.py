@@ -9,6 +9,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any, Literal, Protocol, TypeVar, cast
 
+from .splits import DatasetSplit, SplitName
 from .storage import (
     ObjectLocation,
     ObjectStore,
@@ -279,7 +280,15 @@ def _plan(
     object_store_factory: ObjectStoreFactory | None = None,
     *,
     source: Literal["foxglove", "object_storage"] = "foxglove",
+    split: DatasetSplit | None = None,
+    split_name: SplitName | None = None,
 ) -> _Plan:
+    if (split is None) != (split_name is None):
+        raise ValueError("split and split_name must be provided together")
+    if split is not None and not isinstance(split, DatasetSplit):
+        raise ValueError("split must be a DatasetSplit")
+    if split_name is not None and split_name not in ("train", "validate", "eval"):
+        raise ValueError("split_name must be train, validate, or eval")
     if source not in ("foxglove", "object_storage"):
         raise ValueError("source must be 'foxglove' or 'object_storage'")
     if source == "foxglove" and object_store_factory is not None:
@@ -307,11 +316,12 @@ def _plan(
     if info.get("has_missing_recordings", False):
         raise ValueError("Dataset version contains missing recordings")
     episodes = []
+    recordings: dict[str, tuple[str, ...]] = {}
     page = client.get_dataset_version_episodes(
         dataset_id=dataset_id,
         version_number=version,
         limit=_EPISODE_PAGE_SIZE,
-        include_recordings=make_store is not None,
+        include_recordings=make_store is not None or split is not None,
     )
     for entry in page.auto_paging_iter():
         episode = entry["episode"]
@@ -322,6 +332,23 @@ def _plan(
             )
         if entry.get("has_missing_recordings", False):
             raise ValueError(f"Episode {episode['id']} contains missing recordings")
+        if split is not None:
+            episode_recordings = episode.get("recordings")
+            if not isinstance(episode_recordings, list) or not episode_recordings:
+                raise ValueError(
+                    f"Episode {episode['id']} requires recording IDs for splitting"
+                )
+            recording_ids = []
+            for recording in episode_recordings:
+                recording_id = (
+                    recording.get("id") if isinstance(recording, Mapping) else None
+                )
+                if not isinstance(recording_id, str) or not recording_id:
+                    raise ValueError(
+                        f"Episode {episode['id']} has invalid recording IDs"
+                    )
+                recording_ids.append(recording_id)
+            recordings[episode["id"]] = tuple(recording_ids)
         episodes.append(
             _Episode(
                 episode["id"],
@@ -337,6 +364,9 @@ def _plan(
         )
     # Make rank/worker partitioning independent of pagination order and sort ties.
     episodes.sort(key=lambda episode: episode.id)
+    if split is not None and split_name is not None:
+        selected = split._select(recordings, split_name)
+        episodes = [episode for episode in episodes if episode.id in selected]
     return _Plan(
         dataset_id,
         version,

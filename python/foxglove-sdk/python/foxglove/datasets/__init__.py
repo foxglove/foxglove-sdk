@@ -4,6 +4,7 @@ These APIs are experimental and unstable and may change in backward-incompatible
 """
 
 from .reader import EpisodeReader
+from .splits import DatasetSplit
 from .storage import ObjectLocation, ObjectStore
 
-__all__ = ["EpisodeReader", "ObjectLocation", "ObjectStore"]
+__all__ = ["DatasetSplit", "EpisodeReader", "ObjectLocation", "ObjectStore"]

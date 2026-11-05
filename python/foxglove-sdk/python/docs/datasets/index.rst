@@ -295,6 +295,44 @@ To request ten seconds of history, pass ``read_episode=read_video`` to
 Consume the iterator fully to receive buffered frames. The episode closes streams
 automatically, including on errors or early termination.
 
+Dataset splits
+--------------
+
+Use the same ``DatasetSplit`` configuration with either reader to select stable
+training, validation, and final evaluation pools from a committed dataset version:
+
+.. code-block:: python
+
+   from foxglove.datasets import DatasetSplit
+   from foxglove.datasets.torch import read_dataset  # or foxglove.datasets.ray
+
+   splits = DatasetSplit(train=0.8, validate=0.1, eval=0.1, seed=42)
+   train = read_dataset(
+       "ds_...", version=3, topics=["/camera/image"], read_episode=read_episode,
+       split=splits, split_name="train",
+   )
+
+Repeat with ``split_name="validate"`` or ``"eval"`` for the other pools. Assignment
+happens before epoch shuffling and rank/worker partitioning. The split seed is
+independent of any shuffle seed. Omitting both arguments preserves the full dataset.
+No server-side datasets are created.
+
+Episodes sharing any recording ID are kept together, transitively, including an
+episode attached to multiple recordings. Split planning requests recording IDs in
+both source modes and fails if those IDs are missing. Frames within an episode
+remain together. Recording grouping cannot detect related sessions, sites, or
+robots spread across different recordings: pass ``groups={episode_id: group_id, ...}``
+to ``DatasetSplit`` to add those constraints. The mapping must cover exactly the
+committed version's episode IDs; shared recordings remain together even if the
+caller assigns them different group IDs.
+
+Proportions are approximate by group count, not episode or sample count. Connected
+groups can be large, and even nonzero proportions can produce empty pools. Check
+pool sizes before training or evaluation. Save the committed dataset version,
+proportions, split seed, and optional group mapping with model artifacts.
+Membership is independent of API pagination, source, framework, epoch, and worker
+count. Changing the dataset version can merge groups and change membership.
+
 API reference
 -------------
 
@@ -334,3 +372,8 @@ Video decoding
 .. autoexception:: foxglove.datasets.video.VideoDecodeError
 
 .. autofunction:: foxglove.datasets.torch.to_image_tensor
+
+Dataset splits
+^^^^^^^^^^^^^^
+
+.. autoclass:: foxglove.datasets.DatasetSplit
