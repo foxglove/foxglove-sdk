@@ -195,7 +195,7 @@ def test_adapters_select_same_pool_and_read_pinned_episode_versions(
         expected = {ep.id for ep in plan(client, split, name).episodes}
         ray_rows = read_ray("dataset", **arguments)
         assert {row["id"] for row in ray_rows} == expected
-        torch_rows = []
+        torch_rows: list[dict[str, Any]] = []
         for rank in range(3):
             dataset = read_torch("dataset", rank=rank, world_size=3, **arguments)
             torch_rows.extend(dataset)
