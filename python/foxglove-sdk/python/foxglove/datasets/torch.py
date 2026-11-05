@@ -7,14 +7,17 @@ from __future__ import annotations
 
 from collections.abc import Iterator, Mapping, Sequence
 from random import Random
-from typing import Any, Literal, TypeVar
+from typing import TYPE_CHECKING, Any, Literal, TypeVar
 
 import torch.distributed as distributed
 from torch import Tensor, as_tensor, int64, tensor
 from torch.utils.data import IterableDataset, get_worker_info
 
-from .reader import ClientFactory, ReadEpisode, _Episode, _Plan, _plan
+from .reader import ClientFactory, ReadEpisode, _Plan, _plan
 from .storage import ObjectStoreFactory
+
+if TYPE_CHECKING:
+    from .reader import _Episode
 
 _T = TypeVar("_T")
 
