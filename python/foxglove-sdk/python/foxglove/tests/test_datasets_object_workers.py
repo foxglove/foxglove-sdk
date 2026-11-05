@@ -22,6 +22,7 @@ class ObjectPage:
         for index in range(4):
             yield {
                 "episode": {
+                    "version": 2,
                     "id": str(index),
                     "start_time": START + timedelta(seconds=index),
                     "end_time": START + timedelta(seconds=index, microseconds=1),
