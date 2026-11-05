@@ -185,23 +185,15 @@ class EpisodeReader:
             if lookback
             else {}
         )
-        try:
-            stream = self._client.iter_messages(
-                episode_id=self.id,
-                episode_version=self._episode.version,
-                topics=list(selected_topics),
-                decoder_factories=(
-                    None if decoder_factories is None else list(decoder_factories)
-                ),
-                **time_range,
-            )
-        except TypeError as error:
-            if "episode_version" in str(error):
-                raise RuntimeError(
-                    "Dataset streaming requires foxglove-client>=0.23.0; "
-                    "upgrade foxglove-client"
-                ) from error
-            raise
+        stream = self._client.iter_messages(
+            episode_id=self.id,
+            episode_version=self._episode.version,
+            topics=list(selected_topics),
+            decoder_factories=(
+                None if decoder_factories is None else list(decoder_factories)
+            ),
+            **time_range,
+        )
         yield from self._manage(stream)
 
     def _manage(self, stream: Generator[_T, None, None]) -> Generator[_T, None, None]:

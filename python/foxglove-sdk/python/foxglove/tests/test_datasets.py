@@ -230,10 +230,27 @@ def test_older_client_cannot_stream_latest_in_place_of_pin(
     plan = _plan("dataset", 7, ["/camera"], lambda: client)
     with pytest.raises(RuntimeError) as error:
         list(plan.read(plan.episodes, samples))
-    assert isinstance(error.value.__cause__, RuntimeError)
-    assert "foxglove-client>=0.23.0; upgrade foxglove-client" in str(
-        error.value.__cause__
-    )
+    assert isinstance(error.value.__cause__, TypeError)
+    assert "unexpected keyword argument 'episode_version'" in str(error.value.__cause__)
+
+
+def test_client_type_error_is_preserved_with_episode_context(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    failure = TypeError("invalid episode_version value")
+
+    def iter_messages(**kwargs: Any) -> Any:
+        assert kwargs["episode_version"] == 2
+        raise failure
+
+    client = Client()
+    monkeypatch.setattr(client, "iter_messages", iter_messages)
+    plan = _plan("dataset", 7, ["/camera"], lambda: client)
+    with pytest.raises(
+        RuntimeError, match="Failed to read episode a in dataset dataset version 7"
+    ) as error:
+        list(plan.read(plan.episodes, samples))
+    assert error.value.__cause__ is failure
 
 
 def test_missing_episode_pin_does_not_fall_back_to_latest(
