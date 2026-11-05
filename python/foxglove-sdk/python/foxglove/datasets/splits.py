@@ -10,15 +10,30 @@ from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Literal
 
-SplitName = Literal["train", "validate", "eval"]
+SplitName = Literal["train", "validation", "test"]
+
+
+@dataclass(frozen=True)
+class SplitSummary:
+    """Metadata counts for one split, before rank or worker partitioning.
+
+    ``group_count`` counts connected recording groups, including custom grouping
+    constraints. ``episode_count`` counts their episodes. Neither count measures
+    samples or frames, which depend on decoding and the episode callback.
+    """
+
+    group_count: int
+    episode_count: int
 
 
 @dataclass(frozen=True)
 class DatasetSplit:
-    """Assign whole recording groups to train, validation, and final evaluation.
+    """Assign whole recording groups to train, validation, and test sets.
 
-    Proportions must be finite, nonnegative, and sum to one. Hash assignment
-    approximates these proportions by group count; small pools can be empty.
+    Proportions must be finite, nonnegative, and sum to one. Each group's hash
+    selects a split with these probabilities; counts are not exact, and small
+    sets can be empty. Use :func:`foxglove.datasets.inspect_splits` to check
+    group and episode counts before training or evaluation.
     ``seed`` is independent of epoch shuffling. ``groups`` optionally maps every
     episode ID to a session, site, or other group ID. These constraints are added
     to recording grouping, so shared recordings always stay together.
@@ -30,14 +45,14 @@ class DatasetSplit:
     """
 
     train: float = 0.8
-    validate: float = 0.1
-    eval: float = 0.1
+    validation: float = 0.1
+    test: float = 0.1
     seed: int = 0
     groups: Mapping[str, str] | None = None
 
     def __post_init__(self) -> None:
         groups = self.groups
-        proportions = (self.train, self.validate, self.eval)
+        proportions = (self.train, self.validation, self.test)
         if any(
             isinstance(value, bool)
             or not isinstance(value, (int, float))
@@ -70,6 +85,15 @@ class DatasetSplit:
     def _select(
         self, recordings: Mapping[str, Sequence[str]], name: SplitName
     ) -> set[str]:
+        return {
+            episode_id
+            for episodes in self._partition(recordings)[name].values()
+            for episode_id in episodes
+        }
+
+    def _partition(
+        self, recordings: Mapping[str, Sequence[str]]
+    ) -> dict[SplitName, dict[str, list[str]]]:
         parents = {episode_id: episode_id for episode_id in recordings}
 
         def root(episode_id: str) -> str:
@@ -110,13 +134,17 @@ class DatasetSplit:
                     "train"
                     if value < self.train * scale
                     else (
-                        "validate"
-                        if value < (self.train + self.validate) * scale
-                        else "eval"
+                        "validation"
+                        if value < (self.train + self.validation) * scale
+                        else "test"
                     )
                 )
-        return {
-            episode_id
-            for episode_id in recordings
-            if assignments[root(episode_id)] == name
+        partitions: dict[SplitName, dict[str, list[str]]] = {
+            "train": {},
+            "validation": {},
+            "test": {},
         }
+        for episode_id in recordings:
+            group = root(episode_id)
+            partitions[assignments[group]].setdefault(group, []).append(episode_id)
+        return partitions

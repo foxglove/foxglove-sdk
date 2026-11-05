@@ -299,20 +299,24 @@ Dataset splits
 --------------
 
 Use the same ``DatasetSplit`` configuration with either reader to select stable
-training, validation, and final evaluation pools from a committed dataset version:
+training, validation, and test sets from a committed dataset version:
 
 .. code-block:: python
 
-   from foxglove.datasets import DatasetSplit
+   from foxglove.datasets import DatasetSplit, inspect_splits
    from foxglove.datasets.torch import read_dataset  # or foxglove.datasets.ray
 
-   splits = DatasetSplit(train=0.8, validate=0.1, eval=0.1, seed=42)
+   splits = DatasetSplit(train=0.8, validation=0.1, test=0.1, seed=42)
+   summary = inspect_splits("ds_...", version=3, split_config=splits)
+   for name, counts in summary.items():
+       print(name, counts.group_count, counts.episode_count)
+
    train = read_dataset(
        "ds_...", version=3, topics=["/camera/image"], read_episode=read_episode,
-       split=splits, split_name="train",
+       split_config=splits, split="train",
    )
 
-Repeat with ``split_name="validate"`` or ``"eval"`` for the other pools. Assignment
+Repeat with ``split="validation"`` or ``"test"`` for the other pools. Assignment
 happens before epoch shuffling and rank/worker partitioning. The split seed is
 independent of any shuffle seed. Omitting both arguments preserves the full dataset.
 No server-side datasets are created.
@@ -326,9 +330,13 @@ to ``DatasetSplit`` to add those constraints. The mapping must cover exactly the
 committed version's episode IDs; shared recordings remain together even if the
 caller assigns them different group IDs.
 
-Proportions are approximate by group count, not episode or sample count. Connected
-groups can be large, and even nonzero proportions can produce empty pools. Check
-pool sizes before training or evaluation. Save the committed dataset version,
+Proportions are assignment probabilities per group, not exact fractions of groups,
+episodes, or samples. Connected groups can be large, and even nonzero proportions
+can produce empty sets. Use ``inspect_splits`` before training or evaluation to
+check group and episode counts for all three sets. Inspection fetches metadata
+only and uses the same assignment as both readers, before worker/rank partitioning.
+Frame and sample counts depend on decoding and ``read_episode`` and are not known
+from this metadata. Save the committed dataset version,
 proportions, split seed, and optional group mapping with model artifacts.
 Membership is independent of API pagination, source, framework, epoch, and worker
 count. Changing the dataset version can merge groups and change membership.
@@ -377,3 +385,7 @@ Dataset splits
 ^^^^^^^^^^^^^^
 
 .. autoclass:: foxglove.datasets.DatasetSplit
+
+.. autofunction:: foxglove.datasets.inspect_splits
+
+.. autoclass:: foxglove.datasets.SplitSummary

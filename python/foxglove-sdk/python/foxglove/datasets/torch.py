@@ -60,8 +60,8 @@ def read_dataset(
     topics: Sequence[str],
     read_episode: ReadEpisode[_T],
     source: Literal["foxglove", "object_storage"] = "foxglove",
-    split: DatasetSplit | None = None,
-    split_name: SplitName | None = None,
+    split_config: DatasetSplit | None = None,
+    split: SplitName | None = None,
     client_factory: ClientFactory | None = None,
     object_store_factory: ObjectStoreFactory | None = None,
     rank: int | None = None,
@@ -81,7 +81,7 @@ def read_dataset(
     ``FOXGLOVE_API_TOKEN`` from the environment; override ``client_factory`` for
     custom authentication or endpoints.
 
-    ``split`` and ``split_name`` select a recording-safe train, validate, or eval
+    ``split_config`` and ``split`` select a recording-safe train, validation, or test
     pool before worker partitioning. See :class:`foxglove.datasets.DatasetSplit`.
 
     ``source="object_storage"`` reads indexed MCAPs from S3, GCS, or Azure using recording
@@ -118,8 +118,8 @@ def read_dataset(
             client_factory,
             object_store_factory,
             source=source,
+            split_config=split_config,
             split=split,
-            split_name=split_name,
         ),
         read_episode,
         resolved_rank,

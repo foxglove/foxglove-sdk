@@ -4,7 +4,7 @@ from collections.abc import Iterator
 from typing import Any
 
 import pytest
-from foxglove.datasets import DatasetSplit, EpisodeReader
+from foxglove.datasets import DatasetSplit, EpisodeReader, SplitSummary, inspect_splits
 from foxglove.datasets.reader import _Plan, _plan
 
 from .datasets_helpers import Client, Page
@@ -33,14 +33,20 @@ class SplitClient(Client):
 
 def plan(client: Any, split: Any = None, name: Any = None, **kwargs: Any) -> _Plan:
     return _plan(
-        "dataset", 7, ["/topic"], lambda: client, split=split, split_name=name, **kwargs
+        "dataset",
+        7,
+        ["/topic"],
+        lambda: client,
+        split_config=split,
+        split=name,
+        **kwargs,
     )
 
 
 def pools(client: Any, split: Any) -> Any:
     return {
         name: {episode.id for episode in plan(client, split, name).episodes}
-        for name in ("train", "validate", "eval")
+        for name in ("train", "validation", "test")
     }
 
 
@@ -86,12 +92,12 @@ def test_disabled_split_preserves_request_and_empty_pools_are_valid() -> None:
     client = SplitClient()
     assert len(plan(client).episodes) == 4
     assert client.includes == [False]
-    result = pools(client, DatasetSplit(train=1, validate=0, eval=0))
-    assert result == {"train": {"a", "b", "c", "d"}, "validate": set(), "eval": set()}
+    result = pools(client, DatasetSplit(train=1, validation=0, test=0))
+    assert result == {"train": {"a", "b", "c", "d"}, "validation": set(), "test": set()}
     assert pools(SplitClient([]), DatasetSplit()) == {
         "train": set(),
-        "validate": set(),
-        "eval": set(),
+        "validation": set(),
+        "test": set(),
     }
 
 
@@ -100,7 +106,7 @@ def test_disabled_split_preserves_request_and_empty_pools_are_valid() -> None:
     [
         dict(train=-1),
         dict(train=float("nan")),
-        dict(eval=float("inf")),
+        dict(test=float("inf")),
         dict(train=0),
         dict(seed=True),
         dict(seed=1.5),
@@ -133,11 +139,79 @@ def test_group_mapping_is_snapshotted_and_requires_complete_version() -> None:
 
 
 @pytest.mark.parametrize(
-    "split,name", [(None, "train"), (DatasetSplit(), None), (DatasetSplit(), "test")]
+    "split,name", [(None, "train"), (DatasetSplit(), None), (DatasetSplit(), "eval")]
 )
 def test_split_name_validation(split: Any, name: Any) -> None:
     with pytest.raises(ValueError):
         plan(SplitClient(), split, name)
+
+
+def test_inspection_counts_connected_groups_without_reading_messages() -> None:
+    client = SplitClient()
+    recording_ids = {"a": ["r1"], "b": ["r1", "r2"], "c": ["r2"], "d": ["r3"]}
+    for entry in client.entries:
+        entry["episode"]["recordings"] = [
+            {"id": recording_id}
+            for recording_id in recording_ids[entry["episode"]["id"]]
+        ]
+    for seed in range(10):
+        config = DatasetSplit(seed=seed)
+        summary = inspect_splits(
+            "dataset", version=7, split_config=config, client_factory=lambda: client
+        )
+        assert sum(counts.group_count for counts in summary.values()) == 2
+        assert sum(counts.episode_count for counts in summary.values()) == 4
+        for name, membership in pools(client, config).items():
+            assert summary[name].episode_count == len(membership)
+            expected_groups = int("a" in membership) + int("d" in membership)
+            assert summary[name].group_count == expected_groups
+    assert client.calls == []
+    assert all(client.includes)
+    config = DatasetSplit(
+        train=1, validation=0, test=0, groups=dict.fromkeys("abcd", "site")
+    )
+    assert inspect_splits(
+        "dataset", version=7, split_config=config, client_factory=lambda: client
+    ) == {
+        "train": SplitSummary(group_count=1, episode_count=4),
+        "validation": SplitSummary(group_count=0, episode_count=0),
+        "test": SplitSummary(group_count=0, episode_count=0),
+    }
+
+
+def test_inspection_preserves_empty_splits() -> None:
+    summary = inspect_splits(
+        "dataset",
+        version=7,
+        split_config=DatasetSplit(),
+        client_factory=lambda: SplitClient([]),
+    )
+    assert summary == {
+        "train": SplitSummary(group_count=0, episode_count=0),
+        "validation": SplitSummary(group_count=0, episode_count=0),
+        "test": SplitSummary(group_count=0, episode_count=0),
+    }
+
+
+@pytest.mark.parametrize(
+    "invalid", ["uncommitted", "missing", "recording_ids", "groups"]
+)
+def test_inspection_rejects_invalid_metadata(invalid: str) -> None:
+    client = SplitClient()
+    config = DatasetSplit()
+    if invalid in ("uncommitted", "missing"):
+        client.get_dataset_version = lambda **kwargs: {  # type: ignore[method-assign]
+            "committed_at": None if invalid == "uncommitted" else "2026-01-01",
+            "has_missing_recordings": invalid == "missing",
+        }
+    elif invalid == "recording_ids":
+        client.entries[0]["episode"]["recordings"] = []
+    else:
+        config = DatasetSplit(groups={"a": "site"})
+    with pytest.raises(ValueError):
+        inspect_splits(
+            "dataset", version=7, split_config=config, client_factory=lambda: client
+        )
 
 
 def test_object_storage_uses_same_membership_without_requiring_locations_for_foxglove() -> (
@@ -181,16 +255,16 @@ def test_adapters_select_same_pool_and_read_pinned_episode_versions(
         return list(source._plan.read(source._plan.episodes, source._read_episode))
 
     monkeypatch.setattr(ray.data, "read_datasource", consume)
-    for name in ("train", "validate", "eval"):
+    for name in ("train", "validation", "test"):
         client = SplitClient()
-        split = DatasetSplit(train=0.5, validate=0.25, eval=0.25, seed=8)
+        split = DatasetSplit(train=0.5, validation=0.25, test=0.25, seed=8)
         arguments: dict[str, Any] = dict(
             version=7,
             topics=["/topic"],
             read_episode=first,
             client_factory=lambda: client,
-            split=split,
-            split_name=name,
+            split_config=split,
+            split=name,
         )
         expected = {ep.id for ep in plan(client, split, name).episodes}
         ray_rows = read_ray("dataset", **arguments)

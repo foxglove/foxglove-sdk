@@ -135,8 +135,8 @@ def read_dataset(
     topics: Sequence[str],
     read_episode: ReadEpisode[Mapping[str, Any]],
     source: Literal["foxglove", "object_storage"] = "foxglove",
-    split: DatasetSplit | None = None,
-    split_name: SplitName | None = None,
+    split_config: DatasetSplit | None = None,
+    split: SplitName | None = None,
     client_factory: ClientFactory | None = None,
     object_store_factory: ObjectStoreFactory | None = None,
     concurrency: int | None = None,
@@ -162,7 +162,7 @@ def read_dataset(
     locations, unsupported schemes, and access failures raise errors without
     falling back to Foxglove downloads.
 
-    ``split`` and ``split_name`` select a recording-safe train, validate, or eval
+    ``split_config`` and ``split`` select a recording-safe train, validation, or test
     pool before task partitioning. See :class:`foxglove.datasets.DatasetSplit`.
 
     ``client_factory`` overrides API authentication or endpoints.
@@ -188,8 +188,8 @@ def read_dataset(
                 client_factory,
                 object_store_factory,
                 source=source,
+                split_config=split_config,
                 split=split,
-                split_name=split_name,
             ),
             read_episode,
         ),
