@@ -62,7 +62,7 @@ struct StreamedSource {
   /// @brief URL to fetch the data from. Can be absolute or relative.
   /// If `id` is absent, this must uniquely identify the data.
   std::string url;
-  /// @brief Identifier for the data source. If present, must be unique.
+  /// @brief Identifier for the data source. If present, must be globally unique.
   /// If absent, the URL is used as the identifier.
   std::optional<std::string> id;
   /// @brief Topics present in the data.

@@ -94,7 +94,7 @@ async fn manifest_handler(headers: HeaderMap, Query(params): Query<FlightParams>
         // We're providing the data from this service in this example, but in principle this could
         // be any URL.
         url: format!("{DATA_ROUTE}?{query}"),
-        // `id` must unique to this data source. Otherwise, incorrect data may be served from cache.
+        // `id` must be globally unique. Otherwise, incorrect data may be served from cache.
         //
         // Here we reuse the query string to make sure we don't forget any parameters. We also
         // include a version number we increment whenever we change the data handler.

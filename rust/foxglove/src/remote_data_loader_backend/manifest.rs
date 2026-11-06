@@ -43,7 +43,7 @@ pub struct StreamedSource {
     /// URL to fetch the data from. Can be absolute or relative.
     /// If `id` is absent, this must uniquely identify the data.
     pub url: String,
-    /// Identifier for the data source. If present, this must be unique.
+    /// Identifier for the data source. If present, this must be globally unique.
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
     pub id: Option<String>,
