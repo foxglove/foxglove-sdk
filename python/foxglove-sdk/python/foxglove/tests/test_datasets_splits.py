@@ -1,6 +1,9 @@
 """Recording-safe dataset split membership and adapter planning."""
 
+import copy
+import pickle
 from collections.abc import Iterator
+from dataclasses import asdict
 from typing import Any
 
 import pytest
@@ -81,6 +84,92 @@ def test_recording_components_and_custom_groups_add_constraints() -> None:
         )
 
 
+@pytest.mark.parametrize("custom_groups", [False, True])
+def test_fixed_split_assignments(custom_groups: bool) -> None:
+    recordings: dict[str, tuple[str, ...]] = {
+        f"ep_{i:02}": (f"rec_{i:02}",) for i in range(12)
+    }
+    recordings["ep_link"] = ("rec_02", "rec_01")
+    groups = {episode_id: episode_id for episode_id in recordings}
+    groups["ep_08"] = groups["ep_06"]
+    config = DatasetSplit(
+        train=0.5,
+        validation=0.25,
+        test=0.25,
+        seed=17,
+        groups=groups if custom_groups else None,
+    )
+    expected = {
+        "train": {"ep_04", "ep_06", "ep_07", "ep_09", "ep_10"},
+        "validation": {"ep_01", "ep_02", "ep_03", "ep_05", "ep_link"},
+        "test": {"ep_00", "ep_08", "ep_11"},
+    }
+    if custom_groups:
+        expected["train"].add("ep_08")
+        expected["test"].remove("ep_08")
+    for metadata in (recordings, dict(reversed(list(recordings.items())))):
+        actual = {
+            name: {
+                episode_id for episodes in partition.values() for episode_id in episodes
+            }
+            for name, partition in config._partition(metadata).items()
+        }
+        assert actual == expected
+
+
+@pytest.mark.parametrize("custom_groups", [False, True])
+def test_adding_episodes_on_existing_recordings_preserves_membership(
+    custom_groups: bool,
+) -> None:
+    before = {f"ep_b{i}": (f"rec_{i}",) for i in range(100)}
+    after = {**before, **{f"ep_a{i}": (f"rec_{i}",) for i in range(100)}}
+    assignments = []
+    for recordings in (before, after):
+        config = DatasetSplit(
+            train=0.5,
+            validation=0.25,
+            test=0.25,
+            seed=17,
+            groups=(
+                {ep: ids[0] for ep, ids in recordings.items()}
+                if custom_groups
+                else None
+            ),
+        )
+        assignments.append(
+            {
+                episode_id: name
+                for name, partition in config._partition(recordings).items()
+                for episodes in partition.values()
+                for episode_id in episodes
+            }
+        )
+    for i in range(100):
+        assert assignments[0][f"ep_b{i}"] == assignments[1][f"ep_b{i}"]
+        assert assignments[0][f"ep_b{i}"] == assignments[1][f"ep_a{i}"]
+
+
+@pytest.mark.parametrize(
+    "groups", [None, {}, {"a": "site", "b": "site", "c": "other", "d": "other"}]
+)
+def test_split_configuration_serialization(groups: Any) -> None:
+    config = DatasetSplit(seed=17, groups=groups)
+    restored = (
+        pickle.loads(pickle.dumps(config)),
+        copy.deepcopy(config),
+        DatasetSplit(**asdict(config)),
+    )
+    for snapshot in restored:
+        assert snapshot == config
+        assert hash(snapshot) == hash(config)
+        if groups != {}:
+            assert pools(SplitClient(), snapshot) == pools(SplitClient(), config)
+    if groups:
+        reordered = DatasetSplit(seed=17, groups=dict(reversed(list(groups.items()))))
+        assert config == reordered
+        assert hash(config) == hash(reordered)
+
+
 def test_seed_changes_membership_without_using_global_randomness() -> None:
     recordings = {str(index): (str(index),) for index in range(100)}
     assert DatasetSplit(seed=1)._select(recordings, "train") != DatasetSplit(
@@ -111,6 +200,9 @@ def test_disabled_split_preserves_request_and_empty_pools_are_valid() -> None:
         dict(seed=True),
         dict(seed=1.5),
         dict(groups={"a": ""}),
+        dict(groups=(("a", "x"), ("a", "y"))),
+        dict(groups=(("a",),)),
+        dict(groups="invalid"),
     ],
 )
 def test_invalid_configuration(kwargs: Any) -> None:

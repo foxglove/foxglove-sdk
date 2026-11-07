@@ -338,8 +338,16 @@ only and uses the same assignment as both readers, before worker/rank partitioni
 Frame and sample counts depend on decoding and ``read_episode`` and are not known
 from this metadata. Save the committed dataset version,
 proportions, split seed, and optional group mapping with model artifacts.
+Custom group mappings are snapshotted as sorted, immutable episode/group pairs.
+Configurations support ``pickle``, ``copy.deepcopy``, and ``dataclasses.asdict``;
+restore a dictionary snapshot with ``DatasetSplit(**snapshot)``.
 Membership is independent of API pagination, source, framework, epoch, and worker
-count. Changing the dataset version can merge groups and change membership.
+count. Each connected group is hashed by its smallest recording ID. Adding episodes
+within existing recording groups preserves membership. Changing the dataset version can
+merge groups or change a group's smallest recording ID (by adding or removing
+recordings), which can move existing episodes between splits. For comparable
+training and evaluation, use the same committed version and split configuration;
+assignments across different versions do not guarantee separation.
 
 API reference
 -------------
