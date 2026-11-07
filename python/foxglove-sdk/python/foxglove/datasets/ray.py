@@ -19,6 +19,7 @@ from ray.data.context import DataContext
 from ray.data.datasource import Datasource, ReadTask
 
 from .reader import ClientFactory, EpisodeReader, ReadEpisode, _Plan, _plan
+from .splits import DatasetSplit, SplitName
 from .storage import ObjectStoreFactory
 
 if TYPE_CHECKING:
@@ -134,6 +135,8 @@ def read_dataset(
     topics: Sequence[str],
     read_episode: ReadEpisode[Mapping[str, Any]],
     source: Literal["foxglove", "object_storage"] = "foxglove",
+    split_config: DatasetSplit | None = None,
+    split: SplitName | None = None,
     client_factory: ClientFactory | None = None,
     object_store_factory: ObjectStoreFactory | None = None,
     concurrency: int | None = None,
@@ -159,6 +162,9 @@ def read_dataset(
     locations, unsupported schemes, and access failures raise errors without
     falling back to Foxglove downloads.
 
+    ``split_config`` and ``split`` select a recording-safe train, validation, or test
+    pool before task partitioning. See :class:`foxglove.datasets.DatasetSplit`.
+
     ``client_factory`` overrides API authentication or endpoints.
     ``object_store_factory`` overrides built-in storage and requires
     ``source="object_storage"``. Factories used by workers must be serializable.
@@ -182,6 +188,8 @@ def read_dataset(
                 client_factory,
                 object_store_factory,
                 source=source,
+                split_config=split_config,
+                split=split,
             ),
             read_episode,
         ),

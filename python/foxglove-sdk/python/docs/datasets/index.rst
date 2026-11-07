@@ -295,6 +295,64 @@ To request ten seconds of history, pass ``read_episode=read_video`` to
 Consume the iterator fully to receive buffered frames. The episode closes streams
 automatically, including on errors or early termination.
 
+Dataset splits
+--------------
+
+Use the same ``DatasetSplit`` configuration with either reader to select stable
+training, validation, and test sets from a committed dataset version:
+
+.. code-block:: python
+
+   from foxglove.datasets import DatasetSplit, inspect_splits
+   from foxglove.datasets.torch import read_dataset  # or foxglove.datasets.ray
+
+   splits = DatasetSplit(train=0.8, validation=0.1, test=0.1, seed=42)
+   summary = inspect_splits("ds_...", version=3, split_config=splits)
+   for name, counts in summary.items():
+       print(name, counts.group_count, counts.episode_count)
+
+   train = read_dataset(
+       "ds_...", version=3, topics=["/camera/image"], read_episode=read_episode,
+       split_config=splits, split="train",
+   )
+
+Repeat with ``split="validation"`` or ``"test"`` for the other pools. Assignment
+happens before epoch shuffling and rank/worker partitioning. The split seed is
+independent of any shuffle seed. Omitting both arguments preserves the full dataset.
+No server-side datasets are created.
+
+Episodes sharing any recording ID are kept together, transitively, including an
+episode attached to multiple recordings. Split planning requests recording IDs in
+both source modes and fails if those IDs are missing. Frames within an episode
+remain together. Recording grouping cannot detect related sessions, sites, or
+robots spread across different recordings: pass ``groups={episode_id: group_id, ...}``
+to ``DatasetSplit`` to add those constraints. The mapping must cover exactly the
+committed version's episode IDs; shared recordings remain together even if the
+caller assigns them different group IDs.
+
+Proportions are assignment probabilities per group, not exact fractions of groups,
+episodes, or samples. Connected groups can be large, and even nonzero proportions
+can produce empty sets. Use ``inspect_splits`` before training or evaluation to
+check group and episode counts for all three sets. Inspection fetches metadata
+only and uses the same assignment as both readers, before worker/rank partitioning.
+Frame and sample counts depend on decoding and ``read_episode`` and are not known
+from this metadata. Save the committed dataset version,
+proportions, split seed, and optional group mapping with model artifacts.
+Custom group mappings are snapshotted as sorted, immutable episode/group pairs.
+Configurations support ``pickle``, ``copy.deepcopy``, and ``dataclasses.asdict``;
+restore a dictionary snapshot with ``DatasetSplit(**snapshot)``. JSON snapshots
+also round-trip with ``DatasetSplit(**json.loads(json.dumps(asdict(config))))``.
+Membership is independent of API pagination, source, framework, epoch, and worker
+count. Each connected group is hashed by its smallest custom group ID when
+``groups`` is provided, otherwise by its smallest recording ID. Adding episodes
+within an existing recording group preserves membership. With custom groups,
+adding recordings to an existing group also preserves membership: use stable
+session, site, or robot IDs, since renaming these IDs can change assignments.
+Changing the dataset version can merge groups or change a group's smallest ID,
+which can move existing episodes between splits. For comparable training and
+evaluation, use the same committed version and split configuration; assignments
+across different versions do not guarantee separation.
+
 API reference
 -------------
 
@@ -334,3 +392,12 @@ Video decoding
 .. autoexception:: foxglove.datasets.video.VideoDecodeError
 
 .. autofunction:: foxglove.datasets.torch.to_image_tensor
+
+Dataset splits
+^^^^^^^^^^^^^^
+
+.. autoclass:: foxglove.datasets.DatasetSplit
+
+.. autofunction:: foxglove.datasets.inspect_splits
+
+.. autoclass:: foxglove.datasets.SplitSummary
