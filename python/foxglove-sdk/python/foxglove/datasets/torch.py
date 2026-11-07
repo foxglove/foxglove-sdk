@@ -104,7 +104,7 @@ def read_dataset(
     rank: int | None = None,
     world_size: int | None = None,
     shuffle: bool = False,
-    seed: int = 0,
+    seed: int | None = None,
 ) -> TorchDataset[_T]:
     """Plan a topic-filtered dataset; download messages only during iteration.
 
@@ -134,6 +134,8 @@ def read_dataset(
     ``shuffle=True`` permutes episode metadata using ``seed + epoch`` before
     partitioning ranks and workers. The same seed, epoch, and committed episode
     list produce the same permutation; all ranks must use the same seed and epoch.
+    ``seed`` must be a nonnegative integer and requires ``shuffle=True`` when
+    supplied. If omitted or ``None``, shuffling uses seed zero.
     Call :meth:`TorchDataset.set_epoch` between completed passes (initial epoch zero).
     Without shuffling, episodes retain sorted ID order. Samples within each episode
     keep callback order; this is not uniform sample shuffling or full training-run
@@ -147,8 +149,13 @@ def read_dataset(
     """
     if not isinstance(shuffle, bool):
         raise TypeError("shuffle must be a bool")
-    if isinstance(seed, bool) or not isinstance(seed, int):
-        raise TypeError("seed must be an integer")
+    if seed is not None:
+        if isinstance(seed, bool) or not isinstance(seed, int):
+            raise TypeError("seed must be an integer")
+        if seed < 0:
+            raise ValueError("seed must be nonnegative")
+        if not shuffle:
+            raise ValueError("seed requires shuffle=True")
     if (rank is None) != (world_size is None):
         raise ValueError("rank and world_size must be provided together")
     if rank is None or world_size is None:
@@ -172,5 +179,5 @@ def read_dataset(
         resolved_rank,
         resolved_world_size,
         shuffle=shuffle,
-        seed=seed,
+        seed=0 if seed is None else seed,
     )

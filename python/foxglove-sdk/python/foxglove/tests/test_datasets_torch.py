@@ -286,7 +286,7 @@ def test_epoch_change_preserves_active_iterator_and_unshuffled_order() -> None:
             read_episode=first_sample,
             client_factory=Client,
             shuffle=shuffle,
-            seed=17,
+            seed=17 if shuffle else None,
         )
         expected = list(dataset)
         active = iter(dataset)
@@ -381,11 +381,24 @@ def test_invalid_epoch(epoch: Any) -> None:
         dataset.set_epoch(epoch)
 
 
-@pytest.mark.parametrize("kwargs", [{"shuffle": 1}, {"seed": 1.5}, {"seed": True}])
-def test_invalid_shuffle_configuration(kwargs: dict[str, Any]) -> None:
+@pytest.mark.parametrize(
+    "kwargs, error, message",
+    [
+        ({"shuffle": 1}, TypeError, "shuffle must be a bool"),
+        ({"shuffle": True, "seed": 1.5}, TypeError, "seed must be an integer"),
+        ({"shuffle": True, "seed": True}, TypeError, "seed must be an integer"),
+        ({"shuffle": True, "seed": -1}, ValueError, "seed must be nonnegative"),
+        ({"seed": -1}, ValueError, "seed must be nonnegative"),
+        ({"seed": 0}, ValueError, "seed requires shuffle=True"),
+        ({"seed": 42}, ValueError, "seed requires shuffle=True"),
+    ],
+)
+def test_invalid_shuffle_configuration(
+    kwargs: dict[str, Any], error: type[Exception], message: str
+) -> None:
     from foxglove.datasets.torch import read_dataset
 
-    with pytest.raises(TypeError):
+    with pytest.raises(error, match=message):
         read_dataset(
             "dataset",
             version=7,
@@ -414,3 +427,31 @@ def test_unshuffled_dataset_does_not_allocate_shared_memory(
     )
     dataset.set_epoch(1)
     assert list(dataset) == [{"id": name} for name in "abcd"]
+
+
+@pytest.mark.parametrize("kwargs", [{}, {"seed": None}])
+def test_shuffling_defaults_to_seed_zero(kwargs: dict[str, Any]) -> None:
+    from foxglove.datasets.torch import read_dataset
+
+    dataset = read_dataset(
+        "dataset",
+        version=7,
+        topics=["/camera"],
+        read_episode=first_sample,
+        client_factory=Client,
+        shuffle=True,
+        **kwargs,
+    )
+    explicit_zero = read_dataset(
+        "dataset",
+        version=7,
+        topics=["/camera"],
+        read_episode=first_sample,
+        client_factory=Client,
+        shuffle=True,
+        seed=0,
+    )
+    for epoch in (0, 1, 2):
+        dataset.set_epoch(epoch)
+        explicit_zero.set_epoch(epoch)
+        assert list(dataset) == list(explicit_zero)
