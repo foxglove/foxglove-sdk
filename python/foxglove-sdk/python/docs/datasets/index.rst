@@ -340,14 +340,18 @@ from this metadata. Save the committed dataset version,
 proportions, split seed, and optional group mapping with model artifacts.
 Custom group mappings are snapshotted as sorted, immutable episode/group pairs.
 Configurations support ``pickle``, ``copy.deepcopy``, and ``dataclasses.asdict``;
-restore a dictionary snapshot with ``DatasetSplit(**snapshot)``.
+restore a dictionary snapshot with ``DatasetSplit(**snapshot)``. JSON snapshots
+also round-trip with ``DatasetSplit(**json.loads(json.dumps(asdict(config))))``.
 Membership is independent of API pagination, source, framework, epoch, and worker
-count. Each connected group is hashed by its smallest recording ID. Adding episodes
-within existing recording groups preserves membership. Changing the dataset version can
-merge groups or change a group's smallest recording ID (by adding or removing
-recordings), which can move existing episodes between splits. For comparable
-training and evaluation, use the same committed version and split configuration;
-assignments across different versions do not guarantee separation.
+count. Each connected group is hashed by its smallest custom group ID when
+``groups`` is provided, otherwise by its smallest recording ID. Adding episodes
+within an existing recording group preserves membership. With custom groups,
+adding recordings to an existing group also preserves membership: use stable
+session, site, or robot IDs, since renaming these IDs can change assignments.
+Changing the dataset version can merge groups or change a group's smallest ID,
+which can move existing episodes between splits. For comparable training and
+evaluation, use the same committed version and split configuration; assignments
+across different versions do not guarantee separation.
 
 API reference
 -------------

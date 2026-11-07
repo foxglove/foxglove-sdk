@@ -7,7 +7,7 @@ import json
 import math
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from typing import Literal
+from typing import Literal, cast
 
 SplitName = Literal["train", "validation", "test"]
 
@@ -37,21 +37,23 @@ class DatasetSplit:
     episode ID to a session, site, or other group ID. These constraints are added
     to recording grouping, so shared recordings always stay together. The mapping
     is snapshotted as sorted, immutable episode/group pairs; these pairs are also
-    accepted when restoring a configuration from ``dataclasses.asdict``.
+    accepted as sequences when restoring from ``dataclasses.asdict`` or JSON.
 
     Membership is reproducible for a committed version and this configuration,
     independent of API order, framework, source, epoch, ranks, and workers.
-    Each group is hashed by its smallest recording ID. Adding episodes within
-    existing recording groups preserves membership. Merging groups or changing
-    their smallest recording ID in another version can change assignments. Save
-    the version and split configuration with model artifacts.
+    Each connected group is hashed by its smallest custom group ID when ``groups``
+    is provided, otherwise by its smallest recording ID. Use stable custom IDs:
+    adding recordings within an existing custom group preserves membership, but
+    renaming custom IDs can change it. Merging groups or changing the smallest
+    ID in another version can also change assignments. Save the version and split
+    configuration with model artifacts.
     """
 
     train: float = 0.8
     validation: float = 0.1
     test: float = 0.1
     seed: int = 0
-    groups: Mapping[str, str] | tuple[tuple[str, str], ...] | None = None
+    groups: Mapping[str, str] | Sequence[Sequence[str]] | None = None
 
     def __post_init__(self) -> None:
         groups = self.groups
@@ -70,18 +72,25 @@ class DatasetSplit:
             raise ValueError("Split seed must be an integer")
         if groups is not None:
             pairs = tuple(groups.items()) if isinstance(groups, Mapping) else groups
-            if not isinstance(pairs, tuple) or any(
-                not isinstance(pair, tuple)
-                or len(pair) != 2
-                or any(not isinstance(value, str) or not value for value in pair)
-                for pair in pairs
+            if (
+                not isinstance(pairs, Sequence)
+                or isinstance(pairs, (str, bytes, bytearray))
+                or any(
+                    not isinstance(pair, Sequence)
+                    or isinstance(pair, (str, bytes, bytearray))
+                    or len(pair) != 2
+                    or any(not isinstance(value, str) or not value for value in pair)
+                    for pair in pairs
+                )
             ):
                 raise ValueError(
-                    "Split groups must map nonempty episode IDs to nonempty group IDs"
+                    "Split groups must be a mapping or sequence of episode/group pairs "
+                    "with nonempty string IDs"
                 )
-            if len(dict(pairs)) != len(pairs):
+            snapshot = tuple(sorted((pair[0], pair[1]) for pair in pairs))
+            if len(dict(snapshot)) != len(snapshot):
                 raise ValueError("Split groups must contain unique episode IDs")
-            object.__setattr__(self, "groups", tuple(sorted(pairs)))
+            object.__setattr__(self, "groups", snapshot)
 
     def _select(
         self, recordings: Mapping[str, Sequence[str]], name: SplitName
@@ -112,8 +121,12 @@ class DatasetSplit:
         for episode_id, recording_ids in recordings.items():
             for recording_id in recording_ids:
                 join(episode_id, owners.setdefault(recording_id, episode_id))
-        if self.groups is not None:
-            groups = dict(self.groups)
+        groups = (
+            dict(cast(tuple[tuple[str, str], ...], self.groups))
+            if self.groups is not None
+            else None
+        )
+        if groups is not None:
             if groups.keys() != recordings.keys():
                 raise ValueError(
                     "Split groups must cover exactly the committed version's episodes"
@@ -124,7 +137,8 @@ class DatasetSplit:
         keys: dict[str, str] = {}
         for episode_id, recording_ids in recordings.items():
             group = root(episode_id)
-            keys[group] = min(keys.get(group, recording_ids[0]), *recording_ids)
+            candidates = recording_ids if groups is None else (groups[episode_id],)
+            keys[group] = min(keys.get(group, candidates[0]), *candidates)
         assignments: dict[str, SplitName] = {}
         for episode_id in recordings:
             group = root(episode_id)

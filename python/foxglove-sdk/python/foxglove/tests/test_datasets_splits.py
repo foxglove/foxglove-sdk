@@ -1,6 +1,7 @@
 """Recording-safe dataset split membership and adapter planning."""
 
 import copy
+import json
 import pickle
 from collections.abc import Iterator
 from dataclasses import asdict
@@ -105,8 +106,11 @@ def test_fixed_split_assignments(custom_groups: bool) -> None:
         "test": {"ep_00", "ep_08", "ep_11"},
     }
     if custom_groups:
-        expected["train"].add("ep_08")
-        expected["test"].remove("ep_08")
+        expected = {
+            "train": {"ep_00", "ep_04", "ep_05", "ep_06", "ep_07", "ep_08", "ep_10"},
+            "validation": {"ep_01", "ep_02", "ep_03", "ep_09", "ep_link"},
+            "test": {"ep_11"},
+        }
     for metadata in (recordings, dict(reversed(list(recordings.items())))):
         actual = {
             name: {
@@ -149,6 +153,38 @@ def test_adding_episodes_on_existing_recordings_preserves_membership(
         assert assignments[0][f"ep_b{i}"] == assignments[1][f"ep_a{i}"]
 
 
+def test_adding_recordings_to_custom_groups_preserves_membership() -> None:
+    before = {"ep_b": ("rec_5",), "ep_c": ("rec_6",)}
+    after = {**before, "ep_a": ("rec_0",)}
+    for seed in range(20):
+        config = DatasetSplit(
+            train=0.5,
+            validation=0.25,
+            test=0.25,
+            seed=seed,
+            groups=dict.fromkeys(before, "site"),
+        )
+        extended = DatasetSplit(
+            train=0.5,
+            validation=0.25,
+            test=0.25,
+            seed=seed,
+            groups=dict.fromkeys(after, "site"),
+        )
+        for name in ("train", "validation", "test"):
+            original = config._select(before, name)
+            assert extended._select(after, name) == (set(after) if original else set())
+
+
+def test_sequence_groups_are_snapshotted() -> None:
+    groups = [["a", "site"], ["b", "site"], ["c", "other"], ["d", "other"]]
+    config = DatasetSplit(groups=groups)
+    expected = pools(SplitClient(), config)
+    groups[0][1] = "other"
+    groups.append(["extra", "site"])
+    assert pools(SplitClient(), config) == expected
+
+
 @pytest.mark.parametrize(
     "groups", [None, {}, {"a": "site", "b": "site", "c": "other", "d": "other"}]
 )
@@ -158,6 +194,7 @@ def test_split_configuration_serialization(groups: Any) -> None:
         pickle.loads(pickle.dumps(config)),
         copy.deepcopy(config),
         DatasetSplit(**asdict(config)),
+        DatasetSplit(**json.loads(json.dumps(asdict(config)))),
     )
     for snapshot in restored:
         assert snapshot == config
@@ -203,6 +240,14 @@ def test_disabled_split_preserves_request_and_empty_pools_are_valid() -> None:
         dict(groups=(("a", "x"), ("a", "y"))),
         dict(groups=(("a",),)),
         dict(groups="invalid"),
+        dict(groups=["ax"]),
+        dict(groups=[b"ax"]),
+        dict(groups=[["a", "x"], ["a", "y"]]),
+        dict(groups=[["a"]]),
+        dict(groups=[["a", "x", "extra"]]),
+        dict(groups=[["a", ""]]),
+        dict(groups=[["a", 1]]),
+        dict(groups=b"ax"),
     ],
 )
 def test_invalid_configuration(kwargs: Any) -> None:
