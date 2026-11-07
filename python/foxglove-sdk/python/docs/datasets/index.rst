@@ -52,6 +52,49 @@ with ``speed`` and ``steering`` fields; adapt ``read_episode`` to your data.
 The result is an ``IterableDataset``. Your callback can yield tensors, tuples,
 dictionaries, or objects handled by a custom ``collate_fn``.
 
+Epoch shuffling
+^^^^^^^^^^^^^^^
+
+Pass ``shuffle=True, seed=42`` to ``read_dataset`` for reproducible episode
+permutations. The default keeps episodes in sorted ID order. Set the epoch before
+starting each pass, including when using persistent workers:
+
+.. code-block:: python
+
+   if __name__ == "__main__":
+       dataset = read_dataset(
+           "ds_123", version=7, topics=["/training/measurements"],
+           read_episode=read_episode, shuffle=True, seed=42,
+       )
+       loader = DataLoader(
+           dataset, batch_size=32, num_workers=2,
+           multiprocessing_context="spawn", persistent_workers=True,
+       )
+       for epoch in range(10):
+           dataset.set_epoch(epoch)
+           for batch in loader:
+               train_step(batch)
+
+Complete the previous pass before changing epochs. Each iterator snapshots the
+epoch when it starts; epoch updates reach spawned and persistent workers on the
+next pass. The initial epoch is zero. The permutation uses ``seed + epoch``;
+repeating the same seed, epoch, and committed episode list repeats its episode
+order. Changing epochs selects a new permutation, which can coincide for small
+sets. This does not guarantee full training-run reproducibility.
+
+Shuffling permutes episode metadata before partitioning by rank, then by worker.
+All ranks must use the same seed and epoch. Ranks may have different worker counts;
+episodes are assigned once across all ranks and workers, including when some
+partitions are empty. The additional shuffle memory is O(number of episodes)
+metadata references; message payloads stream during iteration.
+
+Samples within an episode retain callback order. This is episode shuffling,
+not uniform sample shuffling. Episodes can yield different numbers of samples,
+so ranks and workers can produce unequal batch counts. Use an uneven-input
+training policy, such as DDP's ``model.join()`` context around the training loop,
+when needed. Shuffling does not pad, repeat, or drop episodes to balance ranks.
+Do not pass ``shuffle=True`` or a ``DistributedSampler`` to DataLoader.
+
 Ray Data
 --------
 
@@ -302,6 +345,10 @@ PyTorch
 ^^^^^^^
 
 .. autofunction:: foxglove.datasets.torch.read_dataset
+
+.. autoclass:: foxglove.datasets.torch.TorchDataset
+   :members: set_epoch
+   :exclude-members: __init__, __new__
 
 Ray Data
 ^^^^^^^^
