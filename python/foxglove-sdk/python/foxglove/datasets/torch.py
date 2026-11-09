@@ -13,6 +13,7 @@ from torch import Tensor, as_tensor
 from torch.utils.data import IterableDataset, get_worker_info
 
 from .reader import ClientFactory, ReadEpisode, _Plan, _plan
+from .splits import DatasetSplit, SplitName
 from .storage import ObjectStoreFactory
 
 _T = TypeVar("_T")
@@ -59,6 +60,8 @@ def read_dataset(
     topics: Sequence[str],
     read_episode: ReadEpisode[_T],
     source: Literal["foxglove", "object_storage"] = "foxglove",
+    split_config: DatasetSplit | None = None,
+    split: SplitName | None = None,
     client_factory: ClientFactory | None = None,
     object_store_factory: ObjectStoreFactory | None = None,
     rank: int | None = None,
@@ -77,6 +80,9 @@ def read_dataset(
     locations). Each new iteration rereads data. The default client reads
     ``FOXGLOVE_API_TOKEN`` from the environment; override ``client_factory`` for
     custom authentication or endpoints.
+
+    ``split_config`` and ``split`` select a recording-safe train, validation, or test
+    pool before worker partitioning. See :class:`foxglove.datasets.DatasetSplit`.
 
     ``source="object_storage"`` reads indexed MCAPs from S3, GCS, or Azure using recording
     locations and the worker's cloud credentials. No filesystem configuration is
@@ -112,6 +118,8 @@ def read_dataset(
             client_factory,
             object_store_factory,
             source=source,
+            split_config=split_config,
+            split=split,
         ),
         read_episode,
         resolved_rank,
