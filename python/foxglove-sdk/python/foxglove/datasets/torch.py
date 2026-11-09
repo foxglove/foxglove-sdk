@@ -82,8 +82,8 @@ def read_dataset(
     ``FOXGLOVE_API_TOKEN`` from the environment; override ``client_factory`` for
     custom authentication or endpoints.
 
-    Set ``include_properties=True`` to also fetch each episode's properties from its
-    pinned episode version and read them from ``EpisodeReader.properties``.
+    ``include_properties=True`` fetches each episode's properties from its pinned
+    version for ``EpisodeReader.properties``. They are not fetched by default.
 
     ``split_config`` and ``split`` select a recording-safe train, validation, or test
     pool before worker partitioning. See :class:`foxglove.datasets.DatasetSplit`.

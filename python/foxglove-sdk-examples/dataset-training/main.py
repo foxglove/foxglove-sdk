@@ -16,8 +16,7 @@ from foxglove.datasets import EpisodeReader
 
 def read_episode(episode: EpisodeReader) -> Iterator[dict[str, np.ndarray]]:
     """Convert selected messages to framework-independent training samples."""
-    # Skip episodes reviewers rejected; unreviewed episodes are kept. Properties come
-    # from the episode version pinned by the dataset version.
+    # Requires include_properties=True in read_dataset.
     if episode.properties.get("quality") == "rejected":
         return
     for _schema, _channel, _message, payload in episode.iter_messages():

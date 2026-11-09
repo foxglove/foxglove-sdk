@@ -157,8 +157,8 @@ def read_dataset(
     every worker. Use consistent column types containing scalars, NumPy arrays, or other
     Arrow-compatible values.
 
-    Set ``include_properties=True`` to also fetch each episode's properties from its
-    pinned episode version and read them from ``EpisodeReader.properties``.
+    ``include_properties=True`` fetches each episode's properties from its pinned
+    version for ``EpisodeReader.properties``. They are not fetched by default.
 
     The default client uses ``FOXGLOVE_API_TOKEN``. Set ``source="object_storage"`` to read
     indexed MCAPs directly from S3, GCS, or Azure. The SDK selects the filesystem

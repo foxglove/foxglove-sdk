@@ -75,21 +75,12 @@ further processing. ``concurrency`` limits the number of simultaneous read tasks
 Episode properties
 ------------------
 
-Pass ``include_properties=True`` to either ``read_dataset`` to fetch each episode's
-properties during planning. ``EpisodeReader.properties`` is then a read-only mapping
-of the episode's properties. Values come from the episode version pinned by the
-dataset version, so they match the messages being read even if the episode is
-edited later. Episodes without properties return an empty mapping. Properties are
-not fetched by default, and reading ``EpisodeReader.properties`` without
-``include_properties=True`` raises ``RuntimeError``. Both adapters supply the same
-reader, so this callback works with PyTorch and Ray Data:
+Pass ``include_properties=True`` to either adapter to use episode properties in
+your callback. ``episode.properties`` is a read-only mapping:
 
 .. code-block:: python
 
-   from foxglove.datasets.torch import read_dataset  # or foxglove.datasets.ray
-
    def read_episode(episode):
-       # Skip episodes reviewers rejected; unreviewed episodes are kept.
        if episode.properties.get("quality") == "rejected":
            return
        weight = float(episode.properties.get("weight", 1.0))
@@ -97,15 +88,18 @@ reader, so this callback works with PyTorch and Ray Data:
            yield {"speed": decoded["speed"], "weight": weight}
 
    dataset = read_dataset(
-       "ds_...", version=3, topics=["/measurements"], read_episode=read_episode,
-       include_properties=True,
+       "ds_123", version=7, topics=["/training/measurements"],
+       read_episode=read_episode, include_properties=True,
    )
 
-Pass a default to ``get`` for properties that some episodes do not set, so every
-sample has the same fields and types. Episodes can have different property keys, so
-select the properties you need rather than yielding the whole mapping: DataLoader's
-default collation fails on samples with differing keys or ``None`` values, and Ray
-Data requires consistent column types.
+Values come from the episode version pinned by the dataset version, so later edits
+to an episode do not change them. Episodes without properties have an empty
+mapping. Without ``include_properties=True``, properties are not fetched and
+reading ``episode.properties`` raises ``RuntimeError``.
+
+Episodes can set different properties. Select the ones you need with a default,
+such as ``get("weight", 1.0)``, so every sample has the same fields and types:
+DataLoader's default collation and Ray Data's columns both require this.
 
 Object storage
 --------------
