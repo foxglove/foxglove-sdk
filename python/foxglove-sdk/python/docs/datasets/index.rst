@@ -75,25 +75,22 @@ starting each pass, including when using persistent workers:
            for batch in loader:
                train_step(batch)
 
-Complete the previous pass before changing epochs. Each iterator snapshots the
-epoch when it starts; epoch updates reach spawned and persistent workers on the
-next pass. The initial epoch is zero. The permutation uses ``seed + epoch``;
-repeating the same seed, epoch, and committed episode list repeats its episode
-order. Changing epochs selects a new permutation, which can coincide for small
-sets. This does not guarantee full training-run reproducibility.
+Keep these rules in mind:
 
-Shuffling permutes episode metadata before partitioning by rank, then by worker.
-All ranks must use the same seed and epoch. Ranks may have different worker counts;
-episodes are assigned once across all ranks and workers, including when some
-partitions are empty. The additional shuffle memory is O(number of episodes)
-metadata references; message payloads stream during iteration.
+* Finish each pass before calling ``set_epoch()``. Workers use the updated epoch
+  on the next pass, including persistent workers. The initial epoch is zero.
+* The same seed, epoch, and dataset version reproduce the episode order, using
+  ``seed + epoch``. Different epochs can still produce the same order for small
+  datasets. This does not guarantee a reproducible training run.
+* Only the episode list is reordered in memory; message data streams during
+  iteration. Samples within each episode stay in the order your callback yields
+  them. Leave DataLoader's ``shuffle`` disabled and omit ``DistributedSampler``.
 
-Samples within an episode retain callback order. This is episode shuffling,
-not uniform sample shuffling. Episodes can yield different numbers of samples,
-so ranks and workers can produce unequal batch counts. Use an uneven-input
-training policy, such as DDP's ``model.join()`` context around the training loop,
-when needed. Shuffling does not pad, repeat, or drop episodes to balance ranks.
-Do not pass ``shuffle=True`` or a ``DistributedSampler`` to DataLoader.
+For distributed training, all ranks must use the same seed and epoch. The SDK
+shuffles the episode list, then assigns episodes across ranks and workers without
+duplication. It does not balance sample counts, so ranks can produce different
+numbers of batches. Handle uneven inputs, for example with DDP's ``model.join()``
+context around the training loop.
 
 Ray Data
 --------
