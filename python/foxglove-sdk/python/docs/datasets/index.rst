@@ -84,8 +84,8 @@ reader, so this callback works with PyTorch and Ray Data:
 .. code-block:: python
 
    def read_episode(episode):
-       # Skip episodes labeled for another split; unlabeled episodes are kept.
-       if episode.properties.get("split", "train") != "train":
+       # Skip episodes reviewers rejected; unreviewed episodes are kept.
+       if episode.properties.get("quality") == "rejected":
            return
        weight = float(episode.properties.get("weight", 1.0))
        for schema, channel, message, decoded in episode.iter_messages():
