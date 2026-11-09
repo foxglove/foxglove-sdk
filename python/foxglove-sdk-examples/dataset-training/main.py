@@ -1,6 +1,7 @@
 """Read a committed Foxglove dataset with PyTorch or Ray.
 
 The selected JSON topic contains speed, acceleration, and steering numbers.
+Episodes whose "quality" property is "rejected" are skipped.
 Set FOXGLOVE_API_TOKEN before running. Object storage mode uses cloud credentials
 on workers; the default Foxglove mode also needs FOXGLOVE_API_TOKEN on workers.
 """
@@ -15,6 +16,9 @@ from foxglove.datasets import EpisodeReader
 
 def read_episode(episode: EpisodeReader) -> Iterator[dict[str, np.ndarray]]:
     """Convert selected messages to framework-independent training samples."""
+    # Requires include_properties=True in read_dataset.
+    if episode.properties.get("quality") == "rejected":
+        return
     for _schema, _channel, _message, payload in episode.iter_messages():
         yield {
             "inputs": np.asarray(
@@ -37,6 +41,7 @@ def run_torch(
         topics=["/training/measurements"],
         read_episode=read_episode,
         source=source,
+        include_properties=True,
     )
     loader = DataLoader(
         dataset,
@@ -64,6 +69,7 @@ def run_ray(
             topics=["/training/measurements"],
             read_episode=read_episode,
             source=source,
+            include_properties=True,
             concurrency=2,
         )
         for batch in dataset.iter_torch_batches(batch_size=32, device="cpu"):

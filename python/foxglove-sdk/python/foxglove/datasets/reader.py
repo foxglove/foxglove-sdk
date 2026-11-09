@@ -7,6 +7,7 @@ from collections.abc import Callable, Generator, Iterable, Iterator, Mapping, Se
 from contextlib import ExitStack
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
+from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, Literal, Protocol, TypeVar, cast
 
 from .splits import DatasetSplit, SplitName, SplitSummary
@@ -45,6 +46,7 @@ class _Client(Protocol):
         version_number: int,
         limit: int,
         include_recordings: bool = False,
+        include_properties: bool = False,
     ) -> _Page: ...
 
     def iter_messages(
@@ -78,6 +80,8 @@ class _Episode:
     end_time: datetime
     locations: tuple[ObjectLocation, ...] = ()
     version: int = field(kw_only=True)
+    # None when properties were not requested during planning.
+    properties: dict[str, Any] | None = field(default=None, kw_only=True)
 
 
 class EpisodeReader:
@@ -124,6 +128,22 @@ class EpisodeReader:
     def end_time(self) -> datetime:
         """End of the episode's time window."""
         return self._episode.end_time
+
+    @property
+    def properties(self) -> Mapping[str, Any]:
+        """Read-only properties of the episode version pinned by the dataset version.
+
+        Requires ``include_properties=True`` in ``read_dataset``. Empty if the episode
+        has no properties.
+
+        :raises RuntimeError: If properties were not requested.
+        """
+        if self._episode.properties is None:
+            raise RuntimeError(
+                "Episode properties were not requested; "
+                "pass include_properties=True to read_dataset"
+            )
+        return MappingProxyType(self._episode.properties)
 
     def iter_messages(
         self,
@@ -282,6 +302,7 @@ def _plan(
     source: Literal["foxglove", "object_storage"] = "foxglove",
     split_config: DatasetSplit | None = None,
     split: SplitName | None = None,
+    include_properties: bool = False,
 ) -> _Plan:
     if (split_config is None) != (split is None):
         raise ValueError("split_config and split must be provided together")
@@ -316,6 +337,7 @@ def _plan(
         version,
         make_client,
         include_recordings=make_store is not None or split_config is not None,
+        include_properties=include_properties,
     ):
         if split_config is not None:
             recordings[episode["id"]] = _recording_ids(episode)
@@ -330,6 +352,12 @@ def _plan(
                     else ()
                 ),
                 version=episode["version"],
+                # Episodes without properties may omit the field.
+                properties=(
+                    dict(episode.get("properties") or {})
+                    if include_properties
+                    else None
+                ),
             )
         )
     # Make rank/worker partitioning independent of pagination order and sort ties.
@@ -353,6 +381,7 @@ def _version_episodes(
     client_factory: ClientFactory,
     *,
     include_recordings: bool,
+    include_properties: bool = False,
 ) -> Iterator[Mapping[str, Any]]:
     if not dataset_id:
         raise ValueError("dataset_id must be nonempty")
@@ -369,6 +398,7 @@ def _version_episodes(
         version_number=version,
         limit=_EPISODE_PAGE_SIZE,
         include_recordings=include_recordings,
+        include_properties=include_properties,
     )
     for entry in page.auto_paging_iter():
         episode = entry["episode"]

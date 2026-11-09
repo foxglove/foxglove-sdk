@@ -72,6 +72,35 @@ The result is a ``ray.data.Dataset``. Callbacks must yield mappings with
 consistent column types, such as scalars or NumPy arrays. Use ``map_batches`` for
 further processing. ``concurrency`` limits the number of simultaneous read tasks.
 
+Episode properties
+------------------
+
+Pass ``include_properties=True`` to either adapter to use episode properties in
+your callback. ``episode.properties`` is a read-only mapping:
+
+.. code-block:: python
+
+   def read_episode(episode):
+       if episode.properties.get("quality") == "rejected":
+           return
+       weight = float(episode.properties.get("weight", 1.0))
+       for schema, channel, message, decoded in episode.iter_messages():
+           yield {"speed": decoded["speed"], "weight": weight}
+
+   dataset = read_dataset(
+       "ds_123", version=7, topics=["/training/measurements"],
+       read_episode=read_episode, include_properties=True,
+   )
+
+Values come from the episode version pinned by the dataset version, so later edits
+to an episode do not change them. Episodes without properties have an empty
+mapping. Without ``include_properties=True``, properties are not fetched and
+reading ``episode.properties`` raises ``RuntimeError``.
+
+Episodes can set different properties. Select the ones you need with a default,
+such as ``get("weight", 1.0)``, so every sample has the same fields and types:
+DataLoader's default collation and Ray Data's columns both require this.
+
 Object storage
 --------------
 

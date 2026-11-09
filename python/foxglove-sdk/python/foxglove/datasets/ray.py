@@ -137,6 +137,7 @@ def read_dataset(
     source: Literal["foxglove", "object_storage"] = "foxglove",
     split_config: DatasetSplit | None = None,
     split: SplitName | None = None,
+    include_properties: bool = False,
     client_factory: ClientFactory | None = None,
     object_store_factory: ObjectStoreFactory | None = None,
     concurrency: int | None = None,
@@ -155,6 +156,9 @@ def read_dataset(
     Factories and callbacks must be serializable and their dependencies available on
     every worker. Use consistent column types containing scalars, NumPy arrays, or other
     Arrow-compatible values.
+
+    ``include_properties=True`` fetches each episode's properties from its pinned
+    version for ``EpisodeReader.properties``. They are not fetched by default.
 
     The default client uses ``FOXGLOVE_API_TOKEN``. Set ``source="object_storage"`` to read
     indexed MCAPs directly from S3, GCS, or Azure. The SDK selects the filesystem
@@ -190,6 +194,7 @@ def read_dataset(
                 source=source,
                 split_config=split_config,
                 split=split,
+                include_properties=include_properties,
             ),
             read_episode,
         ),

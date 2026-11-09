@@ -62,6 +62,7 @@ def read_dataset(
     source: Literal["foxglove", "object_storage"] = "foxglove",
     split_config: DatasetSplit | None = None,
     split: SplitName | None = None,
+    include_properties: bool = False,
     client_factory: ClientFactory | None = None,
     object_store_factory: ObjectStoreFactory | None = None,
     rank: int | None = None,
@@ -80,6 +81,9 @@ def read_dataset(
     locations). Each new iteration rereads data. The default client reads
     ``FOXGLOVE_API_TOKEN`` from the environment; override ``client_factory`` for
     custom authentication or endpoints.
+
+    ``include_properties=True`` fetches each episode's properties from its pinned
+    version for ``EpisodeReader.properties``. They are not fetched by default.
 
     ``split_config`` and ``split`` select a recording-safe train, validation, or test
     pool before worker partitioning. See :class:`foxglove.datasets.DatasetSplit`.
@@ -120,6 +124,7 @@ def read_dataset(
             source=source,
             split_config=split_config,
             split=split,
+            include_properties=include_properties,
         ),
         read_episode,
         resolved_rank,

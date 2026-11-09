@@ -285,7 +285,7 @@ def test_real_client_object_storage_locations_and_cursor_pagination(
     assert len(calls) == planning_requests == 3
 
 
-@pytest.mark.parametrize("edit", ["window", "recordings"])
+@pytest.mark.parametrize("edit", ["window", "recordings", "properties"])
 @pytest.mark.parametrize("lookback", [timedelta(0), timedelta(seconds=5)])
 def test_committed_dataset_streams_pinned_episode_after_edits(
     monkeypatch: pytest.MonkeyPatch, edit: str, lookback: timedelta
@@ -298,11 +298,16 @@ def test_committed_dataset_streams_pinned_episode_after_edits(
 
     committed_end = START + timedelta(seconds=256)
     snapshots: dict[int, dict[str, Any]] = {
-        1: {"end": committed_end, "recording": "original"}
+        1: {
+            "end": committed_end,
+            "recording": "original",
+            "properties": {"label": "committed", "weight": 1.5},
+        }
     }
     latest_version = 1
     committed_version: int | None = None
     requests_seen: list[dict[str, Any]] = []
+    episode_list_includes: list[str | None] = []
     streams: dict[str, bytes] = {}
     recordings: dict[str, list[tuple[str, int, Any]]] = {
         "original": [
@@ -352,11 +357,17 @@ def test_committed_dataset_streams_pinned_episode_after_edits(
                     "remove": ["original"],
                 }
                 snapshot["recording"] = "replacement"
+            if "properties" in change:
+                snapshot["properties"] = {
+                    **snapshot["properties"],
+                    **change["properties"],
+                }
             latest_version += 1
             snapshots[latest_version] = snapshot
             payload = {"episodes": [{"id": "episode", "version": latest_version}]}
         elif url.endswith("/episodes"):
             assert committed_version is not None
+            episode_list_includes.append(kwargs["params"].get("include"))
             snapshot = snapshots[committed_version]
             payload = {
                 "episodes": [
@@ -371,6 +382,7 @@ def test_committed_dataset_streams_pinned_episode_after_edits(
                             "startTime": stamp,
                             "endTime": snapshot["end"].isoformat(),
                             "createdAt": stamp,
+                            "properties": snapshot["properties"],
                         },
                     }
                 ]
@@ -409,17 +421,27 @@ def test_committed_dataset_streams_pinned_episode_after_edits(
 
     client = make_client()
     client.commit_dataset(dataset_id="dataset")
-    plan = _plan("dataset", 7, ["/camera", "/other"], make_client)
+    plan = _plan(
+        "dataset", 7, ["/camera", "/other"], make_client, include_properties=True
+    )
     change: dict[str, Any] = {"id": "episode"}
     if edit == "window":
         change["end_time"] = START + timedelta(seconds=156)
-    else:
+    elif edit == "recordings":
         change["recordings"] = {"add": ["replacement"], "remove": ["original"]}
+    else:
+        change["properties"] = {"label": "edited"}
     client.update_episodes(episodes=[change])
+    if edit == "properties":
+        assert snapshots[latest_version]["properties"] == {
+            "label": "edited",
+            "weight": 1.5,
+        }
 
     def samples(reader: EpisodeReader) -> Iterator[int]:
         assert reader.start_time == START
         assert reader.end_time == committed_end
+        assert reader.properties == {"label": "committed", "weight": 1.5}
         for _, channel, message, decoded in reader.iter_messages(
             topics=["/camera"], lookback=lookback
         ):
@@ -432,9 +454,10 @@ def test_committed_dataset_streams_pinned_episode_after_edits(
         # Episode snapshots must retain their pin when transported to workers.
         episodes = pickle.loads(pickle.dumps(plan.episodes))
         assert list(plan.read(episodes, samples)) == list(range(257))
-    replanned = _plan("dataset", 7, ["/camera"], make_client)
+    replanned = _plan("dataset", 7, ["/camera"], make_client, include_properties=True)
     assert list(replanned.read(replanned.episodes, samples)) == list(range(257))
     assert all(params["episodeVersion"] == 1 for params in requests_seen)
+    assert episode_list_includes == ["properties", "properties"]
     assert all(params["topics"] == ["/camera"] for params in requests_seen)
     if lookback:
         assert all(
@@ -447,4 +470,9 @@ def test_committed_dataset_streams_pinned_episode_after_edits(
             episode_id="episode", topics=["/camera"]
         )
     ]
-    assert latest_values == list(range(157) if edit == "window" else range(1000, 1157))
+    expected_latest = {
+        "window": range(157),
+        "recordings": range(1000, 1157),
+        "properties": range(257),
+    }[edit]
+    assert latest_values == list(expected_latest)

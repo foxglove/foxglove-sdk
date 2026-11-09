@@ -54,6 +54,7 @@ class ObjectClient(Client):
         version_number: int,
         limit: int,
         include_recordings: bool = False,
+        include_properties: bool = False,
     ) -> Any:
         assert include_recordings
         return ObjectPage(self.directory)
