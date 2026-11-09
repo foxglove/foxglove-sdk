@@ -1,7 +1,7 @@
 """Read a committed Foxglove dataset with PyTorch or Ray.
 
 The selected JSON topic contains speed, acceleration, and steering numbers.
-Episodes whose "quality" custom property is "rejected" are skipped.
+Episodes whose "quality" property is "rejected" are skipped.
 Set FOXGLOVE_API_TOKEN before running. Object storage mode uses cloud credentials
 on workers; the default Foxglove mode also needs FOXGLOVE_API_TOKEN on workers.
 """

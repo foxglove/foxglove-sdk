@@ -130,9 +130,9 @@ class EpisodeReader:
 
     @property
     def properties(self) -> Mapping[str, Any]:
-        """Read-only custom properties of the episode version pinned by the dataset version.
+        """Read-only properties of the episode version pinned by the dataset version.
 
-        Empty if the episode has no custom properties.
+        Empty if the episode has no properties.
         """
         return MappingProxyType(self._episode.properties)
 
@@ -342,7 +342,7 @@ def _plan(
                     else ()
                 ),
                 version=episode["version"],
-                # Episodes without custom properties may omit the field.
+                # Episodes without properties may omit the field.
                 properties=dict(episode.get("properties") or {}),
             )
         )

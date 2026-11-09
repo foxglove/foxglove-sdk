@@ -75,10 +75,10 @@ further processing. ``concurrency`` limits the number of simultaneous read tasks
 Episode properties
 ------------------
 
-``EpisodeReader.properties`` is a read-only mapping of the episode's custom
-properties. Values come from the episode version pinned by the dataset version, so
-they match the messages being read even if the episode is edited later. Episodes
-without custom properties return an empty mapping. Both adapters supply the same
+``EpisodeReader.properties`` is a read-only mapping of the episode's properties.
+Values come from the episode version pinned by the dataset version, so they match
+the messages being read even if the episode is edited later. Episodes without
+properties return an empty mapping. Both adapters supply the same
 reader, so this callback works with PyTorch and Ray Data:
 
 .. code-block:: python

@@ -15,7 +15,7 @@ from mcap.writer import CompressionType, IndexType, Writer
 START = datetime(2026, 1, 1, tzinfo=timezone.utc)
 START_NS = 1767225600 * 1_000_000_000
 
-# Episodes "b" and "d" have no custom properties.
+# Episodes "b" and "d" have no properties.
 EPISODE_PROPERTIES: dict[str, dict[str, Any]] = {
     "a": {"label": "left", "weight": 1.5},
     "c": {"label": "right", "tags": ["night", "rain"]},

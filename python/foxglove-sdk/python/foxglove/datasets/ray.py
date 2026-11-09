@@ -150,8 +150,8 @@ def read_dataset(
         This API is experimental and unstable. It may change in backward-incompatible
         ways as we continue development and incorporate user feedback.
 
-    Planning fetches only the episode list (ids, time windows, custom properties, and,
-    for object storage, recording locations). Workers stream selected topics and execute
+    Planning fetches only the episode list (ids, time windows, properties, and, for
+    object storage, recording locations). Workers stream selected topics and execute
     ``read_episode``. Factories and callbacks must be serializable and their dependencies
     available on every worker. Use consistent column types containing scalars, NumPy
     arrays, or other Arrow-compatible values.
