@@ -173,9 +173,9 @@ void manifestHandler(const httplib::Request& req, httplib::Response& res) {
   // We're providing the data from this service in this example, but in principle this could
   // be any URL.
   source.url = kDataRoute + std::string("?") + query;
-  // `id` is the cache key, and all users of the remote data loader share the cache. It must
-  // identify this source content. Different content must never share an `id`. Otherwise,
-  // incorrect data may be served from cache.
+  // `id` must identify this source content. Different content must never share an `id`,
+  // across all sources the deployment serves to all users. Otherwise, incorrect data may be
+  // served from cache. The same content should keep the same `id`, so the cache can be reused.
   //
   // Here we reuse the query string to make sure we don't forget any parameters. We also
   // include a version number we increment whenever we change the data handler.

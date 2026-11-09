@@ -41,15 +41,16 @@ pub enum DataSource {
 #[serde(rename_all = "camelCase")]
 pub struct StreamedSource {
     /// URL to fetch the data from. Can be absolute or relative.
-    /// If `id` is absent, this is the cache key, and it must always serve the same data to every
-    /// user.
+    /// If `id` is absent, this is used as the cache key. In that case, the URL must always serve
+    /// the same data to every user.
     pub url: String,
-    /// Identifier for the data source, used as its cache key.
+    /// An idempotency key for this source data.
     ///
-    /// All users of a remote data loader deployment share the cache. If present, the `id` must be
-    /// unique across all sources the deployment serves, and it must always identify the same data.
-    /// If the data endpoint returns different data for different users, include the user in the
-    /// `id`.
+    /// The remote data loader uses it as the cache key for the source, and all users of a
+    /// deployment share that cache. The `id` must be unique across all sources the deployment
+    /// serves, and it must always identify the same data. If the data endpoint returns different
+    /// data for different users, include the user in the `id`. If absent, the `url` is used as the
+    /// cache key.
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
     pub id: Option<String>,
