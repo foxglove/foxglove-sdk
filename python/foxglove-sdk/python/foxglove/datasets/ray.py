@@ -137,6 +137,7 @@ def read_dataset(
     source: Literal["foxglove", "object_storage"] = "foxglove",
     split_config: DatasetSplit | None = None,
     split: SplitName | None = None,
+    include_properties: bool = False,
     client_factory: ClientFactory | None = None,
     object_store_factory: ObjectStoreFactory | None = None,
     concurrency: int | None = None,
@@ -150,11 +151,14 @@ def read_dataset(
         This API is experimental and unstable. It may change in backward-incompatible
         ways as we continue development and incorporate user feedback.
 
-    Planning fetches only the episode list (ids, time windows, properties, and, for
-    object storage, recording locations). Workers stream selected topics and execute
-    ``read_episode``. Factories and callbacks must be serializable and their dependencies
-    available on every worker. Use consistent column types containing scalars, NumPy
-    arrays, or other Arrow-compatible values.
+    Planning fetches only the episode list (ids, time windows, and, for object storage,
+    recording locations). Workers stream selected topics and execute ``read_episode``.
+    Factories and callbacks must be serializable and their dependencies available on
+    every worker. Use consistent column types containing scalars, NumPy arrays, or other
+    Arrow-compatible values.
+
+    Set ``include_properties=True`` to also fetch each episode's properties from its
+    pinned episode version and read them from ``EpisodeReader.properties``.
 
     The default client uses ``FOXGLOVE_API_TOKEN``. Set ``source="object_storage"`` to read
     indexed MCAPs directly from S3, GCS, or Azure. The SDK selects the filesystem
@@ -190,6 +194,7 @@ def read_dataset(
                 source=source,
                 split_config=split_config,
                 split=split,
+                include_properties=include_properties,
             ),
             read_episode,
         ),

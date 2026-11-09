@@ -42,6 +42,7 @@ def run_torch(
         topics=["/training/measurements"],
         read_episode=read_episode,
         source=source,
+        include_properties=True,
     )
     loader = DataLoader(
         dataset,
@@ -69,6 +70,7 @@ def run_ray(
             topics=["/training/measurements"],
             read_episode=read_episode,
             source=source,
+            include_properties=True,
             concurrency=2,
         )
         for batch in dataset.iter_torch_batches(batch_size=32, device="cpu"):

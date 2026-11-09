@@ -62,6 +62,7 @@ def read_dataset(
     source: Literal["foxglove", "object_storage"] = "foxglove",
     split_config: DatasetSplit | None = None,
     split: SplitName | None = None,
+    include_properties: bool = False,
     client_factory: ClientFactory | None = None,
     object_store_factory: ObjectStoreFactory | None = None,
     rank: int | None = None,
@@ -76,10 +77,13 @@ def read_dataset(
 
     ``read_episode`` yields samples, such as tensors, tuples, or dictionaries.
     Use DataLoader's ``collate_fn`` for custom sample types. Planning fetches
-    only the episode list (ids, time windows, properties, and, for object storage,
-    recording locations). Each new iteration rereads data. The default client reads
+    only the episode list (ids, time windows, and, for object storage, recording
+    locations). Each new iteration rereads data. The default client reads
     ``FOXGLOVE_API_TOKEN`` from the environment; override ``client_factory`` for
     custom authentication or endpoints.
+
+    Set ``include_properties=True`` to also fetch each episode's properties from its
+    pinned episode version and read them from ``EpisodeReader.properties``.
 
     ``split_config`` and ``split`` select a recording-safe train, validation, or test
     pool before worker partitioning. See :class:`foxglove.datasets.DatasetSplit`.
@@ -120,6 +124,7 @@ def read_dataset(
             source=source,
             split_config=split_config,
             split=split,
+            include_properties=include_properties,
         ),
         read_episode,
         resolved_rank,

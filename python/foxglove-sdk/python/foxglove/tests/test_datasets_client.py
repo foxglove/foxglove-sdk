@@ -192,7 +192,7 @@ def test_real_client_object_storage_locations_and_cursor_pagination(
         response.url = url
         payload: dict[str, Any]
         if url.endswith("/episodes"):
-            assert kwargs["params"]["include"] == "recordings,properties"
+            assert kwargs["params"]["include"] == "recordings"
             assert kwargs["params"]["limit"] == 2000
             cursor = kwargs["params"].get("cursor")
             assert cursor in (None, "second")
@@ -421,7 +421,9 @@ def test_committed_dataset_streams_pinned_episode_after_edits(
 
     client = make_client()
     client.commit_dataset(dataset_id="dataset")
-    plan = _plan("dataset", 7, ["/camera", "/other"], make_client)
+    plan = _plan(
+        "dataset", 7, ["/camera", "/other"], make_client, include_properties=True
+    )
     change: dict[str, Any] = {"id": "episode"}
     if edit == "window":
         change["end_time"] = START + timedelta(seconds=156)
@@ -452,7 +454,7 @@ def test_committed_dataset_streams_pinned_episode_after_edits(
         # Episode snapshots must retain their pin when transported to workers.
         episodes = pickle.loads(pickle.dumps(plan.episodes))
         assert list(plan.read(episodes, samples)) == list(range(257))
-    replanned = _plan("dataset", 7, ["/camera"], make_client)
+    replanned = _plan("dataset", 7, ["/camera"], make_client, include_properties=True)
     assert list(replanned.read(replanned.episodes, samples)) == list(range(257))
     assert all(params["episodeVersion"] == 1 for params in requests_seen)
     assert episode_list_includes == ["properties", "properties"]

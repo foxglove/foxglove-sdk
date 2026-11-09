@@ -133,22 +133,24 @@ def test_native_ray_execution_with_large_callback_state() -> None:
     ]
 
 
+def sample_with_properties(episode: EpisodeReader) -> Iterator[dict[str, Any]]:
+    yield {
+        "id": episode.id,
+        "label": episode.properties.get("label", ""),
+        "weight": float(episode.properties.get("weight", 0.0)),
+    }
+
+
 def test_native_ray_rows_include_episode_properties() -> None:
     from foxglove.datasets.ray import read_dataset
-
-    def sample(episode: EpisodeReader) -> Iterator[dict[str, Any]]:
-        yield {
-            "id": episode.id,
-            "label": episode.properties.get("label", ""),
-            "weight": float(episode.properties.get("weight", 0.0)),
-        }
 
     dataset = read_dataset(
         "dataset",
         version=7,
         topics=["/camera"],
-        read_episode=sample,
+        read_episode=sample_with_properties,
         client_factory=Client,
+        include_properties=True,
     )
     assert sorted(dataset.take_all(), key=lambda row: row["id"]) == [
         {"id": "a", "label": "left", "weight": 1.5},
@@ -156,6 +158,22 @@ def test_native_ray_rows_include_episode_properties() -> None:
         {"id": "c", "label": "right", "weight": 0.0},
         {"id": "d", "label": "", "weight": 0.0},
     ]
+
+
+def test_native_ray_properties_require_include_properties() -> None:
+    from foxglove.datasets.ray import read_dataset
+
+    client = Client()
+    dataset = read_dataset(
+        "dataset",
+        version=7,
+        topics=["/camera"],
+        read_episode=sample_with_properties,
+        client_factory=lambda: client,
+    )
+    assert client.include_properties == [False]
+    with pytest.raises(RuntimeError, match="pass include_properties=True"):
+        dataset.take_all()
 
 
 def test_native_ray_blocks_follow_context_target(

@@ -30,6 +30,9 @@ class JsonDecoder(DecoderFactory):
 
 
 class Page:
+    def __init__(self, include_properties: bool = False) -> None:
+        self.include_properties = include_properties
+
     def auto_paging_iter(self) -> Iterator[dict[str, Any]]:
         # Deliberately non-sorted, spanning more than one yielded batch.
         for ids in (("c", "a"), ("d", "b")):
@@ -40,7 +43,7 @@ class Page:
                     "start_time": datetime(2026, 1, 1, tzinfo=timezone.utc),
                     "end_time": datetime(2026, 1, 2, tzinfo=timezone.utc),
                 }
-                if episode_id in EPISODE_PROPERTIES:
+                if self.include_properties and episode_id in EPISODE_PROPERTIES:
                     episode["properties"] = EPISODE_PROPERTIES[episode_id]
                 yield {"has_missing_recordings": False, "episode": episode}
 
@@ -50,6 +53,7 @@ class Client:
         self.calls: list[tuple[str, list[str]]] = []
         self.closed: list[str] = []
         self.time_ranges: list[tuple[datetime | None, datetime | None]] = []
+        self.include_properties: list[bool] = []
 
     def get_dataset_version(
         self, *, dataset_id: str, version_number: int
@@ -67,8 +71,8 @@ class Client:
         include_properties: bool = False,
     ) -> Page:
         assert (dataset_id, version_number, limit) == ("dataset", 7, 2000)
-        assert include_properties
-        return Page()
+        self.include_properties.append(include_properties)
+        return Page(include_properties)
 
     def iter_messages(
         self,

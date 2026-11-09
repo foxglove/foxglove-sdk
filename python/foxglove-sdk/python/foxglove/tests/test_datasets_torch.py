@@ -68,6 +68,7 @@ def test_spawned_workers_receive_episode_properties() -> None:
         topics=["/camera"],
         read_episode=sample_with_properties,
         client_factory=Client,
+        include_properties=True,
     )
     loader = DataLoader(
         dataset, batch_size=None, num_workers=2, multiprocessing_context="spawn"
@@ -78,6 +79,24 @@ def test_spawned_workers_receive_episode_properties() -> None:
         {"id": "c", "properties": {"label": "right", "tags": ["night", "rain"]}},
         {"id": "d", "properties": {}},
     ]
+
+
+def test_episode_properties_require_include_properties() -> None:
+    from foxglove.datasets.torch import read_dataset
+
+    client = Client()
+    dataset = read_dataset(
+        "dataset",
+        version=7,
+        topics=["/camera"],
+        read_episode=sample_with_properties,
+        client_factory=lambda: client,
+    )
+    assert client.include_properties == [False]
+    with pytest.raises(RuntimeError, match="Failed to read episode a") as raised:
+        next(iter(dataset))
+    assert isinstance(raised.value.__cause__, RuntimeError)
+    assert "pass include_properties=True" in str(raised.value.__cause__)
 
 
 @pytest.mark.parametrize("rank, size", [(0, None), (2, 2), (0, 0)])

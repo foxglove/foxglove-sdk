@@ -80,7 +80,8 @@ class _Episode:
     end_time: datetime
     locations: tuple[ObjectLocation, ...] = ()
     version: int = field(kw_only=True)
-    properties: dict[str, Any] = field(default_factory=dict, kw_only=True)
+    # None when properties were not requested during planning.
+    properties: dict[str, Any] | None = field(default=None, kw_only=True)
 
 
 class EpisodeReader:
@@ -132,8 +133,16 @@ class EpisodeReader:
     def properties(self) -> Mapping[str, Any]:
         """Read-only properties of the episode version pinned by the dataset version.
 
-        Empty if the episode has no properties.
+        Requires ``include_properties=True`` in ``read_dataset``. Empty if the episode
+        has no properties.
+
+        :raises RuntimeError: If properties were not requested.
         """
+        if self._episode.properties is None:
+            raise RuntimeError(
+                "Episode properties were not requested; "
+                "pass include_properties=True to read_dataset"
+            )
         return MappingProxyType(self._episode.properties)
 
     def iter_messages(
@@ -293,6 +302,7 @@ def _plan(
     source: Literal["foxglove", "object_storage"] = "foxglove",
     split_config: DatasetSplit | None = None,
     split: SplitName | None = None,
+    include_properties: bool = False,
 ) -> _Plan:
     if (split_config is None) != (split is None):
         raise ValueError("split_config and split must be provided together")
@@ -327,7 +337,7 @@ def _plan(
         version,
         make_client,
         include_recordings=make_store is not None or split_config is not None,
-        include_properties=True,
+        include_properties=include_properties,
     ):
         if split_config is not None:
             recordings[episode["id"]] = _recording_ids(episode)
@@ -343,7 +353,11 @@ def _plan(
                 ),
                 version=episode["version"],
                 # Episodes without properties may omit the field.
-                properties=dict(episode.get("properties") or {}),
+                properties=(
+                    dict(episode.get("properties") or {})
+                    if include_properties
+                    else None
+                ),
             )
         )
     # Make rank/worker partitioning independent of pagination order and sort ties.

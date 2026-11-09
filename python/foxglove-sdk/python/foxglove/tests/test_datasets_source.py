@@ -101,7 +101,7 @@ def test_builtin_object_storage_source_validates_scheme_before_constructing_stor
         version_number=7,
         limit=2000,
         include_recordings=True,
-        include_properties=True,
+        include_properties=False,
     )
 
 
@@ -135,7 +135,7 @@ def test_public_adapters_forward_object_storage_source_without_creating_storage(
         version_number=7,
         limit=2000,
         include_recordings=True,
-        include_properties=True,
+        include_properties=False,
     )
     store_factory.assert_not_called()
 
@@ -195,7 +195,7 @@ def test_storage_planning_and_worker_lifecycle(
         version_number=7,
         limit=2000,
         include_recordings=True,
-        include_properties=True,
+        include_properties=False,
     )
     store_factory.assert_not_called()
 
