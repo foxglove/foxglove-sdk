@@ -72,6 +72,31 @@ The result is a ``ray.data.Dataset``. Callbacks must yield mappings with
 consistent column types, such as scalars or NumPy arrays. Use ``map_batches`` for
 further processing. ``concurrency`` limits the number of simultaneous read tasks.
 
+Episode properties
+------------------
+
+``EpisodeReader.properties`` is a read-only mapping of the episode's custom
+properties. Values come from the episode version pinned by the dataset version, so
+they match the messages being read even if the episode is edited later. Episodes
+without custom properties return an empty mapping. Both adapters supply the same
+reader, so this callback works with PyTorch and Ray Data:
+
+.. code-block:: python
+
+   def read_episode(episode):
+       # Skip episodes labeled for another split; unlabeled episodes are kept.
+       if episode.properties.get("split", "train") != "train":
+           return
+       weight = float(episode.properties.get("weight", 1.0))
+       for schema, channel, message, decoded in episode.iter_messages():
+           yield {"speed": decoded["speed"], "weight": weight}
+
+Pass a default to ``get`` for properties that some episodes do not set, so every
+sample has the same fields and types. Episodes can have different property keys, so
+select the properties you need rather than yielding the whole mapping: DataLoader's
+default collation fails on samples with differing keys or ``None`` values, and Ray
+Data requires consistent column types.
+
 Object storage
 --------------
 

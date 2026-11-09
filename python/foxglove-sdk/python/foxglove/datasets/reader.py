@@ -7,6 +7,7 @@ from collections.abc import Callable, Generator, Iterable, Iterator, Mapping, Se
 from contextlib import ExitStack
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
+from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, Literal, Protocol, TypeVar, cast
 
 from .storage import (
@@ -44,6 +45,7 @@ class _Client(Protocol):
         version_number: int,
         limit: int,
         include_recordings: bool = False,
+        include_properties: bool = False,
     ) -> _Page: ...
 
     def iter_messages(
@@ -77,6 +79,7 @@ class _Episode:
     end_time: datetime
     locations: tuple[ObjectLocation, ...] = ()
     version: int = field(kw_only=True)
+    properties: dict[str, Any] = field(default_factory=dict, kw_only=True)
 
 
 class EpisodeReader:
@@ -123,6 +126,14 @@ class EpisodeReader:
     def end_time(self) -> datetime:
         """End of the episode's time window."""
         return self._episode.end_time
+
+    @property
+    def properties(self) -> Mapping[str, Any]:
+        """Read-only custom properties of the episode version pinned by the dataset version.
+
+        Empty if the episode has no custom properties.
+        """
+        return MappingProxyType(self._episode.properties)
 
     def iter_messages(
         self,
@@ -312,6 +323,7 @@ def _plan(
         version_number=version,
         limit=_EPISODE_PAGE_SIZE,
         include_recordings=make_store is not None,
+        include_properties=True,
     )
     for entry in page.auto_paging_iter():
         episode = entry["episode"]
@@ -333,6 +345,8 @@ def _plan(
                     else ()
                 ),
                 version=episode["version"],
+                # Episodes without custom properties may omit the field.
+                properties=dict(episode.get("properties") or {}),
             )
         )
     # Make rank/worker partitioning independent of pagination order and sort ties.

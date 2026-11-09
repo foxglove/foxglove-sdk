@@ -1,6 +1,7 @@
 """Read a committed Foxglove dataset with PyTorch or Ray.
 
 The selected JSON topic contains speed, acceleration, and steering numbers.
+Episodes whose "split" custom property is set to anything other than "train" are skipped.
 Set FOXGLOVE_API_TOKEN before running. Object storage mode uses cloud credentials
 on workers; the default Foxglove mode also needs FOXGLOVE_API_TOKEN on workers.
 """
@@ -15,6 +16,10 @@ from foxglove.datasets import EpisodeReader
 
 def read_episode(episode: EpisodeReader) -> Iterator[dict[str, np.ndarray]]:
     """Convert selected messages to framework-independent training samples."""
+    # Skip episodes labeled for another split; unlabeled episodes are kept. Properties
+    # come from the episode version pinned by the dataset version.
+    if episode.properties.get("split", "train") != "train":
+        return
     for _schema, _channel, _message, payload in episode.iter_messages():
         yield {
             "inputs": np.asarray(

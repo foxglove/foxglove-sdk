@@ -14,6 +14,10 @@ def first_sample(episode: EpisodeReader) -> Iterator[dict[str, Any]]:
     yield {"id": next(episode.iter_messages())[3]}
 
 
+def sample_with_properties(episode: EpisodeReader) -> Iterator[dict[str, Any]]:
+    yield {"id": episode.id, "properties": dict(episode.properties)}
+
+
 def test_spawned_workers_partition_ranks_without_duplicate_episodes() -> None:
     from foxglove.datasets.torch import read_dataset
     from torch.utils.data import DataLoader
@@ -52,6 +56,28 @@ def test_repeated_epochs_create_fresh_streams() -> None:
     assert list(dataset) == expected
     assert list(dataset) == expected
     assert client.closed == ["a", "b", "c", "d"] * 2
+
+
+def test_spawned_workers_receive_episode_properties() -> None:
+    from foxglove.datasets.torch import read_dataset
+    from torch.utils.data import DataLoader
+
+    dataset = read_dataset(
+        "dataset",
+        version=7,
+        topics=["/camera"],
+        read_episode=sample_with_properties,
+        client_factory=Client,
+    )
+    loader = DataLoader(
+        dataset, batch_size=None, num_workers=2, multiprocessing_context="spawn"
+    )
+    assert sorted(loader, key=lambda sample: sample["id"]) == [
+        {"id": "a", "properties": {"label": "left", "weight": 1.5}},
+        {"id": "b", "properties": {}},
+        {"id": "c", "properties": {"label": "right", "tags": ["night", "rain"]}},
+        {"id": "d", "properties": {}},
+    ]
 
 
 @pytest.mark.parametrize("rank, size", [(0, None), (2, 2), (0, 0)])
