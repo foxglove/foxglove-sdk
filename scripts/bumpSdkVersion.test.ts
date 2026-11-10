@@ -153,6 +153,7 @@ describe("SDK workspace dependencies", () => {
       },
     );
     expect(files).toContain("rust/foxglove_data_loader/Cargo.toml");
+    expect(files).toContain("rust/examples/mcap/Cargo.toml");
     for (const filename of files) {
       const member = await readManifest(path.join(root, filename));
       const targets = (member.target ?? {}) as TomlTable;
