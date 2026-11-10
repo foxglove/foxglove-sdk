@@ -1,0 +1,87 @@
+Based on upstream: https://github.com/warmcat/libwebsockets/commit/54e67208976494a4a2235f2e0fc959d46bcb7452
+Keep mutable proxy-address parsing separate from the const authentication pointer.
+
+diff --git a/lib/core-net/client/client.c b/lib/core-net/client/client.c
+index e3bc6d5..d377733 100644
+--- a/lib/core-net/client/client.c
++++ b/lib/core-net/client/client.c
+@@ -31,6 +31,7 @@ lws_set_proxy(struct lws_vhost *vhost, const char *proxy)
+ {
+ 	char authstring[96];
+ 	int brackets = 0;
++	const char *auth;
+ 	char *p;
+ 
+ 	if (!proxy)
+@@ -40,15 +41,15 @@ lws_set_proxy(struct lws_vhost *vhost, const char *proxy)
+ 	if (!strncmp(proxy, "http://", 7))
+ 		proxy += 7;
+ 
+-	p = strrchr(proxy, '@');
+-	if (p) { /* auth is around */
++	auth = strrchr(proxy, '@');
++	if (auth) { /* auth is around */
+ 
+-		if (lws_ptr_diff_size_t(p, proxy) > sizeof(authstring) - 1)
++		if (lws_ptr_diff_size_t(auth, proxy) > sizeof(authstring) - 1)
+ 			goto auth_too_long;
+ 
+-		lws_strncpy(authstring, proxy, lws_ptr_diff_size_t(p, proxy) + 1);
++		lws_strncpy(authstring, proxy, lws_ptr_diff_size_t(auth, proxy) + 1);
+ 		// null termination not needed on input
+-		if (lws_b64_encode_string(authstring, lws_ptr_diff(p, proxy),
++		if (lws_b64_encode_string(authstring, lws_ptr_diff(auth, proxy),
+ 				vhost->proxy_basic_auth_token,
+ 		    sizeof vhost->proxy_basic_auth_token) < 0)
+ 			goto auth_too_long;
+@@ -56,7 +57,7 @@ lws_set_proxy(struct lws_vhost *vhost, const char *proxy)
+ 		lwsl_vhost_info(vhost, " Proxy auth in use");
+ 
+ #if defined(LWS_ROLE_H1) || defined(LWS_ROLE_H2)
+-		proxy = p + 1;
++		proxy = auth + 1;
+ #endif
+ 	} else
+ 		vhost->proxy_basic_auth_token[0] = '\0';
+diff --git a/lib/plat/unix/unix-caps.c b/lib/plat/unix/unix-caps.c
+index 2f38854..0897a5e 100644
+--- a/lib/plat/unix/unix-caps.c
++++ b/lib/plat/unix/unix-caps.c
+@@ -51,7 +51,8 @@ _lws_plat_apply_caps(unsigned int mode, const cap_value_t *cv, int count)
+ int
+ lws_plat_user_colon_group_to_ids(const char *u_colon_g, uid_t *puid, gid_t *pgid)
+ {
+-	char *colon = strchr(u_colon_g, ':'), u[33];
++	const char *colon = strchr(u_colon_g, ':');
++	char u[33];
+ 	struct group *g;
+ 	struct passwd *p;
+ 	size_t ulen;
+diff --git a/lib/roles/http/cookie.c b/lib/roles/http/cookie.c
+index 1860e87..b46702f 100644
+--- a/lib/roles/http/cookie.c
++++ b/lib/roles/http/cookie.c
+@@ -284,7 +284,8 @@ lws_cookie_write_nsc(struct lws *wsi, struct lws_cookie *c)
+ 	const char *ads, *path;
+ 	struct lws_cache_ttl_lru *l1;
+ 	struct client_info_stash *stash;
+-	char *cookie_string = NULL, *dl;
++	char *cookie_string = NULL;
++	const char *dl;
+ 	 /* 6 tabs + 20 for max time_t + 2 * TRUE/FALSE + null */
+ 	size_t size = 6 + 20 + 10 + 1;
+ 	time_t expires = 0;
+diff --git a/lib/roles/http/server/server.c b/lib/roles/http/server/server.c
+index 6b132a4..639f931 100644
+--- a/lib/roles/http/server/server.c
++++ b/lib/roles/http/server/server.c
+@@ -2287,7 +2287,8 @@ raw_transition:
+ 		if (wsi->a.context->reject_service_keywords) {
+ 			const struct lws_protocol_vhost_options *rej =
+ 					wsi->a.context->reject_service_keywords;
+-			char ua[384], *msg = NULL;
++			char ua[384];
++			const char *msg = NULL;
+ 
+ 			if (lws_hdr_copy(wsi, ua, sizeof(ua) - 1,
+ 					 WSI_TOKEN_HTTP_USER_AGENT) > 0) {
