@@ -1,3 +1,5 @@
+import { describe, expect, it } from "vitest";
+
 import { foxgloveEnumSchemas, foxgloveMessageSchemas } from "./schemas";
 import { FoxgloveMessageSchema } from "./types";
 

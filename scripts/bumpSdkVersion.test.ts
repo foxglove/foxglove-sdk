@@ -3,6 +3,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { parse, type TomlTable } from "smol-toml";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { testOnlyExports } from "./bumpSdkVersion";
 
@@ -15,19 +16,17 @@ describe("bumpSdkVersion", () => {
 
   beforeEach(async () => {
     directory = await mkdtemp(path.join(os.tmpdir(), "foxglove-sdk-version-"));
-    jest.replaceProperty(process, "env", {
-      ...process.env,
-      GITHUB_OUTPUT: path.join(directory, "output"),
-    });
-    jest.spyOn(console, "log").mockImplementation(() => undefined);
+    vi.stubEnv("GITHUB_OUTPUT", path.join(directory, "output"));
+    vi.spyOn(console, "log").mockImplementation(() => undefined);
   });
 
   afterEach(async () => {
-    jest.restoreAllMocks();
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
     await rm(directory, { recursive: true, force: true });
   });
 
-  // Two `cargo tree` runs can exceed Jest's default limit on a cold runner.
+  // Two `cargo tree` runs can exceed the default test timeout on a cold runner.
   it("bumps SDK packages and shared dependencies together while preserving the loader version", async () => {
     const files = new Map([
       [

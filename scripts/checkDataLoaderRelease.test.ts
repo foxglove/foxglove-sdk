@@ -1,8 +1,9 @@
 import { spawnSync } from "node:child_process";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { testOnlyExports } from "./checkDataLoaderRelease";
 
-jest.mock("node:child_process", () => ({ spawnSync: jest.fn() }));
+vi.mock("node:child_process", () => ({ spawnSync: vi.fn() }));
 
 function release(version: string, sdkRequirement: string) {
   return { version, sdkRequirement };
@@ -155,7 +156,7 @@ describe("registry and metadata parsing", () => {
 
 describe("main", () => {
   beforeEach(() => {
-    jest.mocked(spawnSync).mockReturnValue({
+    vi.mocked(spawnSync).mockReturnValue({
       pid: 1,
       output: [],
       stdout: metadata(),
@@ -163,40 +164,40 @@ describe("main", () => {
       status: 0,
       signal: null,
     });
-    jest.spyOn(globalThis, "fetch").mockResolvedValue(new Response(indexEntry("0.2.0", "^0.29.2")));
-    jest.spyOn(console, "log").mockImplementation(() => undefined);
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(indexEntry("0.2.0", "^0.29.2")));
+    vi.spyOn(console, "log").mockImplementation(() => undefined);
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
-    jest.mocked(spawnSync).mockReset();
+    vi.restoreAllMocks();
+    vi.mocked(spawnSync).mockReset();
   });
 
   it("rejects the incompatible release using Cargo and registry data", async () => {
     await expect(testOnlyExports.main()).rejects.toThrow("Increase the loader version to 0.3.0");
-    expect(jest.mocked(fetch).mock.calls[0]?.[0]).toBe(
+    expect(vi.mocked(fetch).mock.calls[0]?.[0]).toBe(
       "https://index.crates.io/fo/xg/foxglove_data_loader",
     );
-    expect(jest.mocked(fetch).mock.calls[0]?.[1]?.signal).toBeInstanceOf(AbortSignal);
+    expect(vi.mocked(fetch).mock.calls[0]?.[1]?.signal).toBeInstanceOf(AbortSignal);
   });
 
   it("allows the first release in a new loader line", async () => {
-    jest.mocked(fetch).mockResolvedValue(new Response(indexEntry("0.1.0", "^0.9.0")));
+    vi.mocked(fetch).mockResolvedValue(new Response(indexEntry("0.1.0", "^0.9.0")));
     await expect(testOnlyExports.main()).resolves.toBeUndefined();
   });
 
   it("rejects HTTP errors", async () => {
-    jest.mocked(fetch).mockResolvedValue(new Response("unavailable", { status: 503 }));
+    vi.mocked(fetch).mockResolvedValue(new Response("unavailable", { status: 503 }));
     await expect(testOnlyExports.main()).rejects.toThrow("HTTP 503");
   });
 
   it("rejects request timeouts", async () => {
-    jest.mocked(fetch).mockRejectedValue(new Error("request timed out"));
+    vi.mocked(fetch).mockRejectedValue(new Error("request timed out"));
     await expect(testOnlyExports.main()).rejects.toThrow("request timed out");
   });
 
   it("rejects Cargo failures before requesting registry data", async () => {
-    jest.mocked(spawnSync).mockReturnValue({
+    vi.mocked(spawnSync).mockReturnValue({
       pid: 1,
       output: [],
       stdout: "",

@@ -1,3 +1,5 @@
+import { describe, expect, it } from "vitest";
+
 import { resolveArgs } from "./netemImpairArgs";
 
 describe("resolveArgs", () => {
