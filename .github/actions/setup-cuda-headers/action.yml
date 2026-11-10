@@ -1,0 +1,23 @@
+name: Install CUDA headers
+description: Install the CUDA headers needed to compile NVENC support on Linux x86_64.
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: |
+        set -euo pipefail
+        # webrtc-sys loads the driver at runtime; compiling only needs headers.
+        # Version and checksum come from NVIDIA's CUDA 12.6.3 redistributable manifest:
+        # https://developer.download.nvidia.com/compute/cuda/redist/redistrib_12.6.3.json
+        archive="$RUNNER_TEMP/cuda-cudart.tar.xz"
+        cuda_home="$RUNNER_TEMP/cuda-12.6.77"
+        curl --fail --location --retry 3 --connect-timeout 15 --max-time 60 \
+          --output "$archive" \
+          https://developer.download.nvidia.com/compute/cuda/redist/cuda_cudart/linux-x86_64/cuda_cudart-linux-x86_64-12.6.77-archive.tar.xz
+        echo "f74689258a60fd9c5bdfa7679458527a55e22442691ba678dcfaeffbf4391ef9  $archive" | sha256sum --check
+        mkdir -p "$cuda_home"
+        tar -xJf "$archive" -C "$cuda_home" --strip-components=1 \
+          cuda_cudart-linux-x86_64-12.6.77-archive/include
+        test -f "$cuda_home/include/cuda.h"
+        echo "CUDA_HOME=$cuda_home" >> "$GITHUB_ENV"

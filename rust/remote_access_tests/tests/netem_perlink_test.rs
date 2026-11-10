@@ -116,28 +116,19 @@ fn measure_tcp_rtt(container: &str, target_ip: &str, count: usize) -> Result<Dur
 /// Send UDP datagrams from within the netem container to a target echo server
 /// and count how many echo responses come back. Returns (sent, received).
 ///
-/// Each packet is sent individually via `socat UDP-CONNECT` with a short
-/// timeout. The echo server reflects the datagram back through the netem-shaped
-/// egress path. Packets that are dropped by netem will time out.
+/// Probes are paced and responses collected concurrently in the netem namespace.
+/// A single response deadline covers all probes, including those dropped by netem.
 fn measure_udp_loss(container: &str, target_ip: &str, count: u32) -> Result<(u32, u32)> {
-    // Send each packet individually and count successful echoes. Using
-    // `UDP-CONNECT` creates a connected socket so socat waits for the response.
-    // `socat -T0.5` aborts after 500ms of inactivity (generous for the ~200ms
-    // netem delay); `timeout 1` is a hard wall-clock safety net.
-    let script = format!(
-        r#"
-        received=0
-        for i in $(seq 1 {count}); do
-            resp=$(echo "pkt-$i" | timeout 1 socat -T0.5 - UDP-CONNECT:{target_ip}:{TARGET_UDP_PORT} 2>/dev/null)
-            if [ -n "$resp" ]; then
-                received=$((received + 1))
-            fi
-        done
-        echo "{count} $received"
-        "#
-    );
-
-    let output = docker_exec(container, &["sh", "-c", &script])?;
+    let output = docker_exec(
+        container,
+        &[
+            "python3",
+            "/udp_probe.py",
+            target_ip,
+            &TARGET_UDP_PORT.to_string(),
+            &count.to_string(),
+        ],
+    )?;
     let parts: Vec<&str> = output
         .trim()
         .lines()
@@ -276,6 +267,9 @@ fn perlink_infra_link_a_has_more_packet_loss_than_link_b() -> Result<()> {
 
     let (sent_a, received_a) = measure_udp_loss(&container, TARGET_A_IP, packet_count)?;
     let (sent_b, received_b) = measure_udp_loss(&container, TARGET_B_IP, packet_count)?;
+
+    assert!(received_a > 0, "no UDP echo responses received from link A");
+    assert!(received_b > 0, "no UDP echo responses received from link B");
 
     let lost_a = sent_a - received_a;
     let lost_b = sent_b - received_b;
