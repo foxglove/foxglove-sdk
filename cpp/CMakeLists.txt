@@ -61,10 +61,7 @@ set(LWS_WITHOUT_TEST_PING ON CACHE BOOL "" FORCE)
 set(LWS_WITHOUT_TEST_CLIENT ON CACHE BOOL "" FORCE)
 find_or_fetch(libwebsockets
   GIT_REPOSITORY https://github.com/warmcat/libwebsockets.git
-  GIT_TAG v4.3.3
-  # Preserve const-qualified strchr results with glibc 2.43 headers.
-  PATCH_COMMAND git apply --ignore-space-change
-    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/patches/libwebsockets-c23.patch"
+  GIT_TAG v4.5.8
   # Ubuntu packages the config file as LibwebsocketsConfig.cmake (capital L),
   # which doesn't match find_package(libwebsockets) on case-sensitive filesystems.
   ALT_NAME Libwebsockets
