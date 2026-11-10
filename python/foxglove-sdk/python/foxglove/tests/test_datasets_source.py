@@ -97,7 +97,11 @@ def test_builtin_object_storage_source_validates_scheme_before_constructing_stor
         _plan("dataset", 7, ["/selected"], lambda: client, source="object_storage")
     store_factory.assert_not_called()
     client.get_dataset_version_episodes.assert_called_once_with(
-        dataset_id="dataset", version_number=7, limit=2000, include_recordings=True
+        dataset_id="dataset",
+        version_number=7,
+        limit=2000,
+        include_recordings=True,
+        include_properties=False,
     )
 
 
@@ -127,7 +131,11 @@ def test_public_adapters_forward_object_storage_source_without_creating_storage(
     assert dataset._plan.client_factory is None
     assert dataset._plan.object_store_factory is store_factory
     client.get_dataset_version_episodes.assert_called_once_with(
-        dataset_id="dataset", version_number=7, limit=2000, include_recordings=True
+        dataset_id="dataset",
+        version_number=7,
+        limit=2000,
+        include_recordings=True,
+        include_properties=False,
     )
     store_factory.assert_not_called()
 
@@ -183,7 +191,11 @@ def test_storage_planning_and_worker_lifecycle(
     assert plan.episodes[0].locations == (location,)
     assert plan.client_factory is None
     client.get_dataset_version_episodes.assert_called_once_with(
-        dataset_id="dataset", version_number=7, limit=2000, include_recordings=True
+        dataset_id="dataset",
+        version_number=7,
+        limit=2000,
+        include_recordings=True,
+        include_properties=False,
     )
     store_factory.assert_not_called()
 

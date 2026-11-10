@@ -52,6 +52,46 @@ with ``speed`` and ``steering`` fields; adapt ``read_episode`` to your data.
 The result is an ``IterableDataset``. Your callback can yield tensors, tuples,
 dictionaries, or objects handled by a custom ``collate_fn``.
 
+Epoch shuffling
+^^^^^^^^^^^^^^^
+
+Pass ``shuffle=True, seed=42`` to ``read_dataset`` for reproducible episode
+permutations. The default keeps episodes in sorted ID order. Set the epoch before
+starting each pass, including when using persistent workers:
+
+.. code-block:: python
+
+   if __name__ == "__main__":
+       dataset = read_dataset(
+           "ds_123", version=7, topics=["/training/measurements"],
+           read_episode=read_episode, shuffle=True, seed=42,
+       )
+       loader = DataLoader(
+           dataset, batch_size=32, num_workers=2,
+           multiprocessing_context="spawn", persistent_workers=True,
+       )
+       for epoch in range(10):
+           dataset.set_epoch(epoch)
+           for batch in loader:
+               train_step(batch)
+
+Keep these rules in mind:
+
+* Finish each pass before calling ``set_epoch()``. Workers use the updated epoch
+  on the next pass, including persistent workers. The initial epoch is zero.
+* The same seed, epoch, and dataset version reproduce the episode order, using
+  ``seed + epoch``. Different epochs can still produce the same order for small
+  datasets. This does not guarantee a reproducible training run.
+* Only the episode list is reordered in memory; message data streams during
+  iteration. Samples within each episode stay in the order your callback yields
+  them. Leave DataLoader's ``shuffle`` disabled and omit ``DistributedSampler``.
+
+For distributed training, all ranks must use the same seed and epoch. The SDK
+shuffles the episode list, then assigns episodes across ranks and workers without
+duplication. It does not balance sample counts, so ranks can produce different
+numbers of batches. Handle uneven inputs, for example with DDP's ``model.join()``
+context around the training loop.
+
 Ray Data
 --------
 
@@ -71,6 +111,35 @@ Use the same callback with the Ray adapter:
 The result is a ``ray.data.Dataset``. Callbacks must yield mappings with
 consistent column types, such as scalars or NumPy arrays. Use ``map_batches`` for
 further processing. ``concurrency`` limits the number of simultaneous read tasks.
+
+Episode properties
+------------------
+
+Pass ``include_properties=True`` to either adapter to use episode properties in
+your callback. ``episode.properties`` is a read-only mapping:
+
+.. code-block:: python
+
+   def read_episode(episode):
+       if episode.properties.get("quality") == "rejected":
+           return
+       weight = float(episode.properties.get("weight", 1.0))
+       for schema, channel, message, decoded in episode.iter_messages():
+           yield {"speed": decoded["speed"], "weight": weight}
+
+   dataset = read_dataset(
+       "ds_123", version=7, topics=["/training/measurements"],
+       read_episode=read_episode, include_properties=True,
+   )
+
+Values come from the episode version pinned by the dataset version, so later edits
+to an episode do not change them. Episodes without properties have an empty
+mapping. Without ``include_properties=True``, properties are not fetched and
+reading ``episode.properties`` raises ``RuntimeError``.
+
+Episodes can set different properties. Select the ones you need with a default,
+such as ``get("weight", 1.0)``, so every sample has the same fields and types:
+DataLoader's default collation and Ray Data's columns both require this.
 
 Object storage
 --------------
@@ -295,6 +364,64 @@ To request ten seconds of history, pass ``read_episode=read_video`` to
 Consume the iterator fully to receive buffered frames. The episode closes streams
 automatically, including on errors or early termination.
 
+Dataset splits
+--------------
+
+Use the same ``DatasetSplit`` configuration with either reader to select stable
+training, validation, and test sets from a committed dataset version:
+
+.. code-block:: python
+
+   from foxglove.datasets import DatasetSplit, inspect_splits
+   from foxglove.datasets.torch import read_dataset  # or foxglove.datasets.ray
+
+   splits = DatasetSplit(train=0.8, validation=0.1, test=0.1, seed=42)
+   summary = inspect_splits("ds_...", version=3, split_config=splits)
+   for name, counts in summary.items():
+       print(name, counts.group_count, counts.episode_count)
+
+   train = read_dataset(
+       "ds_...", version=3, topics=["/camera/image"], read_episode=read_episode,
+       split_config=splits, split="train",
+   )
+
+Repeat with ``split="validation"`` or ``"test"`` for the other pools. Assignment
+happens before epoch shuffling and rank/worker partitioning. The split seed is
+independent of any shuffle seed. Omitting both arguments preserves the full dataset.
+No server-side datasets are created.
+
+Episodes sharing any recording ID are kept together, transitively, including an
+episode attached to multiple recordings. Split planning requests recording IDs in
+both source modes and fails if those IDs are missing. Frames within an episode
+remain together. Recording grouping cannot detect related sessions, sites, or
+robots spread across different recordings: pass ``groups={episode_id: group_id, ...}``
+to ``DatasetSplit`` to add those constraints. The mapping must cover exactly the
+committed version's episode IDs; shared recordings remain together even if the
+caller assigns them different group IDs.
+
+Proportions are assignment probabilities per group, not exact fractions of groups,
+episodes, or samples. Connected groups can be large, and even nonzero proportions
+can produce empty sets. Use ``inspect_splits`` before training or evaluation to
+check group and episode counts for all three sets. Inspection fetches metadata
+only and uses the same assignment as both readers, before worker/rank partitioning.
+Frame and sample counts depend on decoding and ``read_episode`` and are not known
+from this metadata. Save the committed dataset version,
+proportions, split seed, and optional group mapping with model artifacts.
+Custom group mappings are snapshotted as sorted, immutable episode/group pairs.
+Configurations support ``pickle``, ``copy.deepcopy``, and ``dataclasses.asdict``;
+restore a dictionary snapshot with ``DatasetSplit(**snapshot)``. JSON snapshots
+also round-trip with ``DatasetSplit(**json.loads(json.dumps(asdict(config))))``.
+Membership is independent of API pagination, source, framework, epoch, and worker
+count. Each connected group is hashed by its smallest custom group ID when
+``groups`` is provided, otherwise by its smallest recording ID. Adding episodes
+within an existing recording group preserves membership. With custom groups,
+adding recordings to an existing group also preserves membership: use stable
+session, site, or robot IDs, since renaming these IDs can change assignments.
+Changing the dataset version can merge groups or change a group's smallest ID,
+which can move existing episodes between splits. For comparable training and
+evaluation, use the same committed version and split configuration; assignments
+across different versions do not guarantee separation.
+
 API reference
 -------------
 
@@ -302,6 +429,10 @@ PyTorch
 ^^^^^^^
 
 .. autofunction:: foxglove.datasets.torch.read_dataset
+
+.. autoclass:: foxglove.datasets.torch.TorchDataset
+   :members: set_epoch
+   :exclude-members: __init__, __new__
 
 Ray Data
 ^^^^^^^^
@@ -334,3 +465,12 @@ Video decoding
 .. autoexception:: foxglove.datasets.video.VideoDecodeError
 
 .. autofunction:: foxglove.datasets.torch.to_image_tensor
+
+Dataset splits
+^^^^^^^^^^^^^^
+
+.. autoclass:: foxglove.datasets.DatasetSplit
+
+.. autofunction:: foxglove.datasets.inspect_splits
+
+.. autoclass:: foxglove.datasets.SplitSummary

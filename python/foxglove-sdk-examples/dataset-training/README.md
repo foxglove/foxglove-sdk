@@ -2,6 +2,8 @@
 
 Run either the PyTorch or Ray adapter on a dataset version. The example expects JSON messages on
 `/training/measurements` with numeric `speed`, `acceleration`, and `steering` fields.
+Episodes whose `quality` property is `rejected` are skipped; both loaders pass
+`include_properties=True` so `read_episode` can read `episode.properties`.
 
 Adapt `read_episode` for your own schemas. Install `foxglove-sdk[torch]` for PyTorch
 or `foxglove-sdk[torch,ray]` for this example's Ray-to-PyTorch batches. These extras

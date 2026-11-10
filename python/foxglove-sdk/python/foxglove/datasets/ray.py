@@ -19,6 +19,7 @@ from ray.data.context import DataContext
 from ray.data.datasource import Datasource, ReadTask
 
 from .reader import ClientFactory, EpisodeReader, ReadEpisode, _Plan, _plan
+from .splits import DatasetSplit, SplitName
 from .storage import ObjectStoreFactory
 
 if TYPE_CHECKING:
@@ -134,6 +135,9 @@ def read_dataset(
     topics: Sequence[str],
     read_episode: ReadEpisode[Mapping[str, Any]],
     source: Literal["foxglove", "object_storage"] = "foxglove",
+    split_config: DatasetSplit | None = None,
+    split: SplitName | None = None,
+    include_properties: bool = False,
     client_factory: ClientFactory | None = None,
     object_store_factory: ObjectStoreFactory | None = None,
     concurrency: int | None = None,
@@ -153,11 +157,17 @@ def read_dataset(
     every worker. Use consistent column types containing scalars, NumPy arrays, or other
     Arrow-compatible values.
 
+    ``include_properties=True`` fetches each episode's properties from its pinned
+    version for ``EpisodeReader.properties``. They are not fetched by default.
+
     The default client uses ``FOXGLOVE_API_TOKEN``. Set ``source="object_storage"`` to read
     indexed MCAPs directly from S3, GCS, or Azure. The SDK selects the filesystem
     from recording locations and uses each worker's cloud credentials. Missing
     locations, unsupported schemes, and access failures raise errors without
     falling back to Foxglove downloads.
+
+    ``split_config`` and ``split`` select a recording-safe train, validation, or test
+    pool before task partitioning. See :class:`foxglove.datasets.DatasetSplit`.
 
     ``client_factory`` overrides API authentication or endpoints.
     ``object_store_factory`` overrides built-in storage and requires
@@ -182,6 +192,9 @@ def read_dataset(
                 client_factory,
                 object_store_factory,
                 source=source,
+                split_config=split_config,
+                split=split,
+                include_properties=include_properties,
             ),
             read_episode,
         ),
