@@ -48,7 +48,7 @@ The core SDK is written in Rust, with bindings for Python and C/C++, plus TypeSc
 - **Rust** - Core SDK implementation; Cargo workspace at the repo root
 - **Python** - PyO3 bindings; managed with `uv`; type-checked with `mypy`; formatted with `black` + `isort`; linted with `flake8`
 - **C/C++** - FFI layer (C) and idiomatic wrapper (C++); built with CMake + `cargo` (via `corrosion`)
-- **TypeScript** - Schema definitions, codegen, and CI scripts; managed with `yarn`; tested with `jest`
+- **TypeScript** - Schema definitions, codegen, and CI scripts; managed with `yarn`; tested with `vitest`
 - **Schemas** - Protobuf, Flatbuffers, JSON Schema, OMG IDL, ROS 1/2 message definitions; generated via `make generate`
   - The schemas are defined in `typescript/schemas/src/internal/schemas.ts`
 

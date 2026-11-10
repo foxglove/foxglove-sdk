@@ -1,4 +1,5 @@
 import { parse as parseMessageDefinition } from "@foxglove/rosmsg";
+import { describe, expect, it } from "vitest";
 
 import {
   generateRosMsgMergedSchema,

@@ -1,4 +1,5 @@
 import { parseIdl } from "@foxglove/omgidl-parser";
+import { describe, expect, it } from "vitest";
 
 import { generateOmgIdl, omgIdlMessageSchemaName } from "./generateOmgIdl";
 import { foxgloveEnumSchemas, foxgloveMessageSchemas } from "./schemas";
@@ -176,7 +177,7 @@ describe("generateOmgIdl", () => {
         values: [{ name: "A", value: 1 }],
       }),
     ).toThrowErrorMatchingInlineSnapshot(
-      `"Enum value Foo.A at index 0 has value 1; index and value must match for OMG IDL"`,
+      `[Error: Enum value Foo.A at index 0 has value 1; index and value must match for OMG IDL]`,
     );
     expect(() =>
       generateOmgIdl({
@@ -191,7 +192,7 @@ describe("generateOmgIdl", () => {
         ],
       }),
     ).toThrowErrorMatchingInlineSnapshot(
-      `"Enum value Foo.B at index 1 has value 3; index and value must match for OMG IDL"`,
+      `[Error: Enum value Foo.B at index 1 has value 3; index and value must match for OMG IDL]`,
     );
   });
 });
