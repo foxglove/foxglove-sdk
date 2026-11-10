@@ -81,6 +81,8 @@ services:
         ipv4_address: 10.98.0.20
 
   netem:
+    volumes:
+      - ./scripts/container/udp_probe.py:/udp_probe.py:ro
     environment:
       # Default class: moderate impairment for unclassified traffic.
       NETEM_ARGS: "${NETEM_ARGS:-delay 80ms 20ms loss 2%}"

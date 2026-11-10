@@ -20,9 +20,7 @@ jobs:
       - uses: ./.github/actions/setup-clang
 
       - name: Install CUDA headers for NVENC
-        run: |
-          sudo apt-get install -y --no-install-recommends nvidia-cuda-dev
-          echo "CUDA_HOME=/usr" >> $GITHUB_ENV
+        uses: ./.github/actions/setup-cuda-headers
 
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
@@ -68,9 +66,7 @@ jobs:
       - uses: ./.github/actions/setup-clang
 
       - name: Install CUDA headers for NVENC
-        run: |
-          sudo apt-get install -y --no-install-recommends nvidia-cuda-dev
-          echo "CUDA_HOME=/usr" >> $GITHUB_ENV
+        uses: ./.github/actions/setup-cuda-headers
 
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
@@ -110,13 +106,14 @@ jobs:
       - uses: ./.github/actions/setup-clang
 
       - name: Install CUDA headers for NVENC
-        run: |
-          sudo apt-get install -y --no-install-recommends nvidia-cuda-dev
-          echo "CUDA_HOME=/usr" >> $GITHUB_ENV
+        uses: ./.github/actions/setup-cuda-headers
 
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: stable
+
+      - name: Test UDP loss probe
+        run: python -m unittest discover -s scripts/container -p test_udp_probe.py -v
 
       - name: Start LiveKit with per-link netem
         run: >
