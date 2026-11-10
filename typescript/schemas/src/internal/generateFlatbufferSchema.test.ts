@@ -1,3 +1,5 @@
+import { describe, expect, it } from "vitest";
+
 import { generateFlatbuffers } from "./generateFlatbufferSchema";
 import { exampleEnum, exampleMessage } from "./testFixtures";
 import { FoxgloveMessageSchema, FoxglovePrimitive } from "./types";

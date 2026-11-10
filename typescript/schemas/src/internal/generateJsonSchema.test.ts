@@ -1,4 +1,5 @@
 import Ajv from "ajv";
+import { describe, expect, it } from "vitest";
 
 import { generateJsonSchema } from "./generateJsonSchema";
 import { foxgloveMessageSchemas } from "./schemas";
