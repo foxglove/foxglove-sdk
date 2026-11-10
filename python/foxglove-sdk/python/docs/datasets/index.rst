@@ -52,6 +52,46 @@ with ``speed`` and ``steering`` fields; adapt ``read_episode`` to your data.
 The result is an ``IterableDataset``. Your callback can yield tensors, tuples,
 dictionaries, or objects handled by a custom ``collate_fn``.
 
+Epoch shuffling
+^^^^^^^^^^^^^^^
+
+Pass ``shuffle=True, seed=42`` to ``read_dataset`` for reproducible episode
+permutations. The default keeps episodes in sorted ID order. Set the epoch before
+starting each pass, including when using persistent workers:
+
+.. code-block:: python
+
+   if __name__ == "__main__":
+       dataset = read_dataset(
+           "ds_123", version=7, topics=["/training/measurements"],
+           read_episode=read_episode, shuffle=True, seed=42,
+       )
+       loader = DataLoader(
+           dataset, batch_size=32, num_workers=2,
+           multiprocessing_context="spawn", persistent_workers=True,
+       )
+       for epoch in range(10):
+           dataset.set_epoch(epoch)
+           for batch in loader:
+               train_step(batch)
+
+Keep these rules in mind:
+
+* Finish each pass before calling ``set_epoch()``. Workers use the updated epoch
+  on the next pass, including persistent workers. The initial epoch is zero.
+* The same seed, epoch, and dataset version reproduce the episode order, using
+  ``seed + epoch``. Different epochs can still produce the same order for small
+  datasets. This does not guarantee a reproducible training run.
+* Only the episode list is reordered in memory; message data streams during
+  iteration. Samples within each episode stay in the order your callback yields
+  them. Leave DataLoader's ``shuffle`` disabled and omit ``DistributedSampler``.
+
+For distributed training, all ranks must use the same seed and epoch. The SDK
+shuffles the episode list, then assigns episodes across ranks and workers without
+duplication. It does not balance sample counts, so ranks can produce different
+numbers of batches. Handle uneven inputs, for example with DDP's ``model.join()``
+context around the training loop.
+
 Ray Data
 --------
 
@@ -389,6 +429,10 @@ PyTorch
 ^^^^^^^
 
 .. autofunction:: foxglove.datasets.torch.read_dataset
+
+.. autoclass:: foxglove.datasets.torch.TorchDataset
+   :members: set_epoch
+   :exclude-members: __init__, __new__
 
 Ray Data
 ^^^^^^^^
