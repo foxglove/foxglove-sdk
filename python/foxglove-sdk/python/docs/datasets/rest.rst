@@ -1,66 +1,99 @@
-REST reference
-==============
+REST map
+========
 
 Base URL: ``https://api.foxglove.dev/v1``. Authenticate with
-``Authorization: Bearer <api-key>``. Official endpoint pages:
-https://docs.foxglove.dev/api/datasets and
-https://docs.foxglove.dev/api/episodes.
+``Authorization: Bearer <api-key>``. Each endpoint lists the API key
+**capability** it needs.
+
+Generated field-level reference (types, limits, defaults, error codes):
+
+- https://docs.foxglove.dev/api/datasets
+- https://docs.foxglove.dev/api/episodes
+- https://docs.foxglove.dev/api/custom-properties
 
 Python names for the same calls: :doc:`python-client`. This page uses API
 camelCase.
 
-Pagination uses ``limit``, ``cursor``, and response headers
-``fg-pagination-next-cursor`` / ``fg-pagination-previous-cursor``.
-
-Count fields on dataset and version objects are listed with those responses.
-
-Objects
--------
-
-Dataset
-^^^^^^^
-
-``id``, ``projectId``, ``name`` (required). ``description``.
-``creatorOrgMemberId``, ``creatorApiKeyId``. ``createdAt``, ``updatedAt``.
-``episodeCount`` (integer ≥ 0). Create-with-episodes also returns ``added``,
-``updated``, ``removed``, ``alreadyPresent``.
-
-DatasetVersion
-^^^^^^^^^^^^^^
-
-``versionNumber`` (integer ≥ 1; highest is the editable draft).
-``description`` (omitted when empty). ``committedAt`` (null/omitted when
-editable). ``committedByOrgMemberId``, ``committedByApiKeyId``.
-``createdAt``. ``episodeCount``, ``addedEpisodeCount``,
-``removedEpisodeCount``, ``changedEpisodeCount``. ``hasMissingRecordings``
-on get/update version.
-
-Episode
-^^^^^^^
-
-``id``, ``projectId``. ``startTime``, ``endTime`` (RFC 3339, nanosecond
-capable). ``version``, ``latestVersion``. ``properties`` only with
-``include=properties``. ``recordings`` only with ``include=recordings``.
-``creationContext`` always on GET-by-id; lists need
-``include=creationContext``. ``hasMissingRecordings`` when recordings are
-included or on dataset membership. ``creatorOrgMemberId``,
-``creatorApiKeyId``, ``createdAt``.
-
-Recording members, when included: ``id``, ``path``, ``location`` (optional
-``bucket``, ``path``, ``scheme``, ``azureStorageAccountName``), ``start``,
-``end``, ``deviceId``, ``available``.
+List endpoints take ``limit`` (0–2000, default 2000) and ``cursor``, and
+return ``fg-pagination-next-cursor`` (and, where supported,
+``fg-pagination-previous-cursor``) headers. Compare also returns
+``nextCursor`` in the body.
 
 Datasets
 --------
 
-``POST /datasets``
-^^^^^^^^^^^^^^^^^^
+.. list-table::
+   :header-rows: 1
+   :widths: 10 42 18 30
 
-Create a dataset.
-
-Body required: ``projectId``, ``name`` (1–100). Optional: ``description``
-(1–500 or null), ``episodeIds`` (≤ 2000). Scope: ``datasets.create``.
-Response 200: Dataset object.
+   * - Method
+     - Path
+     - Capability
+     - Purpose
+   * - POST
+     - ``/datasets``
+     - ``datasets.create``
+     - Create a dataset, optionally seeding episodes
+   * - GET
+     - ``/datasets``
+     - ``datasets.list``
+     - List datasets (JSON **array**, not wrapped)
+   * - GET
+     - ``/datasets/{id}``
+     - ``datasets.list``
+     - Get a dataset
+   * - PATCH
+     - ``/datasets/{id}``
+     - ``datasets.update``
+     - Rename or describe a dataset
+   * - DELETE
+     - ``/datasets/{id}``
+     - ``datasets.delete``
+     - Delete the dataset, not its episodes
+   * - GET
+     - ``/datasets/{id}/episodes``
+     - ``datasets.list``
+     - Membership on the latest committed version (or initial draft)
+   * - PATCH
+     - ``/datasets/{id}/episodes``
+     - ``datasets.update``
+     - Stage draft add/update/remove (does not commit)
+   * - GET
+     - ``/datasets/{id}/versions``
+     - ``datasets.list``
+     - List versions, including the draft
+   * - GET
+     - ``/datasets/{id}/versions/{versionNumber}``
+     - ``datasets.list``
+     - Get one version
+   * - PATCH
+     - ``/datasets/{id}/versions/{versionNumber}``
+     - ``datasets.update``
+     - Set that version's description
+   * - GET
+     - ``/datasets/{id}/versions/{versionNumber}/episodes``
+     - ``datasets.list``
+     - Membership pinned in that version
+   * - GET
+     - ``/datasets/{id}/versions/{versionNumber}/compare``
+     - ``datasets.list``
+     - Diff against query ``version`` (the base)
+   * - POST
+     - ``/datasets/{id}/commit``
+     - ``datasets.update``
+     - Commit the draft
+   * - POST
+     - ``/datasets/{id}/discard``
+     - ``datasets.update``
+     - Discard draft changes
+   * - POST
+     - ``/datasets/{id}/versions/{versionNumber}/restore``
+     - ``datasets.update``
+     - Restore into the draft (does not commit)
+   * - POST
+     - ``/datasets/{id}/versions/{versionNumber}/clone``
+     - ``datasets.create``
+     - Clone a committed version to a new dataset
 
 .. code-block:: bash
 
@@ -69,164 +102,113 @@ Response 200: Dataset object.
      -H "Content-Type: application/json" \
      -d '{"projectId":"prj_123","name":"Training candidates"}'
 
-``GET /datasets``
-^^^^^^^^^^^^^^^^^
+   curl https://api.foxglove.dev/v1/datasets?projectId=prj_123 \
+     -H "Authorization: Bearer $FOXGLOVE_API_TOKEN"
 
-List datasets. Query: ``projectId``, ``name``, ``sortBy``
-(``name``|``createdAt``|``updatedAt``|``episodeCount``, default
-``createdAt``), ``sortOrder``, ``limit`` (0–2000, default 2000), ``cursor``.
-Scope: ``datasets.list``.
+   curl -X PATCH https://api.foxglove.dev/v1/datasets/dset_123/episodes \
+     -H "Authorization: Bearer $FOXGLOVE_API_TOKEN" \
+     -H "Content-Type: application/json" \
+     -d '{"add":["ep_new"],"remove":["ep_old"]}'
 
-``GET /datasets/{id}``
-^^^^^^^^^^^^^^^^^^^^^^
-
-Get a dataset, including ``episodeCount``. Scope: ``datasets.list``.
-
-``PATCH /datasets/{id}``
-^^^^^^^^^^^^^^^^^^^^^^^^
-
-Edit ``name`` and/or ``description`` (null clears). Scope:
-``datasets.update``.
-
-``DELETE /datasets/{id}``
-^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Delete the dataset, not its episodes. Response ``{"success": true}``. Scope:
-``datasets.delete``.
-
-``GET /datasets/{id}/episodes``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-List membership on the latest committed version (or the initial draft).
-Query: ``sortBy`` (``addedAt``|``createdAt``|``startTime``|``endTime``),
-``sortOrder``, ``limit``, ``cursor``, ``start`` and ``end`` together,
-``hasMissingRecordings``, ``recordingId``, ``propertiesQuery``, ``include``
-(``recordings``|``creationContext``|``properties``). Response
-``{"episodes":[...]}``. Each item: ``addedAt``, ``addedInVersion``,
-``hasMissingRecordings``, nested ``episode``.
-
-``PATCH /datasets/{id}/episodes``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Stage draft membership. Body: ``add``, ``update``, ``remove`` (each ≤ 2000).
-``add``/``update`` items are IDs or ``{id, version?}``. Does not commit.
-Response ``added``, ``updated``, ``removed``, ``alreadyPresent``.
-
-``GET /datasets/{id}/versions``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-List versions. Query: ``sortOrder``, ``limit``, ``cursor``. Response
-``{"versions":[...]}``.
-
-``GET /datasets/{id}/versions/{versionNumber}``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Get one version, including counts and ``hasMissingRecordings``.
-``versionNumber`` is ``^[0-9]+$``.
-
-``PATCH /datasets/{id}/versions/{versionNumber}``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Set ``description`` (string or null, 1–2048 when string). Works on editable
-and committed versions.
-
-``GET /datasets/{id}/versions/{versionNumber}/episodes``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-List episodes pinned in that version. Same query as list dataset episodes.
-
-``GET /datasets/{id}/versions/{versionNumber}/compare``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Compare target ``versionNumber`` to query ``version`` (required, integer ≥ 1,
-the base). Optional ``limit``, ``cursor``, ``include``. Response ``changes``,
-``addedCount``, ``removedCount``, ``changedCount``, ``nextCursor``. Change
-kinds: ``added``, ``removed``, ``changed``.
-
-``POST /datasets/{id}/commit``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Commit the draft. Optional body ``description``. 409 when no changes.
-Response ``committed`` (DatasetVersion) and ``editableVersionNumber``.
-
-``POST /datasets/{id}/discard``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Discard draft changes. Response ``discardedAdds``, ``discardedRemoves``,
-``discardedUpdates``.
-
-``POST /datasets/{id}/versions/{versionNumber}/restore``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Restore into the draft. Does not commit. Query ``force`` (bool, default
-false). Response ``added``, ``updated``, ``removed``, ``discardedAdds``,
-``discardedRemoves``, ``discardedUpdates``.
-
-``POST /datasets/{id}/versions/{versionNumber}/clone``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Clone to a new dataset. Body required ``name``. Optional ``description``,
-``includeHistory``. Response: Dataset object.
+   curl -X POST https://api.foxglove.dev/v1/datasets/dset_123/commit \
+     -H "Authorization: Bearer $FOXGLOVE_API_TOKEN" \
+     -H "Content-Type: application/json" \
+     -d '{"description":"Demos after labeling batch 12"}'
 
 Episodes
 --------
 
-``POST /episodes``
-^^^^^^^^^^^^^^^^^^
+.. list-table::
+   :header-rows: 1
+   :widths: 10 42 18 30
 
-Get-or-create. Body: ``projectId`` required; ``episodes`` array ≤ 2000. Each
-item has exactly one of ``recordings`` or ``eventId``, optional ``startTime``
-/ ``endTime``, optional ``properties``. Matching uses time range, recordings,
-and custom properties of the latest version. Scope: ``episodes.create``.
-New episodes count toward the episode meter (:doc:`pricing`). A matched,
-existing episode does not.
+   * - Method
+     - Path
+     - Capability
+     - Purpose
+   * - POST
+     - ``/episodes``
+     - ``episodes.create``
+     - Get-or-create; response ``{"episodes":[{"id","created"}]}``
+   * - PATCH
+     - ``/episodes``
+     - ``episodes.update``
+     - Atomic bulk update
+   * - GET
+     - ``/episodes``
+     - ``episodes.list``
+     - List latest versions
+   * - GET
+     - ``/episodes/{id}``
+     - ``episodes.list``
+     - Get one episode (``version`` defaults to latest)
+   * - PATCH
+     - ``/episodes/{id}``
+     - ``episodes.update``
+     - Update one episode
+   * - DELETE
+     - ``/episodes/{id}``
+     - ``episodes.delete``
+     - Delete if no dataset holds it
+   * - GET
+     - ``/episodes/{id}/versions``
+     - ``episodes.list``
+     - List episode versions, newest first
 
-``PATCH /episodes``
-^^^^^^^^^^^^^^^^^^^
+New episodes from ``POST /episodes`` count toward the episode meter
+(https://docs.foxglove.dev/docs/pricing#episodes). Items with
+``created: false`` reuse an existing episode and are not billed.
 
-Atomic bulk update, ≤ 2000. Each item needs ``id``. Optional
-``appliesToVersion``, times, ``recordings`` ``{add,remove}``, ``properties``
-(null unsets). Scope: ``episodes.update``.
+.. code-block:: bash
 
-``GET /episodes``
-^^^^^^^^^^^^^^^^^
+   curl -X POST https://api.foxglove.dev/v1/episodes \
+     -H "Authorization: Bearer $FOXGLOVE_API_TOKEN" \
+     -H "Content-Type: application/json" \
+     -d '{"projectId":"prj_123","episodes":[{"recordings":["rec_1"]}]}'
 
-List. Query: ``projectId``, ``start``+``end``, ``hasMissingRecordings``,
-``recordingId``, ``exactRecordingIds`` (comma-separated), ``propertiesQuery``,
-``sortBy`` (``createdAt``|``startTime``|``endTime``), ``sortOrder``,
-``limit``, ``cursor``, ``include``. Scope: ``episodes.list``.
+   curl https://api.foxglove.dev/v1/episodes/ep_123 \
+     -H "Authorization: Bearer $FOXGLOVE_API_TOKEN"
 
-``GET /episodes/{id}``
-^^^^^^^^^^^^^^^^^^^^^^
-
-Get one. Query: ``version``, ``include`` (``recordings``|``properties``).
-Always returns ``creationContext``.
-
-``PATCH /episodes/{id}``
-^^^^^^^^^^^^^^^^^^^^^^^^
-
-Update one. Body: ``appliesToVersion``, ``startTime``, ``endTime``,
-``recordings``, ``properties``.
-
-``DELETE /episodes/{id}``
-^^^^^^^^^^^^^^^^^^^^^^^^^
-
-409 if the episode belongs to a dataset. Response ``{"success": true}``.
-Scope: ``episodes.delete``.
-
-``GET /episodes/{id}/versions``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-List episode versions, newest first. Fields include ``version``,
-``createdAt``, creators, ``changedFields``.
+   curl -X PATCH https://api.foxglove.dev/v1/episodes \
+     -H "Authorization: Bearer $FOXGLOVE_API_TOKEN" \
+     -H "Content-Type: application/json" \
+     -d '{"episodes":[{"id":"ep_123","properties":{"outcome":"success"}}]}'
 
 Custom properties
 -----------------
 
-``POST /custom-properties``
-    Body: ``key``, ``label``, ``resourceType`` (includes ``episode``),
-    ``valueType`` (``string``|``multiline-string``|``number``|``enum``|
-    ``boolean``|``multi-enum``), ``enumValues`` when needed.
+.. list-table::
+   :header-rows: 1
+   :widths: 10 42 18 30
 
-``GET /custom-properties``, ``GET/PATCH/DELETE /custom-properties/{id}``
-    https://docs.foxglove.dev/api/custom-properties
+   * - Method
+     - Path
+     - Capability
+     - Purpose
+   * - POST
+     - ``/custom-properties``
+     - ``properties.create``
+     - Create a key (``resourceType`` includes ``episode``)
+   * - GET
+     - ``/custom-properties``
+     - ``properties.list``
+     - List; filter with ``resourceType=episode``
+   * - GET
+     - ``/custom-properties/{id}``
+     - ``properties.list``
+     - Get one
+   * - PATCH
+     - ``/custom-properties/{id}``
+     - ``properties.update``
+     - ``label`` and ``enumValues`` only
+   * - DELETE
+     - ``/custom-properties/{id}``
+     - ``properties.delete``
+     - Delete the key
+
+.. code-block:: bash
+
+   curl -X POST https://api.foxglove.dev/v1/custom-properties \
+     -H "Authorization: Bearer $FOXGLOVE_API_TOKEN" \
+     -H "Content-Type: application/json" \
+     -d '{"key":"outcome","label":"Outcome","resourceType":"episode","valueType":"enum","enumValues":["success","failure"]}'

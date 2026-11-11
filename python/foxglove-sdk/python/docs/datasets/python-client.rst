@@ -1,15 +1,15 @@
 Python client reference
 =======================
 
-Package ``foxglove-client``. Import ``from foxglove.client import Client``.
-Methods map 1:1 to the REST resources in :doc:`rest`. Keys in returned dicts
-are snake_case. Times that the API stores with nanoseconds also appear as
-``raw_start_time`` / ``raw_end_time`` RFC 3339 strings.
+Package ``foxglove-client`` (0.23.0 or later).
+``from foxglove.client import Client``.
 
-Authenticate with ``Client(token=...)``. The client sends
-``Authorization: Bearer <token>``.
+Each method calls one endpoint in :doc:`rest`, except ``download_dataset``.
+Returned dict keys are snake_case, except ``creation_context`` and recording
+``location``, which keep API names. Times are ``datetime`` objects. Errors
+raise ``requests.exceptions.HTTPError``.
 
-Count fields on dataset and version objects are listed with those methods.
+``Client(token: str, host: str = "api.foxglove.dev")``.
 
 Datasets
 --------
@@ -19,19 +19,37 @@ create_dataset
 
 Create a dataset, optionally seeding the first version with episodes.
 
-Inputs:
+Parameters
 
-``project_id`` (str, required)
-    Project that owns the dataset.
+.. list-table::
+   :header-rows: 1
+   :widths: 18 14 10 12 46
 
-``name`` (str, required)
-    1–100 characters. Unique within the project, case-insensitive.
-
-``description`` (str, optional)
-    1–500 characters.
-
-``episode_ids`` (list of str, optional)
-    At most 2,000 episode IDs.
+   * - Name
+     - Type
+     - Required
+     - Default
+     - Description
+   * - ``project_id``
+     - str
+     - yes
+     -
+     - Project that owns the dataset.
+   * - ``name``
+     - str
+     - yes
+     -
+     - 1–100 characters. Unique in the Project, case-insensitive.
+   * - ``description``
+     - str
+     - no
+     -
+     - 1–500 characters.
+   * - ``episode_ids``
+     - list of str
+     - no
+     -
+     - At most 2,000 episode IDs.
 
 Returns a dataset dict (``id``, ``project_id``, ``name``, ``description``,
 ``creator_org_member_id``, ``creator_api_key_id``, ``created_at``,
@@ -47,133 +65,647 @@ Returns a dataset dict (``id``, ``project_id``, ``name``, ``description``,
 get_datasets
 ^^^^^^^^^^^^
 
-List datasets. Optional ``project_id``, ``name`` (case-insensitive substring),
-``sort_by`` (``name``, ``created_at``, ``updated_at``, ``episode_count``;
-default ``created_at``), ``sort_order``, ``limit`` (0–2000, default 2000),
-``cursor``. Returns a ``Page``. Use ``page.auto_paging_iter()``.
+List datasets. ``name`` is a case-insensitive substring match.
+
+Parameters
+
+.. list-table::
+   :header-rows: 1
+   :widths: 18 14 10 12 46
+
+   * - Name
+     - Type
+     - Required
+     - Default
+     - Description
+   * - ``project_id``
+     - str
+     - no
+     -
+     - Restrict to one Project.
+   * - ``name``
+     - str
+     - no
+     -
+     - Case-insensitive substring.
+   * - ``sort_by``
+     - str
+     - no
+     - created_at
+     - ``name``, ``created_at``, ``updated_at``, ``episode_count``.
+   * - ``sort_order``
+     - str
+     - no
+     -
+     - ``asc`` or ``desc``.
+   * - ``limit``
+     - int
+     - no
+     - 2000
+     - Page size, 0–2000.
+   * - ``cursor``
+     - str
+     - no
+     -
+     - Cursor from a previous page.
+
+Returns a ``Page``. Iterate with ``page.auto_paging_iter()``.
+
+.. code-block:: python
+
+   for d in client.get_datasets(project_id="prj_123").auto_paging_iter():
+       print(d["id"], d["name"], d["episode_count"])
 
 get_dataset
 ^^^^^^^^^^^
 
-Return one dataset, including ``episode_count``. Input: ``dataset_id`` (str,
-required).
+Return one dataset, including ``episode_count``.
+
+Parameters
+
+.. list-table::
+   :header-rows: 1
+   :widths: 18 14 10 12 46
+
+   * - Name
+     - Type
+     - Required
+     - Default
+     - Description
+   * - ``dataset_id``
+     - str
+     - yes
+     -
+     - Dataset ID.
+
+.. code-block:: python
+
+   dataset = client.get_dataset(dataset_id="dset_123")
 
 update_dataset
 ^^^^^^^^^^^^^^
 
 Patch ``name`` and/or ``description``. ``description=None`` clears it.
 
+Parameters
+
+.. list-table::
+   :header-rows: 1
+   :widths: 18 14 10 12 46
+
+   * - Name
+     - Type
+     - Required
+     - Default
+     - Description
+   * - ``dataset_id``
+     - str
+     - yes
+     -
+     - Dataset ID.
+   * - ``name``
+     - str
+     - no
+     -
+     - 1–100 characters.
+   * - ``description``
+     - str or None
+     - no
+     -
+     - 1–500, or ``None`` to clear.
+
+.. code-block:: python
+
+   client.update_dataset(dataset_id="dset_123", description=None)
+
 delete_dataset
 ^^^^^^^^^^^^^^
 
-Delete the dataset. Does not delete episodes. Input: ``dataset_id``.
+Delete the dataset. Does not delete episodes. Returns ``None``.
+
+Parameters
+
+.. list-table::
+   :header-rows: 1
+   :widths: 18 14 10 12 46
+
+   * - Name
+     - Type
+     - Required
+     - Default
+     - Description
+   * - ``dataset_id``
+     - str
+     - yes
+     -
+     - Dataset ID.
 
 get_dataset_episodes
 ^^^^^^^^^^^^^^^^^^^^
 
 Page of membership on the latest committed version, or the initial draft if
-none is committed.
+none is committed. ``sort_by`` default ``added_at``. ``start`` and ``end``
+(datetime) must be passed together.
 
-Optional filters: ``sort_by`` (``added_at``, ``created_at``, ``start_time``,
-``end_time``), ``sort_order``, ``limit``, ``cursor``, ``start`` and ``end``
-together, ``has_missing_recordings``, ``recording_id``, ``properties_query``,
-``include_recordings``, ``include_properties``, ``include_creation_context``.
-
-Each item has ``added_at``, ``added_in_version``, ``has_missing_recordings``,
-and nested ``episode``.
+Parameters: same as :ref:`get_dataset_version_episodes` except there is no
+``version_number``.
 
 update_dataset_episodes
 ^^^^^^^^^^^^^^^^^^^^^^^
 
 Stage draft membership. Does not commit.
 
-``add`` / ``update``
-    List of episode IDs, or dicts ``{"id": ..., "version": ...}``. Omitting
-    ``version`` uses the latest episode version. At most 2,000 each.
+An ID in ``update`` can't also be in ``add`` or ``remove``. An object in
+``add`` must not already be in the draft. At least one list must be
+non-empty.
 
-``remove``
-    Episode IDs to drop. At most 2,000.
+Parameters
+
+.. list-table::
+   :header-rows: 1
+   :widths: 18 14 10 12 46
+
+   * - Name
+     - Type
+     - Required
+     - Default
+     - Description
+   * - ``dataset_id``
+     - str
+     - yes
+     -
+     - Dataset ID.
+   * - ``add``
+     - list
+     - no
+     -
+     - IDs or ``{"id", "version?"}``. Latest version if omitted. ≤ 2000.
+   * - ``update``
+     - list
+     - no
+     -
+     - Same forms as ``add``. ≤ 2000.
+   * - ``remove``
+     - list of str
+     - no
+     -
+     - Episode IDs to drop. ≤ 2000.
 
 Returns ``added``, ``updated``, ``removed``, ``already_present`` (ints).
+
+.. code-block:: python
+
+   client.update_dataset_episodes(
+       dataset_id="dset_123", add=["ep_new"], remove=["ep_old"]
+   )
 
 get_dataset_versions
 ^^^^^^^^^^^^^^^^^^^^
 
-Page of versions (committed plus the current draft). Optional ``sort_order``,
-``limit``, ``cursor``.
+Page of versions (committed plus the current draft). The list includes the
+draft; its ``committed_at`` is ``None``.
+
+Parameters
+
+.. list-table::
+   :header-rows: 1
+   :widths: 18 14 10 12 46
+
+   * - Name
+     - Type
+     - Required
+     - Default
+     - Description
+   * - ``dataset_id``
+     - str
+     - yes
+     -
+     - Dataset ID.
+   * - ``sort_order``
+     - str
+     - no
+     -
+     - ``asc`` or ``desc``.
+   * - ``limit``
+     - int
+     - no
+     - 2000
+     - Page size, 0–2000.
+   * - ``cursor``
+     - str
+     - no
+     -
+     - Cursor from a previous page.
 
 get_dataset_version
 ^^^^^^^^^^^^^^^^^^^
 
 One version, including ``has_missing_recordings`` and the count fields
 ``episode_count``, ``added_episode_count``, ``removed_episode_count``,
-``changed_episode_count``. Inputs: ``dataset_id``, ``version_number`` (int).
-``committed_at`` is omitted or null on the editable version.
+``changed_episode_count``. ``committed_at`` is ``None`` on the draft.
+
+Parameters
+
+.. list-table::
+   :header-rows: 1
+   :widths: 18 14 10 12 46
+
+   * - Name
+     - Type
+     - Required
+     - Default
+     - Description
+   * - ``dataset_id``
+     - str
+     - yes
+     -
+     - Dataset ID.
+   * - ``version_number``
+     - int
+     - yes
+     -
+     - Dataset version number.
 
 update_dataset_version
 ^^^^^^^^^^^^^^^^^^^^^^
 
 Set ``description`` (str or ``None``) on a committed or editable version.
-Does not change episodes or commit attribution.
+Does not change episodes or commit attribution. String length 1–2048 with a
+non-whitespace character.
+
+Parameters
+
+.. list-table::
+   :header-rows: 1
+   :widths: 18 14 10 12 46
+
+   * - Name
+     - Type
+     - Required
+     - Default
+     - Description
+   * - ``dataset_id``
+     - str
+     - yes
+     -
+     - Dataset ID.
+   * - ``version_number``
+     - int
+     - yes
+     -
+     - Dataset version number.
+   * - ``description``
+     - str or None
+     - yes
+     -
+     - New description, or ``None`` to clear.
+
+.. _get_dataset_version_episodes:
 
 get_dataset_version_episodes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Same filters as ``get_dataset_episodes``, for a specific ``version_number``.
-Episodes are returned at the pinned episode version.
+List the episodes in one dataset version, at the episode versions it pins.
+
+Parameters
+
+.. list-table::
+   :header-rows: 1
+   :widths: 22 14 10 12 42
+
+   * - Name
+     - Type
+     - Required
+     - Default
+     - Description
+   * - ``dataset_id``
+     - str
+     - yes
+     -
+     - Dataset ID.
+   * - ``version_number``
+     - int
+     - yes
+     -
+     - Dataset version number.
+   * - ``sort_by``
+     - str
+     - no
+     - added_at
+     - ``added_at``, ``created_at``, ``start_time``, ``end_time``.
+   * - ``sort_order``
+     - str
+     - no
+     -
+     - ``asc`` or ``desc``.
+   * - ``limit``
+     - int
+     - no
+     - 2000
+     - Page size, 0–2000.
+   * - ``cursor``
+     - str
+     - no
+     -
+     - Cursor from a previous page.
+   * - ``start`` / ``end``
+     - datetime
+     - no
+     -
+     - Overlap filter. Pass both.
+   * - ``has_missing_recordings``
+     - bool
+     - no
+     -
+     - Filter by recording availability.
+   * - ``recording_id``
+     - str
+     - no
+     -
+     - Episodes containing this recording.
+   * - ``properties_query``
+     - str
+     - no
+     -
+     - ``key:value`` terms, ANDed.
+   * - ``include_recordings``
+     - bool
+     - no
+     - False
+     - Add ``recordings``.
+   * - ``include_properties``
+     - bool
+     - no
+     - False
+     - Add ``properties``.
+   * - ``include_creation_context``
+     - bool
+     - no
+     - False
+     - Add ``creation_context``.
+
+Returns ``Page`` of dicts: ``added_at`` (datetime), ``added_in_version`` (int),
+``has_missing_recordings`` (bool), ``episode`` (dict). Iterate with
+``page.auto_paging_iter()``.
+
+.. code-block:: python
+
+   for m in client.get_dataset_version_episodes(
+       dataset_id="dset_123", version_number=2
+   ).auto_paging_iter():
+       print(m["episode"]["id"], m["episode"]["version"])
 
 compare_dataset_versions
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-Membership changes from ``base_version`` to ``version_number``.
+Membership changes from ``base_version`` to ``version_number``. Optional
+``include_*`` flags as on list calls. ``limit`` default 2000. Counts cover
+the whole changeset. ``next_cursor`` is ``None`` on the last page. Changed
+rows include ``previous_version`` and ``previous_episode``.
+
+Parameters
+
+.. list-table::
+   :header-rows: 1
+   :widths: 22 14 10 12 42
+
+   * - Name
+     - Type
+     - Required
+     - Default
+     - Description
+   * - ``dataset_id``
+     - str
+     - yes
+     -
+     - Dataset ID.
+   * - ``version_number``
+     - int
+     - yes
+     -
+     - Target version.
+   * - ``base_version``
+     - int
+     - yes
+     -
+     - Base version.
+   * - ``limit``
+     - int
+     - no
+     - 2000
+     - Page size, 0–2000.
+   * - ``cursor``
+     - str
+     - no
+     -
+     - Cursor from a previous page.
+   * - ``include_recordings``
+     - bool
+     - no
+     - False
+     - Add ``recordings``.
+   * - ``include_properties``
+     - bool
+     - no
+     - False
+     - Add ``properties``.
+   * - ``include_creation_context``
+     - bool
+     - no
+     - False
+     - Add ``creation_context``.
 
 Returns ``changes``, ``added_count``, ``removed_count``, ``changed_count``,
-``next_cursor``. Each change has a kind ``added``, ``removed``, or
-``changed``. Changed rows include ``previous_version`` and
-``previous_episode`` when present. Optional ``include_*`` flags as on list
-calls.
+``next_cursor``.
 
 .. code-block:: python
 
    diff = client.compare_dataset_versions(
-       dataset_id="ds_123", version_number=2, base_version=1
+       dataset_id="dset_123", version_number=2, base_version=1
    )
 
 commit_dataset
 ^^^^^^^^^^^^^^
 
-Commit the draft. Optional ``description``. Returns ``committed`` (version
-dict) and ``editable_version_number``. HTTP 409 when there are no changes.
+Commit the draft. Raises ``HTTPError`` (409) when the draft has no changes.
+Omitting ``description`` keeps the draft's description; ``None`` clears it.
+
+Parameters
+
+.. list-table::
+   :header-rows: 1
+   :widths: 18 14 10 12 46
+
+   * - Name
+     - Type
+     - Required
+     - Default
+     - Description
+   * - ``dataset_id``
+     - str
+     - yes
+     -
+     - Dataset ID.
+   * - ``description``
+     - str or None
+     - no
+     -
+     - 1–2048, or ``None`` to clear.
+
+Returns ``committed`` (version dict) and ``editable_version_number``.
 
 discard_dataset
 ^^^^^^^^^^^^^^^
 
-Drop draft adds, removes, and updates. Returns ``discarded_adds``,
-``discarded_removes``, ``discarded_updates``.
+Drop draft adds, removes, and updates.
+
+Parameters
+
+.. list-table::
+   :header-rows: 1
+   :widths: 18 14 10 12 46
+
+   * - Name
+     - Type
+     - Required
+     - Default
+     - Description
+   * - ``dataset_id``
+     - str
+     - yes
+     -
+     - Dataset ID.
+
+Returns ``discarded_adds``, ``discarded_removes``, ``discarded_updates``.
 
 restore_dataset_version
 ^^^^^^^^^^^^^^^^^^^^^^^
 
 Stage membership so the draft matches ``version_number``. Does not commit.
-``force`` (bool, default False) discards conflicting draft changes. Returns
-``added``, ``updated``, ``removed``, ``discarded_adds``,
+``force`` (bool, default ``False``): replace pending draft changes. Without
+it, a draft with pending changes raises ``HTTPError`` (409).
+
+Parameters
+
+.. list-table::
+   :header-rows: 1
+   :widths: 18 14 10 12 46
+
+   * - Name
+     - Type
+     - Required
+     - Default
+     - Description
+   * - ``dataset_id``
+     - str
+     - yes
+     -
+     - Dataset ID.
+   * - ``version_number``
+     - int
+     - yes
+     -
+     - Committed version to restore.
+   * - ``force``
+     - bool
+     - no
+     - False
+     - Replace pending draft changes.
+
+Returns ``added``, ``updated``, ``removed``, ``discarded_adds``,
 ``discarded_removes``, ``discarded_updates``.
 
 clone_dataset_version
 ^^^^^^^^^^^^^^^^^^^^^
 
-Create a new dataset from a committed version. Required ``name``. Optional
-``description``, ``include_history`` (bool). Returns the new dataset dict.
-The copy has an empty editable version on top.
+Create a new dataset from a committed version.
+``name`` (str, required, 1–100, unique in Project); ``description`` (str,
+optional, 1–500); ``include_history`` (bool, default ``False``).
+
+Parameters
+
+.. list-table::
+   :header-rows: 1
+   :widths: 18 14 10 12 46
+
+   * - Name
+     - Type
+     - Required
+     - Default
+     - Description
+   * - ``dataset_id``
+     - str
+     - yes
+     -
+     - Source dataset ID.
+   * - ``version_number``
+     - int
+     - yes
+     -
+     - Committed version to clone.
+   * - ``name``
+     - str
+     - yes
+     -
+     - 1–100, unique in the Project.
+   * - ``description``
+     - str
+     - no
+     -
+     - 1–500.
+   * - ``include_history``
+     - bool
+     - no
+     - False
+     - Copy every version through the cloned one.
+
+Returns the new dataset dict. The copy has an empty editable version on top.
 
 download_dataset
 ^^^^^^^^^^^^^^^^
 
 Export a committed version to one MCAP per episode plus ``manifest.json``.
-Inputs: ``dataset_id``, ``version_number``, ``output_directory``, optional
-``topics``, ``include_properties`` (default False). Returns a ``Path``.
-Raises if the version is editable or any member has missing recordings.
-Failed episode transfers are recorded in the manifest;
+``output_directory`` must be empty or not exist. Raises ``RuntimeError`` for
+an editable version or one with unavailable recordings.
+
+Parameters
+
+.. list-table::
+   :header-rows: 1
+   :widths: 22 16 10 12 40
+
+   * - Name
+     - Type
+     - Required
+     - Default
+     - Description
+   * - ``dataset_id``
+     - str
+     - yes
+     -
+     - Dataset ID.
+   * - ``version_number``
+     - int
+     - yes
+     -
+     - Committed version number.
+   * - ``output_directory``
+     - str or Path
+     - yes
+     -
+     - Empty directory, or a path that does not exist.
+   * - ``topics``
+     - list of str
+     - no
+     -
+     - Topic filter. Omit for every topic.
+   * - ``include_properties``
+     - bool
+     - no
+     - False
+     - Add custom properties to the manifest.
+
+Returns a ``Path``. Failed episode transfers are recorded in the manifest;
 ``DatasetDownloadWarning`` is emitted if some episodes fail.
 
 Episodes
@@ -186,66 +718,291 @@ Get-or-create up to 2,000 episodes. Matching uses time range, recordings, and
 custom properties of the latest episode version.
 
 Each item must have exactly one of ``recordings`` or ``event_id``. Recording
-items may set ``start_time`` / ``end_time`` (datetime or RFC 3339 string).
-``event_id`` snapshots the event's current range and overlapping completed
-recordings; later event edits do not change the episode. Optional
-``properties`` must use keys defined for ``resourceType=episode``.
+items may set ``start_time`` and ``end_time`` (timezone-aware ``datetime``).
+``event_id`` items can't set times. ``recordings``: 1–50 recording IDs from
+one device (or all deviceless). ``event_id`` snapshots the event's current
+range and overlapping completed recordings; later event edits do not change
+the episode. Optional ``properties`` must use keys defined for
+``resourceType=episode``.
 
-Returns the ``episodes`` list from the response. New episodes count toward
-the episode meter (:doc:`pricing`). Matched episodes do not.
+Returns a list of ``{"id": str, "created": bool}`` in request order.
+``created`` is ``False`` when an existing episode was reused. New episodes
+count toward the episode meter
+(https://docs.foxglove.dev/docs/pricing#episodes). Matched episodes do not.
+
+Parameters
+
+.. list-table::
+   :header-rows: 1
+   :widths: 18 14 10 12 46
+
+   * - Name
+     - Type
+     - Required
+     - Default
+     - Description
+   * - ``project_id``
+     - str
+     - yes
+     -
+     - Project that owns the episodes.
+   * - ``episodes``
+     - list of dict
+     - yes
+     -
+     - 1–2000 items. See above.
 
 .. code-block:: python
 
+   from datetime import datetime, timezone
+
    episodes = client.create_episodes(
        project_id="prj_123",
-       episodes=[{"recordings": ["rec_1"], "properties": {"task": "fold_towel"}}],
+       episodes=[
+           {
+               "recordings": ["rec_1"],
+               "start_time": datetime(2026, 11, 2, 18, 0, tzinfo=timezone.utc),
+               "end_time": datetime(2026, 11, 2, 18, 5, tzinfo=timezone.utc),
+               "properties": {"task": "fold_towel"},
+           }
+       ],
    )
 
 update_episodes
 ^^^^^^^^^^^^^^^
 
 Atomic bulk update. Each item requires ``id``. Optional
-``applies_to_version``, ``start_time``, ``end_time``, ``recordings``
-(``{"add": [...], "remove": [...]}``), ``properties`` (merge; ``None``
-unsets a key). Unchanged episodes keep their version.
+``applies_to_version``, ``start_time``, ``end_time`` (timezone-aware
+``datetime``), ``recordings`` (``{"add": [...], "remove": [...]}``),
+``properties`` (merge; ``None`` unsets a key). Unchanged episodes keep their
+version. Up to 2,000 items; duplicate IDs are rejected.
+
+Returns a list of ``{"id": str, "version": int}``.
+
+Parameters
+
+.. list-table::
+   :header-rows: 1
+   :widths: 18 14 10 12 46
+
+   * - Name
+     - Type
+     - Required
+     - Default
+     - Description
+   * - ``episodes``
+     - list of dict
+     - yes
+     -
+     - 1–2000 updates.
 
 get_episodes
 ^^^^^^^^^^^^
 
-Page of episodes. Optional ``project_id``, ``start`` and ``end`` together,
-``has_missing_recordings``, ``recording_id``, ``exact_recording_ids``
-(non-empty list), ``properties_query``, ``sort_by`` (``created_at``,
-``start_time``, ``end_time``), ``sort_order``, ``limit``, ``cursor``,
-``include_recordings``, ``include_properties``,
-``include_creation_context``.
+Page of episodes. Returns each episode's latest version.
+``exact_recording_ids`` (list of str, 1–50). ``sort_by`` default
+``created_at``. ``start`` and ``end`` (datetime) must be passed together.
+
+Parameters
+
+.. list-table::
+   :header-rows: 1
+   :widths: 22 14 10 12 42
+
+   * - Name
+     - Type
+     - Required
+     - Default
+     - Description
+   * - ``project_id``
+     - str
+     - no
+     -
+     - Restrict to one Project.
+   * - ``start`` / ``end``
+     - datetime
+     - no
+     -
+     - Overlap filter. Pass both.
+   * - ``has_missing_recordings``
+     - bool
+     - no
+     -
+     - Filter by recording availability.
+   * - ``recording_id``
+     - str
+     - no
+     -
+     - Episodes containing this recording.
+   * - ``exact_recording_ids``
+     - list of str
+     - no
+     -
+     - Exact recording set, 1–50 IDs.
+   * - ``properties_query``
+     - str
+     - no
+     -
+     - ``key:value`` terms, ANDed.
+   * - ``sort_by``
+     - str
+     - no
+     - created_at
+     - ``created_at``, ``start_time``, ``end_time``.
+   * - ``sort_order``
+     - str
+     - no
+     -
+     - ``asc`` or ``desc``.
+   * - ``limit``
+     - int
+     - no
+     - 2000
+     - Page size, 0–2000.
+   * - ``cursor``
+     - str
+     - no
+     -
+     - Cursor from a previous page.
+   * - ``include_recordings``
+     - bool
+     - no
+     - False
+     - Add ``recordings``.
+   * - ``include_properties``
+     - bool
+     - no
+     - False
+     - Add ``properties``.
+   * - ``include_creation_context``
+     - bool
+     - no
+     - False
+     - Add ``creation_context``.
 
 get_episode
 ^^^^^^^^^^^
 
-One episode. Optional ``version``, ``include_recordings``,
-``include_properties``. Always includes ``creation_context``.
+One episode. Always includes ``creation_context``. Optional ``version``
+integer ≥ 1, default latest.
+
+Parameters
+
+.. list-table::
+   :header-rows: 1
+   :widths: 22 14 10 12 42
+
+   * - Name
+     - Type
+     - Required
+     - Default
+     - Description
+   * - ``episode_id``
+     - str
+     - yes
+     -
+     - Episode ID.
+   * - ``version``
+     - int
+     - no
+     -
+     - Episode version. Latest if omitted.
+   * - ``include_recordings``
+     - bool
+     - no
+     - False
+     - Add ``recordings``.
+   * - ``include_properties``
+     - bool
+     - no
+     - False
+     - Add ``properties``.
 
 update_episode
 ^^^^^^^^^^^^^^
 
 Single-episode form of ``update_episodes``. Returns the episode at the
-resulting version.
+resulting version (unchanged if nothing changed). ``start_time`` /
+``end_time`` are timezone-aware ``datetime``.
 
 delete_episode
 ^^^^^^^^^^^^^^
 
-Delete if no dataset holds the episode. HTTP 409 otherwise.
+Returns ``None``. Raises ``HTTPError`` (409) if a dataset holds the episode.
+
+Parameters
+
+.. list-table::
+   :header-rows: 1
+   :widths: 18 14 10 12 46
+
+   * - Name
+     - Type
+     - Required
+     - Default
+     - Description
+   * - ``episode_id``
+     - str
+     - yes
+     -
+     - Episode ID.
 
 get_episode_versions
 ^^^^^^^^^^^^^^^^^^^^
 
-Page of episode versions, newest first. Each row has ``version``,
-``created_at``, creators, and ``changed_fields``.
+Page of episode versions, newest first. Each item: ``version`` (int),
+``created_at`` (datetime), ``creator_org_member_id``, ``creator_api_key_id``,
+``changed_fields`` (list of ``start_time``, ``end_time``, ``recordings``,
+``properties``).
+
+Parameters
+
+.. list-table::
+   :header-rows: 1
+   :widths: 18 14 10 12 46
+
+   * - Name
+     - Type
+     - Required
+     - Default
+     - Description
+   * - ``episode_id``
+     - str
+     - yes
+     -
+     - Episode ID.
+   * - ``limit``
+     - int
+     - no
+     - 2000
+     - Page size, 0–2000.
+   * - ``cursor``
+     - str
+     - no
+     -
+     - Cursor from a previous page.
 
 Custom properties
 -----------------
 
-``create_custom_property``, ``get_custom_properties``, ``get_custom_property``,
-``update_custom_property``, ``delete_custom_property``. Episode keys use
-``resource_type="episode"``. ``value_type`` is ``string``,
-``multiline-string``, ``number``, ``enum``, ``boolean``, or ``multi-enum``.
+``create_custom_property(key, label, resource_type, value_type, enum_values=None)``;
+``get_custom_properties(resource_type=None)``;
+``get_custom_property(custom_property_id)``;
+``update_custom_property(custom_property_id, label=None, enum_values=None)``;
+``delete_custom_property(custom_property_id)``.
+
+Key: 1–32 chars ``[A-Za-z0-9_-]``, immutable. Label: 1–32. ``enum_values`` is
+required for ``enum``. ``update_custom_property`` can only add or reorder
+``enum_values``. ``value_type`` is ``string``, ``multiline-string``,
+``number``, ``enum``, ``boolean``, or ``multi-enum``. Episode keys use
+``resource_type="episode"``.
+
+.. code-block:: python
+
+   client.create_custom_property(
+       key="outcome",
+       label="Outcome",
+       resource_type="episode",
+       value_type="enum",
+       enum_values=["success", "failure"],
+   )

@@ -8,17 +8,16 @@ This example matches
 ``python/foxglove-sdk-examples/dataset-training/main.py`` in the foxglove-sdk
 repository.
 
-.. warning::
+API reference: :doc:`sdk`.
 
-   ``foxglove.datasets`` is experimental and unstable. It may change in
-   backward-incompatible ways.
-
-Install ``foxglove-sdk[torch]``. Create an API key with ``datasets.list`` and
-``data.stream``. Set ``FOXGLOVE_API_TOKEN``.
+**Prerequisites:** Python 3.10+; a committed dataset version whose
+``/training/measurements`` topic is JSON with numeric ``speed``,
+``acceleration``, and ``steering``; an API key with ``datasets.list`` and
+``data.stream``.
 
 .. code-block:: bash
 
-   pip install 'foxglove-sdk[torch]'
+   pip install 'foxglove-sdk[torch]>=0.31'
    export FOXGLOVE_API_TOKEN=your-token
 
 .. code-block:: python
@@ -45,7 +44,7 @@ Install ``foxglove-sdk[torch]``. Create an API key with ``datasets.list`` and
 
    if __name__ == "__main__":
        dataset = read_dataset(
-           "ds_123",
+           "dset_123",
            version=7,
            topics=["/training/measurements"],
            read_episode=read_episode,
@@ -61,37 +60,58 @@ Install ``foxglove-sdk[torch]``. Create an API key with ``datasets.list`` and
        for batch in loader:
            print(batch["inputs"].shape, batch["target"].shape)
 
-The example topic is JSON with numeric ``speed``, ``acceleration``, and
-``steering`` fields. Change ``read_episode`` and ``topics`` for your schemas.
-``include_properties=True`` is required to read ``episode.properties``;
-without it, that access raises ``RuntimeError``.
+**Result:** one line per batch, e.g. ``torch.Size([32, 2]) torch.Size([32, 1])``.
+To adapt it, change ``topics`` and ``read_episode``. Reading
+``episode.properties`` requires ``include_properties=True``.
 
-In the Foxglove UI, **Use for training** on a dataset page generates a
-similar script for the committed version and topics you select. **Copy
-prompt** includes the setup for a coding agent.
+In Foxglove, **Use for training** on a dataset page generates a similar script
+for the committed version and topics you select. **Copy prompt** includes the
+setup for a coding agent.
 
 Shuffling and splits
 --------------------
 
-Pass ``shuffle=True`` and a ``seed`` to permute episodes each epoch. Call
-``dataset.set_epoch(n)`` before each DataLoader pass. Leave DataLoader
-``shuffle`` off. Samples inside an episode stay in callback order.
+.. code-block:: python
 
-For a stable train, validation, and test assignment, pass a
-``DatasetSplit`` and ``split="train"`` (or ``"validation"`` / ``"test"``).
-Use ``inspect_splits`` to print group and episode counts before training.
-See :doc:`sdk`.
+   dataset = read_dataset(
+       "dset_123",
+       version=7,
+       topics=["/training/measurements"],
+       read_episode=read_episode,
+       include_properties=True,
+       shuffle=True,
+       seed=42,
+   )
+   for epoch in range(3):
+       dataset.set_epoch(epoch)
+       for batch in loader:
+           ...
 
-Run the checked-in example::
+Episode order depends on ``seed + epoch``. Samples within an episode keep
+callback order.
+
+.. code-block:: python
+
+   from foxglove.datasets import DatasetSplit, inspect_splits
+   from foxglove.datasets.torch import read_dataset
+
+   splits = DatasetSplit(train=0.8, validation=0.1, test=0.1, seed=0)
+   print(inspect_splits("dset_123", version=7, split_config=splits))
+   train = read_dataset(
+       "dset_123",
+       version=7,
+       topics=["/training/measurements"],
+       read_episode=read_episode,
+       include_properties=True,
+       split_config=splits,
+       split="train",
+   )
+
+Episodes that share a recording land in the same split. Save ``splits`` with
+your checkpoint.
+
+From a clone of ``foxglove/foxglove-sdk`` (requires ``uv``)::
 
    export FOXGLOVE_API_TOKEN=your-token
    cd python/foxglove-sdk-examples/dataset-training
-   uv run main.py --dataset-id ds_123 --version 7 --framework torch
-
-Parameter list: :doc:`sdk`. REST and client calls for listing versions:
-:doc:`python-client`.
-
-.. note::
-
-   A blog post on training with Datasets will link from here once it is
-   published.
+   uv run main.py --dataset-id dset_123 --version 7 --framework torch

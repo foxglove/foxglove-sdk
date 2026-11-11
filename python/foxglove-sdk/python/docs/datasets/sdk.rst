@@ -2,7 +2,8 @@ SDK reference
 =============
 
 ``foxglove.datasets`` loads a committed dataset version into PyTorch or Ray
-Data. Install ``foxglove-sdk[torch]``, ``foxglove-sdk[ray]``, or both.
+Data. Requires ``foxglove-sdk>=0.31`` (``[torch]``, ``[ray]``, ``[video]``
+extras) and ``foxglove-client>=0.23``.
 
 .. warning::
 
@@ -17,44 +18,6 @@ The default client is ``foxglove.client.Client(token=os.environ["FOXGLOVE_API_TO
 foxglove.datasets.torch.read_dataset
 ------------------------------------
 
-Plan a topic-filtered version; download messages during iteration. Returns
-``TorchDataset``.
-
-Inputs:
-
-``dataset_id`` (str, required)
-    Dataset id.
-
-``version`` (int, required)
-    Committed version number.
-
-``topics`` (sequence of str, required)
-    Topics to read.
-
-``read_episode`` (callable, required)
-    ``EpisodeReader`` → iterable of samples.
-
-``source`` (``"foxglove"`` | ``"object_storage"``, default ``"foxglove"``)
-    Foxglove download, or original indexed MCAP objects.
-
-``split_config`` / ``split`` (optional)
-    ``DatasetSplit`` and ``"train"`` | ``"validation"`` | ``"test"``.
-
-``include_properties`` (bool, default False)
-    Fetch pinned custom properties for ``EpisodeReader.properties``.
-
-``client_factory`` / ``object_store_factory`` (optional)
-    Override client or object-store construction. Factories used by workers
-    must be pickleable. ``object_store_factory`` requires
-    ``source="object_storage"``.
-
-``rank`` / ``world_size`` (int, optional)
-    Supply together, or the adapter reads ``torch.distributed``.
-
-``shuffle`` (bool, default False), ``seed`` (int, optional)
-    Permute the episode list with ``seed + epoch``. ``seed`` requires
-    ``shuffle=True``.
-
 .. autofunction:: foxglove.datasets.torch.read_dataset
 
 .. autoclass:: foxglove.datasets.torch.TorchDataset
@@ -64,20 +27,16 @@ Inputs:
 foxglove.datasets.ray.read_dataset
 ----------------------------------
 
-Same planning arguments as the PyTorch adapter, plus ``concurrency`` (int,
-optional) to limit simultaneous read tasks. ``read_episode`` must yield
-mappings. Returns ``ray.data.Dataset``. No ``shuffle`` / ``rank`` arguments;
-use Ray for distribution.
+Parameters match the PyTorch adapter except ``rank``, ``world_size``,
+``shuffle``, and ``seed``, plus ``concurrency`` (int, optional): cap on
+concurrent read tasks. Returns ``ray.data.Dataset``. ``read_episode`` must
+yield mappings with consistent column types. Ray schedules and distributes
+read tasks.
 
 .. autofunction:: foxglove.datasets.ray.read_dataset
 
 EpisodeReader
 -------------
-
-``id``, ``start_time``, ``end_time``. ``properties`` is a read-only mapping
-and requires ``include_properties=True``. ``iter_messages`` yields
-``(schema, channel, message, decoded)`` in log-time order. Optional
-``decoder_factories``, ``topics``, ``lookback``.
 
 .. autoclass:: foxglove.datasets.EpisodeReader
    :members:
@@ -86,9 +45,10 @@ Splits
 ------
 
 ``DatasetSplit(train=0.8, validation=0.1, test=0.1, seed=0, groups=None)``.
-Episodes that share a recording stay together. ``inspect_splits`` returns
-``SplitSummary`` (``group_count``, ``episode_count``) per split name. No
-server-side datasets are created.
+Proportions must be non-negative and sum to 1. Episodes that share a
+recording, or the same ``groups`` ID, go to the same split.
+``inspect_splits(dataset_id, *, version, split_config, client_factory=None)``
+returns ``dict[str, SplitSummary]`` (``group_count``, ``episode_count``).
 
 .. autoclass:: foxglove.datasets.DatasetSplit
 
@@ -99,10 +59,10 @@ server-side datasets are created.
 Object storage
 --------------
 
-``source="object_storage"`` needs recording ``location.scheme`` of ``s3``,
-``gs``, or ``az``. Workers use their own cloud credentials. The Foxglove
-token does not grant bucket access. Recordings must be immutable MCAP with
-summaries and indexes.
+``source="object_storage"`` reads recordings whose ``location.scheme`` is
+``s3``, ``gs``, or ``az`` (Azure also needs ``azure_storage_account_name``),
+using each worker's cloud credentials. Objects must be indexed MCAP and must
+not change during a read. For other stores, pass ``object_store_factory``.
 
 .. autoclass:: foxglove.datasets.ObjectLocation
    :members:
@@ -113,9 +73,11 @@ summaries and indexes.
 Video
 -----
 
-Optional extra ``foxglove-sdk[video]``. ``decode_h264`` yields RGB frames
-from ``CompressedVideo`` H.264 Annex B. ``to_image_tensor`` moves
-channels-last RGB to channels-first.
+Optional extra ``foxglove-sdk[video]``.
+``decode_h264(episode, *, topic=None, lookback=timedelta(seconds=5), decoder_factories=None)``
+yields ``VideoSample`` dicts from ``foxglove.CompressedVideo`` H.264 Annex B;
+pass it directly as ``read_episode``. ``to_image_tensor(sample)`` takes a
+mapping whose ``image`` is ``[..., H, W, 3]`` and returns ``[..., 3, H, W]``.
 
 .. autofunction:: foxglove.datasets.video.decode_h264
 
@@ -129,6 +91,6 @@ channels-last RGB to channels-first.
 Message encodings
 -----------------
 
-``jsonschema`` is included. Install ``mcap-protobuf-support``,
-``mcap-ros1-support``, or ``mcap-ros2-support`` on every worker for those
-encodings. Missing decoders name the package in the error.
+``iter_messages`` decodes JSON. Install ``mcap-protobuf-support``,
+``mcap-ros1-support``, or ``mcap-ros2-support`` on every worker to decode
+those encodings.

@@ -9,23 +9,42 @@ callback is the same shape as the PyTorch adapter: it receives an
 This example matches the Ray path in
 ``python/foxglove-sdk-examples/dataset-training/main.py``.
 
-.. warning::
+API reference: :doc:`sdk`.
 
-   ``foxglove.datasets`` is experimental and unstable. It may change in
-   backward-incompatible ways.
-
-Install ``foxglove-sdk[ray]`` (or ``foxglove-sdk[torch,ray]`` to consume
-Torch batches). Set ``FOXGLOVE_API_TOKEN``.
+**Prerequisites:** ``pip install 'foxglove-sdk[torch,ray]>=0.31'``;
+``FOXGLOVE_API_TOKEN`` set on the driver **and every Ray worker** (for example
+via ``ray.init(runtime_env={"env_vars": {"FOXGLOVE_API_TOKEN": os.environ["FOXGLOVE_API_TOKEN"]}})``).
 
 .. code-block:: python
 
+   import os
+
+   import numpy as np
    import ray
+   from foxglove.datasets import EpisodeReader
    from foxglove.datasets.ray import read_dataset
 
-   ray.init()
+
+   def read_episode(episode: EpisodeReader):
+       if episode.properties.get("quality") == "rejected":
+           return
+       for _schema, _channel, _message, payload in episode.iter_messages():
+           yield {
+               "inputs": np.asarray(
+                   [payload["speed"], payload["acceleration"]], dtype=np.float32
+               ),
+               "target": np.asarray([payload["steering"]], dtype=np.float32),
+           }
+
+
+   ray.init(
+       runtime_env={
+           "env_vars": {"FOXGLOVE_API_TOKEN": os.environ["FOXGLOVE_API_TOKEN"]}
+       }
+   )
    try:
        dataset = read_dataset(
-           "ds_123",
+           "dset_123",
            version=7,
            topics=["/training/measurements"],
            read_episode=read_episode,
@@ -37,23 +56,15 @@ Torch batches). Set ``FOXGLOVE_API_TOKEN``.
    finally:
        ray.shutdown()
 
-Define ``read_episode`` as in :doc:`pytorch`. ``concurrency`` limits how
-many read tasks run at once. Use ``dataset.map_batches`` for further
-processing.
+``concurrency`` caps concurrent read tasks. **Result:** one line per batch,
+e.g. ``torch.Size([32, 2]) torch.Size([32, 1])``.
 
 ``split_config`` and ``split`` work the same as in the PyTorch adapter.
-``source="object_storage"`` reads indexed MCAP objects with the workers'
-cloud credentials; the Foxglove token still loads the episode list.
+``source="object_storage"`` reads indexed MCAP objects with the workers' cloud
+credentials; the Foxglove token still loads the episode list.
 
-Run the checked-in example::
+From a clone of ``foxglove/foxglove-sdk`` (requires ``uv``)::
 
    export FOXGLOVE_API_TOKEN=your-token
    cd python/foxglove-sdk-examples/dataset-training
-   uv run main.py --dataset-id ds_123 --version 7 --framework ray
-
-Parameter list: :doc:`sdk`.
-
-.. note::
-
-   A blog post on training with Datasets will link from here once it is
-   published.
+   uv run main.py --dataset-id dset_123 --version 7 --framework ray
