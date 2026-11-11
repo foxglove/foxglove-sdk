@@ -4,7 +4,8 @@ Python client reference
 Package ``foxglove-client`` (0.23.0 or later).
 ``from foxglove.client import Client``.
 
-Each method calls one endpoint in :doc:`rest`, except ``download_dataset``.
+Each method calls one endpoint in :doc:`rest`, except ``download_dataset``
+and ``iter_messages``.
 Returned dict keys are snake_case, except ``creation_context`` and recording
 ``location``, which keep API names. Times are ``datetime`` objects. Errors
 raise ``requests.exceptions.HTTPError``.
@@ -729,9 +730,9 @@ the episode. Optional ``properties`` must use keys defined for
 ``resourceType=episode``.
 
 Returns a list of ``{"id": str, "created": bool}`` in request order.
-``created`` is ``False`` when an existing episode was reused. New episodes
-count toward the episode meter
-(https://docs.foxglove.dev/docs/pricing#episodes). Matched episodes do not.
+``created`` is ``False`` when an existing episode was reused. Only new
+episodes (``created: True``) count toward episode usage
+(https://foxglove.dev/pricing).
 
 Parameters
 
@@ -920,6 +921,58 @@ Parameters
      - no
      - False
      - Add ``properties``.
+
+iter_messages
+^^^^^^^^^^^^^
+
+Stream decoded messages. Yields ``(schema, channel, message, decoded)``.
+JSON is decoded by default. Pass ``decoder_factories`` to replace the
+client's default decoders. For a pinned episode, pass ``episode_id`` and
+optional ``episode_version`` (latest if omitted). Its time range is used
+when ``start`` and ``end`` are omitted.
+
+Parameters
+
+.. list-table::
+   :header-rows: 1
+   :widths: 22 14 10 12 42
+
+   * - Name
+     - Type
+     - Required
+     - Default
+     - Description
+   * - ``episode_id``
+     - str
+     - no
+     -
+     - Episode to stream. Uses its time range when ``start`` and ``end``
+       are omitted.
+   * - ``episode_version``
+     - int
+     - no
+     -
+     - Episode version. Requires ``episode_id``. Latest if omitted.
+   * - ``topics``
+     - list of str
+     - no
+     -
+     - Topic filter. Omit for every topic.
+   * - ``decoder_factories``
+     - list of DecoderFactory
+     - no
+     -
+     - Replace the client's default MCAP decoders.
+
+.. code-block:: python
+
+   episode = client.get_episode(episode_id="ep_123", version=3)
+   for schema, channel, message, decoded in client.iter_messages(
+       episode_id=episode["id"],
+       episode_version=episode["version"],
+       topics=["/camera/front", "/joint_states"],
+   ):
+       print(channel.topic, message.log_time, type(decoded))
 
 update_episode
 ^^^^^^^^^^^^^^

@@ -68,10 +68,8 @@ include_properties=True to read_dataset"), raised from the DataLoader worker
 as "Failed to read episode …".
 
 In Foxglove, **Use for training** on a dataset page generates a similar script
-for the committed version and topics you select. That script passes
-``client_factory=make_client`` and uses
-``DataLoader(dataset, batch_size=32, num_workers=2)`` (no ``spawn`` or
-``prefetch_factor``). **Copy prompt** includes the setup for a coding agent.
+for the committed version and topics you select. **Copy prompt** includes the
+setup for a coding agent.
 
 Shuffling and splits
 --------------------
@@ -86,6 +84,13 @@ Shuffling and splits
        include_properties=True,
        shuffle=True,
        seed=42,
+   )
+   loader = DataLoader(
+       dataset,
+       batch_size=32,
+       num_workers=2,
+       prefetch_factor=1,
+       multiprocessing_context="spawn",
    )
    for epoch in range(3):
        dataset.set_epoch(epoch)

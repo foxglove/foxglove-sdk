@@ -12,9 +12,8 @@ This example matches the Ray path in
 API reference: :doc:`sdk`.
 
 **Prerequisites:** ``pip install 'foxglove-sdk[torch,ray]>=0.31' pydantic``.
-``iter_torch_batches`` needs torch, and on Ray 2.60 it also imports
-``ray.train.v2``, which needs ``pydantic``. ``FOXGLOVE_API_TOKEN`` must be set
-on the driver **and every Ray worker** (for example via
+``FOXGLOVE_API_TOKEN`` must be set on the driver **and every Ray worker**
+(for example via
 ``ray.init(runtime_env={"env_vars": {"FOXGLOVE_API_TOKEN": os.environ["FOXGLOVE_API_TOKEN"]}})``).
 
 .. code-block:: python

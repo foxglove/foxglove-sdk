@@ -24,8 +24,7 @@ one MCAP per episode plus ``manifest.json``.
 
 UI, Search, and commit: https://docs.foxglove.dev/docs/data/datasets
 
-Episode billing: https://docs.foxglove.dev/docs/pricing#episodes
-Deleting an episode does not refund its creation charge.
+Episode pricing: https://foxglove.dev/pricing
 
 .. toctree::
    :maxdepth: 1

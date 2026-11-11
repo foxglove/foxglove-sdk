@@ -15,8 +15,7 @@ How-tos: :doc:`pytorch`, :doc:`ray`. Worked example:
 
 By default the adapters create ``Client(token=os.environ["FOXGLOVE_API_TOKEN"])``
 (host ``api.foxglove.dev``) and raise ``ValueError`` if the variable is unset.
-Pass ``client_factory`` for another host or token, as the **Use for training**
-script does.
+Pass ``client_factory`` for another host or token.
 
 foxglove.datasets.torch.read_dataset
 ------------------------------------
@@ -71,8 +70,8 @@ Object storage
 ``source="object_storage"`` reads recordings whose ``location.scheme`` is
 ``s3``, ``gs``, or ``az`` (Azure also needs ``azure_storage_account_name``),
 using each worker's cloud credentials. Objects must be indexed MCAP and must
-not change during a read. ``object_store_factory`` requires
-``source="object_storage"``. For other stores, pass ``object_store_factory``.
+not change during a read. For other stores, pass ``object_store_factory``
+(requires ``source="object_storage"``).
 
 .. autoclass:: foxglove.datasets.ObjectLocation
    :members:

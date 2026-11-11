@@ -102,7 +102,7 @@ Datasets
      -H "Content-Type: application/json" \
      -d '{"projectId":"prj_123","name":"Training candidates"}'
 
-   curl https://api.foxglove.dev/v1/datasets?projectId=prj_123 \
+   curl "https://api.foxglove.dev/v1/datasets?projectId=prj_123" \
      -H "Authorization: Bearer $FOXGLOVE_API_TOKEN"
 
    curl -X PATCH https://api.foxglove.dev/v1/datasets/dset_123/episodes \
@@ -155,9 +155,8 @@ Episodes
      - ``episodes.list``
      - List episode versions, newest first
 
-New episodes from ``POST /episodes`` count toward the episode meter
-(https://docs.foxglove.dev/docs/pricing#episodes). Items with
-``created: false`` reuse an existing episode and are not billed.
+Items with ``created: false`` reuse an existing episode; only new episodes
+count toward episode usage (https://foxglove.dev/pricing).
 
 .. code-block:: bash
 
