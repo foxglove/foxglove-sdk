@@ -7,8 +7,9 @@ There is no monthly charge to keep episodes. Deleting an episode does not
 refund a creation charge. Storage, query, indexing, and bandwidth still
 follow their own meters.
 
-The first 1,000 episode creations each month are included. After that,
-additional creations are billed on a marginal tier:
+The first 1,000 episode creations each month are included on the Free and
+Pro plans. On the Pro plan, additional creations are billed on a marginal
+tier:
 
 .. list-table::
    :header-rows: 1
