@@ -14,11 +14,10 @@ SplitName = Literal["train", "validation", "test"]
 
 @dataclass(frozen=True)
 class SplitSummary:
-    """Metadata counts for one split, before rank or worker partitioning.
+    """Group and episode counts for one split, before rank or worker partitioning.
 
     ``group_count`` counts connected recording groups, including custom grouping
-    constraints. ``episode_count`` counts their episodes. Neither count measures
-    samples or frames, which depend on decoding and the episode callback.
+    constraints. ``episode_count`` counts their episodes.
     """
 
     group_count: int
@@ -30,23 +29,19 @@ class DatasetSplit:
     """Assign whole recording groups to train, validation, and test sets.
 
     Proportions must be finite, nonnegative, and sum to one. Each group's hash
-    selects a split with these probabilities; counts are not exact, and small
-    sets can be empty. Use :func:`foxglove.datasets.inspect_splits` to check
-    group and episode counts before training or evaluation.
+    selects a split with these probabilities. Use
+    :func:`foxglove.datasets.inspect_splits` to check group and episode counts.
     ``seed`` is independent of epoch shuffling. ``groups`` optionally maps every
-    episode ID to a session, site, or other group ID. These constraints are added
-    to recording grouping, so shared recordings always stay together. The mapping
-    is snapshotted as sorted, immutable episode/group pairs; these pairs are also
-    accepted as sequences when restoring from ``dataclasses.asdict`` or JSON.
+    episode ID to a session, site, or other group ID. Shared recordings stay
+    together. The mapping is snapshotted as sorted, immutable episode/group
+    pairs; these pairs are also accepted as sequences when restoring from
+    ``dataclasses.asdict`` or JSON.
 
     Membership is reproducible for a committed version and this configuration,
     independent of API order, framework, source, epoch, ranks, and workers.
-    Each connected group is hashed by its smallest custom group ID when ``groups``
-    is provided, otherwise by its smallest recording ID. Use stable custom IDs:
-    adding recordings within an existing custom group preserves membership, but
-    renaming custom IDs can change it. Merging groups or changing the smallest
-    ID in another version can also change assignments. Save the version and split
-    configuration with model artifacts.
+    Each connected group is hashed by its smallest custom group ID when
+    ``groups`` is provided, otherwise by its smallest recording ID. Save the
+    version and split configuration with model artifacts.
     """
 
     train: float = 0.8

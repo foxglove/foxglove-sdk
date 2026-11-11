@@ -26,7 +26,7 @@ class ObjectLocation:
     ``scheme`` identifies the cloud provider: ``s3``, ``gs``, or ``az`` for
     built-in storage access. Custom stores may also accept other or absent schemes.
     For Azure, ``bucket`` is the container and ``azure_storage_account_name``
-    identifies its account. These APIs are experimental and unstable.
+    identifies its account.
     """
 
     bucket: str
@@ -39,7 +39,6 @@ class ObjectStore(Protocol):
     """Worker-local storage access using the customer's credentials.
 
     Implementations may use PyArrow, fsspec, or another random-access filesystem.
-    These APIs are experimental and unstable.
     """
 
     def open(self, location: ObjectLocation) -> IO[bytes]:

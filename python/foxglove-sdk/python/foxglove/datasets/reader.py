@@ -87,16 +87,10 @@ class _Episode:
 class EpisodeReader:
     """An episode scoped to the topics selected by ``read_dataset``.
 
-    .. warning::
-
-        This API is experimental and unstable. It may change in backward-incompatible
-        ways as we continue development and incorporate user feedback.
-
     Instances are supplied to the user's ``read_episode`` callback and remain
     usable only until that callback's iterator finishes or is closed. Message tuples
     are the client's ``(schema, channel, message, decoded_message)`` values. Create
     custom message decoders inside the callback and pass them to :meth:`iter_messages`.
-    Media decoding (such as H.264 to images) is a separate processing step.
     """
 
     def __init__(
@@ -152,24 +146,19 @@ class EpisodeReader:
         topics: Sequence[str] | None = None,
         lookback: timedelta = timedelta(0),
     ) -> Generator[tuple[Schema | None, Channel, Message, Any], None, None]:
-        """Stream the selected topics in log-time order without buffering the episode.
+        """Stream the selected topics in log-time order.
 
         Each invocation opens a new stream on first iteration. Repeated invocations
-        redownload data. Active streams are closed when the callback ends.
-        Message context and stream order are preserved for stateful processing.
+        reread data. Active streams close when the callback ends.
 
-        :param decoder_factories: MCAP decoder factories used for message
-            deserialization. ``None`` uses the client's default decoders; an explicit
-            list replaces them. Construct factories inside the callback so their
-            state stays local to the worker and episode. This does not decode media
-            payloads into images.
-        :param topics: Optional nonempty subset of the dataset topics. Filtering
-            happens on the server or through MCAP indexes for object storage;
-            separate calls open separate downloads.
-        :param lookback: Additional history to request before the episode start,
-            for stateful media decoding. Must be nonnegative. Only recordings
-            attached to the episode are searched; history may be unavailable.
-            Consumers must exclude lookback messages from their training samples.
+        :param decoder_factories: MCAP decoder factories for deserialization.
+            ``None`` uses the client's default decoders; an explicit list replaces
+            them. Construct factories inside the callback so their state stays
+            local to the worker and episode.
+        :param topics: Optional nonempty subset of the dataset topics.
+        :param lookback: Additional history before the episode start, for
+            stateful media decoding. Must be nonnegative. Only recordings
+            attached to the episode are searched.
         :returns: Tuples of schema (possibly ``None``), channel, raw MCAP message,
             and decoded message payload.
         """
@@ -438,10 +427,8 @@ def inspect_splits(
 
     Uses the same assignment as the PyTorch and Ray readers, without downloading
     messages or requiring either framework. Counts cover the whole committed
-    version, before worker/rank partitioning. Check for empty or imbalanced sets
-    before training: proportions are probabilities per connected group, rather
-    than exact episode or sample fractions. Sample counts are unknown until the
-    episode callback runs.
+    version, before worker/rank partitioning. Proportions are probabilities
+    per connected group.
 
     The default client uses ``FOXGLOVE_API_TOKEN``. Override ``client_factory``
     for custom authentication or endpoints, as with ``read_dataset``.

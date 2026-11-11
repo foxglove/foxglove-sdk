@@ -1,7 +1,4 @@
-"""Load committed datasets with PyTorch; requires ``foxglove-sdk[torch]``.
-
-These APIs are experimental and unstable and may change in backward-incompatible ways.
-"""
+"""Load committed datasets with PyTorch; requires ``foxglove-sdk[torch]``."""
 
 from __future__ import annotations
 
@@ -110,52 +107,32 @@ def read_dataset(
     shuffle: bool = False,
     seed: int | None = None,
 ) -> TorchDataset[_T]:
-    """Plan a topic-filtered dataset; download messages only during iteration.
+    """Return a :class:`TorchDataset` over a committed version.
 
-    .. warning::
+    Planning fetches the episode list. Messages stream during iteration.
+    ``read_episode`` converts each :class:`foxglove.datasets.EpisodeReader` into samples.
+    Use DataLoader's ``collate_fn`` for custom sample types.
 
-        This API is experimental and unstable. It may change in backward-incompatible
-        ways as we continue development and incorporate user feedback.
+    ``include_properties=True`` loads pinned custom properties.
+    Pass ``split_config`` and ``split`` together to select a train,
+    validation, or test pool.
 
-    ``read_episode`` yields samples, such as tensors, tuples, or dictionaries.
-    Use DataLoader's ``collate_fn`` for custom sample types. Planning fetches
-    only the episode list (ids, time windows, and, for object storage, recording
-    locations). Each new iteration rereads data. The default client reads
-    ``FOXGLOVE_API_TOKEN`` from the environment; override ``client_factory`` for
-    custom authentication or endpoints.
+    ``source="object_storage"`` reads indexed MCAPs from recording locations
+    with the worker's cloud credentials. Reads use recording locations
+    directly. Location or access errors raise. Use DataLoader's ``spawn``
+    multiprocessing context with cloud storage. ``object_store_factory``
+    requires ``source="object_storage"``. Worker factories and callbacks
+    must be pickleable.
 
-    ``include_properties=True`` fetches each episode's properties from its pinned
-    version for ``EpisodeReader.properties``. They are not fetched by default.
+    ``shuffle=True`` permutes episodes with ``seed + epoch`` (default seed 0)
+    before rank and worker partitioning. Samples within each episode keep
+    callback order. Shuffling holds only episode metadata in memory.
+    Use ``shuffle=True`` and ``set_epoch`` for episode order; rank and worker
+    partitioning are built in. Call :meth:`TorchDataset.set_epoch` between
+    completed DataLoader passes.
 
-    ``split_config`` and ``split`` select a recording-safe train, validation, or test
-    pool before worker partitioning. See :class:`foxglove.datasets.DatasetSplit`.
-
-    ``source="object_storage"`` reads indexed MCAPs from S3, GCS, or Azure using recording
-    locations and the worker's cloud credentials. No filesystem configuration is
-    needed. Missing locations, unsupported schemes, and access failures raise errors
-    without falling back to Foxglove downloads. Use DataLoader's ``spawn``
-    multiprocessing context with cloud storage.
-
-    ``object_store_factory`` overrides built-in storage and requires
-    ``source="object_storage"``. Factories and callbacks used by workers must be
-    pickleable. The API client factory is used only during object storage planning
-    and is not serialized; in default mode it also runs in each consuming process.
-
-    ``shuffle=True`` permutes episode metadata using ``seed + epoch`` before
-    partitioning ranks and workers. The same seed, epoch, and committed episode
-    list produce the same permutation; all ranks must use the same seed and epoch.
-    ``seed`` must be a nonnegative integer and requires ``shuffle=True`` when
-    supplied. If omitted or ``None``, shuffling uses seed zero.
-    Call :meth:`TorchDataset.set_epoch` between completed passes (initial epoch zero).
-    Without shuffling, episodes retain sorted ID order. Samples within each episode
-    keep callback order; this is not uniform sample shuffling or full training-run
-    reproducibility. Shuffling uses O(number of episodes) metadata references,
-    without buffering message payloads.
-
-    Distributed rank and world size are captured here, before DataLoader workers
-    start, or can be supplied together explicitly. Episodes can yield unequal
-    sample counts: use an uneven-input training policy such as DDP's join context.
-    DataLoader shuffling and DistributedSampler do not apply to this iterable.
+    Override ``client_factory`` for another token or host. Rank and world
+    size are captured here or supplied together.
     """
     if not isinstance(shuffle, bool):
         raise TypeError("shuffle must be a bool")
