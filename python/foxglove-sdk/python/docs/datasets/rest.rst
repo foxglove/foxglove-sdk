@@ -81,7 +81,7 @@ Datasets
    * - POST
      - ``/datasets/{id}/commit``
      - ``datasets.update``
-     - Commit the draft
+     - Commit the draft (409 if no changes)
    * - POST
      - ``/datasets/{id}/discard``
      - ``datasets.update``
@@ -89,11 +89,11 @@ Datasets
    * - POST
      - ``/datasets/{id}/versions/{versionNumber}/restore``
      - ``datasets.update``
-     - Restore into the draft (does not commit)
+     - Restore into the draft (409 if pending changes and ``force`` is false)
    * - POST
      - ``/datasets/{id}/versions/{versionNumber}/clone``
      - ``datasets.create``
-     - Clone a committed version to a new dataset
+     - Clone a committed version (409 name taken; 400 ``DatasetSpansPrimarySites``)
 
 .. code-block:: bash
 

@@ -19,6 +19,9 @@ To build a dataset:
 4. Commit a version.
 5. Train on that version, or clone it.
 
+The CLI, ``foxglove-client`` ``download_dataset``, and the browser each write
+one MCAP per episode plus ``manifest.json``.
+
 UI, Search, and commit: https://docs.foxglove.dev/docs/data/datasets
 
 Episode billing: https://docs.foxglove.dev/docs/pricing#episodes

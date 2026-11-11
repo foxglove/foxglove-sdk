@@ -62,11 +62,16 @@ API reference: :doc:`sdk`.
 
 **Result:** one line per batch, e.g. ``torch.Size([32, 2]) torch.Size([32, 1])``.
 To adapt it, change ``topics`` and ``read_episode``. Reading
-``episode.properties`` requires ``include_properties=True``.
+``episode.properties`` without ``include_properties=True`` fails with
+``RuntimeError`` ("Episode properties were not requested; pass
+include_properties=True to read_dataset"), raised from the DataLoader worker
+as "Failed to read episode …".
 
 In Foxglove, **Use for training** on a dataset page generates a similar script
-for the committed version and topics you select. **Copy prompt** includes the
-setup for a coding agent.
+for the committed version and topics you select. That script passes
+``client_factory=make_client`` and uses
+``DataLoader(dataset, batch_size=32, num_workers=2)`` (no ``spawn`` or
+``prefetch_factor``). **Copy prompt** includes the setup for a coding agent.
 
 Shuffling and splits
 --------------------
@@ -87,8 +92,8 @@ Shuffling and splits
        for batch in loader:
            ...
 
-Episode order depends on ``seed + epoch``. Samples within an episode keep
-callback order.
+Episode order depends on ``seed + epoch``. Omitting ``seed`` uses 0.
+Samples within an episode keep callback order.
 
 .. code-block:: python
 
@@ -107,8 +112,8 @@ callback order.
        split="train",
    )
 
-Episodes that share a recording land in the same split. Save ``splits`` with
-your checkpoint.
+``split_config`` and ``split`` must be passed together. Episodes that share a
+recording land in the same split. Save ``splits`` with your checkpoint.
 
 From a clone of ``foxglove/foxglove-sdk`` (requires ``uv``)::
 

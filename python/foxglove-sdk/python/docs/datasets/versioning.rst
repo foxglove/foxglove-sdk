@@ -61,7 +61,7 @@ The list includes the draft; its ``committed_at`` is ``None``.
 base as ``base_version``. Change kinds are ``added``, ``removed``, and
 ``changed``. A changed row includes ``previous_version``.
 
-CLI::
+CLI (from version 1 to 2)::
 
    foxglove datasets versions compare dset_123 1 2
 
@@ -69,13 +69,16 @@ Restore
 -------
 
 Restore stages a previous version's episodes and episode versions in the draft.
-It does not commit. If the draft has pending changes, restore fails with 409;
-pass ``force=True`` to replace them.
+It does not commit. If the draft has pending changes, restore raises
+``requests.HTTPError`` (409); pass ``force=True`` to discard them and restore.
 
 .. code-block:: python
 
    client.restore_dataset_version(dataset_id="dset_123", version_number=1)
    client.commit_dataset(dataset_id="dset_123", description="Restore version 1")
+
+``commit_dataset`` after restore raises ``HTTPError`` (409) if the restored
+membership equals the last committed version (nothing to commit).
 
 CLI::
 
@@ -89,10 +92,13 @@ replaces any pending draft changes.
 Clone
 -----
 
-Clone creates a new, independent dataset in the same Project from a committed
-version. By default the new dataset has one committed version;
-``include_history=True`` copies every version up to and including the cloned
-one, with descriptions and commit details. Requires ``datasets.create``.
+Clone creates a new dataset in the same Project. Without
+``include_history``, its only committed version is version 1. With
+``include_history=True``, versions 1 through the cloned version keep their
+numbers, descriptions, and commit details. Either way an empty draft opens on
+top. Needs ``datasets.create``; raises ``HTTPError`` (409) if the name is
+taken in the project, and 400 ``DatasetSpansPrimarySites`` if recordings span
+Primary Sites.
 
 .. code-block:: python
 

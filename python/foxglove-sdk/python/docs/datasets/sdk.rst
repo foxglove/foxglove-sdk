@@ -13,7 +13,10 @@ extras) and ``foxglove-client>=0.23``.
 How-tos: :doc:`pytorch`, :doc:`ray`. Worked example:
 ``python/foxglove-sdk-examples/dataset-training``.
 
-The default client is ``foxglove.client.Client(token=os.environ["FOXGLOVE_API_TOKEN"])``.
+By default the adapters create ``Client(token=os.environ["FOXGLOVE_API_TOKEN"])``
+(host ``api.foxglove.dev``) and raise ``ValueError`` if the variable is unset.
+Pass ``client_factory`` for another host or token, as the **Use for training**
+script does.
 
 foxglove.datasets.torch.read_dataset
 ------------------------------------
@@ -23,6 +26,11 @@ foxglove.datasets.torch.read_dataset
 .. autoclass:: foxglove.datasets.torch.TorchDataset
    :members: set_epoch
    :exclude-members: __init__, __new__
+
+With ``shuffle=True``, omitting ``seed`` uses seed 0 (deterministic). ``seed``
+must be a non-negative int. Shuffling happens before rank and worker
+partitioning, so every rank must use the same seed and epoch.
+``set_epoch(n)`` needs ``0 <= n < 2**63``.
 
 foxglove.datasets.ray.read_dataset
 ----------------------------------
@@ -45,8 +53,9 @@ Splits
 ------
 
 ``DatasetSplit(train=0.8, validation=0.1, test=0.1, seed=0, groups=None)``.
-Proportions must be non-negative and sum to 1. Episodes that share a
+Proportions must be finite, non-negative, and sum to 1. Episodes that share a
 recording, or the same ``groups`` ID, go to the same split.
+``split_config`` and ``split`` must be passed together.
 ``inspect_splits(dataset_id, *, version, split_config, client_factory=None)``
 returns ``dict[str, SplitSummary]`` (``group_count``, ``episode_count``).
 
@@ -62,7 +71,8 @@ Object storage
 ``source="object_storage"`` reads recordings whose ``location.scheme`` is
 ``s3``, ``gs``, or ``az`` (Azure also needs ``azure_storage_account_name``),
 using each worker's cloud credentials. Objects must be indexed MCAP and must
-not change during a read. For other stores, pass ``object_store_factory``.
+not change during a read. ``object_store_factory`` requires
+``source="object_storage"``. For other stores, pass ``object_store_factory``.
 
 .. autoclass:: foxglove.datasets.ObjectLocation
    :members:

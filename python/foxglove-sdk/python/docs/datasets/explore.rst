@@ -10,8 +10,8 @@ In Python
 ---------
 
 **Prerequisites:** ``pip install 'foxglove-client>=0.23'``; an API key with
-``datasets.list``, ``episodes.list``, and ``data.stream``, exported as
-``FOXGLOVE_API_TOKEN``.
+``datasets.list``, ``episodes.list`` (for ``get_episode``), and
+``data.stream`` (for ``iter_messages``), exported as ``FOXGLOVE_API_TOKEN``.
 
 List membership for a committed version, including custom properties:
 
@@ -42,7 +42,7 @@ List membership for a committed version, including custom properties:
 Pass ``include_properties=True`` to return ``properties``. ``get_episode``
 always returns ``creation_context``; list calls return it with
 ``include_creation_context=True``. ``creation_context`` keeps the API's
-camelCase keys.
+camelCase keys (``recordingIds``).
 
 **Result:** lines such as ``Training candidates 120`` and
 ``2 120 2026-11-02 18:04:11+00:00``.

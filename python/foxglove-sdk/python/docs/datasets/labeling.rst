@@ -79,11 +79,11 @@ A change creates a new episode version:
            }
        ]
    )
-   new_version = result[0]["version"]
 
-``applies_to_version`` makes the call fail with 409 if the episode has a newer
-version; the response lists ``conflicts`` with each ``currentVersion``. The
-call is atomic and accepts up to 2,000 episodes.
+``applies_to_version`` raises ``requests.HTTPError`` (409) if the episode has
+a newer version; the response lists ``conflicts`` with each
+``currentVersion``. The call is atomic and accepts up to 2,000 episodes.
+The returned ``version`` is unchanged if nothing changed.
 
 Then point the dataset draft at the labeled episode versions and commit:
 

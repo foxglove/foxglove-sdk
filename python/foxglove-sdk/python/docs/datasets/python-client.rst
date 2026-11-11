@@ -610,7 +610,7 @@ Parameters
      - bool
      - no
      - False
-     - Replace pending draft changes.
+     - Discard pending draft changes and restore.
 
 Returns ``added``, ``updated``, ``removed``, ``discarded_adds``,
 ``discarded_removes``, ``discarded_updates``.
@@ -618,9 +618,12 @@ Returns ``added``, ``updated``, ``removed``, ``discarded_adds``,
 clone_dataset_version
 ^^^^^^^^^^^^^^^^^^^^^
 
-Create a new dataset from a committed version.
-``name`` (str, required, 1–100, unique in Project); ``description`` (str,
-optional, 1–500); ``include_history`` (bool, default ``False``).
+Create a new dataset from a committed version. Without ``include_history``,
+its only committed version is version 1. With ``include_history=True``,
+versions 1 through the cloned version keep their numbers, descriptions, and
+commit details. Either way an empty draft opens on top. Raises ``HTTPError``
+(409) if the name is taken in the project, and 400 ``DatasetSpansPrimarySites``
+if recordings span Primary Sites.
 
 Parameters
 
@@ -657,9 +660,9 @@ Parameters
      - bool
      - no
      - False
-     - Copy every version through the cloned one.
+     - Copy versions 1 through the cloned version, keeping their numbers.
 
-Returns the new dataset dict. The copy has an empty editable version on top.
+Returns the new dataset dict.
 
 download_dataset
 ^^^^^^^^^^^^^^^^
