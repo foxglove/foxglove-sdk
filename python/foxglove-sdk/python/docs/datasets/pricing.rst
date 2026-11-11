@@ -1,8 +1,11 @@
 Episode pricing
 ===============
 
-Episodes are billed when they are created. Datasets and dataset versions are
-not billed separately.
+Episodes are billed when they are created. Creating a dataset or a dataset
+version is not billed. New versions of an existing episode are not billed.
+There is no monthly charge to keep episodes. Deleting an episode does not
+refund a creation charge. Storage, query, indexing, and bandwidth still
+follow their own meters.
 
 The first 1,000 episode creations each month are included. After that,
 additional creations are billed on a marginal tier:

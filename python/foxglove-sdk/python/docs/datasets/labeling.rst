@@ -1,10 +1,12 @@
 Integrate with a labeling provider
 ==================================
 
-Export a committed dataset version, send the files to your labeling tool, then
-write labels back as episode custom properties and commit a new dataset
-version. Foxglove does not copy recordings when you add episodes to a dataset,
-so the export is a snapshot of the pinned episode versions.
+Foxglove is not a labeling product. Keep the tool you already use for boxes,
+segmentation, and other dense annotations. Export a committed dataset version,
+send the files out, then write results back as episode custom properties and
+commit a new dataset version. Foxglove does not copy recordings when you add
+episodes to a dataset, so the export is a snapshot of the pinned episode
+versions.
 
 Define property keys first
 --------------------------

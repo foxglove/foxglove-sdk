@@ -9,8 +9,7 @@ are snake_case. Times that the API stores with nanoseconds also appear as
 Authenticate with ``Client(token=...)``. The client sends
 ``Authorization: Bearer <token>``.
 
-There is no dataset or episode ``stats`` method. Count fields on dataset and
-version objects are listed with those methods.
+Count fields on dataset and version objects are listed with those methods.
 
 Datasets
 --------

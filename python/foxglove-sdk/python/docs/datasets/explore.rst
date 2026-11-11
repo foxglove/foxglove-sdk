@@ -92,10 +92,9 @@ install ``mcap-protobuf-support``, ``mcap-ros1-support``, or
 ``mcap-ros2-support`` and pass decoder factories if you are not using the
 client defaults.
 
-Count fields on the dataset and version objects (``episode_count``,
-``added_episode_count``, ``removed_episode_count``, ``changed_episode_count``,
-``has_missing_recordings``) are the shipped summary numbers. There is no
-separate stats endpoint.
+Dataset and version responses include ``episode_count``. Version responses
+also include ``added_episode_count``, ``removed_episode_count``,
+``changed_episode_count``, and ``has_missing_recordings``.
 
 See :doc:`python-client` and :doc:`rest` for parameters. For PyTorch or Ray
 iteration over the whole version, see :doc:`pytorch` and :doc:`ray`.

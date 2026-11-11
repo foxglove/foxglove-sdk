@@ -12,8 +12,7 @@ camelCase.
 Pagination uses ``limit``, ``cursor``, and response headers
 ``fg-pagination-next-cursor`` / ``fg-pagination-previous-cursor``.
 
-There is no ``/datasets/.../stats`` route. Count fields on dataset and
-version objects are listed with those responses.
+Count fields on dataset and version objects are listed with those responses.
 
 Objects
 -------
