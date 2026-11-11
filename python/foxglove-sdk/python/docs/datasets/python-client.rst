@@ -191,7 +191,8 @@ items may set ``start_time`` / ``end_time`` (datetime or RFC 3339 string).
 recordings; later event edits do not change the episode. Optional
 ``properties`` must use keys defined for ``resourceType=episode``.
 
-Returns the ``episodes`` list from the response.
+Returns the ``episodes`` list from the response. New episodes count toward
+the episode meter (:doc:`pricing`). Matched episodes do not.
 
 .. code-block:: python
 

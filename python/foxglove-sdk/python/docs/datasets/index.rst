@@ -54,7 +54,8 @@ committed version. The CLI and browser download one MCAP per episode plus
 
 Removing an episode from a dataset does not delete the episode. Deleting a
 dataset does not delete its episodes. You can delete an episode only when no
-dataset holds it in any version.
+dataset holds it in any version. Deleting an episode does not refund its
+creation charge; see :doc:`pricing`.
 
 References
 ----------

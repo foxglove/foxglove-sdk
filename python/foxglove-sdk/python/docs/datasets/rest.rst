@@ -178,6 +178,8 @@ Get-or-create. Body: ``projectId`` required; ``episodes`` array ≤ 2000. Each
 item has exactly one of ``recordings`` or ``eventId``, optional ``startTime``
 / ``endTime``, optional ``properties``. Matching uses time range, recordings,
 and custom properties of the latest version. Scope: ``episodes.create``.
+New episodes count toward the episode meter (:doc:`pricing`). A matched,
+existing episode does not.
 
 ``PATCH /episodes``
 ^^^^^^^^^^^^^^^^^^^
