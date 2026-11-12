@@ -5,14 +5,14 @@ Base URL: ``https://api.foxglove.dev/v1``. Authenticate with
 ``Authorization: Bearer <api-key>``. Each endpoint lists the API key
 **capability** it needs.
 
-Generated field-level reference (types, limits, defaults, error codes):
+Generated field-level reference:
 
 - https://docs.foxglove.dev/api/datasets
 - https://docs.foxglove.dev/api/episodes
 - https://docs.foxglove.dev/api/custom-properties
 
-Python names for the same calls: :doc:`python-client`
-(``foxglove-client>=0.23``). This page uses API camelCase.
+Python names: :doc:`python-client` (``foxglove-client>=0.23``). This page
+uses API camelCase.
 
 List endpoints take ``limit`` (0–2000, default 2000) and ``cursor``, and
 return ``fg-pagination-next-cursor`` (and, where supported,
@@ -102,19 +102,6 @@ Datasets
      -H "Content-Type: application/json" \
      -d '{"projectId":"prj_123","name":"Training candidates"}'
 
-   curl "https://api.foxglove.dev/v1/datasets?projectId=prj_123" \
-     -H "Authorization: Bearer $FOXGLOVE_API_TOKEN"
-
-   curl -X PATCH https://api.foxglove.dev/v1/datasets/dset_123/episodes \
-     -H "Authorization: Bearer $FOXGLOVE_API_TOKEN" \
-     -H "Content-Type: application/json" \
-     -d '{"add":["ep_new"],"remove":["ep_old"]}'
-
-   curl -X POST https://api.foxglove.dev/v1/datasets/dset_123/commit \
-     -H "Authorization: Bearer $FOXGLOVE_API_TOKEN" \
-     -H "Content-Type: application/json" \
-     -d '{"description":"Demos after labeling batch 12"}'
-
 Episodes
 --------
 
@@ -163,14 +150,6 @@ Items with ``created: false`` reuse an existing episode.
      -H "Authorization: Bearer $FOXGLOVE_API_TOKEN" \
      -H "Content-Type: application/json" \
      -d '{"projectId":"prj_123","episodes":[{"recordings":["rec_1"]}]}'
-
-   curl https://api.foxglove.dev/v1/episodes/ep_123 \
-     -H "Authorization: Bearer $FOXGLOVE_API_TOKEN"
-
-   curl -X PATCH https://api.foxglove.dev/v1/episodes \
-     -H "Authorization: Bearer $FOXGLOVE_API_TOKEN" \
-     -H "Content-Type: application/json" \
-     -d '{"episodes":[{"id":"ep_123","properties":{"outcome":"success"}}]}'
 
 Custom properties
 -----------------
