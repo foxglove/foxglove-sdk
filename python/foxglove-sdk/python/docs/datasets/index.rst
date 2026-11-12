@@ -12,12 +12,11 @@ it from Python, or download it as MCAP.
 
 To build a dataset:
 
-1. In Search, select results and choose **Add to dataset**. Each result becomes
-   an episode.
-2. Create a dataset.
-3. Trim episodes and set their properties.
-4. Commit a version.
-5. Train on that version, or clone it.
+1. In Search, select results and choose **Add to dataset**. Pick a dataset or
+   type a new name. Each result becomes an episode.
+2. Trim episodes and set their properties.
+3. Commit a version.
+4. Train on that version, or clone it.
 
 The CLI, ``foxglove-client`` ``download_dataset``, and the browser each write
 one MCAP per episode plus ``manifest.json``.
