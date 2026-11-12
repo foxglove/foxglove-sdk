@@ -18,7 +18,7 @@ API reference: :doc:`sdk`.
 
 .. code-block:: bash
 
-   pip install 'foxglove-sdk[torch]>=0.31'
+   pip install 'foxglove-sdk[torch]>=0.31' numpy
    export FOXGLOVE_API_TOKEN=your-token
 
 .. code-block:: python
@@ -110,6 +110,7 @@ sample counts; use an uneven-input policy such as DDP's ``join`` context.
    splits = DatasetSplit(train=0.8, validation=0.1, test=0.1, seed=0)
    summaries = inspect_splits("dset_123", version=7, split_config=splits)
    print(summaries)
+   assert summaries["validation"].episode_count > 0
    train = read_dataset(
        "dset_123",
        version=7,
@@ -128,7 +129,8 @@ Resize images inside ``read_episode``, then convert them with
 :func:`~foxglove.datasets.torch.to_image_tensor`. Pair each image with the
 most recent ``/joint_states`` message in the callback; ``message.log_time``
 is Unix nanoseconds, so 20 ms is ``20_000_000``. Decode both values to
-arrays so DataLoader can collate them.
+arrays so DataLoader can collate them. This block needs
+``mcap-protobuf-support``.
 
 .. code-block:: python
 
@@ -152,7 +154,7 @@ arrays so DataLoader can collate them.
                continue
            image = np.frombuffer(payload.data, dtype=np.uint8).reshape(
                payload.height, payload.width, 3
-           )[::2, ::2]
+           )[::2, ::2].copy()
            yield {
                "image": to_image_tensor({"image": image}),
                "joints": joints,
