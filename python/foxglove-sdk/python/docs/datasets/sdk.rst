@@ -29,7 +29,7 @@ Episodes are sorted by ID. When ``shuffle=True``, they are permuted with
 ``random.Random(seed + epoch)``, then sliced ``[rank::world_size]`` and
 ``[worker::num_workers]``. ``rank``/``world_size`` default to
 ``torch.distributed`` when it is initialized at call time, else 0 and 1.
-Call ``read_dataset`` after ``init_process_group``; use DDP ``join()``.
+Call ``read_dataset`` after ``init_process_group``.
 Messages are returned in log-time order across the selected topics.
 
 Parameters:
@@ -92,7 +92,7 @@ Select the episode order for the next DataLoader pass. No effect unless
 loader workers. Call on every rank after the previous pass completes, with
 the same epoch. Active iterators keep the order they started with.
 Shuffling happens before rank and worker partitioning. Ranks can yield
-different sample counts; use DDP ``join()``.
+different sample counts.
 
 Parameters:
 

@@ -4,7 +4,8 @@ Python client
 ``foxglove-client>=0.23``. ``from foxglove.client import Client``.
 ``Client(token, host="api.foxglove.dev")``. Keys are snake_case except
 ``creation_context`` and recording ``location``. Time inputs are
-timezone-aware ``datetime``. Returned times are ``datetime``, except
+timezone-aware ``datetime``. A naive ``datetime`` is read as local time;
+pass a timezone-aware ``datetime``. Returned times are ``datetime``, except
 ``creation_context``, which keeps the API strings.
 API errors raise ``requests.exceptions.HTTPError``. Argument errors raise
 ``RuntimeError`` (``iter_messages``) and ``ValueError`` (``create_episodes``).
