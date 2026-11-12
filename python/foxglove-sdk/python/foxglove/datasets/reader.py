@@ -87,11 +87,10 @@ class _Episode:
 class EpisodeReader:
     """An episode scoped to the topics selected by ``read_dataset``.
 
-    Instances are supplied to the user's ``read_episode`` callback and remain
-    usable only until that callback's iterator finishes or is closed. Message tuples
+    Instances are supplied to the user's ``read_episode`` callback. The SDK closes
+    an instance when that callback's iterator finishes or is closed. Message tuples
     are the client's ``(schema, channel, message, decoded_message)`` values. Create
     custom message decoders inside the callback and pass them to :meth:`iter_messages`.
-    Media decoding (such as H.264 to images) is a separate processing step.
     """
 
     def __init__(
@@ -156,16 +155,15 @@ class EpisodeReader:
         :param decoder_factories: Optional. MCAP decoder factories used for message
             deserialization. ``None`` uses the client's default decoders; an explicit
             list replaces them. Construct factories inside the callback so their
-            state stays local to the worker and episode. This does not decode media
-            payloads into images.
+            state stays local to the worker and episode.
         :param topics: Optional. Nonempty subset of the dataset topics; ``None``
             streams all of them. Filtering happens on the server or through MCAP
             indexes for object storage; separate calls open separate downloads.
         :param lookback: Optional. Additional history to request before the episode
-            start, for stateful media decoding. Must be nonnegative. Only recordings
-            attached to the episode are searched; history may be unavailable.
-            Consumers must exclude lookback messages, which are logged before
-            :attr:`start_time`, from their training samples.
+            start, for stateful media decoding. Must be nonnegative. The history is
+            read from the recordings attached to the episode. Consumers must
+            exclude lookback messages, which are logged before :attr:`start_time`,
+            from their training samples.
         :returns: Tuples of schema (possibly ``None``), channel, raw MCAP message,
             and decoded message payload.
         :raises ValueError: On first iteration, if ``lookback`` is negative, or
@@ -440,10 +438,8 @@ def inspect_splits(
 
     Uses the same assignment as the PyTorch and Ray readers, without downloading
     messages or requiring either framework. Counts cover the whole committed
-    version, before worker/rank partitioning. Check for empty or imbalanced sets
-    before training: proportions are probabilities per connected group, rather
-    than exact episode or sample fractions. Sample counts are unknown until the
-    episode callback runs.
+    version, before worker/rank partitioning. Proportions are probabilities per
+    connected group.
 
     :param dataset_id: Required. ID of the dataset.
     :param version: Required. Number of a committed dataset version.

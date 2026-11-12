@@ -23,8 +23,7 @@ _T = TypeVar("_T")
 def to_image_tensor(frame: Mapping[str, Any]) -> Tensor:
     """Convert channels-last images to a contiguous channels-first tensor.
 
-    Call once, either in the episode callback or after DataLoader. Resizing,
-    normalization, and device placement remain up to the training pipeline.
+    Call once, either in the episode callback or after DataLoader.
 
     :param frame: Required. A sample or batch whose ``image`` is a NumPy array or
         Tensor shaped ``[..., H, W, 3]``.
@@ -70,8 +69,8 @@ class TorchDataset(IterableDataset[_T]):
 
         Set it in every rank before starting the next DataLoader iteration, after
         completing the previous pass. Active iterators retain the order they
-        started with. The epoch changes the episode order only when the dataset
-        was created with ``shuffle=True``.
+        started with. For a dataset created with ``shuffle=True``, the epoch
+        selects the episode order.
 
         :param epoch: Required. A nonnegative signed 64-bit integer.
         :raises TypeError: If ``epoch`` is not an integer.
@@ -133,8 +132,8 @@ def read_dataset(
         recording locations and the worker's cloud credentials. No filesystem
         configuration is needed. The MCAP files must have a summary, chunk
         indexes, and message indexes. Missing locations, unsupported schemes, and
-        access failures raise errors without falling back to Foxglove downloads.
-        Use DataLoader's ``spawn`` multiprocessing context with cloud storage.
+        access failures raise errors. Use DataLoader's ``spawn`` multiprocessing
+        context with cloud storage.
     :param split_config: Optional. Together with ``split``, selects a
         recording-safe train, validation, or test pool before worker partitioning.
         See :class:`foxglove.datasets.DatasetSplit`.
@@ -157,18 +156,18 @@ def read_dataset(
         ``torch.distributed`` is not initialized, rank 0 and world size 1 are used.
     :param world_size: Optional. Number of distributed ranks. Episodes are divided
         among ranks, then among each rank's DataLoader workers, so each episode is
-        read once per pass. Episodes can yield unequal sample counts: use an
-        uneven-input training policy such as DDP's join context.
+        read once per pass. Ranks can yield different numbers of samples, so the
+        training loop must support uneven inputs, for example with DDP's ``join``
+        context.
     :param shuffle: Optional. ``True`` permutes episode metadata using
         ``seed + epoch`` before partitioning ranks and workers. The same seed,
         epoch, and committed episode list produce the same permutation; all ranks
         must use the same seed and epoch. Call :meth:`TorchDataset.set_epoch`
         between completed passes (initial epoch zero). Without shuffling, episodes
-        retain sorted ID order. Samples within each episode keep callback order;
-        this is not uniform sample shuffling or full training-run reproducibility.
+        retain sorted ID order. Samples within each episode keep callback order.
         Shuffling uses O(number of episodes) metadata references, without
-        buffering message payloads. DataLoader shuffling and DistributedSampler do
-        not apply to this iterable.
+        buffering message payloads. The dataset orders and partitions episodes
+        itself, so leave DataLoader's ``shuffle`` and ``sampler`` options unset.
     :param seed: Optional. Shuffle seed. Must be a nonnegative integer and requires
         ``shuffle=True`` when supplied. If omitted or ``None``, shuffling uses seed
         zero.

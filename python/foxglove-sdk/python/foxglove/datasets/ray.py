@@ -160,7 +160,7 @@ def read_dataset(
         The SDK selects the filesystem from recording locations and uses each
         worker's cloud credentials. The MCAP files must have a summary, chunk
         indexes, and message indexes. Missing locations, unsupported schemes, and
-        access failures raise errors without falling back to Foxglove downloads.
+        access failures raise errors.
     :param split_config: Optional. Together with ``split``, selects a
         recording-safe train, validation, or test pool before task partitioning.
         See :class:`foxglove.datasets.DatasetSplit`.
@@ -183,10 +183,8 @@ def read_dataset(
     :returns: A Ray dataset whose rows are the mappings that ``read_episode``
         yields. Block construction follows Ray's
         ``DataContext.target_max_block_size``. Ray can combine blocks and buffer
-        multiple episodes before delivering output. This target is not a memory
-        ceiling: large samples, prefetching, and concurrent tasks can exceed it.
-        Setting ``target_max_block_size`` to ``None`` allows an entire task to be
-        buffered.
+        multiple episodes before delivering output. Setting
+        ``target_max_block_size`` to ``None`` allows an entire task to be buffered.
     :raises ValueError: If an argument is invalid, ``FOXGLOVE_API_TOKEN`` is not
         set and no ``client_factory`` is given, the version is not committed or
         contains missing recordings, ``split_config.groups`` does not cover exactly

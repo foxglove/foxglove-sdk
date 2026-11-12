@@ -14,11 +14,7 @@ SplitName = Literal["train", "validation", "test"]
 
 @dataclass(frozen=True)
 class SplitSummary:
-    """Metadata counts for one split, before rank or worker partitioning.
-
-    Neither count measures samples or frames, which depend on decoding and the
-    episode callback.
-    """
+    """Metadata counts for one split, before rank or worker partitioning."""
 
     group_count: int
     """Number of connected recording groups in the split, including custom grouping
@@ -33,18 +29,15 @@ class DatasetSplit:
     """Assign whole recording groups to train, validation, and test sets.
 
     Episodes that share a recording, directly or through other episodes, form one
-    group. Each group's hash selects a split with the configured probabilities;
-    counts are not exact, and small sets can be empty. Use
+    group. Each group's hash selects a split with the configured probabilities. Use
     :func:`foxglove.datasets.inspect_splits` to check group and episode counts
     before training or evaluation.
 
     Membership is reproducible for a committed version and this configuration,
     independent of API order, framework, source, epoch, ranks, and workers.
     Each connected group is hashed by its smallest custom group ID when ``groups``
-    is provided, otherwise by its smallest recording ID. Use stable custom IDs:
-    adding recordings within an existing custom group preserves membership, but
-    renaming custom IDs can change it. Merging groups or changing the smallest
-    ID in another version can also change assignments. Save the version and split
+    is provided, otherwise by its smallest recording ID. That ID, ``seed``, and the
+    proportions determine the group's split. Save the version and split
     configuration with model artifacts.
 
     :param train: Optional. Probability that a group is assigned to the training

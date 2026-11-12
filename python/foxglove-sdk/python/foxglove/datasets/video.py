@@ -304,22 +304,25 @@ def decode_h264(
     independent decoder state per MCAP channel. The episode closes its iterators on exit;
     call ``close()`` to release one earlier.
 
+    A frame can depend on every message on its channel since the latest keyframe.
+    If one of those messages is missing, the frames up to the next keyframe are
+    decoded from the messages that remain.
+
     :param episode: Required. Supplies the inclusive MCAP log-time window for
         output frames.
     :param topic: Optional. One selected dataset topic, or None for all selected
         topics. Non-video schemas are ignored only when topic is None.
     :param lookback: Optional. Nonnegative history budget, default five seconds.
-        Searches only attached recordings. Missing initialization history raises
-        VideoDecodeError. Only history since the latest self-contained keyframe
-        is decoded; older slice data is not checked for corruption.
+        The history is read from the recordings attached to the episode and
+        decoded from its latest self-contained keyframe. Missing initialization
+        history raises VideoDecodeError.
     :param decoder_factories: Optional. MCAP deserializers created in the callback.
         None uses the client's defaults.
-    :returns: VideoSample dictionaries, ordered per channel, without camera
-        synchronization. Consume to exhaustion to receive buffered frames.
+    :returns: VideoSample dictionaries, ordered per channel. Consume to exhaustion
+        to receive buffered frames.
     :raises VideoDecodeError: Unsupported or invalid video, or incomplete decoding.
         Supports CompressedVideo H.264 Annex B, one image per message, no B-frames,
-        with an initial IDR keyframe containing SPS/PPS. Missing packets can cause
-        undetected corruption until the next keyframe.
+        with an initial IDR keyframe containing SPS/PPS.
     :raises ValueError: On first iteration, if ``lookback`` is negative or
         ``topic`` is not one of the dataset topics.
     :raises RuntimeError: If the callback that received ``episode`` has ended.
