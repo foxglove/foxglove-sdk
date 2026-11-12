@@ -159,9 +159,9 @@ class EpisodeReader:
         :param lookback: Additional history before the episode start, for
             stateful media decoding. Must be nonnegative. Only recordings
             attached to the episode are searched. The stream can include
-            messages from before the episode start, so filter on
-            ``log_time >=`` the episode start when you yield samples.
-            ``decode_h264`` already does this.
+            messages from before the episode start. When you yield samples,
+            keep those whose ``message.log_time`` (Unix nanoseconds) is at
+            or after the episode start. ``decode_h264`` already does this.
         :returns: Tuples of schema (possibly ``None``), channel, raw MCAP message,
             and decoded message payload.
         """
