@@ -4,7 +4,8 @@ Python client
 ``foxglove-client>=0.23``. ``from foxglove.client import Client``.
 ``Client(token, host="api.foxglove.dev")``. Keys are snake_case except
 ``creation_context`` and recording ``location``. Times are ``datetime``.
-Raises ``requests.exceptions.HTTPError``.
+API errors raise ``requests.exceptions.HTTPError``. Argument errors raise
+``RuntimeError`` (``iter_messages``) and ``ValueError`` (``create_episodes``).
 
 Datasets
 --------
@@ -126,7 +127,9 @@ Returns ``Page`` of dicts: ``added_at`` (datetime), ``added_in_version`` (int), 
 update_dataset_episodes
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-Stage draft membership. Does not commit.
+Stage draft membership. Does not commit. An ID in ``update`` cannot also
+be in ``add`` or ``remove``. An object in ``add`` must not already be in
+the draft. At least one list must be nonempty.
 
 Parameters:
 
@@ -259,6 +262,7 @@ Parameters:
 
 * ``dataset_id`` (str, required) — Dataset ID.
 * ``description`` (str or None, optional) — 1–2048, or ``None`` to clear.
+  Omitting ``description`` keeps the draft's description.
 
 Returns ``committed`` (version dict) and ``editable_version_number``.
 

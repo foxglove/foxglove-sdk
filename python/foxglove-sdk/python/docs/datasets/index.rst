@@ -9,11 +9,14 @@ Install:
 .. code-block:: bash
 
    pip install 'foxglove-client>=0.23'
-   pip install 'foxglove-sdk[torch]>=0.31'    # PyTorch
-   pip install 'foxglove-sdk[ray]>=0.31'      # Ray Data
-   pip install 'foxglove-sdk[video]>=0.31'    # decode_h264
+   pip install 'foxglove-sdk[torch]>=0.31'         # PyTorch
+   pip install 'foxglove-sdk[ray]>=0.31'           # Ray Data
+   pip install 'foxglove-sdk[video,torch]>=0.31'   # decode_h264 + PyTorch
+   pip install 'foxglove-sdk[video,ray]>=0.31'     # decode_h264 + Ray
 
-Python 3.10+. Authenticate with ``FOXGLOVE_API_TOKEN``.
+Python 3.10+. Authenticate with ``FOXGLOVE_API_TOKEN``. CLI v2.1.0:
+``foxglove datasets`` and ``foxglove episodes``. Example:
+``python/foxglove-sdk-examples/dataset-training``.
 
 .. toctree::
    :maxdepth: 1

@@ -5,36 +5,49 @@ SDK reference
 Data. ``foxglove-sdk>=0.31``, extras ``[torch]``, ``[ray]``, ``[video]``.
 ``foxglove-client>=0.23``.
 
-Default client: ``Client(token=os.environ["FOXGLOVE_API_TOKEN"])``.
-Raises ``ValueError`` if the variable is unset. Pass ``client_factory`` for
-another host or token.
+Default client reads only ``FOXGLOVE_API_TOKEN`` and builds
+``Client(token=...)``. Raises ``ValueError``
+(``Set FOXGLOVE_API_TOKEN or provide client_factory``) if it is unset or
+empty. Pass ``client_factory`` for another host or token.
 
 JSON is decoded by default. Protobuf and ROS decode when
 ``mcap-protobuf-support``, ``mcap-ros1-support``, or ``mcap-ros2-support``
 are installed on every worker.
 
+During ``read_dataset`` iteration, callback and stream errors are raised as
+``RuntimeError("Failed to read episode…")`` with the original as
+``__cause__``. Ray wraps that as ``RayTaskError``.
+
 foxglove.datasets.torch.read_dataset
 ------------------------------------
 
 Return a ``TorchDataset`` over a committed version. Planning fetches the
-episode list; messages stream during iteration.
+episode list; messages stream during iteration. Keyword-only after
+``dataset_id``.
+
+Episodes are sorted by ID. When ``shuffle=True``, they are permuted with
+``random.Random(seed + epoch)``, then sliced ``[rank::world_size]`` and
+``[worker::num_workers]``. ``rank`` and ``world_size`` come from
+``torch.distributed`` if it is initialized when ``read_dataset()`` is
+called; otherwise rank 0 of 1. Leave DataLoader ``shuffle`` off. Do not
+pass a ``DistributedSampler``.
 
 Parameters:
 
 * ``dataset_id`` (str, required) — Dataset ID.
-* ``version`` (int, required) — Committed version number.
-* ``topics`` (list of str, required) — Topics to stream.
-* ``read_episode`` (callable, required) — Convert an ``EpisodeReader`` into samples.
-* ``source`` (str, optional, default ``foxglove``) — ``foxglove`` or ``object_storage``.
-* ``split_config`` (DatasetSplit or None, optional, default None) — Pass with ``split``.
-* ``split`` (str or None, optional, default None) — ``train``, ``validation``, or ``test``.
-* ``include_properties`` (bool, optional, default False) — Load pinned custom properties.
-* ``client_factory`` (callable or None, optional, default None) — Build a client.
-* ``object_store_factory`` (callable or None, optional, default None) — Custom store; requires ``source="object_storage"``.
-* ``rank`` (int or None, optional, default None) — Process rank; pass with ``world_size``.
-* ``world_size`` (int or None, optional, default None) — Number of ranks; captured from DDP if omitted.
-* ``shuffle`` (bool, optional, default False) — Permute episodes before rank and worker partitioning.
-* ``seed`` (int or None, optional, default None) — Nonnegative shuffle seed. With ``shuffle=True``, omitting ``seed`` uses 0. Every rank must pass the same ``seed``.
+* ``version`` (int, keyword-only, required) — Committed version number.
+* ``topics`` (list of str, keyword-only, required) — Topics to stream.
+* ``read_episode`` (callable, keyword-only, required) — Convert an ``EpisodeReader`` into samples.
+* ``source`` (str, keyword-only, optional, default ``foxglove``) — ``foxglove`` or ``object_storage``.
+* ``split_config`` (DatasetSplit or None, keyword-only, optional, default None) — Pass with ``split``.
+* ``split`` (str or None, keyword-only, optional, default None) — ``train``, ``validation``, or ``test``.
+* ``include_properties`` (bool, keyword-only, optional, default False) — Load pinned custom properties.
+* ``client_factory`` (callable or None, keyword-only, optional, default None) — Build a client.
+* ``object_store_factory`` (callable or None, keyword-only, optional, default None) — Custom store; requires ``source="object_storage"``.
+* ``rank`` (int or None, keyword-only, optional, default None) — Process rank; pass with ``world_size``.
+* ``world_size`` (int or None, keyword-only, optional, default None) — Number of ranks.
+* ``shuffle`` (bool, keyword-only, optional, default False) — Permute episodes before rank and worker partitioning.
+* ``seed`` (int or None, keyword-only, optional, default None) — Nonnegative shuffle seed. With ``shuffle=True``, omitting ``seed`` uses 0. Every rank must pass the same ``seed``.
 
 Worker factories and callbacks must be pickleable. With
 ``source="object_storage"``, use DataLoader's ``spawn`` multiprocessing
@@ -42,16 +55,58 @@ context.
 
 Returns: ``TorchDataset``.
 
-Raises: ``ValueError`` if the version is uncommitted, recordings are missing,
+Raises: ``TypeError`` if ``shuffle`` is not a bool or ``seed`` is not an
+int. ``ValueError`` if the version is uncommitted, recordings are missing,
 ``split_config``/``split`` are not passed together, ``rank``/``world_size``
-are not passed together, or ``seed`` is set without ``shuffle=True``.
+are not passed together, ``seed`` is negative, ``seed`` is set without
+``shuffle=True``, ``rank`` is out of range, or ``groups`` does not cover
+exactly the committed version's episodes. During iteration, read errors
+are ``RuntimeError("Failed to read episode…")`` with the original as
+``__cause__``.
 
 .. code-block:: python
 
    from foxglove.datasets.torch import read_dataset
 
+   def read_episode(episode):
+       for schema, channel, message, payload in episode.iter_messages():
+           yield {"log_time": message.log_time}
+
    ds = read_dataset(
        "dset_123", version=2, topics=["/camera"], read_episode=read_episode
+   )
+
+.. code-block:: python
+
+   from foxglove.datasets.torch import read_dataset
+
+   def read_episode(episode):
+       for schema, channel, message, payload in episode.iter_messages():
+           yield {"log_time": message.log_time}
+
+   ds = read_dataset(
+       "dset_123",
+       version=2,
+       topics=["/camera"],
+       read_episode=read_episode,
+       shuffle=True,
+       seed=0,
+   )
+   ds.set_epoch(1)
+
+.. code-block:: python
+
+   from foxglove.datasets.torch import read_dataset
+
+   def read_episode(episode):
+       yield {"outcome": episode.properties.get("outcome")}
+
+   ds = read_dataset(
+       "dset_123",
+       version=2,
+       topics=["/camera"],
+       read_episode=read_episode,
+       include_properties=True,
    )
 
 foxglove.datasets.torch.TorchDataset
@@ -63,11 +118,13 @@ Iterable dataset created by ``torch.read_dataset``. Subclass of
 set_epoch
 ^^^^^^^^^
 
-Select the episode order for the next DataLoader pass. Call on every rank
-after the previous pass completes, with the same epoch. Active iterators
-keep the order they started with. Shuffling happens before rank and worker
-partitioning. Ranks can yield different sample counts; use an uneven-input
-policy such as DDP's ``join`` context.
+Select the episode order for the next DataLoader pass. Applies when
+``shuffle=True``. The epoch tensor is shared with spawned and persistent
+loader workers. Call on every rank after the previous pass completes, with
+the same epoch. Active iterators keep the order they started with.
+Shuffling happens before rank and worker partitioning. Ranks can yield
+different sample counts; use an uneven-input policy such as DDP's
+``join`` context.
 
 Parameters:
 
@@ -81,7 +138,19 @@ outside ``0 .. 2**63 - 1``.
 
 .. code-block:: python
 
-   dataset.set_epoch(1)
+   from foxglove.datasets.torch import read_dataset
+
+   def read_episode(episode):
+       yield {"id": episode.id}
+
+   ds = read_dataset(
+       "dset_123",
+       version=2,
+       topics=["/camera"],
+       read_episode=read_episode,
+       shuffle=True,
+   )
+   ds.set_epoch(1)
 
 foxglove.datasets.torch.to_image_tensor
 ---------------------------------------
@@ -99,9 +168,10 @@ Raises: ``ValueError`` if ``image`` is not channels-last RGB.
 
 .. code-block:: python
 
+   import torch
    from foxglove.datasets.torch import to_image_tensor
 
-   batch = to_image_tensor(batch)
+   out = to_image_tensor({"image": torch.zeros(4, 8, 3)})
 
 foxglove.datasets.ray.read_dataset
 ----------------------------------
@@ -109,31 +179,39 @@ foxglove.datasets.ray.read_dataset
 Return a Ray Data dataset of sample mappings. ``read_episode`` must yield
 mappings with consistent column types. Factories and callbacks must be
 serializable. Read task retries rerun callbacks; keep callbacks
-side-effect free.
+side-effect free. Keyword-only after ``dataset_id``.
 
 Parameters:
 
 * ``dataset_id`` (str, required) — Dataset ID.
-* ``version`` (int, required) — Committed version number.
-* ``topics`` (list of str, required) — Topics to stream.
-* ``read_episode`` (callable, required) — Convert an ``EpisodeReader`` into sample mappings.
-* ``source`` (str, optional, default ``foxglove``) — ``foxglove`` or ``object_storage``.
-* ``split_config`` (DatasetSplit or None, optional, default None) — Pass with ``split``.
-* ``split`` (str or None, optional, default None) — ``train``, ``validation``, or ``test``.
-* ``include_properties`` (bool, optional, default False) — Load pinned custom properties.
-* ``client_factory`` (callable or None, optional, default None) — Build a client.
-* ``object_store_factory`` (callable or None, optional, default None) — Custom store; requires ``source="object_storage"``.
-* ``concurrency`` (int or None, optional, default None) — Cap on concurrent read tasks.
+* ``version`` (int, keyword-only, required) — Committed version number.
+* ``topics`` (list of str, keyword-only, required) — Topics to stream.
+* ``read_episode`` (callable, keyword-only, required) — Convert an ``EpisodeReader`` into sample mappings.
+* ``source`` (str, keyword-only, optional, default ``foxglove``) — ``foxglove`` or ``object_storage``.
+* ``split_config`` (DatasetSplit or None, keyword-only, optional, default None) — Pass with ``split``.
+* ``split`` (str or None, keyword-only, optional, default None) — ``train``, ``validation``, or ``test``.
+* ``include_properties`` (bool, keyword-only, optional, default False) — Load pinned custom properties.
+* ``client_factory`` (callable or None, keyword-only, optional, default None) — Build a client.
+* ``object_store_factory`` (callable or None, keyword-only, optional, default None) — Custom store; requires ``source="object_storage"``.
+* ``concurrency`` (int or None, keyword-only, optional, default None) — Cap on concurrent read tasks.
 
 Returns: ``ray.data.Dataset``.
 
-Raises: ``ValueError`` if the version is uncommitted, recordings are missing,
-or ``split_config``/``split`` are not passed together. ``TypeError`` if
-``read_episode`` yields a non-mapping.
+Raises: ``ValueError`` if the version is uncommitted, recordings are
+missing, ``split_config``/``split`` are not passed together, or
+``groups`` does not cover exactly the committed version's episodes.
+During iteration, a non-mapping from ``read_episode`` raises
+``TypeError``; that and other read errors become
+``RuntimeError("Failed to read episode…")`` with the original as
+``__cause__``, then ``RayTaskError``.
 
 .. code-block:: python
 
    from foxglove.datasets.ray import read_dataset
+
+   def read_episode(episode):
+       for schema, channel, message, payload in episode.iter_messages():
+           yield {"log_time": message.log_time}
 
    ds = read_dataset(
        "dset_123", version=2, topics=["/camera"], read_episode=read_episode
@@ -150,28 +228,33 @@ Attributes:
 * ``id`` (str) — Episode ID.
 * ``start_time`` (datetime) — Start of the episode window.
 * ``end_time`` (datetime) — End of the episode window.
-* ``properties`` (mapping) — Pinned custom properties. Requires
+* ``properties`` (mapping, read-only) — Pinned custom properties. Requires
   ``include_properties=True``. Empty if the episode has none.
 
-Raises: ``RuntimeError`` on ``properties`` if they were not requested.
+Raises: ``RuntimeError`` if properties were not requested. From
+``read_episode``, that becomes ``RuntimeError("Failed to read episode…")``
+with the original as ``__cause__``.
 
 iter_messages
 ^^^^^^^^^^^^^
 
-Stream the selected topics in log-time order. Each call opens a new stream.
+Stream the selected topics in log-time order. Each call opens a new
+stream. All parameters are keyword-only.
 
 Parameters:
 
-* ``decoder_factories`` (list of DecoderFactory or None, optional, default None) — MCAP decoders; ``None`` uses the client's defaults.
-* ``topics`` (list of str or None, optional, default None) — Nonempty subset of the dataset topics.
-* ``lookback`` (timedelta, optional, default 0) — Extra history before the episode start. When you yield samples, keep those whose ``message.log_time`` (Unix nanoseconds) is at or after the episode start. ``decode_h264`` already does this.
+* ``decoder_factories`` (list of DecoderFactory or None, keyword-only, optional, default None) — MCAP decoders; ``None`` uses the client's defaults.
+* ``topics`` (list of str or None, keyword-only, optional, default None) — Nonempty subset of the dataset topics.
+* ``lookback`` (timedelta, keyword-only, optional, default 0) — Extra history before the episode start. When you yield samples, keep those whose ``message.log_time`` (Unix nanoseconds) is at or after the episode start. ``decode_h264`` already does this.
 
 Returns: tuples of schema (possibly ``None``), channel, raw MCAP message, and
 decoded payload. ``message.log_time`` is Unix nanoseconds.
 
 Raises: ``RuntimeError`` if the reader is closed; ``ValueError`` if
 ``lookback`` is negative or ``topics`` is empty or outside the dataset
-topics.
+topics. From ``read_episode``, those become
+``RuntimeError("Failed to read episode…")`` with the original as
+``__cause__``.
 
 .. code-block:: python
 
@@ -193,12 +276,14 @@ Parameters:
 * ``validation`` (float, optional, default 0.1) — Validation proportion.
 * ``test`` (float, optional, default 0.1) — Test proportion.
 * ``seed`` (int, optional, default 0) — Split assignment seed, independent of epoch shuffling.
-* ``groups`` (mapping or sequence or None, optional, default None) — Episode ID to group ID mapping.
+* ``groups`` (mapping or sequence or None, optional, default None) — Mapping or ``(episode_id, group_id)`` pairs. Stored as a sorted tuple. Group IDs may repeat.
 
 Returns: a ``DatasetSplit``.
 
-Raises: ``ValueError`` if proportions are invalid or ``groups`` IDs are not
-unique nonempty strings.
+Raises: ``ValueError`` if proportions are invalid, episode IDs are
+duplicated, or IDs are not nonempty strings. ``read_dataset`` and
+``inspect_splits`` raise ``ValueError`` if ``groups`` does not cover
+exactly the committed version's episodes.
 
 .. code-block:: python
 
@@ -206,24 +291,32 @@ unique nonempty strings.
 
    split = DatasetSplit(train=0.8, validation=0.1, test=0.1, seed=0)
 
+.. code-block:: python
+
+   split = DatasetSplit(
+       groups={"ep_1": "site_a", "ep_2": "site_a", "ep_3": "site_b"},
+   )
+
 inspect_splits
 --------------
 
 Return train, validation, and test sizes from episode metadata. Same
 assignment as the PyTorch and Ray readers. Counts cover the whole committed
-version, before rank or worker partitioning.
+version, before rank or worker partitioning. Keyword-only after
+``dataset_id``.
 
 Parameters:
 
 * ``dataset_id`` (str, required) — Dataset ID.
-* ``version`` (int, required) — Committed version number.
-* ``split_config`` (DatasetSplit, required) — Split configuration.
-* ``client_factory`` (callable or None, optional, default None) — Build a client.
+* ``version`` (int, keyword-only, required) — Committed version number.
+* ``split_config`` (DatasetSplit, keyword-only, required) — Split configuration.
+* ``client_factory`` (callable or None, keyword-only, optional, default None) — Build a client.
 
 Returns: ``dict`` of split name to ``SplitSummary``.
 
 Raises: ``ValueError`` if the version is uncommitted, recordings are missing,
-or ``split_config`` is not a ``DatasetSplit``.
+``split_config`` is not a ``DatasetSplit``, or ``groups`` does not cover
+exactly the committed version's episodes.
 
 .. code-block:: python
 
@@ -282,26 +375,29 @@ decode_h264
 
 Yield RGB frames from ``foxglove.CompressedVideo`` H.264 Annex B. Requires
 ``foxglove-sdk[video]``. Usable as ``read_episode`` or inside a callback.
+Keyword-only after ``episode``.
 
 Parameters:
 
 * ``episode`` (EpisodeReader, required) — Episode whose window bounds output frames.
-* ``topic`` (str or None, optional, default None) — One selected topic, or all selected topics.
-* ``lookback`` (timedelta, optional, default 5 seconds) — History budget before the episode start.
-* ``decoder_factories`` (list of DecoderFactory or None, optional, default None) — MCAP deserializers; ``None`` uses the client's defaults.
+* ``topic`` (str or None, keyword-only, optional, default None) — One selected topic, or all selected topics.
+* ``lookback`` (timedelta, keyword-only, optional, default 5 seconds) — History budget before the episode start.
+* ``decoder_factories`` (list of DecoderFactory or None, keyword-only, optional, default None) — MCAP deserializers; ``None`` uses the client's defaults.
 
 Returns: ``VideoSample`` dicts, ordered per channel.
 
-Raises: ``VideoDecodeError`` if the stream is not H.264 Annex B
-CompressedVideo with one image per message, I/P frames, and an initial IDR
-keyframe with SPS/PPS.
+Raises: ``VideoDecodeError``. From ``read_dataset``, that becomes
+``RuntimeError("Failed to read episode…")`` with the original as
+``__cause__``. Ray wraps that as ``RayTaskError``.
 
 .. code-block:: python
 
    from foxglove.datasets.video import decode_h264
    from foxglove.datasets.torch import read_dataset
 
-   ds = read_dataset("dset_123", version=2, topics=["/camera"], read_episode=decode_h264)
+   ds = read_dataset(
+       "dset_123", version=2, topics=["/camera"], read_episode=decode_h264
+   )
 
 VideoSample
 -----------
