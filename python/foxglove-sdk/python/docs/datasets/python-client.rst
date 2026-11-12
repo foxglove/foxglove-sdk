@@ -3,8 +3,9 @@ Python client
 
 ``foxglove-client>=0.23``. ``from foxglove.client import Client``.
 ``Client(token, host="api.foxglove.dev")``. Keys are snake_case except
-``creation_context`` and recording ``location``. Times are ``datetime`` or
-RFC 3339 ``str``.
+``creation_context`` and recording ``location``. Time inputs are
+timezone-aware ``datetime``. Returned times are ``datetime``, except
+``creation_context``, which keeps the API strings.
 API errors raise ``requests.exceptions.HTTPError``. Argument errors raise
 ``RuntimeError`` (``iter_messages``) and ``ValueError`` (``create_episodes``).
 
@@ -111,7 +112,7 @@ Parameters:
 * ``sort_order`` (str, optional, default None) — ``asc`` or ``desc``.
 * ``limit`` (int, optional, default 2000) — Page size, 0–2000.
 * ``cursor`` (str, optional, default None) — Cursor from a previous page.
-* ``start`` / ``end`` (datetime or str, optional, default None) — Overlap filter. Pass both.
+* ``start`` / ``end`` (datetime (timezone-aware), optional, default None) — Overlap filter. Pass both.
 * ``has_missing_recordings`` (bool, optional, default None) — Filter by recording availability.
 * ``recording_id`` (str, optional, default None) — Episodes containing this recording.
 * ``properties_query`` (str, optional, default None) — ``key:value`` terms, ANDed.
@@ -211,7 +212,7 @@ Parameters:
 * ``sort_order`` (str, optional, default None) — ``asc`` or ``desc``.
 * ``limit`` (int, optional, default 2000) — Page size, 0–2000.
 * ``cursor`` (str, optional, default None) — Cursor from a previous page.
-* ``start`` / ``end`` (datetime or str, optional, default None) — Overlap filter. Pass both.
+* ``start`` / ``end`` (datetime (timezone-aware), optional, default None) — Overlap filter. Pass both.
 * ``has_missing_recordings`` (bool, optional, default None) — Filter by recording availability.
 * ``recording_id`` (str, optional, default None) — Episodes containing this recording.
 * ``properties_query`` (str, optional, default None) — ``key:value`` terms, ANDed.
@@ -362,7 +363,7 @@ Get-or-create up to 2,000 episodes. Matching uses time range, recordings, and cu
 Parameters:
 
 * ``project_id`` (str, required) — Project that owns the episodes.
-* ``episodes`` (list of dict, required) — 1–2000 items. Exactly one of ``recordings`` or ``event_id``. Recording items may set ``start_time`` and ``end_time``. At most 100,000 recording memberships across ``episodes[].recordings``; event inputs resolve at most 10,000. Optional ``properties`` must use episode keys.
+* ``episodes`` (list of dict, required) — 1–2000 items. Exactly one of ``recordings`` or ``event_id``. Recording items may set ``start_time`` and ``end_time`` (timezone-aware ``datetime``). At most 100,000 recording memberships across ``episodes[].recordings``; event inputs resolve at most 10,000. Optional ``properties`` must use episode keys.
 
 Returns a list of ``{"id": str, "created": bool}`` in request order. ``created`` is ``False`` when an existing episode was reused.
 
@@ -389,7 +390,7 @@ Atomic bulk update. Unchanged episodes keep their version.
 
 Parameters:
 
-* ``episodes`` (list of dict, required) — 1–2000 items, each with ``id``. Optional ``applies_to_version``, ``start_time``, ``end_time``, ``recordings`` (``{"add", "remove"}``), ``properties`` (merge; ``None`` unsets a key).
+* ``episodes`` (list of dict, required) — 1–2000 items, each with ``id``. Optional ``applies_to_version``, ``start_time`` and ``end_time`` (timezone-aware ``datetime``), ``recordings`` (``{"add", "remove"}``), ``properties`` (merge; ``None`` unsets a key).
 
 Returns a list of ``{"id": str, "version": int}``.
 
@@ -405,7 +406,7 @@ Page of episodes. Returns each episode's latest version.
 Parameters:
 
 * ``project_id`` (str, optional, default None) — Restrict to one Project.
-* ``start`` / ``end`` (datetime or str, optional, default None) — Overlap filter. Pass both.
+* ``start`` / ``end`` (datetime (timezone-aware), optional, default None) — Overlap filter. Pass both.
 * ``has_missing_recordings`` (bool, optional, default None) — Filter by recording availability.
 * ``recording_id`` (str, optional, default None) — Episodes containing this recording.
 * ``exact_recording_ids`` (list of str, optional, default None) — Exact recording set, 1–50 IDs.
@@ -453,15 +454,15 @@ Parameters:
 
 * ``device_id`` (str, optional, default None) — Device that originated the data. Requires ``start`` and ``end``.
 * ``device_name`` (str, optional, default None) — Device name. Multi-project orgs also need ``project_id``. Requires ``start`` and ``end``.
-* ``session_id`` (str, optional, default None) — Session to stream.
-* ``session_key`` (str, optional, default None) — Session key to stream.
+* ``session_id`` (str, optional, default None) — Session to stream. Requires ``start`` and ``end``.
+* ``session_key`` (str, optional, default None) — Session key to stream. Requires ``start`` and ``end``.
 * ``recording_id`` (str, optional, default None) — Recording to stream.
 * ``recording_key`` (str, optional, default None) — Recording key to stream.
 * ``episode_id`` (str, optional, default None) — Episode to stream. Uses its time range when ``start`` and ``end`` are omitted.
 * ``episode_version`` (int, optional, default None) — Episode version. Requires ``episode_id``. Latest if omitted.
 * ``project_id`` (str, optional, default None) — Project for ``device_name`` in multi-project organizations.
-* ``start`` (datetime or str, optional, default None) — Inclusive start of the stream. Required with a device. Pass with ``end``.
-* ``end`` (datetime or str, optional, default None) — Inclusive end of the stream. Required with a device. Pass with ``start``.
+* ``start`` (datetime (timezone-aware), optional, default None) — Inclusive start of the stream. Required unless ``episode_id``, ``recording_id``, or ``recording_key`` is given. Pass with ``end``.
+* ``end`` (datetime (timezone-aware), optional, default None) — Inclusive end of the stream. Required unless ``episode_id``, ``recording_id``, or ``recording_key`` is given. Pass with ``start``.
 * ``topics`` (list of str, optional, default None) — Topic filter. Omit for every topic.
 * ``decoder_factories`` (list of DecoderFactory, optional, default None) — Replace the client's default MCAP decoders.
 * ``replay_policy`` (str, optional, default None) — ``lastPerChannel`` includes the most recent message on each channel from before ``start``.
@@ -469,8 +470,8 @@ Parameters:
 
 Returns tuples of ``(schema, channel, message, decoded)``. JSON is decoded by default.
 
-Raises: ``RuntimeError`` if ``start`` and ``end`` are omitted when using a
-device.
+Raises: ``RuntimeError`` if ``start`` and ``end`` are omitted unless
+``episode_id``, ``recording_id``, or ``recording_key`` is given.
 
 .. code-block:: python
 
@@ -491,8 +492,8 @@ Parameters:
 
 * ``episode_id`` (str, required) — Episode ID.
 * ``applies_to_version`` (int, optional, default None) — Reject if the latest version differs.
-* ``start_time`` (datetime or str, optional, default None) — Inclusive start of the episode window.
-* ``end_time`` (datetime or str, optional, default None) — Inclusive end of the episode window.
+* ``start_time`` (datetime (timezone-aware), optional, default None) — Inclusive start of the episode window.
+* ``end_time`` (datetime (timezone-aware), optional, default None) — Inclusive end of the episode window.
 * ``recordings`` (dict, optional, default None) — ``{"add": [...], "remove": [...]}`` recording IDs.
 * ``properties`` (dict, optional, default None) — Merge keys; ``None`` unsets a key.
 

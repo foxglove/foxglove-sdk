@@ -27,10 +27,12 @@ episode list; messages stream during iteration. Keyword-only after
 
 Episodes are sorted by ID. When ``shuffle=True``, they are permuted with
 ``random.Random(seed + epoch)``, then sliced ``[rank::world_size]`` and
-``[worker::num_workers]``. ``rank`` and ``world_size`` come from
+``[worker::num_workers]``. Call ``read_dataset`` after
+``init_process_group``. ``rank`` and ``world_size`` come from
 ``torch.distributed`` if it is initialized when ``read_dataset()`` is
 called; otherwise rank 0 of 1. Leave DataLoader ``shuffle`` off. Do not
-pass a ``DistributedSampler``. Messages are returned in log-time order
+pass a ``DistributedSampler``. Ranks can yield different sample counts;
+use DDP ``join()``. Messages are returned in log-time order
 per channel. To combine topics into one sample, match them by timestamp
 in your code.
 
@@ -127,7 +129,7 @@ Select the episode order for the next DataLoader pass. No effect unless
 loader workers. Call on every rank after the previous pass completes, with
 the same epoch. Active iterators keep the order they started with.
 Shuffling happens before rank and worker partitioning. Ranks can yield
-different sample counts.
+different sample counts; use DDP ``join()``.
 
 Parameters:
 

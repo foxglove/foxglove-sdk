@@ -154,8 +154,9 @@ Items with ``created: false`` reuse an existing episode.
 Data lookup
 -----------
 
-``iter_messages`` uses these endpoints. ``POST /data/stream`` returns a
-``link``; GET that URL to read bytes.
+``iter_messages`` calls ``POST /data/stream``, which returns a ``link``;
+GET that URL to read bytes. ``GET /data/topics`` backs ``get_topics``.
+``GET /data/coverage`` backs ``get_coverage``.
 
 .. list-table::
    :header-rows: 1
