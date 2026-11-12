@@ -118,7 +118,8 @@ def read_dataset(
     """Plan a topic-filtered dataset; download messages only during iteration.
 
     Planning fetches only the episode list (ids, time windows, and, for object
-    storage, recording locations). Each new iteration rereads data.
+    storage, recording locations). Each new iteration rereads data. Factories and
+    callbacks used by workers must be pickleable.
 
     :param dataset_id: Required. ID of the dataset.
     :param version: Required. Number of a committed dataset version.
@@ -149,16 +150,15 @@ def read_dataset(
         mode it also runs in each consuming process.
     :param object_store_factory: Optional. Callable that returns an
         :class:`~foxglove.datasets.ObjectStore`, overriding built-in storage.
-        Requires ``source="object_storage"``. Factories and callbacks used by
-        workers must be pickleable.
+        Requires ``source="object_storage"``.
     :param rank: Optional. Distributed rank of this process. Supply together with
         ``world_size``. If both are omitted, they are captured here from
         ``torch.distributed``, before DataLoader workers start. If
         ``torch.distributed`` is not initialized, rank 0 and world size 1 are used.
-    :param world_size: Optional. Number of distributed ranks. Each episode is read
-        by one rank and one of its DataLoader workers. Episodes can yield unequal
-        sample counts: use an uneven-input training policy such as DDP's join
-        context.
+    :param world_size: Optional. Number of distributed ranks. Episodes are divided
+        among ranks, then among each rank's DataLoader workers, so each episode is
+        read once per pass. Episodes can yield unequal sample counts: use an
+        uneven-input training policy such as DDP's join context.
     :param shuffle: Optional. ``True`` permutes episode metadata using
         ``seed + epoch`` before partitioning ranks and workers. The same seed,
         epoch, and committed episode list produce the same permutation; all ranks
