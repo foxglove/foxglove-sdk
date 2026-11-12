@@ -411,7 +411,8 @@ Inputs
      - str or None
      - no
      - None
-     - ``s3``, ``gs``, or ``az``.
+     - ``s3``, ``gs``, or ``az`` for built-in storage. Custom stores can
+       accept other values or ``None``.
 
 Outputs
 
