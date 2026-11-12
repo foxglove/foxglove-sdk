@@ -4,6 +4,10 @@ Dataset loading for ML
 Load a Foxglove dataset version into PyTorch or Ray Data. Choose the topics to read and define how
 to convert each episode into training samples.
 
+``version`` can be a committed version or the number of the dataset's uncommitted draft. A draft's
+episodes can change between reads, and each PyTorch rank plans its own episode list, so the
+ordering, split, and rank partitioning guarantees below hold only for committed versions.
+
 .. warning::
 
    The ``foxglove.datasets`` APIs, including the PyTorch and Ray Data adapters
@@ -79,7 +83,7 @@ Keep these rules in mind:
 
 * Finish each pass before calling ``set_epoch()``. Workers use the updated epoch
   on the next pass, including persistent workers. The initial epoch is zero.
-* The same seed, epoch, and dataset version reproduce the episode order, using
+* The same seed, epoch, and committed dataset version reproduce the episode order, using
   ``seed + epoch``. Different epochs can still produce the same order for small
   datasets. This does not guarantee a reproducible training run.
 * Only the episode list is reordered in memory; message data streams during
@@ -88,7 +92,7 @@ Keep these rules in mind:
 
 For distributed training, all ranks must use the same seed and epoch. The SDK
 shuffles the episode list, then assigns episodes across ranks and workers without
-duplication. It does not balance sample counts, so ranks can produce different
+duplication for a committed version. It does not balance sample counts, so ranks can produce different
 numbers of batches. Handle uneven inputs, for example with DDP's ``model.join()``
 context around the training loop.
 
@@ -396,7 +400,7 @@ both source modes and fails if those IDs are missing. Frames within an episode
 remain together. Recording grouping cannot detect related sessions, sites, or
 robots spread across different recordings: pass ``groups={episode_id: group_id, ...}``
 to ``DatasetSplit`` to add those constraints. The mapping must cover exactly the
-committed version's episode IDs; shared recordings remain together even if the
+dataset version's episode IDs; shared recordings remain together even if the
 caller assigns them different group IDs.
 
 Proportions are assignment probabilities per group, not exact fractions of groups,

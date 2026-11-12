@@ -1,4 +1,4 @@
-"""Load committed datasets with PyTorch; requires ``foxglove-sdk[torch]``.
+"""Load dataset versions with PyTorch; requires ``foxglove-sdk[torch]``.
 
 These APIs are experimental and unstable and may change in backward-incompatible ways.
 """
@@ -124,6 +124,11 @@ def read_dataset(
     ``FOXGLOVE_API_TOKEN`` from the environment; override ``client_factory`` for
     custom authentication or endpoints.
 
+    ``version`` can be the dataset's uncommitted draft. A draft's episodes can
+    change between reads. Each rank plans separately, so ranks can read different
+    episode lists. Shuffling, split, and rank partitioning guarantees hold only for
+    committed versions.
+
     ``include_properties=True`` fetches each episode's properties from its pinned
     version for ``EpisodeReader.properties``. They are not fetched by default.
 
@@ -142,7 +147,7 @@ def read_dataset(
     and is not serialized; in default mode it also runs in each consuming process.
 
     ``shuffle=True`` permutes episode metadata using ``seed + epoch`` before
-    partitioning ranks and workers. The same seed, epoch, and committed episode
+    partitioning ranks and workers. The same seed, epoch, and episode
     list produce the same permutation; all ranks must use the same seed and epoch.
     ``seed`` must be a nonnegative integer and requires ``shuffle=True`` when
     supplied. If omitted or ``None``, shuffling uses seed zero.
