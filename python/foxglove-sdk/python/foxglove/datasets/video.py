@@ -299,10 +299,9 @@ def decode_h264(
 ) -> Generator[VideoSample, None, None]:
     """Yield RGB frames from an episode. Requires ``foxglove-sdk[video]``.
 
-    Use directly as ``read_episode=decode_h264`` with PyTorch or Ray, or call
-    inside an episode callback. Each invocation opens one download and maintains
-    independent decoder state per MCAP channel. The episode closes its iterators on exit;
-    call ``close()`` to release one earlier.
+    Iteration opens the episode's message sources and maintains independent
+    decoder state per MCAP channel. The returned generator closes them when
+    exhausted or closed.
 
     A frame can depend on every message on its channel since the latest keyframe.
     If one of those messages is missing, decoding raises VideoDecodeError or yields

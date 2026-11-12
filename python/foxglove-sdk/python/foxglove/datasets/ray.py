@@ -158,9 +158,10 @@ def read_dataset(
     :param source: Optional. ``"foxglove"`` downloads messages through Foxglove.
         ``"object_storage"`` reads indexed MCAPs directly from S3, GCS, or Azure.
         The SDK selects the filesystem from recording locations and uses each
-        worker's cloud credentials. The MCAP files must have a summary, chunk
-        indexes, and message indexes. Missing locations, unsupported schemes, and
-        access failures raise errors.
+        worker's cloud credentials. Each MCAP file must have a summary. A file
+        needs chunk indexes unless its summary reports zero messages, and every
+        chunk that contains messages needs message indexes. Missing locations,
+        unsupported schemes, and access failures raise errors.
     :param split_config: Optional. Together with ``split``, selects a
         recording-safe train, validation, or test pool before task partitioning.
         See :class:`foxglove.datasets.DatasetSplit`.
@@ -188,7 +189,8 @@ def read_dataset(
     :raises ValueError: If an argument is invalid, ``FOXGLOVE_API_TOKEN`` is not
         set and no ``client_factory`` is given, the version is not committed or
         contains missing recordings, ``split_config.groups`` does not cover exactly
-        the version's episodes, or, for object storage, a recording has no
+        the version's episodes, an episode has no recording IDs when
+        ``split_config`` is given, or, for object storage, a recording has no
         supported location.
     :raises RuntimeError: When the dataset is executed, if ``read_episode`` or a
         message stream raises, or ``read_episode`` yields a value that is not a

@@ -23,11 +23,10 @@ _T = TypeVar("_T")
 def to_image_tensor(frame: Mapping[str, Any]) -> Tensor:
     """Convert channels-last images to a contiguous channels-first tensor.
 
-    Call once, either in the episode callback or after DataLoader.
-
     :param frame: Required. A sample or batch whose ``image`` is a NumPy array or
         Tensor shaped ``[..., H, W, 3]``.
     :returns: The image shaped ``[..., 3, H, W]``. Preserves dtype and device.
+    :raises KeyError: If ``frame`` has no ``"image"`` entry.
     :raises ValueError: If ``image`` is not shaped ``[..., H, W, 3]``.
     """
     image = as_tensor(frame["image"])
@@ -114,11 +113,12 @@ def read_dataset(
     shuffle: bool = False,
     seed: int | None = None,
 ) -> TorchDataset[_T]:
-    """Plan a topic-filtered dataset; download messages only during iteration.
+    """Return a :class:`TorchDataset` over a committed dataset version.
 
     Planning fetches only the episode list (ids, time windows, and, for object
-    storage, recording locations). Each new iteration rereads data. Factories and
-    callbacks used by workers must be pickleable.
+    storage, recording locations). Messages are downloaded during iteration, and
+    each new iteration rereads data. Factories and callbacks used by workers must
+    be pickleable.
 
     :param dataset_id: Required. ID of the dataset.
     :param version: Required. Number of a committed dataset version.
@@ -130,10 +130,11 @@ def read_dataset(
     :param source: Optional. ``"foxglove"`` downloads messages through Foxglove.
         ``"object_storage"`` reads indexed MCAPs from S3, GCS, or Azure using
         recording locations and the worker's cloud credentials. No filesystem
-        configuration is needed. The MCAP files must have a summary, chunk
-        indexes, and message indexes. Missing locations, unsupported schemes, and
-        access failures raise errors. Use DataLoader's ``spawn`` multiprocessing
-        context with cloud storage.
+        configuration is needed. Each MCAP file must have a summary. A file needs
+        chunk indexes unless its summary reports zero messages, and every chunk
+        that contains messages needs message indexes. Missing locations,
+        unsupported schemes, and access failures raise errors. Use DataLoader's
+        ``spawn`` multiprocessing context with cloud storage.
     :param split_config: Optional. Together with ``split``, selects a
         recording-safe train, validation, or test pool before worker partitioning.
         See :class:`foxglove.datasets.DatasetSplit`.
@@ -144,9 +145,10 @@ def read_dataset(
         are not fetched by default.
     :param client_factory: Optional. Callable that returns the API client, for
         custom authentication or endpoints. The default client reads
-        ``FOXGLOVE_API_TOKEN`` from the environment. The API client factory is
-        used only during object storage planning and is not serialized; in default
-        mode it also runs in each consuming process.
+        ``FOXGLOVE_API_TOKEN`` from the environment. With
+        ``source="object_storage"``, the factory runs only during planning and is
+        not serialized. With ``source="foxglove"``, it also runs in each consuming
+        process, so it must be pickleable.
     :param object_store_factory: Optional. Callable that returns an
         :class:`~foxglove.datasets.ObjectStore`, overriding built-in storage.
         Requires ``source="object_storage"``.
@@ -176,7 +178,8 @@ def read_dataset(
     :raises ValueError: If an argument is invalid, ``FOXGLOVE_API_TOKEN`` is not
         set and no ``client_factory`` is given, the version is not committed or
         contains missing recordings, ``split_config.groups`` does not cover exactly
-        the version's episodes, or, for object storage, a recording has no
+        the version's episodes, an episode has no recording IDs when
+        ``split_config`` is given, or, for object storage, a recording has no
         supported location.
     :raises RuntimeError: While iterating, if ``read_episode`` or a message stream
         raises. The message names the episode, dataset, and version, and the

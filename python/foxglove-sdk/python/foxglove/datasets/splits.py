@@ -28,17 +28,12 @@ class SplitSummary:
 class DatasetSplit:
     """Assign whole recording groups to train, validation, and test sets.
 
-    Episodes that share a recording, directly or through other episodes, form one
-    group. Each group's hash selects a split with the configured probabilities. Use
-    :func:`foxglove.datasets.inspect_splits` to check group and episode counts
-    before training or evaluation.
-
-    Membership is reproducible for a committed version and this configuration,
-    independent of API order, framework, source, epoch, ranks, and workers.
-    Each connected group is hashed by its smallest custom group ID when ``groups``
-    is provided, otherwise by its smallest recording ID. That ID, ``seed``, and the
-    proportions determine the group's split. Save the version and split
-    configuration with model artifacts.
+    Episodes connected by a shared recording form one group. Each group is
+    assigned according to a hash of its smallest custom group ID, or its smallest
+    recording ID when ``groups`` is omitted, together with ``seed`` and the
+    configured probabilities. Membership is reproducible for a committed dataset
+    version and configuration, independent of API order, framework, source, epoch,
+    ranks, and workers.
 
     :param train: Optional. Probability that a group is assigned to the training
         set. The three proportions must be finite, nonnegative, and sum to one.
