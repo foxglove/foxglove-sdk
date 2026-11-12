@@ -13,11 +13,12 @@ The modules require Python 3.10 or later. Install the extra for each module you 
 
 .. code-block:: bash
 
-   pip install 'foxglove-sdk[torch]'   # foxglove.datasets.torch
-   pip install 'foxglove-sdk[ray]'     # foxglove.datasets.ray
-   pip install 'foxglove-sdk[video]'   # foxglove.datasets.video
+   pip install 'foxglove-sdk[torch]>=0.31'         # foxglove.datasets.torch
+   pip install 'foxglove-sdk[ray]>=0.31'           # foxglove.datasets.ray
+   pip install 'foxglove-sdk[torch,video]>=0.31'   # foxglove.datasets.video, with torch or ray
 
-Extras can be combined, for example ``foxglove-sdk[torch,video]``.
+Install the ``video`` extra together with ``torch`` or ``ray``. The video decoder reads the
+episodes that those modules supply.
 
 For guides on building datasets and training with them, see the `Datasets documentation
 <https://docs.foxglove.dev/docs/data/datasets>`__.
