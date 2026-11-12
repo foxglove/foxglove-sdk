@@ -1,26 +1,27 @@
 Datasets
 ========
 
-API reference for datasets and episodes. How-tos:
-https://docs.foxglove.dev/docs/data/datasets
+The ``foxglove.datasets`` modules load a committed version of a Foxglove dataset for model
+training. :py:mod:`foxglove.datasets.torch` returns a PyTorch dataset, and
+:py:mod:`foxglove.datasets.ray` returns a Ray Data dataset. Both stream the topics you select and
+call a function you provide to turn each episode's messages into samples.
+:py:mod:`foxglove.datasets.video` decodes H.264 video into RGB frames.
+:py:mod:`foxglove.datasets` defines what the two readers share: the episode reader passed to your
+function, train, validation, and test splits, and access to recordings in your own object storage.
 
-Install:
+The modules require Python 3.10 or later. Install the extra for each module you use:
 
 .. code-block:: bash
 
-   pip install 'foxglove-client>=0.23'
-   pip install 'foxglove-sdk[torch]>=0.31'         # PyTorch
-   pip install 'foxglove-sdk[ray]>=0.31'           # Ray Data
-   pip install 'foxglove-sdk[video,torch]>=0.31'   # decode_h264 + PyTorch
-   pip install 'foxglove-sdk[video,ray]>=0.31'     # decode_h264 + Ray
+   pip install 'foxglove-sdk[torch]'   # foxglove.datasets.torch
+   pip install 'foxglove-sdk[ray]'     # foxglove.datasets.ray
+   pip install 'foxglove-sdk[video]'   # foxglove.datasets.video
 
-Python 3.10+. Authenticate with ``FOXGLOVE_API_TOKEN``. CLI v2.1.0:
-``foxglove datasets`` and ``foxglove episodes``. Example:
-``python/foxglove-sdk-examples/dataset-training``.
+Extras can be combined, for example ``foxglove-sdk[torch,video]``.
 
-.. toctree::
-   :maxdepth: 1
+For guides on building datasets and training with them, see the `Datasets documentation
+<https://docs.foxglove.dev/docs/data/datasets>`__.
 
-   python-client
-   sdk
-   rest
+Every function and class is documented in the :doc:`API Reference <../api/index>`, which also
+covers the dataset and episode methods of the :doc:`foxglove-client package <../api/client>`.
+The REST API reference is at https://docs.foxglove.dev/api.
