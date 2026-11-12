@@ -10,7 +10,8 @@ repository.
 
 API reference: :doc:`sdk`.
 
-**Prerequisites:** Python 3.10+; a committed dataset version whose
+**Prerequisites:** Python 3.10+; ``foxglove-sdk[torch]>=0.31``
+(``foxglove-client>=0.23``); a committed dataset version whose
 ``/training/measurements`` topic is JSON with numeric ``speed``,
 ``acceleration``, and ``steering``; an API key with ``datasets.list`` and
 ``data.stream``.
@@ -107,7 +108,8 @@ sample counts; use an uneven-input policy such as DDP's ``join`` context.
    from foxglove.datasets.torch import read_dataset
 
    splits = DatasetSplit(train=0.8, validation=0.1, test=0.1, seed=0)
-   print(inspect_splits("dset_123", version=7, split_config=splits))
+   summaries = inspect_splits("dset_123", version=7, split_config=splits)
+   print(summaries)
    train = read_dataset(
        "dset_123",
        version=7,
@@ -120,6 +122,11 @@ sample counts; use an uneven-input policy such as DDP's ``join`` context.
 
 ``split_config`` and ``split`` must be passed together. Episodes that share a
 recording land in the same split. Save ``splits`` with your checkpoint.
+Check ``inspect_splits`` and confirm validation is not empty before training.
+
+Resize images inside ``read_episode``, before any shuffle buffer, then convert
+with :func:`~foxglove.datasets.torch.to_image_tensor`. Pair 200 Hz joint states
+with an absolute staleness tolerance of about 20 ms.
 
 From a clone of ``foxglove/foxglove-sdk`` (requires ``uv``)::
 
