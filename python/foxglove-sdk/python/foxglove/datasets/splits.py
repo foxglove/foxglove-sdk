@@ -40,7 +40,8 @@ class DatasetSplit:
     accepted as sequences when restoring from ``dataclasses.asdict`` or JSON.
 
     Membership is reproducible for a committed version and this configuration,
-    independent of API order, framework, source, epoch, ranks, and workers.
+    independent of API order, framework, source, epoch, ranks, and workers. An
+    uncommitted draft's episodes can change between reads, and so can its membership.
     Each connected group is hashed by its smallest custom group ID when ``groups``
     is provided, otherwise by its smallest recording ID. Use stable custom IDs:
     adding recordings within an existing custom group preserves membership, but
@@ -129,7 +130,7 @@ class DatasetSplit:
         if groups is not None:
             if groups.keys() != recordings.keys():
                 raise ValueError(
-                    "Split groups must cover exactly the committed version's episodes"
+                    "Split groups must cover exactly the dataset version's episodes"
                 )
             group_owners: dict[str, str] = {}
             for episode_id, group in groups.items():

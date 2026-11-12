@@ -330,16 +330,29 @@ def test_inspection_preserves_empty_splits() -> None:
     }
 
 
-@pytest.mark.parametrize(
-    "invalid", ["uncommitted", "missing", "recording_ids", "groups"]
-)
+def test_inspection_reads_uncommitted_draft() -> None:
+    committed = inspect_splits(
+        "dataset", version=7, split_config=DatasetSplit(), client_factory=SplitClient
+    )
+    client = SplitClient()
+    client.get_dataset_version = lambda **kwargs: {  # type: ignore[method-assign]
+        "committed_at": None,
+        "has_missing_recordings": False,
+    }
+    draft = inspect_splits(
+        "dataset", version=7, split_config=DatasetSplit(), client_factory=lambda: client
+    )
+    assert draft == committed
+
+
+@pytest.mark.parametrize("invalid", ["missing", "recording_ids", "groups"])
 def test_inspection_rejects_invalid_metadata(invalid: str) -> None:
     client = SplitClient()
     config = DatasetSplit()
-    if invalid in ("uncommitted", "missing"):
+    if invalid == "missing":
         client.get_dataset_version = lambda **kwargs: {  # type: ignore[method-assign]
-            "committed_at": None if invalid == "uncommitted" else "2026-01-01",
-            "has_missing_recordings": invalid == "missing",
+            "committed_at": "2026-01-01",
+            "has_missing_recordings": True,
         }
     elif invalid == "recording_ids":
         client.entries[0]["episode"]["recordings"] = []

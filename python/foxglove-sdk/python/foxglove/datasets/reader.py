@@ -389,8 +389,6 @@ def _version_episodes(
         raise ValueError("version must be a positive integer")
     client = client_factory()
     info = client.get_dataset_version(dataset_id=dataset_id, version_number=version)
-    if info["committed_at"] is None:
-        raise ValueError("Dataset version must be committed")
     if info.get("has_missing_recordings", False):
         raise ValueError("Dataset version contains missing recordings")
     page = client.get_dataset_version_episodes(
@@ -437,7 +435,7 @@ def inspect_splits(
     """Inspect train, validation, and test sizes using episode metadata only.
 
     Uses the same assignment as the PyTorch and Ray readers, without downloading
-    messages or requiring either framework. Counts cover the whole committed
+    messages or requiring either framework. Counts cover the whole dataset
     version, before worker/rank partitioning. Check for empty or imbalanced sets
     before training: proportions are probabilities per connected group, rather
     than exact episode or sample fractions. Sample counts are unknown until the

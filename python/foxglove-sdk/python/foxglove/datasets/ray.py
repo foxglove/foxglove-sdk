@@ -1,4 +1,4 @@
-"""Load committed datasets with Ray Data; requires ``foxglove-sdk[ray]``.
+"""Load dataset versions with Ray Data; requires ``foxglove-sdk[ray]``.
 
 These APIs are experimental and unstable and may change in backward-incompatible ways.
 """
@@ -156,6 +156,9 @@ def read_dataset(
     Factories and callbacks must be serializable and their dependencies available on
     every worker. Use consistent column types containing scalars, NumPy arrays, or other
     Arrow-compatible values.
+
+    ``version`` can be the dataset's uncommitted draft. A draft's episodes can
+    change between reads, so split guarantees hold only for committed versions.
 
     ``include_properties=True`` fetches each episode's properties from its pinned
     version for ``EpisodeReader.properties``. They are not fetched by default.
