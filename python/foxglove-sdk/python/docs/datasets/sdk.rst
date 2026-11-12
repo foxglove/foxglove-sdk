@@ -34,13 +34,17 @@ Parameters:
 * ``rank`` (int or None, optional, default None) — Process rank; pass with ``world_size``.
 * ``world_size`` (int or None, optional, default None) — Number of ranks; captured from DDP if omitted.
 * ``shuffle`` (bool, optional, default False) — Permute episodes before rank and worker partitioning.
-* ``seed`` (int or None, optional, default None) — Nonnegative shuffle seed. With ``shuffle=True``, omitting ``seed`` uses 0.
+* ``seed`` (int or None, optional, default None) — Nonnegative shuffle seed. With ``shuffle=True``, omitting ``seed`` uses 0. Every rank must pass the same ``seed``.
+
+Worker factories and callbacks must be pickleable. With
+``source="object_storage"``, use DataLoader's ``spawn`` multiprocessing
+context.
 
 Returns: ``TorchDataset``.
 
 Raises: ``ValueError`` if the version is uncommitted, recordings are missing,
-``split_config``/``split`` are not passed together, or ``rank``/``world_size``
-are not passed together.
+``split_config``/``split`` are not passed together, ``rank``/``world_size``
+are not passed together, or ``seed`` is set without ``shuffle=True``.
 
 .. code-block:: python
 
@@ -60,12 +64,15 @@ set_epoch
 ^^^^^^^^^
 
 Select the episode order for the next DataLoader pass. Call on every rank
-after the previous pass completes. Active iterators keep the order they
-started with. Shuffling happens before rank and worker partitioning.
+after the previous pass completes, with the same epoch. Active iterators
+keep the order they started with. Shuffling happens before rank and worker
+partitioning. Ranks can yield different sample counts; use an uneven-input
+policy such as DDP's ``join`` context.
 
 Parameters:
 
-* ``epoch`` (int, required) — Nonnegative signed 64-bit integer.
+* ``epoch`` (int, required) — Nonnegative signed 64-bit integer. Every rank
+  must use the same value.
 
 Returns: ``None``.
 
@@ -100,7 +107,9 @@ foxglove.datasets.ray.read_dataset
 ----------------------------------
 
 Return a Ray Data dataset of sample mappings. ``read_episode`` must yield
-mappings with consistent column types.
+mappings with consistent column types. Factories and callbacks must be
+serializable. Read task retries rerun callbacks; keep callbacks
+side-effect free.
 
 Parameters:
 
@@ -253,8 +262,9 @@ ObjectStore
 Protocol for worker-local storage access. ``source="object_storage"`` uses
 the built-in store for ``s3``, ``gs``, and ``az`` (Azure also needs
 ``azure_storage_account_name``) with each worker's cloud credentials.
-Objects must be indexed MCAP. Pass ``object_store_factory`` for another
-store (requires ``source="object_storage"``).
+Objects must be indexed MCAP and must not change during a read. Pass
+``object_store_factory`` for another store (requires
+``source="object_storage"``).
 
 open
 ^^^^
