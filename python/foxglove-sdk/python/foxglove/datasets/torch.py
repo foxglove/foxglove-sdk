@@ -125,7 +125,8 @@ def read_dataset(
     custom authentication or endpoints.
 
     ``version`` can be the dataset's uncommitted draft. A draft's episodes can
-    change between reads, so shuffling and split guarantees hold only for
+    change between reads. Each rank plans separately, so ranks can read different
+    episode lists. Shuffling, split, and rank partitioning guarantees hold only for
     committed versions.
 
     ``include_properties=True`` fetches each episode's properties from its pinned

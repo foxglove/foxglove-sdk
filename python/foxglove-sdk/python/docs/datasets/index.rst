@@ -5,8 +5,8 @@ Load a Foxglove dataset version into PyTorch or Ray Data. Choose the topics to r
 to convert each episode into training samples.
 
 ``version`` can be a committed version or the number of the dataset's uncommitted draft. A draft's
-episodes can change between reads, so the ordering and split guarantees below hold only for
-committed versions.
+episodes can change between reads, and each PyTorch rank plans its own episode list, so the
+ordering, split, and rank partitioning guarantees below hold only for committed versions.
 
 .. warning::
 
@@ -92,7 +92,7 @@ Keep these rules in mind:
 
 For distributed training, all ranks must use the same seed and epoch. The SDK
 shuffles the episode list, then assigns episodes across ranks and workers without
-duplication. It does not balance sample counts, so ranks can produce different
+duplication for a committed version. It does not balance sample counts, so ranks can produce different
 numbers of batches. Handle uneven inputs, for example with DDP's ``model.join()``
 context around the training loop.
 
