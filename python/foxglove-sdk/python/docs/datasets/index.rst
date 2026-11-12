@@ -39,7 +39,7 @@ UI, Search, and commit: https://docs.foxglove.dev/docs/data/datasets
 References
 ----------
 
-Python client (``foxglove-client`` 0.23.0 or later): :doc:`python-client`
+Python client (``foxglove-client>=0.23``): :doc:`python-client`
 
 Training adapters (``foxglove-sdk>=0.31``): :doc:`sdk`
 

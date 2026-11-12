@@ -11,8 +11,8 @@ Generated field-level reference (types, limits, defaults, error codes):
 - https://docs.foxglove.dev/api/episodes
 - https://docs.foxglove.dev/api/custom-properties
 
-Python names for the same calls: :doc:`python-client`. This page uses API
-camelCase.
+Python names for the same calls: :doc:`python-client`
+(``foxglove-client>=0.23``). This page uses API camelCase.
 
 List endpoints take ``limit`` (0–2000, default 2000) and ``cursor``, and
 return ``fg-pagination-next-cursor`` (and, where supported,

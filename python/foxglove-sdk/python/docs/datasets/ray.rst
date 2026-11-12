@@ -11,7 +11,8 @@ This example matches the Ray path in
 
 API reference: :doc:`sdk`.
 
-**Prerequisites:** ``pip install 'foxglove-sdk[torch,ray]>=0.31' pydantic``.
+**Prerequisites:** ``pip install 'foxglove-sdk[torch,ray]>=0.31' pydantic``
+(``foxglove-client>=0.23``).
 ``FOXGLOVE_API_TOKEN`` must be set on the driver **and every Ray worker**
 (for example via
 ``ray.init(runtime_env={"env_vars": {"FOXGLOVE_API_TOKEN": os.environ["FOXGLOVE_API_TOKEN"]}})``).

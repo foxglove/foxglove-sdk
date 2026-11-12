@@ -1,7 +1,7 @@
 Python client reference
 =======================
 
-Package ``foxglove-client`` (0.23.0 or later).
+Package ``foxglove-client>=0.23``.
 ``from foxglove.client import Client``.
 
 Each method calls one endpoint in :doc:`rest`, except ``download_dataset``
