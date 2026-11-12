@@ -5,11 +5,6 @@ SDK reference
 Data. Requires ``foxglove-sdk>=0.31`` (``[torch]``, ``[ray]``, ``[video]``
 extras) and ``foxglove-client>=0.23``.
 
-.. warning::
-
-   These APIs, including the adapters and ``EpisodeReader``, are experimental
-   and unstable. They may change in backward-incompatible ways.
-
 How-tos: :doc:`pytorch`, :doc:`ray`. Worked example:
 ``python/foxglove-sdk-examples/dataset-training``.
 
