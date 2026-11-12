@@ -305,8 +305,8 @@ def decode_h264(
     call ``close()`` to release one earlier.
 
     A frame can depend on every message on its channel since the latest keyframe.
-    If one of those messages is missing, the frames up to the next keyframe are
-    decoded from the messages that remain.
+    If one of those messages is missing, decoding raises VideoDecodeError or yields
+    frames that can be corrupt until the next keyframe.
 
     :param episode: Required. Supplies the inclusive MCAP log-time window for
         output frames.
