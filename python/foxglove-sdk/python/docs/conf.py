@@ -43,6 +43,7 @@ nitpick_ignore = [
     ("py:class", "ray.data.dataset.Dataset"),
     ("py:class", "datetime.datetime"),
     ("py:class", "datetime.timedelta"),
+    ("py:class", "enum.Enum"),
     ("py:class", "collections.abc.Iterable"),
     ("py:class", "collections.abc.Iterator"),
     ("py:class", "collections.abc.Sequence"),
@@ -114,8 +115,9 @@ def convert_client_parameter_lines(
 ) -> None:
     """Rewrite ``name: description`` lines of a foxglove-client docstring as ``:param:`` fields.
 
-    foxglove-client 0.23.0 documents the parameters of ``Client.iter_messages`` in this form,
-    which is not valid reStructuredText. Docstrings that already use ``:param:`` are unchanged.
+    foxglove-client 0.23.0 documents the parameters of ``Client.iter_messages`` and
+    ``Client.download_data`` in this form, which is not valid reStructuredText. Docstrings that
+    already use ``:param:`` are unchanged.
     """
     if not name.startswith("foxglove.client."):
         return

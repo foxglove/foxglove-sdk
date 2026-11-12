@@ -53,6 +53,8 @@ Episodes
 .. automethod:: Client.delete_episode
 .. automethod:: Client.get_episode_versions
 .. automethod:: Client.iter_messages
+.. automethod:: Client.download_data
+.. automethod:: Client.get_topics
 
 Custom properties
 -----------------
@@ -74,4 +76,16 @@ Supporting types
    :exclude-members: __init__, __new__
 
 .. autoclass:: DatasetDownloadWarning
+   :exclude-members: __init__, __new__
+
+.. autoclass:: OutputFormat
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   :exclude-members: __init__, __new__
+
+.. autoclass:: CompressionFormat
+   :members:
+   :undoc-members:
+   :show-inheritance:
    :exclude-members: __init__, __new__
