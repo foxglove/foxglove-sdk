@@ -220,6 +220,38 @@ EpisodeReader
 .. autoclass:: foxglove.datasets.EpisodeReader
    :members:
 
+iter_messages inputs
+
+.. list-table::
+   :header-rows: 1
+   :widths: 22 16 10 12 40
+
+   * - Name
+     - Type
+     - Required
+     - Default
+     - Description
+   * - ``decoder_factories``
+     - list of DecoderFactory or None
+     - no
+     - None
+     - MCAP decoders; ``None`` uses the client's defaults.
+   * - ``topics``
+     - list of str or None
+     - no
+     - None
+     - Nonempty subset of the dataset topics.
+   * - ``lookback``
+     - timedelta
+     - no
+     - 0
+     - Extra history before the episode start.
+
+Outputs
+
+Tuples of schema (possibly ``None``), channel, raw MCAP message, and decoded
+payload. ``message.log_time`` is Unix nanoseconds.
+
 Splits
 ------
 
@@ -311,6 +343,32 @@ Outputs
 
 .. autoclass:: foxglove.datasets.SplitSummary
 
+Inputs
+
+.. list-table::
+   :header-rows: 1
+   :widths: 22 16 10 12 40
+
+   * - Name
+     - Type
+     - Required
+     - Default
+     - Description
+   * - ``group_count``
+     - int
+     - yes
+     -
+     - Connected recording groups in this split.
+   * - ``episode_count``
+     - int
+     - yes
+     -
+     - Episodes in those groups.
+
+Outputs
+
+A :class:`~foxglove.datasets.SplitSummary`.
+
 Object storage
 --------------
 
@@ -323,8 +381,65 @@ not change during a read. For other stores, pass ``object_store_factory``
 .. autoclass:: foxglove.datasets.ObjectLocation
    :members:
 
+Inputs
+
+.. list-table::
+   :header-rows: 1
+   :widths: 22 16 10 12 40
+
+   * - Name
+     - Type
+     - Required
+     - Default
+     - Description
+   * - ``bucket``
+     - str
+     - yes
+     -
+     - Bucket or Azure container.
+   * - ``path``
+     - str
+     - yes
+     -
+     - Full object key.
+   * - ``azure_storage_account_name``
+     - str or None
+     - no
+     - None
+     - Azure account; required for ``scheme="az"``.
+   * - ``scheme``
+     - str or None
+     - no
+     - None
+     - ``s3``, ``gs``, or ``az``.
+
+Outputs
+
+A :class:`~foxglove.datasets.ObjectLocation`.
+
 .. autoclass:: foxglove.datasets.ObjectStore
    :members:
+
+open inputs
+
+.. list-table::
+   :header-rows: 1
+   :widths: 22 16 10 12 40
+
+   * - Name
+     - Type
+     - Required
+     - Default
+     - Description
+   * - ``location``
+     - ObjectLocation
+     - yes
+     -
+     - Recording object to open.
+
+Outputs
+
+A seekable binary file. The SDK owns and closes the handle.
 
 Video
 -----
@@ -334,6 +449,42 @@ Optional extra ``foxglove-sdk[video]``. ``decode_h264`` yields
 pass it directly as ``read_episode``.
 
 .. autofunction:: foxglove.datasets.video.decode_h264
+
+Inputs
+
+.. list-table::
+   :header-rows: 1
+   :widths: 22 16 10 12 40
+
+   * - Name
+     - Type
+     - Required
+     - Default
+     - Description
+   * - ``episode``
+     - EpisodeReader
+     - yes
+     -
+     - Episode whose window bounds output frames.
+   * - ``topic``
+     - str or None
+     - no
+     - None
+     - One selected topic, or all selected topics.
+   * - ``lookback``
+     - timedelta
+     - no
+     - 5 seconds
+     - History budget before the episode start.
+   * - ``decoder_factories``
+     - list of DecoderFactory or None
+     - no
+     - None
+     - MCAP deserializers; ``None`` uses the client's defaults.
+
+Outputs
+
+``VideoSample`` dicts, ordered per channel.
 
 .. autoclass:: foxglove.datasets.video.VideoSample
    :members:

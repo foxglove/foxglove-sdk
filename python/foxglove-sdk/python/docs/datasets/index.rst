@@ -24,8 +24,6 @@ one MCAP per episode plus ``manifest.json``.
 
 UI, Search, and commit: https://docs.foxglove.dev/docs/data/datasets
 
-Episode pricing: https://docs.foxglove.dev/docs/pricing
-
 .. toctree::
    :maxdepth: 1
 

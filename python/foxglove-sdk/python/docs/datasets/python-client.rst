@@ -139,6 +139,8 @@ Parameters
      -
      - Dataset ID.
 
+Returns a dataset dict including ``episode_count``.
+
 .. code-block:: python
 
    dataset = client.get_dataset(dataset_id="dset_123")
@@ -175,6 +177,8 @@ Parameters
      -
      - 1–500, or ``None`` to clear.
 
+Returns the updated dataset dict.
+
 .. code-block:: python
 
    client.update_dataset(dataset_id="dset_123", description=None)
@@ -201,6 +205,8 @@ Parameters
      -
      - Dataset ID.
 
+Returns ``None``.
+
 get_dataset_episodes
 ^^^^^^^^^^^^^^^^^^^^
 
@@ -208,8 +214,81 @@ Page of membership on the latest committed version, or the initial draft if
 none is committed. ``sort_by`` default ``added_at``. ``start`` and ``end``
 (datetime) must be passed together.
 
-Parameters: same as :ref:`get_dataset_version_episodes` except there is no
-``version_number``.
+Parameters
+
+.. list-table::
+   :header-rows: 1
+   :widths: 22 14 10 12 42
+
+   * - Name
+     - Type
+     - Required
+     - Default
+     - Description
+   * - ``dataset_id``
+     - str
+     - yes
+     -
+     - Dataset ID.
+   * - ``sort_by``
+     - str
+     - no
+     - added_at
+     - ``added_at``, ``created_at``, ``start_time``, ``end_time``.
+   * - ``sort_order``
+     - str
+     - no
+     -
+     - ``asc`` or ``desc``.
+   * - ``limit``
+     - int
+     - no
+     - 2000
+     - Page size, 0–2000.
+   * - ``cursor``
+     - str
+     - no
+     -
+     - Cursor from a previous page.
+   * - ``start`` / ``end``
+     - datetime
+     - no
+     -
+     - Overlap filter. Pass both.
+   * - ``has_missing_recordings``
+     - bool
+     - no
+     -
+     - Filter by recording availability.
+   * - ``recording_id``
+     - str
+     - no
+     -
+     - Episodes containing this recording.
+   * - ``properties_query``
+     - str
+     - no
+     -
+     - ``key:value`` terms, ANDed.
+   * - ``include_recordings``
+     - bool
+     - no
+     - False
+     - Add ``recordings``.
+   * - ``include_properties``
+     - bool
+     - no
+     - False
+     - Add ``properties``.
+   * - ``include_creation_context``
+     - bool
+     - no
+     - False
+     - Add ``creation_context``.
+
+Returns ``Page`` of dicts: ``added_at`` (datetime), ``added_in_version`` (int),
+``has_missing_recordings`` (bool), ``episode`` (dict). Iterate with
+``page.auto_paging_iter()``.
 
 update_dataset_episodes
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -298,6 +377,8 @@ Parameters
      -
      - Cursor from a previous page.
 
+Returns a ``Page`` of version dicts. Draft ``committed_at`` is ``None``.
+
 get_dataset_version
 ^^^^^^^^^^^^^^^^^^^
 
@@ -326,6 +407,9 @@ Parameters
      - yes
      -
      - Dataset version number.
+
+Returns a version dict including ``has_missing_recordings`` and the count
+fields.
 
 update_dataset_version
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -360,6 +444,8 @@ Parameters
      - yes
      -
      - New description, or ``None`` to clear.
+
+Returns the version dict.
 
 .. _get_dataset_version_episodes:
 
@@ -733,9 +819,7 @@ event edits do not change the episode. Optional ``properties`` must use
 keys defined for ``resourceType=episode``.
 
 Returns a list of ``{"id": str, "created": bool}`` in request order.
-``created`` is ``False`` when an existing episode was reused. Only new
-episodes (``created: True``) count toward episode usage
-(https://docs.foxglove.dev/docs/pricing).
+``created`` is ``False`` when an existing episode was reused.
 
 Parameters
 
@@ -887,6 +971,8 @@ Parameters
      - False
      - Add ``creation_context``.
 
+Returns a ``Page`` of latest-version episode dicts.
+
 get_episode
 ^^^^^^^^^^^
 
@@ -924,6 +1010,8 @@ Parameters
      - no
      - False
      - Add ``properties``.
+
+Returns one episode dict. Always includes ``creation_context``.
 
 iter_messages
 ^^^^^^^^^^^^^
@@ -1025,6 +1113,9 @@ Parameters
      - How far before ``start`` to look. Used with
        ``replay_policy="lastPerChannel"``.
 
+Returns tuples of ``(schema, channel, message, decoded)``. JSON is decoded
+by default.
+
 .. code-block:: python
 
    episode = client.get_episode(episode_id="ep_123", version=3)
@@ -1041,6 +1132,50 @@ update_episode
 Single-episode form of ``update_episodes``. Returns the episode at the
 resulting version (unchanged if nothing changed). ``start_time`` /
 ``end_time`` are timezone-aware ``datetime``.
+
+Parameters
+
+.. list-table::
+   :header-rows: 1
+   :widths: 18 14 10 12 46
+
+   * - Name
+     - Type
+     - Required
+     - Default
+     - Description
+   * - ``episode_id``
+     - str
+     - yes
+     -
+     - Episode ID.
+   * - ``applies_to_version``
+     - int
+     - no
+     -
+     - Reject if the latest version differs.
+   * - ``start_time``
+     - datetime
+     - no
+     -
+     - Inclusive start of the episode window.
+   * - ``end_time``
+     - datetime
+     - no
+     -
+     - Inclusive end of the episode window.
+   * - ``recordings``
+     - dict
+     - no
+     -
+     - ``{"add": [...], "remove": [...]}`` recording IDs.
+   * - ``properties``
+     - dict
+     - no
+     -
+     - Merge keys; ``None`` unsets a key.
+
+Returns the episode dict at the resulting version.
 
 delete_episode
 ^^^^^^^^^^^^^^
@@ -1099,20 +1234,156 @@ Parameters
      -
      - Cursor from a previous page.
 
+Returns a ``Page`` of version dicts, newest first.
+
 Custom properties
 -----------------
 
-``create_custom_property(key, label, resource_type, value_type, enum_values=None)``;
-``get_custom_properties(resource_type=None)``;
-``get_custom_property(custom_property_id)``;
-``update_custom_property(custom_property_id, label=None, enum_values=None)``;
-``delete_custom_property(custom_property_id)``.
-
 Key: 1–32 chars ``[A-Za-z0-9_-]``, immutable. Label: 1–32. ``enum_values`` is
-required for ``enum``. ``update_custom_property`` can only add or reorder
-``enum_values``. ``value_type`` is ``string``, ``multiline-string``,
-``number``, ``enum``, ``boolean``, or ``multi-enum``. Episode keys use
-``resource_type="episode"``.
+required for ``enum`` and ``multi-enum``. ``update_custom_property`` can only
+add or reorder ``enum_values``. ``value_type`` is ``string``,
+``multiline-string``, ``number``, ``enum``, ``boolean``, or ``multi-enum``.
+Episode keys use ``resource_type="episode"``.
+
+create_custom_property
+^^^^^^^^^^^^^^^^^^^^^^
+
+Parameters
+
+.. list-table::
+   :header-rows: 1
+   :widths: 18 14 10 12 46
+
+   * - Name
+     - Type
+     - Required
+     - Default
+     - Description
+   * - ``key``
+     - str
+     - yes
+     -
+     - Immutable identifier for queries.
+   * - ``label``
+     - str
+     - yes
+     -
+     - Display label.
+   * - ``resource_type``
+     - str
+     - yes
+     -
+     - ``device``, ``event``, ``session``, or ``episode``.
+   * - ``value_type``
+     - str
+     - yes
+     -
+     - See above.
+   * - ``enum_values``
+     - list of str
+     - no
+     -
+     - Required for ``enum`` and ``multi-enum``.
+
+Returns the custom property dict.
+
+get_custom_properties
+^^^^^^^^^^^^^^^^^^^^^
+
+Parameters
+
+.. list-table::
+   :header-rows: 1
+   :widths: 18 14 10 12 46
+
+   * - Name
+     - Type
+     - Required
+     - Default
+     - Description
+   * - ``resource_type``
+     - str
+     - no
+     -
+     - Filter: ``device``, ``event``, ``session``, or ``episode``.
+
+Returns a list of custom property dicts.
+
+get_custom_property
+^^^^^^^^^^^^^^^^^^^
+
+Parameters
+
+.. list-table::
+   :header-rows: 1
+   :widths: 18 14 10 12 46
+
+   * - Name
+     - Type
+     - Required
+     - Default
+     - Description
+   * - ``custom_property_id``
+     - str
+     - yes
+     -
+     - Custom property ID.
+
+Returns the custom property dict.
+
+update_custom_property
+^^^^^^^^^^^^^^^^^^^^^^
+
+Parameters
+
+.. list-table::
+   :header-rows: 1
+   :widths: 18 14 10 12 46
+
+   * - Name
+     - Type
+     - Required
+     - Default
+     - Description
+   * - ``custom_property_id``
+     - str
+     - yes
+     -
+     - Custom property ID.
+   * - ``label``
+     - str
+     - no
+     -
+     - New display label.
+   * - ``enum_values``
+     - list of str
+     - no
+     -
+     - Superset of existing values; reorder or add.
+
+Returns the custom property dict.
+
+delete_custom_property
+^^^^^^^^^^^^^^^^^^^^^^
+
+Parameters
+
+.. list-table::
+   :header-rows: 1
+   :widths: 18 14 10 12 46
+
+   * - Name
+     - Type
+     - Required
+     - Default
+     - Description
+   * - ``custom_property_id``
+     - str
+     - yes
+     -
+     - Custom property ID.
+
+Returns ``None``.
 
 .. code-block:: python
 
