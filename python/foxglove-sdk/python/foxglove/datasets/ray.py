@@ -197,6 +197,18 @@ def read_dataset(
         mapping. The message names the episode, dataset, and version. Ray reports
         it as a ``RayTaskError`` that is also a ``RuntimeError`` and whose message
         contains the original traceback.
+
+    Example::
+
+        from foxglove.datasets.ray import read_dataset
+
+        def read_episode(episode):
+            for schema, channel, message, payload in episode.iter_messages():
+                yield {"log_time": message.log_time}
+
+        ds = read_dataset(
+            "dset_123", version=2, topics=["/camera"], read_episode=read_episode
+        )
     """
     return ray.data.read_datasource(
         _Datasource(

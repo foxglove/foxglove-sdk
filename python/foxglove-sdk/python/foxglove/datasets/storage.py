@@ -53,6 +53,12 @@ class ObjectStore(Protocol):
 
         :param location: Required. The recording to open.
         :returns: A seekable binary file handle for the object.
+
+        Example::
+
+            class LocalStore:
+                def open(self, location):
+                    return open(f"/mnt/{location.bucket}/{location.path}", "rb")
         """
         ...
 

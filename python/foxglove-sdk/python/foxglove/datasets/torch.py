@@ -28,6 +28,14 @@ def to_image_tensor(frame: Mapping[str, Any]) -> Tensor:
     :returns: The image shaped ``[..., 3, H, W]``. Preserves dtype and device.
     :raises KeyError: If ``frame`` has no ``"image"`` entry.
     :raises ValueError: If ``image`` is not shaped ``[..., H, W, 3]``.
+
+    Example::
+
+        import torch
+        from foxglove.datasets.torch import to_image_tensor
+
+        batch = {"image": torch.zeros(8, 4, 8, 3)}
+        images = to_image_tensor(batch)
     """
     image = as_tensor(frame["image"])
     if image.ndim < 3 or image.shape[-1] != 3:
@@ -74,6 +82,22 @@ class TorchDataset(IterableDataset[_T]):
         :param epoch: Required. A nonnegative signed 64-bit integer.
         :raises TypeError: If ``epoch`` is not an integer.
         :raises ValueError: If ``epoch`` is negative or greater than ``2**63 - 1``.
+
+        Example::
+
+            from foxglove.datasets.torch import read_dataset
+
+            def read_episode(episode):
+                yield {"id": episode.id}
+
+            ds = read_dataset(
+                "dset_123",
+                version=2,
+                topics=["/camera"],
+                read_episode=read_episode,
+                shuffle=True,
+            )
+            ds.set_epoch(1)
         """
         if isinstance(epoch, bool) or not isinstance(epoch, int):
             raise TypeError("epoch must be an integer")
@@ -186,6 +210,18 @@ def read_dataset(
         original exception is its ``__cause__``. DataLoader worker processes
         report the error to the main process as a new ``RuntimeError`` whose
         message contains the original traceback.
+
+    Example::
+
+        from foxglove.datasets.torch import read_dataset
+
+        def read_episode(episode):
+            for schema, channel, message, payload in episode.iter_messages():
+                yield {"log_time": message.log_time}
+
+        ds = read_dataset(
+            "dset_123", version=2, topics=["/camera"], read_episode=read_episode
+        )
     """
     if not isinstance(shuffle, bool):
         raise TypeError("shuffle must be a bool")

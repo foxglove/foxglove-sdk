@@ -172,6 +172,12 @@ class EpisodeReader:
             this reader has ended.
         :raises mcap.exceptions.DecoderNotFoundError: If no decoder factory handles
             the encoding of a message.
+
+        Example::
+
+            def read_episode(episode):
+                for schema, channel, message, payload in episode.iter_messages():
+                    yield {"topic": channel.topic, "log_time": message.log_time}
         """
         if self._closed:
             raise RuntimeError("Episode reader is closed")
@@ -453,6 +459,13 @@ def inspect_splits(
         set and no ``client_factory`` is given, the version is not committed or
         contains missing recordings, an episode has no recording IDs, or
         ``split_config.groups`` does not cover exactly the version's episodes.
+
+    Example::
+
+        from foxglove.datasets import DatasetSplit, inspect_splits
+
+        summaries = inspect_splits("dset_123", version=2, split_config=DatasetSplit())
+        print(summaries["train"].episode_count, summaries["train"].group_count)
     """
     if not isinstance(split_config, DatasetSplit):
         raise ValueError("split_config must be a DatasetSplit")

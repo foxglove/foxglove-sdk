@@ -325,6 +325,15 @@ def decode_h264(
     :raises ValueError: On first iteration, if ``lookback`` is negative or
         ``topic`` is not one of the dataset topics.
     :raises RuntimeError: If the callback that received ``episode`` has ended.
+
+    Example::
+
+        from foxglove.datasets.video import decode_h264
+        from foxglove.datasets.torch import read_dataset
+
+        ds = read_dataset(
+            "dset_123", version=2, topics=["/camera"], read_episode=decode_h264
+        )
     """
 
     messages = episode.iter_messages(

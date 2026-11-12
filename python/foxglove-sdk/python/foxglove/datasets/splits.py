@@ -52,6 +52,13 @@ class DatasetSplit:
         proportions do not sum to one, ``seed`` is not an integer, or ``groups``
         is not a mapping or sequence of episode/group pairs of nonempty strings
         with unique episode IDs.
+
+    Example::
+
+        from foxglove.datasets import DatasetSplit, inspect_splits
+
+        split = DatasetSplit(train=0.8, validation=0.1, test=0.1, seed=0)
+        summaries = inspect_splits("dset_123", version=2, split_config=split)
     """
 
     train: float = 0.8
