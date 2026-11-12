@@ -149,10 +149,9 @@ class EpisodeReader:
     ) -> Generator[tuple[Schema | None, Channel, Message, Any], None, None]:
         """Stream the selected topics in log-time order without buffering the episode.
 
-        Each invocation validates its arguments and opens a new stream on first
-        iteration. Repeated invocations redownload data. Active streams are closed
-        when the callback ends. Message context and stream order are preserved for
-        stateful processing.
+        Each invocation opens a new stream on first iteration. Repeated invocations
+        redownload data. Active streams are closed when the callback ends.
+        Message context and stream order are preserved for stateful processing.
 
         :param decoder_factories: Optional. MCAP decoder factories used for message
             deserialization. ``None`` uses the client's default decoders; an explicit
@@ -169,9 +168,10 @@ class EpisodeReader:
             consumers must exclude from their training samples.
         :returns: Tuples of schema (possibly ``None``), channel, raw MCAP message,
             and decoded message payload.
-        :raises ValueError: If ``lookback`` is negative, or ``topics`` is empty or
-            not a subset of the dataset topics.
-        :raises RuntimeError: If the callback that received this reader has ended.
+        :raises ValueError: On first iteration, if ``lookback`` is negative, or
+            ``topics`` is empty or not a subset of the dataset topics.
+        :raises RuntimeError: On first iteration, if the callback that received
+            this reader has ended.
         :raises mcap.exceptions.DecoderNotFoundError: If no decoder factory handles
             the encoding of a message.
         """

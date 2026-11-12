@@ -320,8 +320,8 @@ def decode_h264(
         Supports CompressedVideo H.264 Annex B, one image per message, no B-frames,
         with an initial IDR keyframe containing SPS/PPS. Missing packets can cause
         undetected corruption until the next keyframe.
-    :raises ValueError: If ``lookback`` is negative or ``topic`` is not one of the
-        dataset topics.
+    :raises ValueError: On first iteration, if ``lookback`` is negative or
+        ``topic`` is not one of the dataset topics.
     :raises RuntimeError: If the callback that received ``episode`` has ended.
     """
 

@@ -175,8 +175,10 @@ def read_dataset(
     :returns: An iterable dataset of the samples that ``read_episode`` yields.
     :raises TypeError: If ``shuffle`` is not a bool or ``seed`` is not an integer.
     :raises ValueError: If an argument is invalid, ``FOXGLOVE_API_TOKEN`` is not
-        set and no ``client_factory`` is given, or the version is not committed or
-        contains missing recordings.
+        set and no ``client_factory`` is given, the version is not committed or
+        contains missing recordings, ``split_config.groups`` does not cover exactly
+        the version's episodes, or, for object storage, a recording has no
+        supported location.
     :raises RuntimeError: While iterating, if ``read_episode`` or a message stream
         raises. The message names the episode, dataset, and version, and the
         original exception is its ``__cause__``. DataLoader worker processes

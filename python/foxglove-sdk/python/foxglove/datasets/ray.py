@@ -185,10 +185,13 @@ def read_dataset(
         ``DataContext.target_max_block_size``. Ray can combine blocks and buffer
         multiple episodes before delivering output. This target is not a memory
         ceiling: large samples, prefetching, and concurrent tasks can exceed it.
-        Setting it to ``None`` allows an entire task to be buffered.
+        Setting ``target_max_block_size`` to ``None`` allows an entire task to be
+        buffered.
     :raises ValueError: If an argument is invalid, ``FOXGLOVE_API_TOKEN`` is not
-        set and no ``client_factory`` is given, or the version is not committed or
-        contains missing recordings.
+        set and no ``client_factory`` is given, the version is not committed or
+        contains missing recordings, ``split_config.groups`` does not cover exactly
+        the version's episodes, or, for object storage, a recording has no
+        supported location.
     :raises RuntimeError: When the dataset is executed, if ``read_episode`` or a
         message stream raises, or ``read_episode`` yields a value that is not a
         mapping. The message names the episode, dataset, and version. Ray reports
