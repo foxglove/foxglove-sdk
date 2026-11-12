@@ -80,10 +80,11 @@ rst_epilog = f"""
 typehints_defaults = "braces"
 
 
-def format_typehint(annotation: Any, _config: Config) -> str | None:
+def format_typehint(annotation: Any, _config: Config | None = None) -> str | None:
     """Render ``numpy.typing.NDArray`` annotations as ``numpy.ndarray``.
 
     The default formatter names the private NumPy class that implements the alias.
+    sphinx-autodoc-typehints passes the config in some calls and omits it in others.
     """
     origin = get_origin(annotation)
     if getattr(origin, "__module__", "").startswith("numpy") and getattr(
