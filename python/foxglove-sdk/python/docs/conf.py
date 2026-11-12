@@ -2,6 +2,8 @@
 #
 # For the full list of built-in configuration values, see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
+import inspect
+import re
 from datetime import date
 from importlib.metadata import version as package_version
 from typing import Any, get_origin
@@ -101,6 +103,32 @@ suppress_warnings = ["config.cache"]
 # Treat __init__ signatures as separate methods so we can exclude them using :exclude-members:
 autodoc_class_signature = "separated"
 
+
+def convert_client_parameter_lines(
+    _app: Sphinx,
+    _what: str,
+    name: str,
+    obj: Any,
+    _options: Any,
+    lines: list[str],
+) -> None:
+    """Rewrite ``name: description`` lines of a foxglove-client docstring as ``:param:`` fields.
+
+    foxglove-client 0.23.0 documents the parameters of ``Client.iter_messages`` in this form,
+    which is not valid reStructuredText. Docstrings that already use ``:param:`` are unchanged.
+    """
+    if not name.startswith("foxglove.client."):
+        return
+    try:
+        parameters = inspect.signature(obj).parameters
+    except (TypeError, ValueError):
+        return
+    for index, line in enumerate(lines):
+        match = re.match(r"(\w+): (.*)", line)
+        if match is not None and match.group(1) in parameters:
+            lines[index] = f":param {match.group(1)}: {match.group(2)}"
+
+
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
@@ -111,6 +139,10 @@ html_theme = "alabaster"
 def setup(app: Sphinx) -> dict[str, Any]:
     app.add_directive("foxglove_autopanels", AutoPanelsDirective)
     app.connect("config-inited", generate_panel_pages)
+    # Run before sphinx_autodoc_typehints (priority 500), which adds types to :param: fields.
+    app.connect(
+        "autodoc-process-docstring", convert_client_parameter_lines, priority=400
+    )
 
     return {
         "version": "0.1.0",

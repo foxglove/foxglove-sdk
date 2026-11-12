@@ -359,4 +359,4 @@ SDK, as the `foxglove-client <https://pypi.org/project/foxglove-client/>`__ pack
 .. toctree::
    :maxdepth: 1
 
-   Dataset and episode methods <./client>
+   Dataset, episode, and custom property methods <./client>

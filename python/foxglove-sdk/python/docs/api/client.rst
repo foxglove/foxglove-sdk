@@ -7,8 +7,8 @@ is in the `foxglove-python <https://github.com/foxglove/foxglove-python>`__ repo
 ``torch`` and ``ray`` extras of ``foxglove-sdk`` install it.
 
 This page is generated from the docstrings of ``foxglove-client`` |foxglove_client_version|. It
-covers the methods of :py:class:`~foxglove.client.Client` that work with datasets and episodes. All
-of them are available in version 0.23 and later.
+covers the methods of :py:class:`~foxglove.client.Client` that work with datasets, episodes, and
+custom properties. All of them are available in version 0.23 and later.
 
 Pass timezone-aware ``datetime`` values for time arguments. The client converts them with
 ``astimezone()``, so a naive ``datetime`` is read as local time. Times in results, such as
@@ -52,6 +52,19 @@ Episodes
 .. automethod:: Client.update_episodes
 .. automethod:: Client.delete_episode
 .. automethod:: Client.get_episode_versions
+.. automethod:: Client.iter_messages
+
+Custom properties
+-----------------
+
+The ``properties`` of an episode use keys that are defined as custom properties with
+``resource_type="episode"``.
+
+.. automethod:: Client.create_custom_property
+.. automethod:: Client.get_custom_properties
+.. automethod:: Client.get_custom_property
+.. automethod:: Client.update_custom_property
+.. automethod:: Client.delete_custom_property
 
 Supporting types
 ----------------
