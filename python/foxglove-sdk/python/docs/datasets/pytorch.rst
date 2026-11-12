@@ -158,10 +158,10 @@ arrays so DataLoader can collate them.
                "joints": joints,
            }
 
-The sample expects ``foxglove.RawImage`` with ``encoding="rgb8"`` on
-``/camera/front`` and a joint-state message with a ``position`` sequence on
-``/joint_states``. Pass ``topics=["/camera/front", "/joint_states"]`` to
-``read_dataset``.
+The sample expects protobuf-encoded ``foxglove.RawImage`` with
+``encoding="rgb8"`` on ``/camera/front`` and a joint-state message with a
+``position`` sequence on ``/joint_states``. Pass
+``topics=["/camera/front", "/joint_states"]`` to ``read_dataset``.
 
 From a clone of ``foxglove/foxglove-sdk`` (requires ``uv``)::
 
