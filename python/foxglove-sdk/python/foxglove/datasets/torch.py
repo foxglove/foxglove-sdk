@@ -118,18 +118,15 @@ def read_dataset(
     validation, or test pool.
 
     ``source="object_storage"`` reads indexed MCAPs from recording locations
-    with the worker's cloud credentials. Reads use recording locations
-    directly. Location or access errors raise. Use DataLoader's ``spawn``
-    multiprocessing context with cloud storage. ``object_store_factory``
-    requires ``source="object_storage"``. Worker factories and callbacks
-    must be pickleable.
+    with the worker's cloud credentials. Location or access errors raise.
+    Use DataLoader's ``spawn`` multiprocessing context with cloud storage.
+    ``object_store_factory`` requires ``source="object_storage"``. Worker
+    factories and callbacks must be pickleable.
 
     ``shuffle=True`` permutes episodes with ``seed + epoch`` (default seed 0)
     before rank and worker partitioning. Samples within each episode keep
     callback order. Shuffling holds only episode metadata in memory.
-    Use ``shuffle=True`` and ``set_epoch`` for episode order; rank and worker
-    partitioning are built in. Call :meth:`TorchDataset.set_epoch` between
-    completed DataLoader passes.
+    Call :meth:`TorchDataset.set_epoch` between completed DataLoader passes.
 
     Override ``client_factory`` for another token or host. Rank and world
     size are captured here or supplied together.

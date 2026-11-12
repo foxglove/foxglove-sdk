@@ -59,8 +59,8 @@ Stream decoded messages for one pinned episode:
    ):
        print(channel.topic, message.log_time, type(decoded))
 
-``iter_messages`` decodes JSON. Install ``mcap-protobuf-support``,
-``mcap-ros1-support``, or ``mcap-ros2-support`` to decode those encodings; the
-client registers installed decoders automatically.
+JSON is decoded by default. Protobuf and ROS decode when
+``mcap-protobuf-support``, ``mcap-ros1-support``, or ``mcap-ros2-support``
+are installed; the client registers installed decoders automatically.
 
 Next: :doc:`pytorch`, :doc:`ray`.

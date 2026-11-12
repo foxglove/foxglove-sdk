@@ -151,15 +151,14 @@ def read_dataset(
     validation, or test pool.
 
     ``source="object_storage"`` reads indexed MCAPs from recording locations
-    with each worker's cloud credentials. Reads use recording locations
-    directly. Location or access errors raise. ``object_store_factory``
-    requires ``source="object_storage"``.
+    with each worker's cloud credentials. Location or access errors raise.
+    ``object_store_factory`` requires ``source="object_storage"``.
 
     ``concurrency`` caps concurrent read tasks. Block construction follows
     Ray's ``DataContext.target_max_block_size``. Large samples, prefetching,
-    and concurrent tasks can use more memory than ``target_max_block_size``.
+    and concurrent tasks can use more memory than that setting.
     Read task retries rerun callbacks; keep callbacks side-effect free.
-    Setting the target to ``None`` buffers an entire task.
+    Setting ``target_max_block_size`` to ``None`` buffers an entire task.
 
     Override ``client_factory`` for another token or host.
     """

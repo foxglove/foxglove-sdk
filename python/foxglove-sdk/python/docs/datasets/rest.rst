@@ -156,7 +156,7 @@ Episodes
      - List episode versions, newest first
 
 Items with ``created: false`` reuse an existing episode; only new episodes
-count toward episode usage (https://foxglove.dev/pricing).
+count toward episode usage (https://docs.foxglove.dev/docs/pricing).
 
 .. code-block:: bash
 

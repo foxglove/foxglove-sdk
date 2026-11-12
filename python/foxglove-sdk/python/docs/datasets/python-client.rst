@@ -723,16 +723,19 @@ custom properties of the latest episode version.
 
 Each item must have exactly one of ``recordings`` or ``event_id``. Recording
 items may set ``start_time`` and ``end_time`` (timezone-aware ``datetime``).
-``event_id`` items can't set times. ``recordings``: 1–50 recording IDs from
-one device (or all deviceless). ``event_id`` snapshots the event's current
-range and overlapping completed recordings; later event edits do not change
-the episode. Optional ``properties`` must use keys defined for
-``resourceType=episode``.
+``event_id`` items can't set times. Across all ``episodes[].recordings``
+lists, a request may contain at most 100,000 recording memberships.
+Duplicate recording IDs within an episode count once; a recording listed
+in multiple episodes counts once per episode. Event inputs in one request
+can resolve at most 10,000 recording memberships. ``event_id`` snapshots
+the event's current range and overlapping completed recordings; later
+event edits do not change the episode. Optional ``properties`` must use
+keys defined for ``resourceType=episode``.
 
 Returns a list of ``{"id": str, "created": bool}`` in request order.
 ``created`` is ``False`` when an existing episode was reused. Only new
 episodes (``created: True``) count toward episode usage
-(https://foxglove.dev/pricing).
+(https://docs.foxglove.dev/docs/pricing).
 
 Parameters
 
@@ -926,10 +929,11 @@ iter_messages
 ^^^^^^^^^^^^^
 
 Stream decoded messages. Yields ``(schema, channel, message, decoded)``.
-JSON is decoded by default. Pass ``decoder_factories`` to replace the
-client's default decoders. For a pinned episode, pass ``episode_id`` and
-optional ``episode_version`` (latest if omitted). Its time range is used
-when ``start`` and ``end`` are omitted.
+JSON is decoded by default. Protobuf and ROS decode when their packages
+are installed. Pass ``decoder_factories`` to replace the client's default
+decoders. For a pinned episode, pass ``episode_id`` and optional
+``episode_version`` (latest if omitted). Its time range is used when
+``start`` and ``end`` are omitted.
 
 Parameters
 
@@ -942,6 +946,36 @@ Parameters
      - Required
      - Default
      - Description
+   * - ``device_id``
+     - str
+     - no
+     -
+     - Device that originated the data.
+   * - ``device_name``
+     - str
+     - no
+     -
+     - Device name. Multi-project orgs also need ``project_id``.
+   * - ``session_id``
+     - str
+     - no
+     -
+     - Session to stream.
+   * - ``session_key``
+     - str
+     - no
+     -
+     - Session key to stream.
+   * - ``recording_id``
+     - str
+     - no
+     -
+     - Recording to stream.
+   * - ``recording_key``
+     - str
+     - no
+     -
+     - Recording key to stream.
    * - ``episode_id``
      - str
      - no
@@ -953,6 +987,21 @@ Parameters
      - no
      -
      - Episode version. Requires ``episode_id``. Latest if omitted.
+   * - ``project_id``
+     - str
+     - no
+     -
+     - Project for ``device_name`` in multi-project organizations.
+   * - ``start``
+     - datetime
+     - no
+     -
+     - Inclusive start of the stream. Pass with ``end``.
+   * - ``end``
+     - datetime
+     - no
+     -
+     - Inclusive end of the stream. Pass with ``start``.
    * - ``topics``
      - list of str
      - no
@@ -963,6 +1012,18 @@ Parameters
      - no
      -
      - Replace the client's default MCAP decoders.
+   * - ``replay_policy``
+     - str
+     - no
+     -
+     - ``lastPerChannel`` includes the most recent message on each
+       channel from before ``start``.
+   * - ``replay_lookback_seconds``
+     - float
+     - no
+     -
+     - How far before ``start`` to look. Used with
+       ``replay_policy="lastPerChannel"``.
 
 .. code-block:: python
 

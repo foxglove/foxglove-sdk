@@ -98,7 +98,8 @@ Shuffling and splits
            ...
 
 Episode order depends on ``seed + epoch``. Omitting ``seed`` uses 0.
-Samples within an episode keep callback order.
+Samples within an episode keep callback order. Ranks can yield different
+sample counts; use an uneven-input policy such as DDP's ``join`` context.
 
 .. code-block:: python
 
