@@ -12,9 +12,9 @@ it from Python, or download it as MCAP.
 
 To build a dataset:
 
-1. Create a dataset.
-2. In Search, select results and choose **Add to dataset**. Each result becomes
+1. In Search, select results and choose **Add to dataset**. Each result becomes
    an episode.
+2. Create a dataset.
 3. Trim episodes and set their properties.
 4. Commit a version.
 5. Train on that version, or clone it.

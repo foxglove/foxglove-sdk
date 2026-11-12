@@ -240,7 +240,9 @@ iter_messages inputs
      - timedelta
      - no
      - 0
-     - Extra history before the episode start.
+     - Extra history before the episode start. When you yield samples, keep
+       those whose ``message.log_time`` (Unix nanoseconds) is at or after the
+       episode start. ``decode_h264`` already does this.
 
 Outputs
 
@@ -338,7 +340,7 @@ Outputs
 
 .. autoclass:: foxglove.datasets.SplitSummary
 
-Inputs
+Fields
 
 .. list-table::
    :header-rows: 1

@@ -1,10 +1,9 @@
 Integrate with a labeling provider
 ==================================
 
-Keep annotating in your labeling tool. Export a committed dataset version, send
-the files to the tool, write the results back as episode custom properties, and
-commit a new dataset version. The export contains the episode versions that
-dataset version pins.
+Export a committed dataset version, send the files to your labeling tool, write
+the results back as episode custom properties, and commit a new dataset version.
+The export contains the episode versions that dataset version pins.
 
 **Prerequisites:** ``foxglove-client>=0.23`` or Foxglove CLI v2.1.0+; an API key
 with ``datasets.list``, ``datasets.update``, ``episodes.update``, and
@@ -85,7 +84,8 @@ Round-trip
    ``currentVersion``. The call is atomic and accepts up to 2,000 episodes.
    The returned ``version`` is unchanged if nothing changed.
 
-4. **Point the draft at the new episode versions.**
+4. **Point the draft at the new episode versions**, or click **Update to
+   latest version** in the app.
 
    .. code-block:: python
 
