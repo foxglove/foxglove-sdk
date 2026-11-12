@@ -362,10 +362,6 @@ Fields
      -
      - Episodes in those groups.
 
-Outputs
-
-A :class:`~foxglove.datasets.SplitSummary`.
-
 Object storage
 --------------
 
