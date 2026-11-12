@@ -3,7 +3,8 @@ Version and reproduce a training set
 
 A committed dataset version records which episodes, at which episode versions,
 a training run used. You edit only the draft. Committing saves the draft as a
-new version and opens a new draft.
+new version and opens a new draft. Requires ``foxglove-client>=0.23``. CLI
+examples need v2.1.0 or later.
 
 Commit
 ------
@@ -27,16 +28,13 @@ Commit
    print(result["committed"]["version_number"], result["editable_version_number"])
 
 ``commit_dataset`` raises ``requests.HTTPError`` (409) when the draft has no
-changes. If you omit ``description``, the commit keeps the draft's description;
-``None`` clears it. ``discard_dataset`` resets the draft to the last committed
-version.
+changes. Set ``description`` here, or in **Review changes**. Omitting it keeps
+the draft's description; ``None`` clears it. ``discard_dataset`` resets the
+draft to the last committed version.
 
 CLI (v2.1.0 or later)::
 
    foxglove datasets commit dset_123
-
-In Foxglove, open **Review changes**, optionally describe the version, and
-commit.
 
 List, get, compare
 ------------------
