@@ -446,9 +446,8 @@ Returns one episode dict, including ``creation_context``.
 iter_messages
 ^^^^^^^^^^^^^
 
-Stream decoded messages. Messages are returned in log-time order per
-channel. To combine topics into one sample, match them by timestamp in
-your code.
+Stream decoded messages. Messages are returned in log-time order across
+the selected topics.
 
 Parameters:
 
@@ -475,13 +474,11 @@ Raises: ``RuntimeError`` if ``start`` and ``end`` are omitted unless
 
 .. code-block:: python
 
-   episode = client.get_episode(episode_id="ep_123", version=3)
    for schema, channel, message, decoded in client.iter_messages(
-       episode_id=episode["id"],
-       episode_version=episode["version"],
-       topics=["/camera/front", "/joint_states"],
+       recording_id="rec_123",
+       topics=["/camera/front"],
    ):
-       print(channel.topic, message.log_time, type(decoded))
+       print(channel.topic, message.log_time)
 
 update_episode
 ^^^^^^^^^^^^^^

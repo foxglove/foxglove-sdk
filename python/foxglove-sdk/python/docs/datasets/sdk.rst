@@ -27,14 +27,10 @@ episode list; messages stream during iteration. Keyword-only after
 
 Episodes are sorted by ID. When ``shuffle=True``, they are permuted with
 ``random.Random(seed + epoch)``, then sliced ``[rank::world_size]`` and
-``[worker::num_workers]``. Call ``read_dataset`` after
-``init_process_group``. ``rank`` and ``world_size`` come from
-``torch.distributed`` if it is initialized when ``read_dataset()`` is
-called; otherwise rank 0 of 1. Leave DataLoader ``shuffle`` off. Do not
-pass a ``DistributedSampler``. Ranks can yield different sample counts;
-use DDP ``join()``. Messages are returned in log-time order
-per channel. To combine topics into one sample, match them by timestamp
-in your code.
+``[worker::num_workers]``. ``rank``/``world_size`` default to
+``torch.distributed`` when it is initialized at call time, else 0 and 1.
+Call ``read_dataset`` after ``init_process_group``; use DDP ``join()``.
+Messages are returned in log-time order across the selected topics.
 
 Parameters:
 
@@ -74,39 +70,6 @@ are ``RuntimeError("Failed to read episode…")`` with the original as
 
    ds = read_dataset(
        "dset_123", version=2, topics=["/camera"], read_episode=read_episode
-   )
-
-.. code-block:: python
-
-   from foxglove.datasets.torch import read_dataset
-
-   def read_episode(episode):
-       for schema, channel, message, payload in episode.iter_messages():
-           yield {"log_time": message.log_time}
-
-   ds = read_dataset(
-       "dset_123",
-       version=2,
-       topics=["/camera"],
-       read_episode=read_episode,
-       shuffle=True,
-       seed=0,
-   )
-   ds.set_epoch(1)
-
-.. code-block:: python
-
-   from foxglove.datasets.torch import read_dataset
-
-   def read_episode(episode):
-       yield {"outcome": episode.properties.get("outcome")}
-
-   ds = read_dataset(
-       "dset_123",
-       version=2,
-       topics=["/camera"],
-       read_episode=read_episode,
-       include_properties=True,
    )
 
 foxglove.datasets.torch.TorchDataset
@@ -184,9 +147,8 @@ foxglove.datasets.ray.read_dataset
 
 Return a Ray Data dataset of sample mappings. ``read_episode`` must yield
 mappings with consistent column types. Factories and callbacks must be
-serializable. Ray can run a callback more than once for the same block
-when it retries a task. Write callbacks so that repeated runs give the
-same result. Keyword-only after ``dataset_id``.
+serializable. Ray task retries rerun callbacks. Keyword-only after
+``dataset_id``.
 
 Parameters:
 
@@ -250,8 +212,7 @@ iter_messages
 ^^^^^^^^^^^^^
 
 Stream the selected topics. All parameters are keyword-only. Messages
-are returned in log-time order per channel. To combine topics into one
-sample, match them by timestamp in your code.
+are returned in log-time order across the selected topics.
 
 Parameters:
 
@@ -302,12 +263,6 @@ exactly the committed version's episodes.
    from foxglove.datasets import DatasetSplit
 
    split = DatasetSplit(train=0.8, validation=0.1, test=0.1, seed=0)
-
-.. code-block:: python
-
-   split = DatasetSplit(
-       groups={"ep_1": "site_a", "ep_2": "site_a", "ep_3": "site_b"},
-   )
 
 inspect_splits
 --------------
@@ -378,9 +333,8 @@ Protocol for worker-local storage access. ``source="object_storage"`` uses
 the built-in store for ``s3``, ``gs``, and ``az`` (Azure also needs
 ``azure_storage_account_name``) with each worker's cloud credentials.
 The reader reads objects directly from your bucket. Keep objects unchanged
-while a read runs. With a torch DataLoader, set
-``multiprocessing_context="spawn"``. Pass ``object_store_factory`` for
-another store (requires ``source="object_storage"``).
+while a read runs. Pass ``object_store_factory`` for another store
+(requires ``source="object_storage"``).
 
 open
 ^^^^
@@ -395,17 +349,17 @@ Returns: a seekable binary file supporting ``read``, ``readinto``, and ``seek``.
 
 .. code-block:: python
 
-   with store.open(location) as handle:
-       handle.seek(0)
+   class LocalStore:
+       def open(self, location):
+           return open(f"/mnt/{location.bucket}/{location.path}", "rb")
 
 decode_h264
 -----------
 
 Yield RGB frames from ``foxglove.CompressedVideo`` H.264 Annex B. Requires
 ``foxglove-sdk[video]``. Usable as ``read_episode`` or inside a callback.
-Keyword-only after ``episode``. Frames are yielded as the iterator is
-consumed; read it to the end to get every frame. Each camera topic
-decodes on its own; match frames across cameras by timestamp.
+Keyword-only after ``episode``. Frames are yielded lazily. Each channel
+has its own decoder.
 
 Parameters:
 
