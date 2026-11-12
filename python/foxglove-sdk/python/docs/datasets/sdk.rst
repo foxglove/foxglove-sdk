@@ -30,28 +30,26 @@ Episodes are sorted by ID. When ``shuffle=True``, they are permuted with
 ``[worker::num_workers]``. ``rank`` and ``world_size`` come from
 ``torch.distributed`` if it is initialized when ``read_dataset()`` is
 called; otherwise rank 0 of 1. Leave DataLoader ``shuffle`` off. Do not
-pass a ``DistributedSampler``.
+pass a ``DistributedSampler``. Messages are returned in log-time order
+per channel. To combine topics into one sample, match them by timestamp
+in your code.
 
 Parameters:
 
 * ``dataset_id`` (str, required) — Dataset ID.
 * ``version`` (int, keyword-only, required) — Committed version number.
 * ``topics`` (list of str, keyword-only, required) — Topics to stream.
-* ``read_episode`` (callable, keyword-only, required) — Convert an ``EpisodeReader`` into samples.
-* ``source`` (str, keyword-only, optional, default ``foxglove``) — ``foxglove`` or ``object_storage``.
+* ``read_episode`` (callable, keyword-only, required) — Convert an ``EpisodeReader`` into samples. Must be pickleable.
+* ``source`` (str, keyword-only, optional, default ``foxglove``) — ``foxglove`` or ``object_storage``. With ``object_storage``, set DataLoader ``multiprocessing_context="spawn"``.
 * ``split_config`` (DatasetSplit or None, keyword-only, optional, default None) — Pass with ``split``.
 * ``split`` (str or None, keyword-only, optional, default None) — ``train``, ``validation``, or ``test``.
 * ``include_properties`` (bool, keyword-only, optional, default False) — Load pinned custom properties.
-* ``client_factory`` (callable or None, keyword-only, optional, default None) — Build a client.
-* ``object_store_factory`` (callable or None, keyword-only, optional, default None) — Custom store; requires ``source="object_storage"``.
+* ``client_factory`` (callable or None, keyword-only, optional, default None) — Build a client. Must be pickleable.
+* ``object_store_factory`` (callable or None, keyword-only, optional, default None) — Custom store; requires ``source="object_storage"``. Must be pickleable.
 * ``rank`` (int or None, keyword-only, optional, default None) — Process rank; pass with ``world_size``.
 * ``world_size`` (int or None, keyword-only, optional, default None) — Number of ranks.
 * ``shuffle`` (bool, keyword-only, optional, default False) — Permute episodes before rank and worker partitioning.
 * ``seed`` (int or None, keyword-only, optional, default None) — Nonnegative shuffle seed. With ``shuffle=True``, omitting ``seed`` uses 0. Every rank must pass the same ``seed``.
-
-Worker factories and callbacks must be pickleable. With
-``source="object_storage"``, use DataLoader's ``spawn`` multiprocessing
-context.
 
 Returns: ``TorchDataset``.
 
@@ -115,16 +113,21 @@ foxglove.datasets.torch.TorchDataset
 Iterable dataset created by ``torch.read_dataset``. Subclass of
 ``torch.utils.data.IterableDataset``.
 
+.. code-block:: python
+
+   from torch.utils.data import DataLoader
+
+   loader = DataLoader(ds, batch_size=8, shuffle=False)
+
 set_epoch
 ^^^^^^^^^
 
-Select the episode order for the next DataLoader pass. Applies when
+Select the episode order for the next DataLoader pass. No effect unless
 ``shuffle=True``. The epoch tensor is shared with spawned and persistent
 loader workers. Call on every rank after the previous pass completes, with
 the same epoch. Active iterators keep the order they started with.
 Shuffling happens before rank and worker partitioning. Ranks can yield
-different sample counts; use an uneven-input policy such as DDP's
-``join`` context.
+different sample counts.
 
 Parameters:
 
@@ -171,28 +174,30 @@ Raises: ``ValueError`` if ``image`` is not channels-last RGB.
    import torch
    from foxglove.datasets.torch import to_image_tensor
 
-   out = to_image_tensor({"image": torch.zeros(4, 8, 3)})
+   batch = {"image": torch.zeros(8, 4, 8, 3)}
+   images = to_image_tensor(batch)
 
 foxglove.datasets.ray.read_dataset
 ----------------------------------
 
 Return a Ray Data dataset of sample mappings. ``read_episode`` must yield
 mappings with consistent column types. Factories and callbacks must be
-serializable. Read task retries rerun callbacks; keep callbacks
-side-effect free. Keyword-only after ``dataset_id``.
+serializable. Ray can run a callback more than once for the same block
+when it retries a task. Write callbacks so that repeated runs give the
+same result. Keyword-only after ``dataset_id``.
 
 Parameters:
 
 * ``dataset_id`` (str, required) — Dataset ID.
 * ``version`` (int, keyword-only, required) — Committed version number.
 * ``topics`` (list of str, keyword-only, required) — Topics to stream.
-* ``read_episode`` (callable, keyword-only, required) — Convert an ``EpisodeReader`` into sample mappings.
+* ``read_episode`` (callable, keyword-only, required) — Convert an ``EpisodeReader`` into sample mappings. Must be pickleable.
 * ``source`` (str, keyword-only, optional, default ``foxglove``) — ``foxglove`` or ``object_storage``.
 * ``split_config`` (DatasetSplit or None, keyword-only, optional, default None) — Pass with ``split``.
 * ``split`` (str or None, keyword-only, optional, default None) — ``train``, ``validation``, or ``test``.
 * ``include_properties`` (bool, keyword-only, optional, default False) — Load pinned custom properties.
-* ``client_factory`` (callable or None, keyword-only, optional, default None) — Build a client.
-* ``object_store_factory`` (callable or None, keyword-only, optional, default None) — Custom store; requires ``source="object_storage"``.
+* ``client_factory`` (callable or None, keyword-only, optional, default None) — Build a client. Must be pickleable.
+* ``object_store_factory`` (callable or None, keyword-only, optional, default None) — Custom store; requires ``source="object_storage"``. Must be pickleable.
 * ``concurrency`` (int or None, keyword-only, optional, default None) — Cap on concurrent read tasks.
 
 Returns: ``ray.data.Dataset``.
@@ -235,11 +240,16 @@ Raises: ``RuntimeError`` if properties were not requested. From
 ``read_episode``, that becomes ``RuntimeError("Failed to read episode…")``
 with the original as ``__cause__``.
 
+.. code-block:: python
+
+   print(episode.id, episode.start_time, episode.end_time)
+
 iter_messages
 ^^^^^^^^^^^^^
 
-Stream the selected topics in log-time order. Each call opens a new
-stream. All parameters are keyword-only.
+Stream the selected topics. All parameters are keyword-only. Messages
+are returned in log-time order per channel. To combine topics into one
+sample, match them by timestamp in your code.
 
 Parameters:
 
@@ -276,7 +286,7 @@ Parameters:
 * ``validation`` (float, optional, default 0.1) — Validation proportion.
 * ``test`` (float, optional, default 0.1) — Test proportion.
 * ``seed`` (int, optional, default 0) — Split assignment seed, independent of epoch shuffling.
-* ``groups`` (mapping or sequence or None, optional, default None) — Mapping or ``(episode_id, group_id)`` pairs. Stored as a sorted tuple. Group IDs may repeat.
+* ``groups`` (mapping or sequence or None, optional, default None) — Mapping or ``(episode_id, group_id)`` pairs. Stored as a sorted tuple. Episode IDs must be unique. The mapping covers exactly the version's episodes. Group IDs may repeat.
 
 Returns: a ``DatasetSplit``.
 
@@ -334,6 +344,10 @@ Fields:
 * ``group_count`` (int) — Connected recording groups in this split.
 * ``episode_count`` (int) — Episodes in those groups.
 
+.. code-block:: python
+
+   print(summaries["train"].episode_count, summaries["train"].group_count)
+
 ObjectLocation
 --------------
 
@@ -349,15 +363,22 @@ Parameters:
 
 Returns: an ``ObjectLocation``.
 
+.. code-block:: python
+
+   from foxglove.datasets import ObjectLocation
+
+   loc = ObjectLocation(bucket="my-bucket", path="run/file.mcap", scheme="s3")
+
 ObjectStore
 -----------
 
 Protocol for worker-local storage access. ``source="object_storage"`` uses
 the built-in store for ``s3``, ``gs``, and ``az`` (Azure also needs
 ``azure_storage_account_name``) with each worker's cloud credentials.
-Objects must be indexed MCAP and must not change during a read. Pass
-``object_store_factory`` for another store (requires
-``source="object_storage"``).
+The reader reads objects directly from your bucket. Keep objects unchanged
+while a read runs. With a torch DataLoader, set
+``multiprocessing_context="spawn"``. Pass ``object_store_factory`` for
+another store (requires ``source="object_storage"``).
 
 open
 ^^^^
@@ -370,12 +391,19 @@ Parameters:
 
 Returns: a seekable binary file supporting ``read``, ``readinto``, and ``seek``.
 
+.. code-block:: python
+
+   with store.open(location) as handle:
+       handle.seek(0)
+
 decode_h264
 -----------
 
 Yield RGB frames from ``foxglove.CompressedVideo`` H.264 Annex B. Requires
 ``foxglove-sdk[video]``. Usable as ``read_episode`` or inside a callback.
-Keyword-only after ``episode``.
+Keyword-only after ``episode``. Frames are yielded as the iterator is
+consumed; read it to the end to get every frame. Each camera topic
+decodes on its own; match frames across cameras by timestamp.
 
 Parameters:
 
@@ -414,7 +442,20 @@ Fields:
 * ``publish_time_ns`` (int) — Publish time, Unix nanoseconds.
 * ``frame_id`` (str) — Camera coordinate frame.
 
+.. code-block:: python
+
+   height, width, _ = sample["image"].shape
+
 VideoDecodeError
 ----------------
 
 Raised when video data cannot be decoded. Subclass of ``ValueError``.
+
+.. code-block:: python
+
+   from foxglove.datasets.video import VideoDecodeError, decode_h264
+
+   try:
+       next(decode_h264(episode))
+   except VideoDecodeError:
+       pass

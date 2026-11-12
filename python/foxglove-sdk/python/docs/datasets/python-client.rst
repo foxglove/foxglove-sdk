@@ -3,7 +3,8 @@ Python client
 
 ``foxglove-client>=0.23``. ``from foxglove.client import Client``.
 ``Client(token, host="api.foxglove.dev")``. Keys are snake_case except
-``creation_context`` and recording ``location``. Times are ``datetime``.
+``creation_context`` and recording ``location``. Times are ``datetime`` or
+RFC 3339 ``str``.
 API errors raise ``requests.exceptions.HTTPError``. Argument errors raise
 ``RuntimeError`` (``iter_messages``) and ``ValueError`` (``create_episodes``).
 
@@ -19,8 +20,8 @@ Parameters:
 
 * ``project_id`` (str, required) — Project that owns the dataset.
 * ``name`` (str, required) — 1–100 characters. Unique in the Project, case-insensitive.
-* ``description`` (str, optional) — 1–500 characters.
-* ``episode_ids`` (list of str, optional) — At most 2,000 episode IDs.
+* ``description`` (str, optional, default None) — 1–500 characters.
+* ``episode_ids`` (list of str, optional, default None) — At most 2,000 episode IDs.
 
 Returns a dataset dict (``id``, ``project_id``, ``name``, ``description``, ``creator_org_member_id``, ``creator_api_key_id``, ``created_at``, ``updated_at``, ``episode_count``, and seed counts ``added``, ``updated``, ``removed``, ``already_present`` when episodes were supplied).
 
@@ -37,12 +38,12 @@ List datasets.
 
 Parameters:
 
-* ``project_id`` (str, optional) — Restrict to one Project.
-* ``name`` (str, optional) — Case-insensitive substring.
+* ``project_id`` (str, optional, default None) — Restrict to one Project.
+* ``name`` (str, optional, default None) — Case-insensitive substring.
 * ``sort_by`` (str, optional, default ``created_at``) — ``name``, ``created_at``, ``updated_at``, ``episode_count``.
-* ``sort_order`` (str, optional) — ``asc`` or ``desc``.
+* ``sort_order`` (str, optional, default None) — ``asc`` or ``desc``.
 * ``limit`` (int, optional, default 2000) — Page size, 0–2000.
-* ``cursor`` (str, optional) — Cursor from a previous page.
+* ``cursor`` (str, optional, default None) — Cursor from a previous page.
 
 Returns a ``Page``. Iterate with ``page.auto_paging_iter()``.
 
@@ -54,7 +55,7 @@ Returns a ``Page``. Iterate with ``page.auto_paging_iter()``.
 get_dataset
 ^^^^^^^^^^^
 
-Return one dataset, including ``episode_count``.
+Return one dataset.
 
 Parameters:
 
@@ -74,8 +75,8 @@ Patch ``name`` and/or ``description``.
 Parameters:
 
 * ``dataset_id`` (str, required) — Dataset ID.
-* ``name`` (str, optional) — 1–100 characters.
-* ``description`` (str or None, optional) — 1–500, or ``None`` to clear.
+* ``name`` (str, optional, default unchanged) — 1–100 characters.
+* ``description`` (str or None, optional, default unchanged) — 1–500, or ``None`` to clear.
 
 Returns the updated dataset dict.
 
@@ -107,13 +108,13 @@ Parameters:
 
 * ``dataset_id`` (str, required) — Dataset ID.
 * ``sort_by`` (str, optional, default ``added_at``) — ``added_at``, ``created_at``, ``start_time``, ``end_time``.
-* ``sort_order`` (str, optional) — ``asc`` or ``desc``.
+* ``sort_order`` (str, optional, default None) — ``asc`` or ``desc``.
 * ``limit`` (int, optional, default 2000) — Page size, 0–2000.
-* ``cursor`` (str, optional) — Cursor from a previous page.
-* ``start`` / ``end`` (datetime, optional) — Overlap filter. Pass both.
-* ``has_missing_recordings`` (bool, optional) — Filter by recording availability.
-* ``recording_id`` (str, optional) — Episodes containing this recording.
-* ``properties_query`` (str, optional) — ``key:value`` terms, ANDed.
+* ``cursor`` (str, optional, default None) — Cursor from a previous page.
+* ``start`` / ``end`` (datetime or str, optional, default None) — Overlap filter. Pass both.
+* ``has_missing_recordings`` (bool, optional, default None) — Filter by recording availability.
+* ``recording_id`` (str, optional, default None) — Episodes containing this recording.
+* ``properties_query`` (str, optional, default None) — ``key:value`` terms, ANDed.
 * ``include_recordings`` (bool, optional, default False) — Add ``recordings``.
 * ``include_properties`` (bool, optional, default False) — Add ``properties``.
 * ``include_creation_context`` (bool, optional, default False) — Add ``creation_context``.
@@ -129,14 +130,14 @@ update_dataset_episodes
 
 Stage draft membership. Does not commit. An ID in ``update`` cannot also
 be in ``add`` or ``remove``. An object in ``add`` must not already be in
-the draft. At least one list must be nonempty.
+the draft. At least one of ``add``, ``update``, or ``remove`` is required.
 
 Parameters:
 
 * ``dataset_id`` (str, required) — Dataset ID.
-* ``add`` (list, optional) — IDs or ``{"id", "version?"}``. Latest version if omitted. ≤ 2000.
-* ``update`` (list, optional) — Same forms as ``add``. ≤ 2000.
-* ``remove`` (list of str, optional) — Episode IDs to drop. ≤ 2000.
+* ``add`` (list, optional, default None) — IDs or ``{"id", "version?"}``. Latest version if omitted. ≤ 2000.
+* ``update`` (list, optional, default None) — Same forms as ``add``. ≤ 2000.
+* ``remove`` (list of str, optional, default None) — Episode IDs to drop. ≤ 2000.
 
 Returns ``added``, ``updated``, ``removed``, ``already_present`` (ints).
 
@@ -154,9 +155,9 @@ Page of versions (committed plus the current draft).
 Parameters:
 
 * ``dataset_id`` (str, required) — Dataset ID.
-* ``sort_order`` (str, optional) — ``asc`` or ``desc``.
+* ``sort_order`` (str, optional, default None) — ``asc`` or ``desc``.
 * ``limit`` (int, optional, default 2000) — Page size, 0–2000.
-* ``cursor`` (str, optional) — Cursor from a previous page.
+* ``cursor`` (str, optional, default None) — Cursor from a previous page.
 
 Returns a ``Page`` of version dicts. Draft ``committed_at`` is ``None``.
 
@@ -167,7 +168,7 @@ Returns a ``Page`` of version dicts. Draft ``committed_at`` is ``None``.
 get_dataset_version
 ^^^^^^^^^^^^^^^^^^^
 
-Return one version, including ``has_missing_recordings`` and count fields.
+Return one version.
 
 Parameters:
 
@@ -207,13 +208,13 @@ Parameters:
 * ``dataset_id`` (str, required) — Dataset ID.
 * ``version_number`` (int, required) — Dataset version number.
 * ``sort_by`` (str, optional, default ``added_at``) — ``added_at``, ``created_at``, ``start_time``, ``end_time``.
-* ``sort_order`` (str, optional) — ``asc`` or ``desc``.
+* ``sort_order`` (str, optional, default None) — ``asc`` or ``desc``.
 * ``limit`` (int, optional, default 2000) — Page size, 0–2000.
-* ``cursor`` (str, optional) — Cursor from a previous page.
-* ``start`` / ``end`` (datetime, optional) — Overlap filter. Pass both.
-* ``has_missing_recordings`` (bool, optional) — Filter by recording availability.
-* ``recording_id`` (str, optional) — Episodes containing this recording.
-* ``properties_query`` (str, optional) — ``key:value`` terms, ANDed.
+* ``cursor`` (str, optional, default None) — Cursor from a previous page.
+* ``start`` / ``end`` (datetime or str, optional, default None) — Overlap filter. Pass both.
+* ``has_missing_recordings`` (bool, optional, default None) — Filter by recording availability.
+* ``recording_id`` (str, optional, default None) — Episodes containing this recording.
+* ``properties_query`` (str, optional, default None) — ``key:value`` terms, ANDed.
 * ``include_recordings`` (bool, optional, default False) — Add ``recordings``.
 * ``include_properties`` (bool, optional, default False) — Add ``properties``.
 * ``include_creation_context`` (bool, optional, default False) — Add ``creation_context``.
@@ -238,7 +239,7 @@ Parameters:
 * ``version_number`` (int, required) — Target version.
 * ``base_version`` (int, required) — Base version.
 * ``limit`` (int, optional, default 2000) — Page size, 0–2000.
-* ``cursor`` (str, optional) — Cursor from a previous page.
+* ``cursor`` (str, optional, default None) — Cursor from a previous page.
 * ``include_recordings`` (bool, optional, default False) — Add ``recordings``.
 * ``include_properties`` (bool, optional, default False) — Add ``properties``.
 * ``include_creation_context`` (bool, optional, default False) — Add ``creation_context``.
@@ -261,7 +262,7 @@ Commit the draft.
 Parameters:
 
 * ``dataset_id`` (str, required) — Dataset ID.
-* ``description`` (str or None, optional) — 1–2048, or ``None`` to clear.
+* ``description`` (str or None, optional, default unchanged) — 1–2048, or ``None`` to clear.
   Omitting ``description`` keeps the draft's description.
 
 Returns ``committed`` (version dict) and ``editable_version_number``.
@@ -316,7 +317,7 @@ Parameters:
 * ``dataset_id`` (str, required) — Source dataset ID.
 * ``version_number`` (int, required) — Committed version to clone.
 * ``name`` (str, required) — 1–100, unique in the Project.
-* ``description`` (str, optional) — 1–500.
+* ``description`` (str, optional, default None) — 1–500.
 * ``include_history`` (bool, optional, default False) — Copy versions 1 through the cloned version, keeping their numbers.
 
 Returns the new dataset dict.
@@ -337,12 +338,14 @@ Parameters:
 * ``dataset_id`` (str, required) — Dataset ID.
 * ``version_number`` (int, required) — Committed version number.
 * ``output_directory`` (str or Path, required) — Empty directory, or a path that does not exist.
-* ``topics`` (list of str, optional) — Topic filter. Omit for every topic.
+* ``topics`` (list of str, optional, default None) — Topic filter. Omit for every topic.
 * ``include_properties`` (bool, optional, default False) — Add custom properties to the manifest.
 
 Returns a ``Path``. Failed episode transfers are recorded in the manifest; ``DatasetDownloadWarning`` is emitted if some episodes fail.
 
-Raises: ``RuntimeError`` for an editable version or one with unavailable recordings.
+Raises: ``RuntimeError`` if the version is editable, recordings are
+unavailable, ``output_directory`` exists and is not a directory, ``output_directory``
+is not empty, or no episodes could be downloaded.
 
 .. code-block:: python
 
@@ -401,16 +404,16 @@ Page of episodes. Returns each episode's latest version.
 
 Parameters:
 
-* ``project_id`` (str, optional) — Restrict to one Project.
-* ``start`` / ``end`` (datetime, optional) — Overlap filter. Pass both.
-* ``has_missing_recordings`` (bool, optional) — Filter by recording availability.
-* ``recording_id`` (str, optional) — Episodes containing this recording.
-* ``exact_recording_ids`` (list of str, optional) — Exact recording set, 1–50 IDs.
-* ``properties_query`` (str, optional) — ``key:value`` terms, ANDed.
+* ``project_id`` (str, optional, default None) — Restrict to one Project.
+* ``start`` / ``end`` (datetime or str, optional, default None) — Overlap filter. Pass both.
+* ``has_missing_recordings`` (bool, optional, default None) — Filter by recording availability.
+* ``recording_id`` (str, optional, default None) — Episodes containing this recording.
+* ``exact_recording_ids`` (list of str, optional, default None) — Exact recording set, 1–50 IDs.
+* ``properties_query`` (str, optional, default None) — ``key:value`` terms, ANDed.
 * ``sort_by`` (str, optional, default ``created_at``) — ``created_at``, ``start_time``, ``end_time``.
-* ``sort_order`` (str, optional) — ``asc`` or ``desc``.
+* ``sort_order`` (str, optional, default None) — ``asc`` or ``desc``.
 * ``limit`` (int, optional, default 2000) — Page size, 0–2000.
-* ``cursor`` (str, optional) — Cursor from a previous page.
+* ``cursor`` (str, optional, default None) — Cursor from a previous page.
 * ``include_recordings`` (bool, optional, default False) — Add ``recordings``.
 * ``include_properties`` (bool, optional, default False) — Add ``properties``.
 * ``include_creation_context`` (bool, optional, default False) — Add ``creation_context``.
@@ -424,16 +427,16 @@ Returns a ``Page`` of latest-version episode dicts.
 get_episode
 ^^^^^^^^^^^
 
-Return one episode. Always includes ``creation_context``.
+Return one episode.
 
 Parameters:
 
 * ``episode_id`` (str, required) — Episode ID.
-* ``version`` (int, optional) — Episode version. Latest if omitted.
+* ``version`` (int, optional, default None) — Episode version. Latest if omitted.
 * ``include_recordings`` (bool, optional, default False) — Add ``recordings``.
 * ``include_properties`` (bool, optional, default False) — Add ``properties``.
 
-Returns one episode dict. Always includes ``creation_context``.
+Returns one episode dict, including ``creation_context``.
 
 .. code-block:: python
 
@@ -442,27 +445,32 @@ Returns one episode dict. Always includes ``creation_context``.
 iter_messages
 ^^^^^^^^^^^^^
 
-Stream decoded messages. Yields ``(schema, channel, message, decoded)``.
+Stream decoded messages. Messages are returned in log-time order per
+channel. To combine topics into one sample, match them by timestamp in
+your code.
 
 Parameters:
 
-* ``device_id`` (str, optional) — Device that originated the data.
-* ``device_name`` (str, optional) — Device name. Multi-project orgs also need ``project_id``.
-* ``session_id`` (str, optional) — Session to stream.
-* ``session_key`` (str, optional) — Session key to stream.
-* ``recording_id`` (str, optional) — Recording to stream.
-* ``recording_key`` (str, optional) — Recording key to stream.
-* ``episode_id`` (str, optional) — Episode to stream. Uses its time range when ``start`` and ``end`` are omitted.
-* ``episode_version`` (int, optional) — Episode version. Requires ``episode_id``. Latest if omitted.
-* ``project_id`` (str, optional) — Project for ``device_name`` in multi-project organizations.
-* ``start`` (datetime, optional) — Inclusive start of the stream. Pass with ``end``.
-* ``end`` (datetime, optional) — Inclusive end of the stream. Pass with ``start``.
-* ``topics`` (list of str, optional) — Topic filter. Omit for every topic.
-* ``decoder_factories`` (list of DecoderFactory, optional) — Replace the client's default MCAP decoders.
-* ``replay_policy`` (str, optional) — ``lastPerChannel`` includes the most recent message on each channel from before ``start``.
-* ``replay_lookback_seconds`` (float, optional) — How far before ``start`` to look. Used with ``replay_policy="lastPerChannel"``.
+* ``device_id`` (str, optional, default None) — Device that originated the data. Requires ``start`` and ``end``.
+* ``device_name`` (str, optional, default None) — Device name. Multi-project orgs also need ``project_id``. Requires ``start`` and ``end``.
+* ``session_id`` (str, optional, default None) — Session to stream.
+* ``session_key`` (str, optional, default None) — Session key to stream.
+* ``recording_id`` (str, optional, default None) — Recording to stream.
+* ``recording_key`` (str, optional, default None) — Recording key to stream.
+* ``episode_id`` (str, optional, default None) — Episode to stream. Uses its time range when ``start`` and ``end`` are omitted.
+* ``episode_version`` (int, optional, default None) — Episode version. Requires ``episode_id``. Latest if omitted.
+* ``project_id`` (str, optional, default None) — Project for ``device_name`` in multi-project organizations.
+* ``start`` (datetime or str, optional, default None) — Inclusive start of the stream. Required with a device. Pass with ``end``.
+* ``end`` (datetime or str, optional, default None) — Inclusive end of the stream. Required with a device. Pass with ``start``.
+* ``topics`` (list of str, optional, default None) — Topic filter. Omit for every topic.
+* ``decoder_factories`` (list of DecoderFactory, optional, default None) — Replace the client's default MCAP decoders.
+* ``replay_policy`` (str, optional, default None) — ``lastPerChannel`` includes the most recent message on each channel from before ``start``.
+* ``replay_lookback_seconds`` (float, optional, default None) — How far before ``start`` to look. Used with ``replay_policy="lastPerChannel"``.
 
 Returns tuples of ``(schema, channel, message, decoded)``. JSON is decoded by default.
+
+Raises: ``RuntimeError`` if ``start`` and ``end`` are omitted when using a
+device.
 
 .. code-block:: python
 
@@ -477,16 +485,16 @@ Returns tuples of ``(schema, channel, message, decoded)``. JSON is decoded by de
 update_episode
 ^^^^^^^^^^^^^^
 
-Update one episode. Returns the episode at the resulting version.
+Update one episode.
 
 Parameters:
 
 * ``episode_id`` (str, required) — Episode ID.
-* ``applies_to_version`` (int, optional) — Reject if the latest version differs.
-* ``start_time`` (datetime, optional) — Inclusive start of the episode window.
-* ``end_time`` (datetime, optional) — Inclusive end of the episode window.
-* ``recordings`` (dict, optional) — ``{"add": [...], "remove": [...]}`` recording IDs.
-* ``properties`` (dict, optional) — Merge keys; ``None`` unsets a key.
+* ``applies_to_version`` (int, optional, default None) — Reject if the latest version differs.
+* ``start_time`` (datetime or str, optional, default None) — Inclusive start of the episode window.
+* ``end_time`` (datetime or str, optional, default None) — Inclusive end of the episode window.
+* ``recordings`` (dict, optional, default None) — ``{"add": [...], "remove": [...]}`` recording IDs.
+* ``properties`` (dict, optional, default None) — Merge keys; ``None`` unsets a key.
 
 Returns the episode dict at the resulting version.
 
@@ -520,7 +528,7 @@ Parameters:
 
 * ``episode_id`` (str, required) — Episode ID.
 * ``limit`` (int, optional, default 2000) — Page size, 0–2000.
-* ``cursor`` (str, optional) — Cursor from a previous page.
+* ``cursor`` (str, optional, default None) — Cursor from a previous page.
 
 Returns a ``Page`` of version dicts (``version``, ``created_at``,
 ``creator_org_member_id``, ``creator_api_key_id``, ``changed_fields``),
@@ -550,7 +558,7 @@ Parameters:
 * ``label`` (str, required) — Display label.
 * ``resource_type`` (str, required) — ``device``, ``event``, ``session``, or ``episode``.
 * ``value_type`` (str, required) — See above.
-* ``enum_values`` (list of str, optional) — Required for ``enum`` and ``multi-enum``.
+* ``enum_values`` (list of str, optional, default None) — Required for ``enum`` and ``multi-enum``.
 
 Returns the custom property dict.
 
@@ -571,7 +579,7 @@ List custom properties.
 
 Parameters:
 
-* ``resource_type`` (str, optional) — Filter: ``device``, ``event``, ``session``, or ``episode``.
+* ``resource_type`` (str, optional, default None) — Filter: ``device``, ``event``, ``session``, or ``episode``.
 
 Returns a list of custom property dicts.
 
@@ -602,8 +610,8 @@ Patch ``label`` and/or ``enum_values``.
 Parameters:
 
 * ``custom_property_id`` (str, required) — Custom property ID.
-* ``label`` (str, optional) — New display label.
-* ``enum_values`` (list of str, optional) — Superset of existing values; reorder or add.
+* ``label`` (str, optional, default None) — New display label.
+* ``enum_values`` (list of str, optional, default None) — Superset of existing values; reorder or add.
 
 Returns the custom property dict.
 

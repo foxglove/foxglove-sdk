@@ -16,8 +16,8 @@ uses API camelCase.
 
 List endpoints take ``limit`` (0–2000, default 2000) and ``cursor``, and
 return ``fg-pagination-next-cursor`` (and, where supported,
-``fg-pagination-previous-cursor``) headers. Compare also returns
-``nextCursor`` in the body.
+``fg-pagination-previous-cursor``) headers, except ``GET /custom-properties``,
+which takes neither. Compare also returns ``nextCursor`` in the body.
 
 Datasets
 --------
@@ -150,6 +150,33 @@ Items with ``created: false`` reuse an existing episode.
      -H "Authorization: Bearer $FOXGLOVE_API_TOKEN" \
      -H "Content-Type: application/json" \
      -d '{"projectId":"prj_123","episodes":[{"recordings":["rec_1"]}]}'
+
+Data lookup
+-----------
+
+``iter_messages`` uses these endpoints. ``POST /data/stream`` returns a
+``link``; GET that URL to read bytes.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 10 42 18 30
+
+   * - Method
+     - Path
+     - Capability
+     - Purpose
+   * - POST
+     - ``/data/stream``
+     - ``data.stream``
+     - Request an MCAP stream link
+   * - GET
+     - ``/data/topics``
+     - ``data.topics.list``
+     - List topics
+   * - GET
+     - ``/data/coverage``
+     - ``data.coverage.list``
+     - List coverage ranges
 
 Custom properties
 -----------------
