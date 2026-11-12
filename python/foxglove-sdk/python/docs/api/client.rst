@@ -18,6 +18,9 @@ recording's ``location``, keep the API's field names.
 
 The REST API that these methods call is documented at https://docs.foxglove.dev/api.
 
+.. The signatures and parameter lists below are compared with the installed foxglove-client by
+   python/foxglove/tests/test_client_reference_docs.py.
+
 .. currentmodule:: foxglove.client
 
 .. py:class:: Client
