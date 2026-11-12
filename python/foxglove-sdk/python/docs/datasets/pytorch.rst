@@ -124,9 +124,36 @@ sample counts; use an uneven-input policy such as DDP's ``join`` context.
 recording land in the same split. Save ``splits`` with your checkpoint.
 Check ``inspect_splits`` and confirm validation is not empty before training.
 
-Resize images inside ``read_episode``, before any shuffle buffer, then convert
-with :func:`~foxglove.datasets.torch.to_image_tensor`. Pair 200 Hz joint states
-with an absolute staleness tolerance of about 20 ms.
+Resize images inside ``read_episode``, then convert them with
+:func:`~foxglove.datasets.torch.to_image_tensor`. Pair each image with the
+most recent ``/joint_states`` message in the callback; ``message.log_time``
+is Unix nanoseconds, so 20 ms is ``20_000_000``.
+
+.. code-block:: python
+
+   from foxglove.datasets.torch import to_image_tensor
+
+   MAX_JOINT_AGE_NS = 20_000_000
+
+
+   def read_camera_episode(episode: EpisodeReader):
+       joints = None
+       joints_log_time = 0
+       for _schema, channel, message, payload in episode.iter_messages():
+           if channel.topic == "/joint_states":
+               joints, joints_log_time = payload, message.log_time
+               continue
+           if joints is None or channel.topic != "/camera/front":
+               continue
+           if message.log_time - joints_log_time > MAX_JOINT_AGE_NS:
+               continue
+           image = payload[::2, ::2]
+           yield {
+               "image": to_image_tensor({"image": image}),
+               "joints": joints,
+           }
+
+Pass ``topics=["/camera/front", "/joint_states"]`` to ``read_dataset``.
 
 From a clone of ``foxglove/foxglove-sdk`` (requires ``uv``)::
 
