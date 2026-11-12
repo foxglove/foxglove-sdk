@@ -2,10 +2,7 @@
 #
 # For the full list of built-in configuration values, see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
-import inspect
-import re
 from datetime import date
-from importlib.metadata import version as package_version
 from typing import Any, get_origin
 
 from docs.extensions.foxglove_autopanels import (
@@ -43,7 +40,6 @@ nitpick_ignore = [
     ("py:class", "ray.data.dataset.Dataset"),
     ("py:class", "datetime.datetime"),
     ("py:class", "datetime.timedelta"),
-    ("py:class", "enum.Enum"),
     ("py:class", "collections.abc.Iterable"),
     ("py:class", "collections.abc.Iterator"),
     ("py:class", "collections.abc.Sequence"),
@@ -55,6 +51,10 @@ nitpick_ignore = [
     ("py:class", "mcap.records.Message"),
     ("py:exc", "mcap.exceptions.DecoderNotFoundError"),
     ("py:class", "numpy.ndarray"),
+    # External types on the hand-written foxglove.client page.
+    ("py:class", "os.PathLike"),
+    ("py:class", "pathlib.Path"),
+    ("py:exc", "requests.exceptions.HTTPError"),
     # The structural type of the API client that the dataset readers accept.
     ("py:class", "foxglove.datasets.reader._Client"),
     # The sample type variable of TorchDataset.
@@ -65,18 +65,10 @@ nitpick_ignore_regex = [
     ("py:data", r"typing.*"),
     ("py:class", r"collections\.abc\.Callable"),
     ("py:class", r"Path"),
-    # Python 3.13 reports the module of pathlib.Path as pathlib._local.
-    ("py:class", r"pathlib(\._local)?\.Path"),
 ]
 
 templates_path = ["_templates"]
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
-
-# The foxglove.client page is generated from the installed foxglove-client package, so it states
-# the version it was built from.
-rst_epilog = f"""
-.. |foxglove_client_version| replace:: {package_version("foxglove-client")}
-"""
 
 # Config for sphinx_autodoc_typehints
 # https://pypi.org/project/sphinx-autodoc-typehints/
@@ -104,33 +96,6 @@ suppress_warnings = ["config.cache"]
 # Treat __init__ signatures as separate methods so we can exclude them using :exclude-members:
 autodoc_class_signature = "separated"
 
-
-def convert_client_parameter_lines(
-    _app: Sphinx,
-    _what: str,
-    name: str,
-    obj: Any,
-    _options: Any,
-    lines: list[str],
-) -> None:
-    """Rewrite ``name: description`` lines of a foxglove-client docstring as ``:param:`` fields.
-
-    foxglove-client 0.23.0 documents the parameters of ``Client.iter_messages`` and
-    ``Client.download_data`` in this form, which is not valid reStructuredText. Docstrings that
-    already use ``:param:`` are unchanged.
-    """
-    if not name.startswith("foxglove.client."):
-        return
-    try:
-        parameters = inspect.signature(obj).parameters
-    except (TypeError, ValueError):
-        return
-    for index, line in enumerate(lines):
-        match = re.match(r"(\w+): (.*)", line)
-        if match is not None and match.group(1) in parameters:
-            lines[index] = f":param {match.group(1)}: {match.group(2)}"
-
-
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
@@ -141,10 +106,6 @@ html_theme = "alabaster"
 def setup(app: Sphinx) -> dict[str, Any]:
     app.add_directive("foxglove_autopanels", AutoPanelsDirective)
     app.connect("config-inited", generate_panel_pages)
-    # Run before sphinx_autodoc_typehints (priority 500), which adds types to :param: fields.
-    app.connect(
-        "autodoc-process-docstring", convert_client_parameter_lines, priority=400
-    )
 
     return {
         "version": "0.1.0",
