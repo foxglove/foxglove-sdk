@@ -163,9 +163,9 @@ class EpisodeReader:
             indexes for object storage; separate calls open separate downloads.
         :param lookback: Optional. Additional history to request before the episode
             start, for stateful media decoding. Must be nonnegative. Only recordings
-            attached to the episode are searched; history may be unavailable. The
-            stream then includes messages logged before :attr:`start_time`, which
-            consumers must exclude from their training samples.
+            attached to the episode are searched; history may be unavailable.
+            Consumers must exclude lookback messages, which are logged before
+            :attr:`start_time`, from their training samples.
         :returns: Tuples of schema (possibly ``None``), channel, raw MCAP message,
             and decoded message payload.
         :raises ValueError: On first iteration, if ``lookback`` is negative, or

@@ -6,8 +6,8 @@ training. :py:mod:`foxglove.datasets.torch` returns a PyTorch dataset, and
 :py:mod:`foxglove.datasets.ray` returns a Ray Data dataset. Both stream the topics you select and
 call a function you provide to turn each episode's messages into samples.
 :py:mod:`foxglove.datasets.video` decodes H.264 video into RGB frames.
-:py:mod:`foxglove.datasets` defines what the two readers share: the episode reader passed to your
-function, train, validation, and test splits, and access to recordings in your own object storage.
+:py:mod:`foxglove.datasets` defines what the two readers share: the episode reader that your
+function receives, dataset splits, and access to recordings in your own object storage.
 
 The modules require Python 3.10 or later. Install the extra for each module you use:
 
