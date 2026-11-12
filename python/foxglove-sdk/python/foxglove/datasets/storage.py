@@ -20,25 +20,27 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True)
 class ObjectLocation:
-    """Location of an original recording in customer-managed storage.
-
-    ``path`` is the full object key, not the recording's display filename.
-    ``scheme`` identifies the cloud provider: ``s3``, ``gs``, or ``az`` for
-    built-in storage access. Custom stores may also accept other or absent schemes.
-    For Azure, ``bucket`` is the container and ``azure_storage_account_name``
-    identifies its account.
-    """
+    """Location of an original recording in customer-managed storage."""
 
     bucket: str
+    """Bucket that holds the object. For Azure, the container."""
+
     path: str
+    """Full object key, not the recording's display filename."""
+
     azure_storage_account_name: str | None = None
+    """For Azure, the storage account of the container."""
+
     scheme: str | None = None
+    """Cloud provider: ``s3``, ``gs``, or ``az`` for built-in storage access. Custom
+    stores may also accept other or absent schemes."""
 
 
 class ObjectStore(Protocol):
     """Worker-local storage access using the customer's credentials.
 
     Implementations may use PyArrow, fsspec, or another random-access filesystem.
+    Any object with a matching ``open`` method satisfies this protocol.
     """
 
     def open(self, location: ObjectLocation) -> IO[bytes]:
@@ -48,6 +50,9 @@ class ObjectStore(Protocol):
         The SDK buffers small reads in 64 KiB blocks. Use range reads and bounded
         caching, not a whole-object download.
         Files must remain immutable for the duration of a dataset read.
+
+        :param location: Required. The recording to open.
+        :returns: A seekable binary file handle for the object.
         """
         ...
 

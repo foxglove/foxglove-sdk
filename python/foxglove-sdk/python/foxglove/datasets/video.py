@@ -39,19 +39,29 @@ class VideoDecodeError(ValueError):
 class VideoSample(TypedDict):
     """An RGB image and the metadata of its original compressed message.
 
-    ``image`` is a writable, contiguous uint8 NumPy array of shape ``[H, W, 3]``.
-    All timestamps are integer nanoseconds since the Unix epoch. ``timestamp_ns``
-    is the video's capture timestamp; ``log_time_ns`` determines episode membership.
-    ``frame_id`` identifies the camera's coordinate frame, not a sequence number.
+    All timestamps are integer nanoseconds since the Unix epoch.
     """
 
     image: NDArray[np.uint8]
+    """Writable, contiguous uint8 NumPy array of shape ``[H, W, 3]``."""
+
     topic: str
+    """Topic of the compressed message."""
+
     channel_id: int
+    """ID of the MCAP channel of the compressed message."""
+
     timestamp_ns: int
+    """The video's capture timestamp."""
+
     log_time_ns: int
+    """Log time of the compressed message. Determines episode membership."""
+
     publish_time_ns: int
+    """Publish time of the compressed message."""
+
     frame_id: str
+    """The camera's coordinate frame, not a sequence number."""
 
 
 def _nanoseconds(value: datetime) -> int:
@@ -289,22 +299,30 @@ def decode_h264(
 ) -> Generator[VideoSample, None, None]:
     """Yield RGB frames from an episode. Requires ``foxglove-sdk[video]``.
 
-    Use as ``read_episode=decode_h264`` with PyTorch or Ray, or call inside
-    an episode callback. Each invocation opens one download and maintains
-    independent decoder state per MCAP channel.
+    Use directly as ``read_episode=decode_h264`` with PyTorch or Ray, or call
+    inside an episode callback. Each invocation opens one download and maintains
+    independent decoder state per MCAP channel. The episode closes its iterators on exit;
+    call ``close()`` to release one earlier.
 
-    :param episode: Supplies the inclusive MCAP log-time window for output frames.
-    :param topic: One selected dataset topic, or None for all selected topics.
-        Non-video schemas are ignored only when topic is None.
-    :param lookback: Nonnegative history budget, default five seconds. Searches
-        only attached recordings. Missing initialization history raises
-        VideoDecodeError.
-    :param decoder_factories: Optional MCAP deserializers created in the callback.
+    :param episode: Required. Supplies the inclusive MCAP log-time window for
+        output frames.
+    :param topic: Optional. One selected dataset topic, or None for all selected
+        topics. Non-video schemas are ignored only when topic is None.
+    :param lookback: Optional. Nonnegative history budget, default five seconds.
+        Searches only attached recordings. Missing initialization history raises
+        VideoDecodeError. Only history since the latest self-contained keyframe
+        is decoded; older slice data is not checked for corruption.
+    :param decoder_factories: Optional. MCAP deserializers created in the callback.
         None uses the client's defaults.
-    :returns: VideoSample dicts, ordered per channel.
-    :raises VideoDecodeError: if the stream isn't H.264 Annex B CompressedVideo
-        with one image per message, I/P frames, and an initial IDR keyframe
-        with SPS/PPS.
+    :returns: VideoSample dictionaries, ordered per channel, without camera
+        synchronization. Consume to exhaustion to receive buffered frames.
+    :raises VideoDecodeError: Unsupported or invalid video, or incomplete decoding.
+        Supports CompressedVideo H.264 Annex B, one image per message, no B-frames,
+        with an initial IDR keyframe containing SPS/PPS. Missing packets can cause
+        undetected corruption until the next keyframe.
+    :raises ValueError: If ``lookback`` is negative or ``topic`` is not one of the
+        dataset topics.
+    :raises RuntimeError: If the callback that received ``episode`` has ended.
     """
 
     messages = episode.iter_messages(

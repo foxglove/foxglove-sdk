@@ -139,28 +139,61 @@ def read_dataset(
     object_store_factory: ObjectStoreFactory | None = None,
     concurrency: int | None = None,
 ) -> ray.data.Dataset:
-    """Return a Ray Data dataset of sample mappings from ``read_episode``.
+    """Return a native Ray dataset of callback-produced sample mappings.
 
-    Planning fetches the episode list. Workers stream selected topics and
-    run ``read_episode``. Yield mappings with consistent column types
-    (scalars, NumPy arrays, or other Arrow-compatible values). Factories
-    and callbacks must be serializable and available on every worker.
+    Planning fetches only the episode list (ids, time windows, and, for object storage,
+    recording locations). Workers stream selected topics and execute ``read_episode``.
+    Factories and callbacks must be serializable and their dependencies available on
+    every worker.
 
-    ``include_properties=True`` loads pinned custom properties.
-    Pass ``split_config`` and ``split`` together to select a train,
-    validation, or test pool.
-
-    ``source="object_storage"`` reads indexed MCAPs from recording locations
-    with each worker's cloud credentials. Location or access errors raise.
-    ``object_store_factory`` requires ``source="object_storage"``.
-
-    ``concurrency`` caps concurrent read tasks. Block construction follows
-    Ray's ``DataContext.target_max_block_size``. Large samples, prefetching,
-    and concurrent tasks can use more memory than that setting.
-    Read task retries rerun callbacks; keep callbacks side-effect free.
-    Setting ``target_max_block_size`` to ``None`` buffers an entire task.
-
-    Override ``client_factory`` for another token or host.
+    :param dataset_id: Required. ID of the dataset.
+    :param version: Required. Number of a committed dataset version.
+    :param topics: Required. Topics to stream. Must be nonempty.
+    :param read_episode: Required. Callback that receives each
+        :class:`~foxglove.datasets.EpisodeReader` and yields sample mappings.
+        Mappings (including TypedDict samples) are materialized as dictionaries for
+        Ray. Use consistent column types containing scalars, NumPy arrays, or other
+        Arrow-compatible values. Read task retries rerun callbacks, so callbacks
+        should not perform external side effects.
+    :param source: Optional. ``"foxglove"`` downloads messages through Foxglove.
+        ``"object_storage"`` reads indexed MCAPs directly from S3, GCS, or Azure.
+        The SDK selects the filesystem from recording locations and uses each
+        worker's cloud credentials. The MCAP files must have a summary, chunk
+        indexes, and message indexes. Missing locations, unsupported schemes, and
+        access failures raise errors without falling back to Foxglove downloads.
+    :param split_config: Optional. Together with ``split``, selects a
+        recording-safe train, validation, or test pool before task partitioning.
+        See :class:`foxglove.datasets.DatasetSplit`.
+    :param split: Optional. The pool to read: ``"train"``, ``"validation"``, or
+        ``"test"``. Requires ``split_config``.
+    :param include_properties: Optional. ``True`` fetches each episode's
+        properties from its pinned version for ``EpisodeReader.properties``. They
+        are not fetched by default.
+    :param client_factory: Optional. Callable that returns the API client,
+        overriding API authentication or endpoints. The default client uses
+        ``FOXGLOVE_API_TOKEN``. For object storage the API client factory is only
+        used during planning and is not serialized.
+    :param object_store_factory: Optional. Callable that returns an
+        :class:`~foxglove.datasets.ObjectStore`, overriding built-in storage.
+        Requires ``source="object_storage"``. Factories used by workers must be
+        serializable. No storage clients or open files are serialized in the read
+        tasks.
+    :param concurrency: Optional. Caps concurrent read tasks. By default, Ray
+        decides.
+    :returns: A Ray dataset whose rows are the mappings that ``read_episode``
+        yields. Block construction follows Ray's
+        ``DataContext.target_max_block_size``. Ray can combine blocks and buffer
+        multiple episodes before delivering output. This target is not a memory
+        ceiling: large samples, prefetching, and concurrent tasks can exceed it.
+        Setting it to ``None`` allows an entire task to be buffered.
+    :raises ValueError: If an argument is invalid, ``FOXGLOVE_API_TOKEN`` is not
+        set and no ``client_factory`` is given, or the version is not committed or
+        contains missing recordings.
+    :raises RuntimeError: When the dataset is executed, if ``read_episode`` or a
+        message stream raises, or ``read_episode`` yields a value that is not a
+        mapping. The message names the episode, dataset, and version. Ray reports
+        it as a ``RayTaskError`` that is also a ``RuntimeError`` and whose message
+        contains the original traceback.
     """
     return ray.data.read_datasource(
         _Datasource(

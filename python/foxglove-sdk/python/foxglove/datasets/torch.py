@@ -23,10 +23,13 @@ _T = TypeVar("_T")
 def to_image_tensor(frame: Mapping[str, Any]) -> Tensor:
     """Convert channels-last images to a contiguous channels-first tensor.
 
-    Accepts a sample or batch whose ``image`` is a NumPy array or Tensor shaped
-    ``[..., H, W, 3]``; returns ``[..., 3, H, W]``. Preserves dtype and device.
     Call once, either in the episode callback or after DataLoader. Resizing,
     normalization, and device placement remain up to the training pipeline.
+
+    :param frame: Required. A sample or batch whose ``image`` is a NumPy array or
+        Tensor shaped ``[..., H, W, 3]``.
+    :returns: The image shaped ``[..., 3, H, W]``. Preserves dtype and device.
+    :raises ValueError: If ``image`` is not shaped ``[..., H, W, 3]``.
     """
     image = as_tensor(frame["image"])
     if image.ndim < 3 or image.shape[-1] != 3:
@@ -65,9 +68,14 @@ class TorchDataset(IterableDataset[_T]):
     def set_epoch(self, epoch: int) -> None:
         """Select the epoch for the next iteration (initially zero).
 
-        ``epoch`` must be a nonnegative signed 64-bit integer. Set it in every
-        rank before starting the next DataLoader iteration, after completing the
-        previous pass. Active iterators retain the order they started with.
+        Set it in every rank before starting the next DataLoader iteration, after
+        completing the previous pass. Active iterators retain the order they
+        started with. The epoch changes the episode order only when the dataset
+        was created with ``shuffle=True``.
+
+        :param epoch: Required. A nonnegative signed 64-bit integer.
+        :raises TypeError: If ``epoch`` is not an integer.
+        :raises ValueError: If ``epoch`` is negative or greater than ``2**63 - 1``.
         """
         if isinstance(epoch, bool) or not isinstance(epoch, int):
             raise TypeError("epoch must be an integer")
@@ -107,29 +115,73 @@ def read_dataset(
     shuffle: bool = False,
     seed: int | None = None,
 ) -> TorchDataset[_T]:
-    """Return a :class:`TorchDataset` over a committed version.
+    """Plan a topic-filtered dataset; download messages only during iteration.
 
-    Planning fetches the episode list. Messages stream during iteration.
-    ``read_episode`` converts each :class:`foxglove.datasets.EpisodeReader` into samples.
-    Use DataLoader's ``collate_fn`` for custom sample types.
+    Planning fetches only the episode list (ids, time windows, and, for object
+    storage, recording locations). Each new iteration rereads data.
 
-    ``include_properties=True`` loads pinned custom properties.
-    Pass ``split_config`` and ``split`` together to select a train,
-    validation, or test pool.
-
-    ``source="object_storage"`` reads indexed MCAPs from recording locations
-    with the worker's cloud credentials. Location or access errors raise.
-    Use DataLoader's ``spawn`` multiprocessing context with cloud storage.
-    ``object_store_factory`` requires ``source="object_storage"``. Worker
-    factories and callbacks must be pickleable.
-
-    ``shuffle=True`` permutes episodes with ``seed + epoch`` (default seed 0)
-    before rank and worker partitioning. Samples within each episode keep
-    callback order. Shuffling holds only episode metadata in memory.
-    Call :meth:`TorchDataset.set_epoch` between completed DataLoader passes.
-
-    Override ``client_factory`` for another token or host. Rank and world
-    size are captured here or supplied together.
+    :param dataset_id: Required. ID of the dataset.
+    :param version: Required. Number of a committed dataset version.
+    :param topics: Required. Topics to stream. Must be nonempty.
+    :param read_episode: Required. Callback that receives each
+        :class:`~foxglove.datasets.EpisodeReader` and yields samples, such as
+        tensors, tuples, or dictionaries. Use DataLoader's ``collate_fn`` for
+        custom sample types.
+    :param source: Optional. ``"foxglove"`` downloads messages through Foxglove.
+        ``"object_storage"`` reads indexed MCAPs from S3, GCS, or Azure using
+        recording locations and the worker's cloud credentials. No filesystem
+        configuration is needed. The MCAP files must have a summary, chunk
+        indexes, and message indexes. Missing locations, unsupported schemes, and
+        access failures raise errors without falling back to Foxglove downloads.
+        Use DataLoader's ``spawn`` multiprocessing context with cloud storage.
+    :param split_config: Optional. Together with ``split``, selects a
+        recording-safe train, validation, or test pool before worker partitioning.
+        See :class:`foxglove.datasets.DatasetSplit`.
+    :param split: Optional. The pool to read: ``"train"``, ``"validation"``, or
+        ``"test"``. Requires ``split_config``.
+    :param include_properties: Optional. ``True`` fetches each episode's
+        properties from its pinned version for ``EpisodeReader.properties``. They
+        are not fetched by default.
+    :param client_factory: Optional. Callable that returns the API client, for
+        custom authentication or endpoints. The default client reads
+        ``FOXGLOVE_API_TOKEN`` from the environment. The API client factory is
+        used only during object storage planning and is not serialized; in default
+        mode it also runs in each consuming process.
+    :param object_store_factory: Optional. Callable that returns an
+        :class:`~foxglove.datasets.ObjectStore`, overriding built-in storage.
+        Requires ``source="object_storage"``. Factories and callbacks used by
+        workers must be pickleable.
+    :param rank: Optional. Distributed rank of this process. Supply together with
+        ``world_size``. If both are omitted, they are captured here from
+        ``torch.distributed``, before DataLoader workers start. If
+        ``torch.distributed`` is not initialized, rank 0 and world size 1 are used.
+    :param world_size: Optional. Number of distributed ranks. Each episode is read
+        by one rank and one of its DataLoader workers. Episodes can yield unequal
+        sample counts: use an uneven-input training policy such as DDP's join
+        context.
+    :param shuffle: Optional. ``True`` permutes episode metadata using
+        ``seed + epoch`` before partitioning ranks and workers. The same seed,
+        epoch, and committed episode list produce the same permutation; all ranks
+        must use the same seed and epoch. Call :meth:`TorchDataset.set_epoch`
+        between completed passes (initial epoch zero). Without shuffling, episodes
+        retain sorted ID order. Samples within each episode keep callback order;
+        this is not uniform sample shuffling or full training-run reproducibility.
+        Shuffling uses O(number of episodes) metadata references, without
+        buffering message payloads. DataLoader shuffling and DistributedSampler do
+        not apply to this iterable.
+    :param seed: Optional. Shuffle seed. Must be a nonnegative integer and requires
+        ``shuffle=True`` when supplied. If omitted or ``None``, shuffling uses seed
+        zero.
+    :returns: An iterable dataset of the samples that ``read_episode`` yields.
+    :raises TypeError: If ``shuffle`` is not a bool or ``seed`` is not an integer.
+    :raises ValueError: If an argument is invalid, ``FOXGLOVE_API_TOKEN`` is not
+        set and no ``client_factory`` is given, or the version is not committed or
+        contains missing recordings.
+    :raises RuntimeError: While iterating, if ``read_episode`` or a message stream
+        raises. The message names the episode, dataset, and version, and the
+        original exception is its ``__cause__``. DataLoader worker processes
+        report the error to the main process as a new ``RuntimeError`` whose
+        message contains the original traceback.
     """
     if not isinstance(shuffle, bool):
         raise TypeError("shuffle must be a bool")

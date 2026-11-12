@@ -91,6 +91,7 @@ class EpisodeReader:
     usable only until that callback's iterator finishes or is closed. Message tuples
     are the client's ``(schema, channel, message, decoded_message)`` values. Create
     custom message decoders inside the callback and pass them to :meth:`iter_messages`.
+    Media decoding (such as H.264 to images) is a separate processing step.
     """
 
     def __init__(
@@ -146,24 +147,33 @@ class EpisodeReader:
         topics: Sequence[str] | None = None,
         lookback: timedelta = timedelta(0),
     ) -> Generator[tuple[Schema | None, Channel, Message, Any], None, None]:
-        """Stream the selected topics in log-time order.
+        """Stream the selected topics in log-time order without buffering the episode.
 
-        Each invocation opens a new stream on first iteration. Repeated invocations
-        reread data. Active streams close when the callback ends.
+        Each invocation validates its arguments and opens a new stream on first
+        iteration. Repeated invocations redownload data. Active streams are closed
+        when the callback ends. Message context and stream order are preserved for
+        stateful processing.
 
-        :param decoder_factories: MCAP decoder factories for deserialization.
-            ``None`` uses the client's default decoders; an explicit list replaces
-            them. Construct factories inside the callback so their state stays
-            local to the worker and episode.
-        :param topics: Optional nonempty subset of the dataset topics.
-        :param lookback: Additional history before the episode start, for
-            stateful media decoding. Must be nonnegative. Only recordings
-            attached to the episode are searched. The stream can include
-            messages from before the episode start. When you yield samples,
-            keep those whose ``message.log_time`` (Unix nanoseconds) is at
-            or after the episode start. ``decode_h264`` already does this.
+        :param decoder_factories: Optional. MCAP decoder factories used for message
+            deserialization. ``None`` uses the client's default decoders; an explicit
+            list replaces them. Construct factories inside the callback so their
+            state stays local to the worker and episode. This does not decode media
+            payloads into images.
+        :param topics: Optional. Nonempty subset of the dataset topics; ``None``
+            streams all of them. Filtering happens on the server or through MCAP
+            indexes for object storage; separate calls open separate downloads.
+        :param lookback: Optional. Additional history to request before the episode
+            start, for stateful media decoding. Must be nonnegative. Only recordings
+            attached to the episode are searched; history may be unavailable. The
+            stream then includes messages logged before :attr:`start_time`, which
+            consumers must exclude from their training samples.
         :returns: Tuples of schema (possibly ``None``), channel, raw MCAP message,
             and decoded message payload.
+        :raises ValueError: If ``lookback`` is negative, or ``topics`` is empty or
+            not a subset of the dataset topics.
+        :raises RuntimeError: If the callback that received this reader has ended.
+        :raises mcap.exceptions.DecoderNotFoundError: If no decoder factory handles
+            the encoding of a message.
         """
         if self._closed:
             raise RuntimeError("Episode reader is closed")
@@ -430,11 +440,23 @@ def inspect_splits(
 
     Uses the same assignment as the PyTorch and Ray readers, without downloading
     messages or requiring either framework. Counts cover the whole committed
-    version, before worker/rank partitioning. Proportions are probabilities
-    per connected group.
+    version, before worker/rank partitioning. Check for empty or imbalanced sets
+    before training: proportions are probabilities per connected group, rather
+    than exact episode or sample fractions. Sample counts are unknown until the
+    episode callback runs.
 
-    The default client uses ``FOXGLOVE_API_TOKEN``. Override ``client_factory``
-    for custom authentication or endpoints, as with ``read_dataset``.
+    :param dataset_id: Required. ID of the dataset.
+    :param version: Required. Number of a committed dataset version.
+    :param split_config: Required. Split configuration to inspect.
+    :param client_factory: Optional. Callable that returns the API client, for
+        custom authentication or endpoints, as with ``read_dataset``. The default
+        client uses ``FOXGLOVE_API_TOKEN``.
+    :returns: The :class:`~foxglove.datasets.SplitSummary` of each split, keyed by
+        ``"train"``, ``"validation"``, and ``"test"``.
+    :raises ValueError: If an argument is invalid, ``FOXGLOVE_API_TOKEN`` is not
+        set and no ``client_factory`` is given, the version is not committed or
+        contains missing recordings, an episode has no recording IDs, or
+        ``split_config.groups`` does not cover exactly the version's episodes.
     """
     if not isinstance(split_config, DatasetSplit):
         raise ValueError("split_config must be a DatasetSplit")
