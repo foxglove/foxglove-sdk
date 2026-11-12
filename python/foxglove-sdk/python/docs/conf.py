@@ -3,6 +3,7 @@
 # For the full list of built-in configuration values, see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 from datetime import date
+from importlib.metadata import version as package_version
 from typing import Any, get_origin
 
 from docs.extensions.foxglove_autopanels import (
@@ -61,10 +62,18 @@ nitpick_ignore_regex = [
     ("py:data", r"typing.*"),
     ("py:class", r"collections\.abc\.Callable"),
     ("py:class", r"Path"),
+    # Python 3.13 reports the module of pathlib.Path as pathlib._local.
+    ("py:class", r"pathlib(\._local)?\.Path"),
 ]
 
 templates_path = ["_templates"]
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
+
+# The foxglove.client page is generated from the installed foxglove-client package, so it states
+# the version it was built from.
+rst_epilog = f"""
+.. |foxglove_client_version| replace:: {package_version("foxglove-client")}
+"""
 
 # Config for sphinx_autodoc_typehints
 # https://pypi.org/project/sphinx-autodoc-typehints/

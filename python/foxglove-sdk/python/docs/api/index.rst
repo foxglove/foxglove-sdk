@@ -349,3 +349,14 @@ foxglove.datasets.video
    :members:
    :show-inheritance:
 
+
+foxglove.client (foxglove-client package)
+-----------------------------------------
+
+``foxglove.client`` is the Python client for the Foxglove API. It is published separately from the
+SDK, as the `foxglove-client <https://pypi.org/project/foxglove-client/>`__ package.
+
+.. toctree::
+   :maxdepth: 1
+
+   Dataset and episode methods <./client>
