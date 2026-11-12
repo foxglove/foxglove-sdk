@@ -182,9 +182,13 @@ def read_dataset(
         ``torch.distributed`` is not initialized, rank 0 and world size 1 are used.
     :param world_size: Optional. Number of distributed ranks. Episodes are divided
         among ranks, then among each rank's DataLoader workers, so each episode is
-        read once per pass. Ranks can yield different numbers of samples, so the
-        training loop must support uneven inputs, for example with DDP's ``join``
-        context.
+        read once per pass. ``read_dataset`` already splits episodes by rank, so
+        do not add a ``DistributedSampler``. Ranks can get different numbers of
+        batches, because each rank reads whole episodes and episodes differ in
+        length. Before each optimizer step, call ``torch.distributed.all_reduce``
+        with ``ReduceOp.MIN`` on a tensor that is 1 if the rank has a batch and 0
+        if it does not, and stop the epoch on every rank when the result is 0.
+        Every rank then takes the same number of optimizer steps.
     :param shuffle: Optional. ``True`` permutes episode metadata using
         ``seed + epoch`` before partitioning ranks and workers. The same seed,
         epoch, and committed episode list produce the same permutation; all ranks
