@@ -220,7 +220,10 @@ def read_dataset(
                 yield {"log_time": message.log_time}
 
         ds = read_dataset(
-            "dset_123", version=2, topics=["/camera"], read_episode=read_episode
+            "dset_123",
+            version=2,
+            topics=["/camera"],
+            read_episode=read_episode,
         )
     """
     if not isinstance(shuffle, bool):

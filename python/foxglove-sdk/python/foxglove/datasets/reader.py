@@ -177,7 +177,10 @@ class EpisodeReader:
 
             def read_episode(episode):
                 for schema, channel, message, payload in episode.iter_messages():
-                    yield {"topic": channel.topic, "log_time": message.log_time}
+                    yield {
+                        "topic": channel.topic,
+                        "log_time": message.log_time,
+                    }
         """
         if self._closed:
             raise RuntimeError("Episode reader is closed")
@@ -464,8 +467,11 @@ def inspect_splits(
 
         from foxglove.datasets import DatasetSplit, inspect_splits
 
-        summaries = inspect_splits("dset_123", version=2, split_config=DatasetSplit())
-        print(summaries["train"].episode_count, summaries["train"].group_count)
+        summaries = inspect_splits(
+            "dset_123", version=2, split_config=DatasetSplit()
+        )
+        train = summaries["train"]
+        print(train.episode_count, train.group_count)
     """
     if not isinstance(split_config, DatasetSplit):
         raise ValueError("split_config must be a DatasetSplit")

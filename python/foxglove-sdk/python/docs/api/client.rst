@@ -59,7 +59,9 @@ Datasets
    .. code-block:: python
 
       dataset = client.create_dataset(
-          project_id="prj_123", name="Training candidates", episode_ids=["ep_1"]
+          project_id="prj_123",
+          name="Training candidates",
+          episode_ids=["ep_1"],
       )
 
 .. py:method:: Client.get_datasets(*, project_id=None, name=None, sort_by=None, sort_order=None, limit=None, cursor=None)
@@ -80,7 +82,9 @@ Datasets
 
    .. code-block:: python
 
-      for d in client.get_datasets(project_id="prj_123").auto_paging_iter():
+      for d in client.get_datasets(
+          project_id="prj_123"
+      ).auto_paging_iter():
           print(d["id"], d["name"], d["episode_count"])
 
 .. py:method:: Client.get_dataset(*, dataset_id)
@@ -227,7 +231,9 @@ Datasets
 
    .. code-block:: python
 
-      v = client.get_dataset_version(dataset_id="dset_123", version_number=2)
+      v = client.get_dataset_version(
+          dataset_id="dset_123", version_number=2
+      )
 
 .. py:method:: Client.update_dataset_version(*, dataset_id, version_number, description)
 
@@ -244,7 +250,11 @@ Datasets
 
    .. code-block:: python
 
-      client.update_dataset_version(dataset_id="dset_123", version_number=2, description=None)
+      client.update_dataset_version(
+          dataset_id="dset_123",
+          version_number=2,
+          description=None,
+      )
 
 .. py:method:: Client.get_dataset_version_episodes(*, dataset_id, version_number, sort_by=None, sort_order=None, limit=None, cursor=None, start=None, end=None, has_missing_recordings=None, recording_id=None, properties_query=None, include_recordings=False, include_properties=False, include_creation_context=False)
 
@@ -334,7 +344,9 @@ Datasets
 
    .. code-block:: python
 
-      client.commit_dataset(dataset_id="dset_123", description="Labels batch 12")
+      client.commit_dataset(
+          dataset_id="dset_123", description="Labels batch 12"
+      )
 
 .. py:method:: Client.discard_dataset(*, dataset_id)
 
@@ -365,7 +377,9 @@ Datasets
 
    .. code-block:: python
 
-      client.restore_dataset_version(dataset_id="dset_123", version_number=1)
+      client.restore_dataset_version(
+          dataset_id="dset_123", version_number=1
+      )
 
 .. py:method:: Client.clone_dataset_version(*, dataset_id, version_number, name, description=None, include_history=None)
 
@@ -385,7 +399,11 @@ Datasets
 
    .. code-block:: python
 
-      client.clone_dataset_version(dataset_id="dset_123", version_number=2, name="eval-holdout")
+      client.clone_dataset_version(
+          dataset_id="dset_123",
+          version_number=2,
+          name="eval-holdout",
+      )
 
 .. py:method:: Client.download_dataset(*, dataset_id, version_number, output_directory, topics=None, include_properties=False)
 
@@ -412,7 +430,11 @@ Datasets
 
    .. code-block:: python
 
-      client.download_dataset(dataset_id="dset_123", version_number=2, output_directory="out")
+      client.download_dataset(
+          dataset_id="dset_123",
+          version_number=2,
+          output_directory="out",
+      )
 
 Episodes
 --------
@@ -446,8 +468,12 @@ Episodes
           episodes=[
               {
                   "recordings": ["rec_1"],
-                  "start_time": datetime(2026, 11, 2, 18, 0, tzinfo=timezone.utc),
-                  "end_time": datetime(2026, 11, 2, 18, 5, tzinfo=timezone.utc),
+                  "start_time": datetime(
+                      2026, 11, 2, 18, 0, tzinfo=timezone.utc
+                  ),
+                  "end_time": datetime(
+                      2026, 11, 2, 18, 5, tzinfo=timezone.utc
+                  ),
                   "properties": {"task": "fold_towel"},
               }
           ],
@@ -539,7 +565,9 @@ Episodes
 
    .. code-block:: python
 
-      client.update_episode(episode_id="ep_123", properties={"outcome": "success"})
+      client.update_episode(
+          episode_id="ep_123", properties={"outcome": "success"}
+      )
 
 .. py:method:: Client.update_episodes(*, episodes)
 
@@ -556,7 +584,14 @@ Episodes
 
    .. code-block:: python
 
-      client.update_episodes(episodes=[{"id": "ep_123", "properties": {"outcome": "success"}}])
+      client.update_episodes(
+          episodes=[
+              {
+                  "id": "ep_123",
+                  "properties": {"outcome": "success"},
+              }
+          ]
+      )
 
 .. py:method:: Client.delete_episode(*, episode_id)
 
@@ -689,7 +724,9 @@ Episodes
 
    .. code-block:: python
 
-      data = client.download_data(episode_id="ep_123", topics=["/camera/front"])
+      data = client.download_data(
+          episode_id="ep_123", topics=["/camera/front"]
+      )
 
 .. py:method:: Client.get_topics(*, device_id=None, device_name=None, start=None, end=None, include_schemas=False, project_id=None, session_id=None, session_key=None, episode_id=None, limit=None, offset=None, recording_id=None, recording_key=None, episode_version=None, sort_by=None, sort_order=None)
 
@@ -844,7 +881,9 @@ The ``properties`` of an episode use keys that are defined as custom properties 
 
    .. code-block:: python
 
-      client.update_custom_property(custom_property_id="cp_123", label="Outcome")
+      client.update_custom_property(
+          custom_property_id="cp_123", label="Outcome"
+      )
 
 .. py:method:: Client.delete_custom_property(*, custom_property_id)
 

@@ -332,7 +332,10 @@ def decode_h264(
         from foxglove.datasets.torch import read_dataset
 
         ds = read_dataset(
-            "dset_123", version=2, topics=["/camera"], read_episode=decode_h264
+            "dset_123",
+            version=2,
+            topics=["/camera"],
+            read_episode=decode_h264,
         )
     """
 
