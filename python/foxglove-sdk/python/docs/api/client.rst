@@ -20,9 +20,8 @@ The REST API that these methods call is documented at https://docs.foxglove.dev/
 
 The examples on this page use the ``client`` that the first example creates.
 
-.. The signatures and parameter lists below are compared with the installed foxglove-client by
-   python/foxglove/tests/test_client_reference_docs.py. The calls in the examples are checked by
-   python/foxglove/tests/test_reference_examples.py.
+.. The signatures below are compared with the installed foxglove-client by
+   python/foxglove/tests/test_client_reference_docs.py.
 
 .. currentmodule:: foxglove.client
 

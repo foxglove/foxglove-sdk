@@ -24,8 +24,6 @@ environment variable to an API key:
 This script connects to Foxglove, lists the versions of a dataset, reads a committed version, and
 takes one batch of video frames from the ``/camera`` topic:
 
-.. The calls in this example are checked by python/foxglove/tests/test_reference_examples.py.
-
 .. code-block:: python
 
    import os
