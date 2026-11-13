@@ -57,7 +57,7 @@ class DatasetSplit:
 
         from foxglove.datasets import DatasetSplit, inspect_splits
 
-        split = DatasetSplit(train=0.8, validation=0.1, test=0.1, seed=0)
+        split = DatasetSplit(train=0.8, validation=0.1, test=0.1)
         summaries = inspect_splits(
             "dset_123", version=2, split_config=split
         )

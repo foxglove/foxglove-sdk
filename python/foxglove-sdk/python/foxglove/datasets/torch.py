@@ -85,19 +85,12 @@ class TorchDataset(IterableDataset[_T]):
 
         Example::
 
-            from foxglove.datasets.torch import read_dataset
+            from torch.utils.data import DataLoader
 
-            def read_episode(episode):
-                yield {"id": episode.id}
-
-            ds = read_dataset(
-                "dset_123",
-                version=2,
-                topics=["/camera"],
-                read_episode=read_episode,
-                shuffle=True,
-            )
-            ds.set_epoch(1)
+            for epoch in range(3):
+                ds.set_epoch(epoch)
+                for batch in DataLoader(ds, batch_size=8):
+                    ...
         """
         if isinstance(epoch, bool) or not isinstance(epoch, int):
             raise TypeError("epoch must be an integer")
@@ -219,17 +212,10 @@ def read_dataset(
     Example::
 
         from foxglove.datasets.torch import read_dataset
+        from foxglove.datasets.video import decode_h264
 
-        def read_episode(episode):
-            for schema, channel, message, payload in episode.iter_messages():
-                yield {"log_time": message.log_time}
-
-        ds = read_dataset(
-            "dset_123",
-            version=2,
-            topics=["/camera"],
-            read_episode=read_episode,
-        )
+        ds = read_dataset("dset_123", version=2, topics=["/camera"],
+                          read_episode=decode_h264)
     """
     if not isinstance(shuffle, bool):
         raise TypeError("shuffle must be a bool")

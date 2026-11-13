@@ -201,17 +201,10 @@ def read_dataset(
     Example::
 
         from foxglove.datasets.ray import read_dataset
+        from foxglove.datasets.video import decode_h264
 
-        def read_episode(episode):
-            for schema, channel, message, payload in episode.iter_messages():
-                yield {"log_time": message.log_time}
-
-        ds = read_dataset(
-            "dset_123",
-            version=2,
-            topics=["/camera"],
-            read_episode=read_episode,
-        )
+        ds = read_dataset("dset_123", version=2, topics=["/camera"],
+                          read_episode=decode_h264)
     """
     return ray.data.read_datasource(
         _Datasource(

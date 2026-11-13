@@ -58,9 +58,8 @@ class ObjectStore(Protocol):
 
             class LocalStore:
                 def open(self, location):
-                    return open(
-                        f"/mnt/{location.bucket}/{location.path}", "rb"
-                    )
+                    path = f"/mnt/{location.bucket}/{location.path}"
+                    return open(path, "rb")
         """
         ...
 

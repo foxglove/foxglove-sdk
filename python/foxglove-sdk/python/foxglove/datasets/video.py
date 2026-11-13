@@ -328,15 +328,11 @@ def decode_h264(
 
     Example::
 
-        from foxglove.datasets.video import decode_h264
         from foxglove.datasets.torch import read_dataset
+        from foxglove.datasets.video import decode_h264
 
-        ds = read_dataset(
-            "dset_123",
-            version=2,
-            topics=["/camera"],
-            read_episode=decode_h264,
-        )
+        ds = read_dataset("dset_123", version=2, topics=["/camera"],
+                          read_episode=decode_h264)
     """
 
     messages = episode.iter_messages(
