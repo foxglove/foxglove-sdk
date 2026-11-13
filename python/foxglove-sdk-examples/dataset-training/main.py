@@ -1,4 +1,4 @@
-"""Read a committed Foxglove dataset with PyTorch or Ray.
+"""Read a Foxglove dataset version with PyTorch or Ray.
 
 The selected JSON topic contains speed, acceleration, and steering numbers.
 Episodes whose "quality" property is "rejected" are skipped.

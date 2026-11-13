@@ -398,8 +398,6 @@ def _version_episodes(
         raise ValueError("version must be a positive integer")
     client = client_factory()
     info = client.get_dataset_version(dataset_id=dataset_id, version_number=version)
-    if info["committed_at"] is None:
-        raise ValueError("Dataset version must be committed")
     if info.get("has_missing_recordings", False):
         raise ValueError("Dataset version contains missing recordings")
     page = client.get_dataset_version_episodes(

@@ -132,18 +132,25 @@ def test_rejects_invalid_version() -> None:
         _plan("dataset", 0, ["/camera"], Client)
 
 
-@pytest.mark.parametrize(
-    "info, message",
-    [
-        ({"committed_at": None}, "committed"),
-        ({"committed_at": "date", "has_missing_recordings": True}, "missing"),
-    ],
-)
-def test_rejects_editable_or_incomplete_version(
-    monkeypatch: pytest.MonkeyPatch, info: dict[str, Any], message: str
+def test_reads_uncommitted_draft_version(monkeypatch: pytest.MonkeyPatch) -> None:
+    committed = _plan("dataset", 7, ["/camera"], Client)
+    monkeypatch.setattr(
+        Client,
+        "get_dataset_version",
+        lambda *args, **kwargs: {"committed_at": None, "has_missing_recordings": False},
+    )
+    draft = _plan("dataset", 7, ["/camera"], Client)
+    assert draft.episodes
+    assert draft.episodes == committed.episodes
+
+
+@pytest.mark.parametrize("committed_at", ["date", None])
+def test_rejects_version_with_missing_recordings(
+    monkeypatch: pytest.MonkeyPatch, committed_at: str | None
 ) -> None:
+    info = {"committed_at": committed_at, "has_missing_recordings": True}
     monkeypatch.setattr(Client, "get_dataset_version", lambda *args, **kwargs: info)
-    with pytest.raises(ValueError, match=message):
+    with pytest.raises(ValueError, match="missing"):
         _plan("dataset", 7, ["/camera"], Client)
 
 

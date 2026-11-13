@@ -143,7 +143,7 @@ class DatasetSplit:
         if groups is not None:
             if groups.keys() != recordings.keys():
                 raise ValueError(
-                    "Split groups must cover exactly the committed version's episodes"
+                    "Split groups must cover exactly the dataset version's episodes"
                 )
             group_owners: dict[str, str] = {}
             for episode_id, group in groups.items():
