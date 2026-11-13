@@ -1,6 +1,7 @@
 """Topic-filtered episode readers for optional Ray and PyTorch integrations.
 
-These APIs are experimental and unstable and may change in backward-incompatible ways.
+For a short script that reads a dataset, see the :ref:`Datasets quickstart
+<datasets-quickstart>`.
 """
 
 from .reader import EpisodeReader, inspect_splits

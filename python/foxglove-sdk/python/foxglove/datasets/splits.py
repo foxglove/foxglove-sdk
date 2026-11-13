@@ -14,40 +14,54 @@ SplitName = Literal["train", "validation", "test"]
 
 @dataclass(frozen=True)
 class SplitSummary:
-    """Metadata counts for one split, before rank or worker partitioning.
-
-    ``group_count`` counts connected recording groups, including custom grouping
-    constraints. ``episode_count`` counts their episodes. Neither count measures
-    samples or frames, which depend on decoding and the episode callback.
-    """
+    """Metadata counts for one split, before rank or worker partitioning."""
 
     group_count: int
+    """Number of connected recording groups in the split, including custom grouping
+    constraints."""
+
     episode_count: int
+    """Number of episodes in the split."""
 
 
 @dataclass(frozen=True)
 class DatasetSplit:
     """Assign whole recording groups to train, validation, and test sets.
 
-    Proportions must be finite, nonnegative, and sum to one. Each group's hash
-    selects a split with these probabilities; counts are not exact, and small
-    sets can be empty. Use :func:`foxglove.datasets.inspect_splits` to check
-    group and episode counts before training or evaluation.
-    ``seed`` is independent of epoch shuffling. ``groups`` optionally maps every
-    episode ID to a session, site, or other group ID. These constraints are added
-    to recording grouping, so shared recordings always stay together. The mapping
-    is snapshotted as sorted, immutable episode/group pairs; these pairs are also
-    accepted as sequences when restoring from ``dataclasses.asdict`` or JSON.
+    Episodes connected by a shared recording form one group. Each group is
+    assigned according to a hash of its smallest custom group ID, or its smallest
+    recording ID when ``groups`` is omitted, together with ``seed`` and the
+    configured probabilities. Membership is reproducible for a committed dataset
+    version and configuration, independent of API order, framework, source, epoch,
+    ranks, and workers. A draft's episodes can change until the draft is
+    committed, and its membership can change with them.
 
-    Membership is reproducible for a committed version and this configuration,
-    independent of API order, framework, source, epoch, ranks, and workers. An
-    uncommitted draft's episodes can change between reads, and so can its membership.
-    Each connected group is hashed by its smallest custom group ID when ``groups``
-    is provided, otherwise by its smallest recording ID. Use stable custom IDs:
-    adding recordings within an existing custom group preserves membership, but
-    renaming custom IDs can change it. Merging groups or changing the smallest
-    ID in another version can also change assignments. Save the version and split
-    configuration with model artifacts.
+    :param train: Optional. Probability that a group is assigned to the training
+        set. The three proportions must be finite, nonnegative, and sum to one.
+    :param validation: Optional. Probability that a group is assigned to the
+        validation set.
+    :param test: Optional. Probability that a group is assigned to the test set.
+    :param seed: Optional. Seed for the assignment hash. Independent of epoch
+        shuffling.
+    :param groups: Optional. Maps every episode ID to a session, site, or other
+        group ID, and must cover exactly the episodes of the dataset version.
+        These constraints are added to recording grouping, so shared recordings
+        always stay together. The mapping is snapshotted as sorted, immutable
+        episode/group pairs; these pairs are also accepted as sequences when
+        restoring from ``dataclasses.asdict`` or JSON.
+    :raises ValueError: If a proportion is not a finite, nonnegative number, the
+        proportions do not sum to one, ``seed`` is not an integer, or ``groups``
+        is not a mapping or sequence of episode/group pairs of nonempty strings
+        with unique episode IDs.
+
+    Example::
+
+        from foxglove.datasets import DatasetSplit, inspect_splits
+
+        split = DatasetSplit(train=0.8, validation=0.1, test=0.1)
+        summaries = inspect_splits(
+            "dset_123", version=2, split_config=split
+        )
     """
 
     train: float = 0.8
