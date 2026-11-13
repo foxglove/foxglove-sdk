@@ -18,8 +18,11 @@ recording's ``location``, keep the API's field names.
 
 The REST API that these methods call is documented at https://docs.foxglove.dev/api.
 
+The examples on this page use the ``client`` that the first example creates.
+
 .. The signatures and parameter lists below are compared with the installed foxglove-client by
-   python/foxglove/tests/test_client_reference_docs.py.
+   python/foxglove/tests/test_client_reference_docs.py. The calls in the examples are checked by
+   python/foxglove/tests/test_reference_examples.py.
 
 .. currentmodule:: foxglove.client
 
@@ -36,9 +39,11 @@ The REST API that these methods call is documented at https://docs.foxglove.dev/
 
       .. code-block:: python
 
+         import os
+
          from foxglove.client import Client
 
-         client = Client(token="<API key>")
+         client = Client(token=os.environ["FOXGLOVE_API_TOKEN"])
 
 Datasets
 --------
@@ -85,9 +90,8 @@ Datasets
 
    .. code-block:: python
 
-      for d in client.get_datasets(
-          project_id="prj_123"
-      ).auto_paging_iter():
+      page = client.get_datasets(project_id="prj_123")
+      for d in page.auto_paging_iter():
           print(d["id"], d["name"], d["episode_count"])
 
 .. py:method:: Client.get_dataset(*, dataset_id)
@@ -105,6 +109,8 @@ Datasets
    .. code-block:: python
 
       dataset = client.get_dataset(dataset_id="dset_123")
+      print(dataset["name"], dataset["episode_count"])
+      print(dataset["updated_at"].isoformat())
 
 .. py:method:: Client.update_dataset(*, dataset_id, name=None, description=...)
 
@@ -122,7 +128,9 @@ Datasets
 
    .. code-block:: python
 
-      client.update_dataset(dataset_id="dset_123", description=None)
+      dataset = client.update_dataset(
+          dataset_id="dset_123", description=None
+      )
 
 .. py:method:: Client.delete_dataset(*, dataset_id)
 
@@ -135,7 +143,10 @@ Datasets
 
    .. code-block:: python
 
-      client.delete_dataset(dataset_id="dset_123")
+      scratch = client.create_dataset(
+          project_id="prj_123", name="Scratch"
+      )
+      client.delete_dataset(dataset_id=scratch["id"])
 
 .. py:method:: Client.get_dataset_episodes(*, dataset_id, sort_by=None, sort_order=None, limit=None, cursor=None, start=None, end=None, has_missing_recordings=None, recording_id=None, properties_query=None, include_recordings=False, include_properties=False, include_creation_context=False)
 
@@ -174,6 +185,8 @@ Datasets
    .. code-block:: python
 
       page = client.get_dataset_episodes(dataset_id="dset_123")
+      for m in page.auto_paging_iter():
+          print(m["episode"]["id"], m["added_in_version"])
 
 .. py:method:: Client.update_dataset_episodes(*, dataset_id, add=None, remove=None, update=None)
 
@@ -216,7 +229,9 @@ Datasets
 
    .. code-block:: python
 
-      versions = client.get_dataset_versions(dataset_id="dset_123")
+      page = client.get_dataset_versions(dataset_id="dset_123")
+      for v in page.auto_paging_iter():
+          print(v["version_number"], v["committed_at"])
 
 .. py:method:: Client.get_dataset_version(*, dataset_id, version_number)
 
@@ -295,9 +310,10 @@ Datasets
 
    .. code-block:: python
 
-      for m in client.get_dataset_version_episodes(
+      page = client.get_dataset_version_episodes(
           dataset_id="dset_123", version_number=2
-      ).auto_paging_iter():
+      )
+      for m in page.auto_paging_iter():
           print(m["episode"]["id"], m["episode"]["version"])
 
 .. py:method:: Client.compare_dataset_versions(*, dataset_id, version_number, base_version, limit=None, cursor=None, include_recordings=False, include_properties=False, include_creation_context=False)
@@ -363,7 +379,9 @@ Datasets
 
    .. code-block:: python
 
-      client.discard_dataset(dataset_id="dset_123")
+      counts = client.discard_dataset(dataset_id="dset_123")
+      for name, count in counts.items():
+          print(name, count)
 
 .. py:method:: Client.restore_dataset_version(*, dataset_id, version_number, force=False)
 
