@@ -1,4 +1,4 @@
-"""Load committed datasets with Ray Data; requires ``foxglove-sdk[ray]``."""
+"""Load dataset versions with Ray Data; requires ``foxglove-sdk[ray]``."""
 
 from __future__ import annotations
 
@@ -147,7 +147,12 @@ def read_dataset(
     every worker.
 
     :param dataset_id: Required. ID of the dataset.
-    :param version: Required. Number of a committed dataset version.
+    :param version: Required. Number of the dataset version to read: a committed
+        version or the dataset's draft. The episode list is read once, during
+        this call. A draft's episodes can change until the draft is committed,
+        so separate calls can read different episode lists. Every call for a
+        committed version reads the same list, so split membership is
+        reproducible.
     :param topics: Required. Topics to stream. Must be nonempty.
     :param read_episode: Required. Callback that receives each
         :class:`~foxglove.datasets.EpisodeReader` and yields sample mappings.
@@ -187,11 +192,10 @@ def read_dataset(
         multiple episodes before delivering output. Setting
         ``target_max_block_size`` to ``None`` allows an entire task to be buffered.
     :raises ValueError: If an argument is invalid, ``FOXGLOVE_API_TOKEN`` is not
-        set and no ``client_factory`` is given, the version is not committed or
-        contains missing recordings, ``split_config.groups`` does not cover exactly
-        the version's episodes, an episode has no recording IDs when
-        ``split_config`` is given, or, for object storage, a recording has no
-        supported location.
+        set and no ``client_factory`` is given, the version contains missing
+        recordings, ``split_config.groups`` does not cover exactly the version's
+        episodes, an episode has no recording IDs when ``split_config`` is given,
+        or, for object storage, a recording has no supported location.
     :raises RuntimeError: When the dataset is executed, if ``read_episode`` or a
         message stream raises, or ``read_episode`` yields a value that is not a
         mapping. The message names the episode, dataset, and version. Ray reports

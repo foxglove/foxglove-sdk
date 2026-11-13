@@ -33,7 +33,8 @@ class DatasetSplit:
     recording ID when ``groups`` is omitted, together with ``seed`` and the
     configured probabilities. Membership is reproducible for a committed dataset
     version and configuration, independent of API order, framework, source, epoch,
-    ranks, and workers.
+    ranks, and workers. A draft's episodes can change until the draft is
+    committed, and its membership can change with them.
 
     :param train: Optional. Probability that a group is assigned to the training
         set. The three proportions must be finite, nonnegative, and sum to one.
@@ -43,7 +44,7 @@ class DatasetSplit:
     :param seed: Optional. Seed for the assignment hash. Independent of epoch
         shuffling.
     :param groups: Optional. Maps every episode ID to a session, site, or other
-        group ID, and must cover exactly the episodes of the committed version.
+        group ID, and must cover exactly the episodes of the dataset version.
         These constraints are added to recording grouping, so shared recordings
         always stay together. The mapping is snapshotted as sorted, immutable
         episode/group pairs; these pairs are also accepted as sequences when

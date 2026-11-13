@@ -1,4 +1,4 @@
-"""Load committed datasets with PyTorch; requires ``foxglove-sdk[torch]``."""
+"""Load dataset versions with PyTorch; requires ``foxglove-sdk[torch]``."""
 
 from __future__ import annotations
 
@@ -130,7 +130,7 @@ def read_dataset(
     shuffle: bool = False,
     seed: int | None = None,
 ) -> TorchDataset[_T]:
-    """Return a :class:`TorchDataset` over a committed dataset version.
+    """Return a :class:`TorchDataset` over a dataset version.
 
     Planning fetches only the episode list (ids, time windows, and, for object
     storage, recording locations). Messages are downloaded during iteration, and
@@ -138,7 +138,13 @@ def read_dataset(
     be pickleable.
 
     :param dataset_id: Required. ID of the dataset.
-    :param version: Required. Number of a committed dataset version.
+    :param version: Required. Number of the dataset version to read: a committed
+        version or the dataset's draft. The episode list is read once, during
+        this call. A draft's episodes can change until the draft is committed,
+        so separate calls, including the calls that different ranks make, can
+        read different episode lists. Every call for a committed version reads
+        the same list, so the shuffle order, split membership, and division of
+        episodes among ranks are reproducible.
     :param topics: Required. Topics to stream. Must be nonempty.
     :param read_episode: Required. Callback that receives each
         :class:`~foxglove.datasets.EpisodeReader` and yields samples, such as
@@ -174,18 +180,18 @@ def read_dataset(
         ``torch.distributed``, before DataLoader workers start. If
         ``torch.distributed`` is not initialized, rank 0 and world size 1 are used.
     :param world_size: Optional. Number of distributed ranks. Episodes are divided
-        among ranks, then among each rank's DataLoader workers, so each episode is
-        read once per pass. ``read_dataset`` already splits episodes by rank, so
-        do not add a ``DistributedSampler``. Ranks can get different numbers of
-        batches, because each rank reads whole episodes and episodes differ in
-        length. Before the forward pass of each training step, call
-        ``torch.distributed.all_reduce`` with ``ReduceOp.MIN`` on a tensor that is
-        1 if the rank has a batch and 0 if it does not, and stop the epoch on
-        every rank when the result is 0. Every rank then takes the same number of
-        optimizer steps.
+        among ranks, then among each rank's DataLoader workers, so each episode of
+        a committed version is read once per pass. ``read_dataset`` already splits
+        episodes by rank, so do not add a ``DistributedSampler``. Ranks can get
+        different numbers of batches, because each rank reads whole episodes and
+        episodes differ in length. Before the forward pass of each training step,
+        call ``torch.distributed.all_reduce`` with ``ReduceOp.MIN`` on a tensor
+        that is 1 if the rank has a batch and 0 if it does not, and stop the epoch
+        on every rank when the result is 0. Every rank then takes the same number
+        of optimizer steps.
     :param shuffle: Optional. ``True`` permutes episode metadata using
         ``seed + epoch`` before partitioning ranks and workers. The same seed,
-        epoch, and committed episode list produce the same permutation; all ranks
+        epoch, and episode list produce the same permutation; all ranks
         must use the same seed and epoch. Call :meth:`TorchDataset.set_epoch`
         between completed passes (initial epoch zero). Without shuffling, episodes
         retain sorted ID order. Samples within each episode keep callback order.
@@ -198,11 +204,10 @@ def read_dataset(
     :returns: An iterable dataset of the samples that ``read_episode`` yields.
     :raises TypeError: If ``shuffle`` is not a bool or ``seed`` is not an integer.
     :raises ValueError: If an argument is invalid, ``FOXGLOVE_API_TOKEN`` is not
-        set and no ``client_factory`` is given, the version is not committed or
-        contains missing recordings, ``split_config.groups`` does not cover exactly
-        the version's episodes, an episode has no recording IDs when
-        ``split_config`` is given, or, for object storage, a recording has no
-        supported location.
+        set and no ``client_factory`` is given, the version contains missing
+        recordings, ``split_config.groups`` does not cover exactly the version's
+        episodes, an episode has no recording IDs when ``split_config`` is given,
+        or, for object storage, a recording has no supported location.
     :raises RuntimeError: While iterating, if ``read_episode`` or a message stream
         raises. The message names the episode, dataset, and version, and the
         original exception is its ``__cause__``. DataLoader worker processes

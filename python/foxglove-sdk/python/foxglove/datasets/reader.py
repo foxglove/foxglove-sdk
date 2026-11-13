@@ -444,12 +444,13 @@ def inspect_splits(
     """Inspect train, validation, and test sizes using episode metadata only.
 
     Uses the same assignment as the PyTorch and Ray readers, without downloading
-    messages or requiring either framework. Counts cover the whole committed
+    messages or requiring either framework. Counts cover the whole dataset
     version, before worker/rank partitioning. Proportions are probabilities per
     connected group.
 
     :param dataset_id: Required. ID of the dataset.
-    :param version: Required. Number of a committed dataset version.
+    :param version: Required. Number of the dataset version to inspect: a
+        committed version or the dataset's draft.
     :param split_config: Required. Split configuration to inspect.
     :param client_factory: Optional. Callable that returns the API client, for
         custom authentication or endpoints, as with ``read_dataset``. The default
@@ -457,9 +458,9 @@ def inspect_splits(
     :returns: The :class:`~foxglove.datasets.SplitSummary` of each split, keyed by
         ``"train"``, ``"validation"``, and ``"test"``.
     :raises ValueError: If an argument is invalid, ``FOXGLOVE_API_TOKEN`` is not
-        set and no ``client_factory`` is given, the version is not committed or
-        contains missing recordings, an episode has no recording IDs, or
-        ``split_config.groups`` does not cover exactly the version's episodes.
+        set and no ``client_factory`` is given, the version contains missing
+        recordings, an episode has no recording IDs, or ``split_config.groups``
+        does not cover exactly the version's episodes.
 
     Example::
 
