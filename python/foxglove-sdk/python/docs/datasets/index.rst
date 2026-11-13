@@ -53,9 +53,9 @@ is a complete script for PyTorch and Ray. The product docs have a `training how-
 
 In a notebook, DataLoader workers that start with the ``spawn`` or ``forkserver`` method cannot
 load a ``read_episode`` function that is defined in a notebook cell, and iteration raises a
-``RuntimeError`` that says a DataLoader worker exited unexpectedly. ``spawn`` is the default on
-macOS and Windows, and ``forkserver`` is the default on Linux in Python 3.14 and later. Define the
-function in a module and import it, or keep ``num_workers=0``.
+``RuntimeError`` that says a DataLoader worker exited unexpectedly. The default method is ``spawn``
+on macOS and Windows, and ``forkserver`` on Linux in Python 3.14 and later. Define the function in
+a module and import it, or keep ``num_workers=0``.
 
 Install
 -------

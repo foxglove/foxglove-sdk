@@ -1,4 +1,8 @@
-"""Topic-filtered episode readers for optional Ray and PyTorch integrations."""
+"""Topic-filtered episode readers for optional Ray and PyTorch integrations.
+
+For a short script that reads a dataset, see the :ref:`Datasets quickstart
+<datasets-quickstart>`.
+"""
 
 from .reader import EpisodeReader, inspect_splits
 from .splits import DatasetSplit, SplitSummary

@@ -319,8 +319,6 @@ Used with the playback control feature during live visualization. Requires the
 foxglove.datasets
 -----------------
 
-For a short script that reads a dataset, see the :ref:`Datasets quickstart <datasets-quickstart>`.
-
 .. Constructors are excluded. The SDK creates most of these objects, and DatasetSplit documents its arguments on the class.
 .. automodule:: foxglove.datasets
    :members:
