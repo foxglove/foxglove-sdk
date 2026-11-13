@@ -753,8 +753,8 @@ Episodes
 
    List the topics of a device, session, recording, or episode.
 
-   ``start`` and ``end`` are required unless ``episode_id``, ``recording_id``, or
-   ``recording_key`` is given.
+   ``start`` and ``end`` are required with ``device_id`` or ``device_name``.
+   Session, recording, and episode queries can omit them.
 
    :param str device_id: Optional, default ``None``. Device to list topics for.
    :param str device_name: Optional, default ``None``. Name of the device to list topics for.
@@ -777,7 +777,8 @@ Episodes
    :param str sort_by: Optional, default ``None``. ``topic`` or ``version``.
    :param str sort_order: Optional, default ``None``. ``asc`` or ``desc``.
    :returns: One dict per topic, with ``topic``, ``version``, ``encoding``, ``schema_encoding``,
-      and ``schema_name``. With ``include_schemas``, each also has ``schema``, as ``bytes``.
+      and ``schema_name``. With ``include_schemas``, each also has ``schema``, as ``bytes``
+      or ``None`` when no schema is available.
    :rtype: list[dict]
    :raises RuntimeError: If ``episode_version`` is given without ``episode_id``, ``episode_id`` is
       combined with a device, session, or recording, or ``start`` and ``end`` are missing when
