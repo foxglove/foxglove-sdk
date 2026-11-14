@@ -983,7 +983,8 @@ void FoxgloveBridge::createOrIncrementSubscriptionLocked(ChannelId channelId, Cl
                                                          std::optional<SinkId> sinkId) {
   auto channelIt = _channels.find(channelId);
   if (channelIt == _channels.end()) {
-    RCLCPP_ERROR(this->get_logger(), "received subscribe request for unknown channel: %" PRIu64,
+    RCLCPP_DEBUG(this->get_logger(),
+                 "Not creating a ROS subscription for channel %" PRIu64 ": not a ROS channel",
                  static_cast<uint64_t>(channelId));
     return;
   }
@@ -1070,10 +1071,16 @@ void FoxgloveBridge::removeOrDecrementSubscriptionLocked(ChannelId channelId, Cl
                                                          bool isGateway) {
   auto subIt = _subscriptions.find(channelId);
   if (subIt == _subscriptions.end()) {
-    RCLCPP_ERROR(this->get_logger(),
-                 "Client %u tried unsubscribing from channel %" PRIu64
-                 " but no subscription exists",
-                 clientId, static_cast<uint64_t>(channelId));
+    if (_channels.find(channelId) != _channels.end()) {
+      RCLCPP_ERROR(this->get_logger(),
+                   "Client %u tried unsubscribing from channel %" PRIu64
+                   " but no subscription exists",
+                   clientId, static_cast<uint64_t>(channelId));
+    } else {
+      RCLCPP_DEBUG(this->get_logger(),
+                   "Client %u unsubscribed from channel %" PRIu64 ", which is not a ROS channel",
+                   clientId, static_cast<uint64_t>(channelId));
+    }
     return;
   }
 
