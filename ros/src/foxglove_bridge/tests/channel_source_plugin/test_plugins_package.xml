@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<!-- Mock package for pluginlib_enable_plugin_testing; only used by channel_source_plugin_test. -->
+<package format="3">
+    <name>foxglove_bridge_test_plugins</name>
+    <version>0.0.0</version>
+    <description>Channel source plugins used by foxglove_bridge's tests</description>
+    <license>MIT</license>
+    <maintainer email="ros-tooling+foxglove_bridge@foxglove.dev">Foxglove</maintainer>
+    <export>
+        <build_type>ament_cmake</build_type>
+    </export>
+</package>

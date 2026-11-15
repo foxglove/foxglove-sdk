@@ -12,6 +12,7 @@
 
     <!-- ROS 2 runtime dependencies -->
     <depend>ament_index_cpp</depend>
+    <depend>pluginlib</depend>
     <depend>rclcpp</depend>
     <depend>rclcpp_components</depend>
     <depend>rosx_introspection</depend>

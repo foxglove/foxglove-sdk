@@ -35,6 +35,8 @@
 
 namespace foxglove_bridge {
 
+class ChannelSourcePluginHost;
+
 extern const char FOXGLOVE_BRIDGE_VERSION[];
 extern const char FOXGLOVE_BRIDGE_GIT_HASH[];
 
@@ -159,6 +161,9 @@ private:
   std::unordered_map<std::string, std::shared_ptr<RosMsgParser::Parser>> _jsonParsers;
   std::atomic<bool> _shuttingDown = false;
   foxglove::Context _serverContext;
+
+  // Declared after _serverContext, which it uses.
+  std::unique_ptr<ChannelSourcePluginHost> _channelSourcePlugins;
 
   rclcpp::Publisher<std_msgs::msg::UInt32>::SharedPtr _clientCountPublisher;
 
