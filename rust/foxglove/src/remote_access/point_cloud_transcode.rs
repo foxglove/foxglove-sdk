@@ -884,7 +884,9 @@ mod tests {
         assert_eq!(converted.fields[3].r#type, NumericType::Float32 as i32);
         let widened: Vec<f32> = converted
             .data
-            .chunks_exact(16)
+            .as_chunks::<16>()
+            .0
+            .iter()
             .map(|point| f32::from_le_bytes(point[12..16].try_into().unwrap()))
             .collect();
         assert_eq!(widened, [1.0, -2.0]);
