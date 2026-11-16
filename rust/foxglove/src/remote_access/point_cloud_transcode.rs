@@ -209,7 +209,7 @@ fn field_size(numeric_type: i32) -> Option<usize> {
 
     match NumericType::try_from(numeric_type).ok()? {
         NumericType::Uint8 | NumericType::Int8 => Some(1),
-        NumericType::Uint16 | NumericType::Int16 => Some(2),
+        NumericType::Uint16 | NumericType::Int16 | NumericType::Float16 => Some(2),
         NumericType::Uint32 | NumericType::Int32 | NumericType::Float32 => Some(4),
         NumericType::Float64 => Some(8),
         NumericType::Unknown => None,

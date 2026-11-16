@@ -186,6 +186,11 @@
                 "title": "FLOAT64",
                 "const": 8,
                 "description": "64-bit floating-point number"
+              },
+              {
+                "title": "FLOAT16",
+                "const": 9,
+                "description": "16-bit floating-point number (IEEE 754 half precision)"
               }
             ]
           }

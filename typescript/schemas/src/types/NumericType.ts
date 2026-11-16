@@ -29,4 +29,7 @@ export enum NumericType {
 
   /** 64-bit floating-point number */
   FLOAT64 = 8,
+
+  /** 16-bit floating-point number (IEEE 754 half precision) */
+  FLOAT16 = 9,
 }
