@@ -49,12 +49,16 @@ benchmark-python:
 	MATURIN_PEP517_ARGS="$(MATURIN_PEP517_ARGS)" uv --directory python/foxglove-sdk pip install --editable '.[notebook]'
 	uv --directory python/foxglove-sdk run pytest --with-benchmarks
 
+# The docs extensions (enum-tools, sphinx-toolbox) are only installed on Python >= 3.11.5,
+# because soupsieve >= 4.0.0 requires it. Pin the docs interpreter to the version CI uses.
+DOCS_PYTHON ?= 3.13
+
 .PHONY: docs-python
 docs-python:
 	uv --directory python/foxglove-sdk lock --check
-	uv --directory python/foxglove-sdk sync --all-extras
+	uv --directory python/foxglove-sdk sync --all-extras --python $(DOCS_PYTHON)
 	MATURIN_PEP517_ARGS="$(MATURIN_PEP517_ARGS)" uv --directory python/foxglove-sdk pip install --editable '.[notebook]'
-	uv --directory python/foxglove-sdk run sphinx-build --fail-on-warning ./python/docs ./python/docs/_build
+	uv --directory python/foxglove-sdk run --python $(DOCS_PYTHON) sphinx-build --fail-on-warning ./python/docs ./python/docs/_build
 
 .PHONY: clean-docs-python
 clean-docs-python:

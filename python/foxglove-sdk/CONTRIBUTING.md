@@ -87,5 +87,7 @@ Examples exist in the `foxglove-sdk-examples` directory. See each example's read
 Sphinx documentation can be generated from this directory with:
 
 ```sh
-uv run sphinx-build ./python/docs ./python/docs/_build
+uv run --python 3.13 sphinx-build ./python/docs ./python/docs/_build
 ```
+
+Building the docs requires Python 3.11.5 or later; the docs extensions are not installed on older versions.
