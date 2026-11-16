@@ -1263,6 +1263,7 @@ const NumericType: FoxgloveEnumSchema = {
       name: "FLOAT16",
       value: 9,
       description: "16-bit floating-point number (IEEE 754 half precision)",
+      omitRos1Constant: true,
     },
   ],
 };

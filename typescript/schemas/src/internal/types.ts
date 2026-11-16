@@ -10,6 +10,12 @@ export type FoxgloveEnumSchema = {
     value: number;
     name: string;
     description?: string;
+    /**
+     * Omit this value's constant from ROS 1 .msg files and document it in the enum field's
+     * comment instead. ROS 1 includes constants in a message's MD5, so adding a constant to a
+     * published message stops it from interoperating with earlier builds and recorded bags.
+     */
+    omitRos1Constant?: boolean;
   }>;
 };
 

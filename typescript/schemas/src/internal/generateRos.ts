@@ -149,6 +149,7 @@ export function generateRosMsgDefinition(
 
   const fields: RosMsgFieldWithDescription[] = [];
   for (const field of schema.fields) {
+    const valuesWithoutConstants: string[] = [];
     let isArray = field.array != undefined;
     const arrayLength = typeof field.array === "number" ? field.array : undefined;
     let fieldType: string;
@@ -163,7 +164,7 @@ export function generateRosMsgDefinition(
           break;
         }
         const enumFields: RosMsgFieldWithDescription[] = [];
-        for (const { name, value, description } of field.type.enum.values) {
+        for (const { name, value, description, omitRos1Constant } of field.type.enum.values) {
           if (enumFieldNames.has(name)) {
             throw new Error(
               `Enum value ${name} occurs in more than one enum referenced by ${schema.name}, this is not supported in ROS msg files`,
@@ -175,6 +176,12 @@ export function generateRosMsgDefinition(
             );
           }
           enumFieldNames.add(name);
+          if (rosVersion === 1 && omitRos1Constant === true) {
+            valuesWithoutConstants.push(
+              description != undefined ? `${name}=${value}: ${description}` : `${name}=${value}`,
+            );
+            continue;
+          }
           enumFields.push({
             name,
             value,
@@ -217,13 +224,20 @@ export function generateRosMsgDefinition(
         }
         break;
     }
+    let description = getRosFieldDescription(field);
+    if (valuesWithoutConstants.length > 0) {
+      description += [
+        "\nThese values have no constants, because constants are part of the ROS 1 message MD5:",
+        ...valuesWithoutConstants,
+      ].join("\n");
+    }
     fields.push({
       name: rosVersion === 2 ? field.name.toLowerCase() : field.name,
       type: fieldType,
       isComplex: isComplex(field),
       isArray,
       arrayLength,
-      description: getRosFieldDescription(field),
+      description,
     });
   }
 
