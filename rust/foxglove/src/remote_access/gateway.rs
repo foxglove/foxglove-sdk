@@ -510,8 +510,10 @@ impl Gateway {
     /// - Float64 fields are narrowed to float32 (the default kd-tree encoder cannot
     ///   encode them, and positions are narrowed regardless), keeping about seven
     ///   significant digits.
+    /// - Float16 fields are widened to float32, exactly (Draco has no 16-bit float type).
     /// - Points containing a non-finite (NaN or infinite) value in any float field —
-    ///   including a float64 value that overflows float32 — are removed: publishers
+    ///   including a float64 value that overflows float32 and a float16 NaN or infinity —
+    ///   are removed: publishers
     ///   commonly pad invalid returns with NaN, and the quantizer rejects non-finite
     ///   input, which would otherwise fail the whole cloud.
     ///
