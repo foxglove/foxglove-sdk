@@ -22,7 +22,7 @@ video = ["av>=16,<17", "numpy>=1.23,<3", "mcap>=1.6,<2"]
 [dependency-groups]
 dev = [
   "black>=26.3.1,<27",
-  "enum-tools[sphinx]>=0.13.0,<0.14",
+  "enum-tools[sphinx]>=0.13.0,<0.14; python_full_version >= '3.11.5'",
   "flake8>=7.0.0,<8",
   "isort>=6.0.0,<7",
   "maturin>=1.14.1,<2",
@@ -31,7 +31,7 @@ dev = [
   "pytest-benchmark>=5.1.0,<6",
   "sphinx>=8.0.0,<8.2.0",
   "sphinx-autodoc-typehints>=3.0.0,<4",
-  "sphinx-toolbox>=4.1.2,<5",
+  "sphinx-toolbox>=4.1.2,<5; python_full_version >= '3.11.5'",
   "types-docutils",
   "types-requests",
   "mcap>=1.6.0,<2",
@@ -40,6 +40,9 @@ dev = [
 
 [tool.uv]
 package = false
+# soupsieve >= 4.0.0 requires Python >= 3.11.5. Docs extras that pull it in
+# (enum-tools[sphinx] -> sphinx-toolbox -> beautifulsoup4) are gated to that floor.
+constraint-dependencies = ["soupsieve>=4.0.0"]
 
 # Resolve torch from the CPU-only index for development and CI. This does not affect
 # the published package metadata.
