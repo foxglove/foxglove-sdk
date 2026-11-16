@@ -84,10 +84,12 @@ Examples exist in the `foxglove-sdk-examples` directory. See each example's read
 
 ### Documentation
 
-Sphinx documentation can be generated from this directory with:
+Sphinx documentation requires Python 3.13 (matching docs CI). Sync and install
+the editable SDK with that interpreter first; `uv run --python 3.13` alone
+replaces `.venv` and autodoc cannot import `foxglove`.
 
 ```sh
+uv sync --all-extras --python 3.13
+uv pip install --editable '.[notebook]'
 uv run --python 3.13 sphinx-build ./python/docs ./python/docs/_build
 ```
-
-Building the docs requires Python 3.11.5 or later; the docs extensions are not installed on older versions.
