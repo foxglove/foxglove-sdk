@@ -1,7 +1,8 @@
 [project]
 name = "cpp-sdk-documentation"
 version = "0.0.0"
-requires-python = ">=3.10"
+# soupsieve >= 4.0.0 (CVE-2026-126190) requires Python >= 3.11.5.
+requires-python = ">=3.11.5"
 
 [dependency-groups]
 dev = [
@@ -14,3 +15,4 @@ dev = [
 
 [tool.uv]
 package = false
+constraint-dependencies = ["soupsieve>=4.0.0"]
