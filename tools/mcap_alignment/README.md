@@ -2,6 +2,8 @@
 
 Sample camera and telemetry topics on a common timeline and write an indexed MCAP. The output log time is the sample time. Each selected image is independently decodable, and the provenance topic identifies its source message.
 
+Decoding camera images or video requires Python 3.11 or later and the SDK's `alignment` extra.
+
 ## Run the four-camera example
 
 From the repository root on Apple Silicon macOS, with Rust, Xcode Command Line Tools, and uv installed:

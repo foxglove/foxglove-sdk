@@ -41,7 +41,8 @@ test-python:
 	MATURIN_PEP517_ARGS="$(MATURIN_PEP517_ARGS)" uv --directory python/foxglove-sdk pip install --editable '.[notebook]'
 	uv --directory python/foxglove-sdk run mypy .
 	FOXGLOVE_TEST_REQUIRE_REMOTE_ACCESS="$(FOXGLOVE_TEST_REQUIRE_REMOTE_ACCESS)" uv --directory python/foxglove-sdk run pytest
-	uv --directory python/foxglove-sdk run pytest ../../tools/mcap_alignment
+	uv run --no-project --python 3.11 --with-editable './python/foxglove-sdk[alignment]' \
+		--with pytest --with mcap-protobuf-support pytest tools/mcap_alignment
 
 .PHONY: benchmark-python
 benchmark-python:

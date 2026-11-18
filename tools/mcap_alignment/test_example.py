@@ -4,7 +4,9 @@ import random
 from pathlib import Path
 
 import av
+import pytest
 from foxglove import Context, open_mcap
+from foxglove._alignment_media import MediaError, process_image
 from foxglove.channels import CompressedImageChannel
 from foxglove.experimental.mcap_alignment import load_config, run
 from foxglove.messages import CompressedImage
@@ -160,7 +162,7 @@ def test_reference_camera_aligns_video_and_telemetry(tmp_path: Path) -> None:
     ):
         writer = Writer(output, compression=CompressionType.NONE)
         writer.start()
-        reader = SeekingReader(input_file)
+        reader = SeekingReader(input_file, decoder_factories=[DecoderFactory()])
         summary = reader.get_summary()
         assert summary is not None
         channel = next(c for c in summary.channels.values() if c.topic == camera)
@@ -168,13 +170,17 @@ def test_reference_camera_aligns_video_and_telemetry(tmp_path: Path) -> None:
         schema_id = writer.register_schema(schema.name, schema.encoding, schema.data)
         camera_id = writer.register_channel(camera, channel.message_encoding, schema_id)
         telemetry_id = writer.register_channel("/telemetry", "json", 0)
-        for _, _, message in reader.iter_messages(
+        for _, _, message, video in reader.iter_decoded_messages(
             topics=[camera], log_time_order=False
         ):
+            data = message.data
+            if message.log_time == at_ms(321):
+                video.data = b"invalid Annex B packet"
+                data = video.SerializeToString()
             writer.add_message(
                 camera_id,
                 message.log_time,
-                message.data,
+                data,
                 message.publish_time,
                 sequence=message.sequence,
             )
@@ -209,6 +215,8 @@ def test_reference_camera_aligns_video_and_telemetry(tmp_path: Path) -> None:
     )
     report = run(config, base_directory=tmp_path)["report"]
     assert (report["targets"], report["selections"], report["reused"]) == (3, 6, 1)
+    assert report["media_video_packets"] == report["media_decoded_frames"] == 4
+    assert report["media_dependency_frames"] == 1
     source_pixels = _source_pixels(camera)
 
     with destination.open("rb") as handle:
@@ -310,3 +318,20 @@ def test_transcoded_image_can_exceed_input_record_limit(tmp_path: Path) -> None:
             assert png.format == "PNG"
             assert png.size == size
             png.load()
+
+
+@pytest.mark.parametrize("expected_format", ["jpeg", "png"])
+def test_image_does_not_open_an_undeclared_format(
+    expected_format: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    gif = io.BytesIO()
+    Image.new("RGB", (8, 8)).save(gif, "GIF")
+
+    def reject_open(*args: object, **kwargs: object) -> None:
+        raise AssertionError("GIF decoder was called")
+
+    _, accept_gif = Image.OPEN["GIF"]
+    monkeypatch.setitem(Image.OPEN, "GIF", (reject_open, accept_gif))
+    with pytest.raises(MediaError) as error:
+        process_image(gif.getvalue(), expected_format)
+    assert error.value.kind == "decode_failed"

@@ -14,7 +14,10 @@ repository = "https://github.com/foxglove/foxglove-sdk"
 documentation = "https://docs.foxglove.dev/"
 
 [project.optional-dependencies]
-alignment = ["av==16.1.0", "Pillow==12.0.0"]
+alignment = [
+  "av==16.1.0; python_version >= '3.11'",
+  "Pillow==13.0.0; python_version >= '3.11'",
+]
 notebook = ["anywidget", "mcap", "traitlets"]
 torch = ["foxglove-client>=0.23.0", "torch>=2.5,<3", "pyarrow>=16", "mcap>=1.6,<2"]
 ray = ["foxglove-client>=0.23.0", "ray[data]>=2.49,<3", "pyarrow>=16", "mcap>=1.6,<2"]
@@ -87,6 +90,11 @@ warn_redundant_casts = true
 warn_unused_ignores = true
 warn_no_return = true
 warn_unreachable = true
+
+[[tool.mypy.overrides]]
+# The alignment extra installs Pillow only on Python 3.11 and later.
+module = ["PIL", "PIL.*"]
+ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = ["ray.*", "torch.*", "pyarrow.*", "numpy.*", "foxglove.client.*"]

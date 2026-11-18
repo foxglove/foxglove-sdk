@@ -946,12 +946,20 @@ fn process_binding(
             .schemas
             .get(&channel.schema_id)
             .is_some_and(|s| s.name == "foxglove.CompressedImage");
-        let mut next_selected = selected.next_record()?;
-        while next_selected.is_some_and(|source| {
-            source.identity.file != binding.file || source.identity.channel != binding.channel
-        }) {
-            next_selected = selected.next_record()?;
-        }
+        let mut next_binding_selection = || {
+            while let Some(source) = selected.next_record()? {
+                if source.identity.file > binding.file {
+                    break;
+                }
+                if source.identity.file == binding.file
+                    && source.identity.channel == binding.channel
+                {
+                    return Ok(Some(source));
+                }
+            }
+            Ok::<_, Error>(None)
+        };
+        let mut next_selected = next_binding_selection()?;
         let mut spool = ImageSpool::new(sources)?;
         if next_selected.is_none() {
             return Ok(BindingOutput {
@@ -979,12 +987,15 @@ fn process_binding(
         let mut calibration_reads = MediaReadStats::default();
         let mut calibration_status = json!({"status":"unavailable"});
         let mut geometry = None;
-        while let Some(source) = cursor.next_record()? {
+        while let Some(target) = next_selected {
+            let source = cursor
+                .next_record()?
+                .ok_or_else(|| unsupported("selected media record missing from binding"))?;
             cancel(cancellation)?;
-            while next_selected.is_some_and(|r| r.identity.order() < source.identity.order()) {
-                next_selected = selected.next_record()?;
+            let wanted = target.identity == source.identity;
+            if wanted {
+                next_selected = next_binding_selection()?;
             }
-            let wanted = next_selected.is_some_and(|r| r.identity == source.identity);
             if image_source {
                 if !wanted {
                     continue;

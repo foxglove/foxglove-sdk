@@ -133,7 +133,11 @@ def main() -> None:
             }
         )
     resolved = validate_config(config)
-    args.config.write_text(json.dumps(resolved, indent=2) + "\n")
+    try:
+        with args.config.open("x", encoding="utf-8") as config_file:
+            config_file.write(json.dumps(resolved, indent=2) + "\n")
+    except FileExistsError:
+        parser.error(f"config path already exists: {args.config}")
     print(
         json.dumps(
             {

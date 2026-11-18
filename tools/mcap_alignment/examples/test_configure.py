@@ -41,3 +41,19 @@ def test_first_tick_waits_for_telemetry(
     assert config["timeline"]["origin"] == 150
     assert config["episode"] == {"start": 100, "end": 301}
     assert config["streams"][1]["independence"] == "declared"
+
+
+def test_config_path_cannot_overwrite_recording(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    original = (Path(__file__).parents[1] / "example" / "source.mcap").read_bytes()
+    source = tmp_path / "source.mcap"
+    source.write_bytes(original)
+    monkeypatch.setattr(
+        sys, "argv", ["configure", str(source), "aligned.mcap", str(source)]
+    )
+    with pytest.raises(SystemExit) as error:
+        configure.main()
+    assert error.value.code == 2
+    assert "config path already exists" in capsys.readouterr().err
+    assert source.read_bytes() == original

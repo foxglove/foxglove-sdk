@@ -14,11 +14,18 @@ import re
 from fractions import Fraction
 from typing import Any, cast
 
-import av
-from PIL import Image, features
+try:
+    import av
+    from PIL import Image, features
+except ModuleNotFoundError as exc:
+    raise ImportError(
+        "Alignment media requires Python 3.11 or later and foxglove-sdk[alignment]"
+    ) from exc
 
 _START_CODE = re.compile(b"\x00\x00\x00?\x01")
 _MAX_INTEGER = (1 << 63) - 1
+_PYAV_VERSION = "16.1.0"
+_PILLOW_VERSION = "13.0.0"
 
 
 class MediaError(ValueError):
@@ -33,10 +40,17 @@ def _fail(kind: str, message: str) -> None:
     raise MediaError(kind, message)
 
 
+def _check_runtime() -> None:
+    if av.__version__ != _PYAV_VERSION or Image.__version__ != _PILLOW_VERSION:
+        _fail(
+            "unsupported_media",
+            f"Alignment requires PyAV {_PYAV_VERSION} and Pillow {_PILLOW_VERSION}",
+        )
+
+
 def capabilities() -> dict[str, Any]:
     """Describe actual software codec availability and the strict stream subset."""
-    if av.__version__ != "16.1.0" or Image.__version__ != "12.0.0":
-        _fail("unsupported_media", "Alignment requires PyAV16.1.0 and Pillow12.0.0")
+    _check_runtime()
     codecs = {}
     for name, native in (("h264", "h264"), ("h265", "hevc")):
         try:
@@ -264,10 +278,7 @@ def process_image(
     if format == "png":
         _check_png_rgb8(data)
     try:
-        with Image.open(io.BytesIO(data)) as image:
-            actual = (image.format or "").lower()
-            if actual != format:
-                _fail("unsupported_media", "Image bytes disagree with envelope format")
+        with Image.open(io.BytesIO(data), formats=(format.upper(),)) as image:
             if (
                 image.mode != "RGB"
                 or getattr(image, "n_frames", 1) != 1
@@ -339,8 +350,7 @@ class Decoder:
         max_frame_bytes: int = 64 * 1024 * 1024,
         codec_threads: int = 1,
     ) -> None:
-        if av.__version__ != "16.1.0" or Image.__version__ != "12.0.0":
-            _fail("unsupported_media", "Alignment requires PyAV16.1.0 and Pillow12.0.0")
+        _check_runtime()
         if codec not in ("h264", "h265"):
             _fail("unsupported_media", f"Unsupported codec {codec}")
         # Independent camera workers provide concurrency; a codec never adds threads.
