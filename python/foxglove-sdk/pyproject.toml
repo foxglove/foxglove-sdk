@@ -36,6 +36,7 @@ dev = [
   "types-docutils",
   "types-requests",
   "mcap>=1.6.0,<2",
+  "mcap-protobuf-support>=0.5,<1",
   "sphinx-copybutton>=0.5.2",
 ]
 

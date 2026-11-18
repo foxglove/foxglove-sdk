@@ -4,7 +4,7 @@ use std::io::{Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use mcap::records::Record;
+use mcap::records::{ChunkIndex, Record};
 
 use crate::local_source::{EpisodeFiles, FileInventory, LocalSources, error, io_error, wire};
 use crate::{Error, ErrorKind, FileIdentity, Locator, SourceRecord};
@@ -299,7 +299,13 @@ impl LocalSources {
             .map_err(|_| error(ErrorKind::InvalidSource, "storage lock poisoned", "peak"))?
             .peak)
     }
-    pub(crate) fn validate_output(&self, path: &Path, writer_memory: usize) -> Result<(), Error> {
+    pub(crate) fn validate_output(
+        &self,
+        path: &Path,
+        writer_memory: usize,
+        largest_sample_payload: usize,
+        chunks: &[ChunkIndex],
+    ) -> Result<(), Error> {
         let mut inventory = FileInventory {
             path: PathBuf::from(path),
             identity: FileIdentity {
@@ -310,16 +316,28 @@ impl LocalSources {
             schemas: Default::default(),
         };
         let mut limits = self.limits;
-        limits.max_record_bytes = limits.max_record_bytes.max(1024 * 1024);
-        limits.max_chunk_bytes = limits.max_chunk_bytes.max(
-            limits
-                .max_decompressed_chunk_bytes
-                .saturating_add(2 * 1024 * 1024),
-        );
+        // Transcoded samples may be larger than any input record. Use sizes
+        // observed by this writer rather than the input caps or on-disk claims.
+        const MESSAGE_HEADER_BYTES: usize = 2 + 4 + 8 + 8;
+        limits.max_record_bytes = limits
+            .max_record_bytes
+            .max(1024 * 1024)
+            .max(largest_sample_payload.saturating_add(MESSAGE_HEADER_BYTES));
         limits.inventory_memory_bytes = writer_memory;
-        limits.max_decompressed_chunk_bytes = limits
-            .max_decompressed_chunk_bytes
-            .saturating_add(2 * 1024 * 1024);
+        for chunk in chunks {
+            let chunk_bytes = usize::try_from(chunk.chunk_length)
+                .map_err(|err| error(ErrorKind::ResourceLimit, "output chunk size", err))?;
+            let decompressed_bytes = usize::try_from(chunk.uncompressed_size).map_err(|err| {
+                error(
+                    ErrorKind::ResourceLimit,
+                    "output decompressed chunk size",
+                    err,
+                )
+            })?;
+            limits.max_chunk_bytes = limits.max_chunk_bytes.max(chunk_bytes);
+            limits.max_decompressed_chunk_bytes =
+                limits.max_decompressed_chunk_bytes.max(decompressed_bytes);
+        }
         wire::scan(path, &mut inventory, &limits, None, &mut 0)?;
         Ok(())
     }

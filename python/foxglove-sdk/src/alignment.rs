@@ -190,6 +190,10 @@ fn integer(value: &Value, name: &str) -> Result<u64, Error> {
 fn number(value: &Value, key: &str, default: u64) -> Result<u64, Error> {
     value.get(key).map_or(Ok(default), |v| integer(v, key))
 }
+fn size_limit(value: &Value, key: &str, default: u64) -> Result<usize, Error> {
+    usize::try_from(number(value, key, default)?)
+        .map_err(|_| invalid(format!("{key} exceeds the platform size limit")))
+}
 fn bindings(value: &Value, sources: &LocalSources) -> Result<Vec<Binding>, Error> {
     if let Some(topic) = value.get("topic").and_then(Value::as_str) {
         return Ok(vec![sources.resolve_topic(topic)?]);
@@ -221,17 +225,17 @@ fn run(value: Value) -> Result<Value, Error> {
     let temp = PathBuf::from(value["temporary_directory"].as_str().unwrap_or("/tmp"));
     let limits = &value["limits"];
     let source_limits = SourceLimits {
-        index_memory_bytes: number(limits, "index_memory_bytes", 16 * 1024 * 1024)? as usize,
-        inventory_memory_bytes: number(limits, "inventory_memory_bytes", 8 * 1024 * 1024)? as usize,
-        max_record_bytes: number(limits, "max_record_bytes", 8 * 1024 * 1024)? as usize,
-        max_chunk_bytes: number(limits, "max_chunk_bytes", 64 * 1024 * 1024)? as usize,
-        max_decompressed_chunk_bytes: number(
+        index_memory_bytes: size_limit(limits, "index_memory_bytes", 16 * 1024 * 1024)?,
+        inventory_memory_bytes: size_limit(limits, "inventory_memory_bytes", 8 * 1024 * 1024)?,
+        max_record_bytes: size_limit(limits, "max_record_bytes", 8 * 1024 * 1024)?,
+        max_chunk_bytes: size_limit(limits, "max_chunk_bytes", 64 * 1024 * 1024)?,
+        max_decompressed_chunk_bytes: size_limit(
             limits,
             "max_decompressed_chunk_bytes",
             128 * 1024 * 1024,
-        )? as usize,
+        )?,
         temporary_bytes: number(limits, "temporary_bytes", 68_719_476_736)?,
-        max_open_files: number(limits, "max_open_files", 256)? as usize,
+        max_open_files: size_limit(limits, "max_open_files", 256)?,
     };
     if let Some(mode) = value.get("index_mode")
         && mode != "indexed"
@@ -256,9 +260,7 @@ fn run(value: Value) -> Result<Value, Error> {
                                 .map_or(0, |s| s.name.len().saturating_mul(8)),
                         ),
                 );
-                if inspection_bytes
-                    > number(limits, "inventory_memory_bytes", 8 * 1024 * 1024)? as usize
-                {
+                if inspection_bytes > source_limits.inventory_memory_bytes {
                     return Err(failure(
                         ErrorKind::ResourceLimit,
                         "inspection report memory budget",
@@ -358,7 +360,7 @@ fn run(value: Value) -> Result<Value, Error> {
                     .cloned()
                     .unwrap_or_else(|| json!({"kind":"png"})),
                 calibration,
-                max_frame_bytes: number(config, "max_frame_bytes", 64 * 1024 * 1024)? as usize,
+                max_frame_bytes: size_limit(config, "max_frame_bytes", 64 * 1024 * 1024)?,
             })
         } else {
             None
@@ -467,14 +469,14 @@ fn run(value: Value) -> Result<Value, Error> {
         limits: ExecuteLimits {
             compute_threads: usize::try_from(strict_number(limits, "compute_threads", 7)?)
                 .map_err(invalid)?,
-            batch_targets: number(limits, "batch_targets", 32)? as usize,
-            cache_bytes: number(limits, "cache_bytes", 64 * 1024 * 1024)? as usize,
+            batch_targets: size_limit(limits, "batch_targets", 32)?,
+            cache_bytes: size_limit(limits, "cache_bytes", 64 * 1024 * 1024)?,
             max_output_bytes: number(limits, "max_output_bytes", 68_719_476_736)?,
-            writer_index_memory_bytes: number(
+            writer_index_memory_bytes: size_limit(
                 limits,
                 "writer_index_memory_bytes",
                 128 * 1024 * 1024,
-            )? as usize,
+            )?,
         },
     };
     let destination = PathBuf::from(

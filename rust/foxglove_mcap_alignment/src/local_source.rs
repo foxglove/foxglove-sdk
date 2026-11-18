@@ -277,7 +277,7 @@ impl LocalSources {
                     .and_then(|r| v.checked_add(r))
             })
             .and_then(|v| v.checked_add(64 * 1024 * 1024));
-        if managed.is_none_or(|bytes| bytes > 4_294_967_296) {
+        if managed.is_none_or(|bytes| bytes as u64 > 4_294_967_296) {
             return Err(error(
                 ErrorKind::InvalidConfiguration,
                 "source managed limits exceed 4 GiB job pool",

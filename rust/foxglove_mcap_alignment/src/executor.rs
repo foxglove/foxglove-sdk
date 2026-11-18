@@ -1095,6 +1095,7 @@ fn execute_body(
     let mut sequences = vec![0u64; job.streams.len()];
     let mut targets = 0u64;
     let mut selections = 0u64;
+    let mut largest_sample_payload = 0;
     let mut reused = 0u64;
     let mut selected_records = sources.selected_records()?;
     let mut provenance_sequence = 0u64;
@@ -1182,6 +1183,7 @@ fn execute_body(
                 let sequence =
                     next_sequence(&mut sequences[stream], "output channel sequence exhausted")?;
                 let (position, length) = positions[target_position * job.streams.len() + stream];
+                largest_sample_payload = largest_sample_payload.max(length);
                 spool.seek(SeekFrom::Start(position)).map_err(write_error)?;
                 let mut payload = vec![0u8; length];
                 spool.read_exact(&mut payload).map_err(write_error)?;
@@ -1291,14 +1293,19 @@ fn execute_body(
     );
     metadata(&mut writer, REPORT_METADATA, &report)?;
     let finalization = Instant::now();
-    writer.finish().map_err(write_error)?;
+    let summary = writer.finish().map_err(write_error)?;
     let output = writer.into_inner();
     output.sync()?;
     let finalization_ns = finalization.elapsed().as_nanos();
     let validation = Instant::now();
     check_cancel(cancellation)?;
     sources
-        .validate_output(staging.path(), job.limits.writer_index_memory_bytes)
+        .validate_output(
+            staging.path(),
+            job.limits.writer_index_memory_bytes,
+            largest_sample_payload,
+            &summary.chunk_indexes,
+        )
         .map_err(|mut e| {
             if e.kind != ErrorKind::ResourceLimit {
                 e.kind = ErrorKind::ValidationFailed;

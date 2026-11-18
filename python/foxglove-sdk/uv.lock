@@ -540,6 +540,7 @@ dev = [
     { name = "isort" },
     { name = "maturin" },
     { name = "mcap" },
+    { name = "mcap-protobuf-support" },
     { name = "mypy" },
     { name = "pytest" },
     { name = "pytest-benchmark" },
@@ -580,6 +581,7 @@ dev = [
     { name = "isort", specifier = ">=6.0.0,<7" },
     { name = "maturin", specifier = ">=1.14.1,<2" },
     { name = "mcap", specifier = ">=1.6.0,<2" },
+    { name = "mcap-protobuf-support", specifier = ">=0.5,<1" },
     { name = "mypy", specifier = ">=1.13.0,<2" },
     { name = "pytest", specifier = ">=8.3.4,<10" },
     { name = "pytest-benchmark", specifier = ">=5.1.0,<6" },
@@ -954,6 +956,19 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/ca/6a/5039c5204c30478a27c9bd28ef2b5d1e947cae35b2636fae786ff777c1c6/mcap-1.6.0.tar.gz", hash = "sha256:d9aa1d9706ada964740536c7598b735a5aab677493d52c2be59fbd7467ec5664", size = 25657, upload-time = "2026-10-19T17:48:51.008Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/cd/15/fa7ff687a128ec51084a48fb1e039b247a9add47b974c125278d97f370be/mcap-1.6.0-py3-none-any.whl", hash = "sha256:7cd37fba2cf51d033f2139ca837d2ed3024dcec3cd9f8ecdf3d4d15930df6e17", size = 21955, upload-time = "2026-10-19T17:48:49.61Z" },
+]
+
+[[package]]
+name = "mcap-protobuf-support"
+version = "0.6.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "mcap" },
+    { name = "protobuf" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/42/b7/cf5617e7458de28501b08f77b053294c8de6947a78d89421e6bae3824e45/mcap_protobuf_support-0.6.0.tar.gz", hash = "sha256:4378cab3262b9976f3b9fdb0ee514c4dde9a5cd1b563102c83f90a3ccedd9928", size = 7704, upload-time = "2026-10-19T17:53:06.43Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/0a/a7/9ff7159b8fe081d2d658e1a6823b444b208dc91020d9fa43b7209a1a1cd2/mcap_protobuf_support-0.6.0-py3-none-any.whl", hash = "sha256:11318f7c51ad72ef595fb1e239c0d3ce6f76f1ae7bc79bbffac94065edd436a2", size = 7549, upload-time = "2026-10-19T17:53:05.273Z" },
 ]
 
 [[package]]

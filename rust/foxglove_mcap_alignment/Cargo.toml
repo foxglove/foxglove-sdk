@@ -24,5 +24,5 @@ zstd = "0.14"
 lz4 = "1.28"
 
 serde_json = "1.0.142"
-foxglove = { path = "../foxglove", default-features = false }
+foxglove.workspace = true
 prost.workspace = true
