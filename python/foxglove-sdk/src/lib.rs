@@ -23,6 +23,8 @@ use system_info::{PySystemInfoPublisher, start_sysinfo_publisher};
 #[cfg(not(target_family = "wasm"))]
 use websocket::start_server;
 
+#[cfg(not(target_family = "wasm"))]
+mod alignment;
 mod errors;
 mod generated;
 mod logging;
@@ -343,6 +345,8 @@ fn shutdown(#[allow(unused_variables)] py: Python<'_>) {
 /// Rust bindings are exported as `_foxglove_py` and should not be imported directly.
 #[pymodule]
 fn _foxglove_py(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    #[cfg(not(target_family = "wasm"))]
+    m.add_function(wrap_pyfunction!(alignment::_alignment_execute, m)?)?;
     foxglove::library_version::set_sdk_language("python");
     m.add_function(wrap_pyfunction!(enable_logging, m)?)?;
     m.add_function(wrap_pyfunction!(disable_logging, m)?)?;
