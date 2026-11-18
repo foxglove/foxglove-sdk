@@ -247,6 +247,16 @@ void declareParameters(rclcpp::Node* node) {
   node->declare_parameter(PARAM_MESSAGE_BACKLOG_SIZE, DEFAULT_MESSAGE_BACKLOG_SIZE,
                           messageBacklogSizeDescription);
 
+  auto channelSourcePluginsDescription = rcl_interfaces::msg::ParameterDescriptor{};
+  channelSourcePluginsDescription.name = PARAM_CHANNEL_SOURCE_PLUGINS;
+  channelSourcePluginsDescription.type = rcl_interfaces::msg::ParameterType::PARAMETER_STRING_ARRAY;
+  channelSourcePluginsDescription.description =
+    "Names of the channel source plugin instances to load. '<name>.plugin' sets the pluginlib "
+    "class of each instance.";
+  channelSourcePluginsDescription.read_only = true;
+  node->declare_parameter(PARAM_CHANNEL_SOURCE_PLUGINS, std::vector<std::string>(),
+                          channelSourcePluginsDescription);
+
   auto remoteAccessDescription = rcl_interfaces::msg::ParameterDescriptor{};
   remoteAccessDescription.name = PARAM_REMOTE_ACCESS;
   remoteAccessDescription.type = rcl_interfaces::msg::ParameterType::PARAMETER_BOOL;

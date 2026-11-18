@@ -12,6 +12,7 @@
 #include <resource_retriever/retriever.hpp>
 
 #include <foxglove_bridge/cdr_serializer.hpp>
+#include <foxglove_bridge/channel_source_plugin_host.hpp>
 #include <foxglove_bridge/ros2_foxglove_bridge.hpp>
 #include <foxglove_bridge/utils.hpp>
 #include <foxglove_bridge/version.hpp>
@@ -192,6 +193,8 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
   const bool publishClientCount = this->get_parameter(PARAM_PUBLISH_CLIENT_COUNT).as_bool();
   const auto messageBacklogSize =
     saturatingToSizeT(this->get_parameter(PARAM_MESSAGE_BACKLOG_SIZE).as_int());
+  const auto channelSourcePlugins =
+    this->get_parameter(PARAM_CHANNEL_SOURCE_PLUGINS).as_string_array();
 
   const bool debug = this->get_parameter(PARAM_DEBUG).as_bool();
   if (debug) {
@@ -472,6 +475,10 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
 
   _rosgraphPollThread =
     std::make_unique<std::thread>(std::bind(&FoxgloveBridge::rosgraphPollThread, this));
+
+  // Last, so a throwing constructor never leaves plugins running.
+  _channelSourcePlugins = std::make_unique<ChannelSourcePluginHost>(*this, _serverContext);
+  _channelSourcePlugins->load(channelSourcePlugins);
 }
 
 FoxgloveBridge::~FoxgloveBridge() {
@@ -480,6 +487,7 @@ FoxgloveBridge::~FoxgloveBridge() {
   if (_rosgraphPollThread) {
     _rosgraphPollThread->join();
   }
+  _channelSourcePlugins->shutdown();
   if (_sysinfoPublisher) {
     _sysinfoPublisher->stop();
   }

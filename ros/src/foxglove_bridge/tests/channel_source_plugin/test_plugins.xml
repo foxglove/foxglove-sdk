@@ -1,0 +1,14 @@
+<library path="foxglove_bridge_test_plugins">
+  <class type="foxglove_bridge_test_plugins::TestChannelSourcePlugin"
+         base_class_type="foxglove_bridge::ChannelSourcePlugin">
+    <description>Serves one JSON channel, logging while a client is subscribed.</description>
+  </class>
+  <class type="foxglove_bridge_test_plugins::ThrowingPlugin"
+         base_class_type="foxglove_bridge::ChannelSourcePlugin">
+    <description>Throws from initialize().</description>
+  </class>
+  <class type="foxglove_bridge_test_plugins::VersionMismatchPlugin"
+         base_class_type="foxglove_bridge::ChannelSourcePlugin">
+    <description>Built as if against another foxglove_bridge version.</description>
+  </class>
+</library>
