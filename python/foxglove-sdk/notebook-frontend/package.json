@@ -16,7 +16,7 @@
   },
   "devDependencies": {
     "@anywidget/types": "0.2.0",
-    "@foxglove/embed": "0.2.3",
+    "@foxglove/embed": "0.85.0",
     "@foxglove/tsconfig": "2.0.0",
     "esbuild": "0.28.2",
     "typescript": "5.9.3"
