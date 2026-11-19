@@ -8,7 +8,7 @@ import pytest
 from foxglove import Context, open_mcap
 from foxglove._alignment_media import MediaError, process_image
 from foxglove.channels import CompressedImageChannel
-from foxglove.experimental.mcap_alignment import load_config, run
+from foxglove.experimental.mcap_alignment import AlignmentError, load_config, run
 from foxglove.messages import CompressedImage
 from mcap.reader import SeekingReader
 from mcap.writer import CompressionType, Writer
@@ -261,6 +261,102 @@ def test_reference_camera_aligns_video_and_telemetry(tmp_path: Path) -> None:
                 at_ms(source_ms)
             )
             assert provenance[telemetry_topic]["reused"] is (tick == 2)
+
+
+@pytest.mark.parametrize(
+    ("camera", "keyframe_ms"),
+    [(1, 321), (3, 299)],
+    ids=["h265", "h264"],
+)
+def test_split_recording_requires_complete_keyframe_before_selected_frame(
+    tmp_path: Path, camera: int, keyframe_ms: int
+) -> None:
+    source = tmp_path / "split.mcap"
+    destination = tmp_path / "aligned.mcap"
+    topic = f"/camera/{camera}"
+    keyframe_time = ORIGIN + keyframe_ms * 1_000_000
+    selected_frame = 5
+    selected_time = ORIGIN + FRAME_TIMES[camera][selected_frame] * 1_000_000
+
+    with (
+        (EXAMPLE / "source.mcap").open("rb") as input_file,
+        source.open("wb") as output,
+    ):
+        reader = SeekingReader(input_file)
+        writer = Writer(output, compression=CompressionType.NONE)
+        writer.start()
+        summary = reader.get_summary()
+        assert summary is not None
+        channel = next(c for c in summary.channels.values() if c.topic == topic)
+        schema = summary.schemas[channel.schema_id]
+        schema_id = writer.register_schema(schema.name, schema.encoding, schema.data)
+        channel_id = writer.register_channel(topic, channel.message_encoding, schema_id)
+        for _, _, message in reader.iter_messages(topics=[topic], log_time_order=False):
+            if message.log_time > ORIGIN:
+                writer.add_message(
+                    channel_id,
+                    message.log_time,
+                    message.data,
+                    message.publish_time,
+                    sequence=message.sequence,
+                )
+        writer.finish()
+
+    config = load_config(EXAMPLE / "job.json")
+    image_topic = config["streams"][camera]["output_topic"]
+    config.update(
+        paths=[str(source)],
+        destination=str(destination),
+        episode={"start": ORIGIN + 1, "end": selected_time + 1},
+        timeline={"kind": "reference", "topic": topic},
+        streams=[{**config["streams"][camera], "policy": "exact", "tolerance_ns": 0}],
+    )
+    with pytest.raises(AlignmentError, match="no complete keyframe") as error:
+        run(config, base_directory=tmp_path)
+    assert error.value.kind == "DecodeFailed"
+    assert not destination.exists()
+
+    config["episode"]["start"] = keyframe_time + 1
+    report = run(config, base_directory=tmp_path)["report"]
+    assert report["media_video_packets"] == report["media_decoded_frames"] == 2
+    assert report["media_dependency_frames"] == 1
+    assert report["image_encodes"] == 1
+    with destination.open("rb") as handle:
+        reader = SeekingReader(handle, decoder_factories=[DecoderFactory()])
+        [(_, _, message, image)] = reader.iter_decoded_messages(topics=[image_topic])
+        assert message.log_time == selected_time
+        with Image.open(io.BytesIO(image.data)) as png:
+            assert png.tobytes() == _source_pixels(topic)[selected_frame]
+
+
+def test_repeated_media_frame_fits_physical_index_budget(tmp_path: Path) -> None:
+    destination = tmp_path / "aligned.mcap"
+    config = load_config(EXAMPLE / "job.json")
+    image_topic = config["streams"][0]["output_topic"]
+    config.update(
+        destination=str(destination),
+        temporary_directory=str(tmp_path),
+        episode={"start": ORIGIN, "end": ORIGIN + 100_000_000},
+        timeline={"kind": "fixed", "numerator": 2000},
+        streams=[config["streams"][0]],
+        limits={"index_memory_bytes": 16 * 1024, "batch_targets": 11},
+    )
+    report = run(config, base_directory=EXAMPLE)["report"]
+    assert report["targets"] == report["selections"] == 200
+    assert report["unique_selected"] == report["image_encodes"] == 1
+    assert report["reused"] == report["image_encode_reuse"] == 199
+    with destination.open("rb") as handle:
+        reader = SeekingReader(handle, validate_crcs=True)
+        images = list(reader.iter_messages(topics=[image_topic]))
+        rows = list(reader.iter_messages(topics=[PROVENANCE]))
+        assert len(images) == len(rows) == 200
+        for tick, ((_, _, image), (_, _, row)) in enumerate(zip(images, rows)):
+            provenance = json.loads(row.data)
+            assert image.log_time == row.log_time == ORIGIN + tick * 500_000
+            assert image.sequence == provenance["output_sequence"] == tick
+            assert provenance["target_index"] == tick
+            assert provenance["source_sequence"] == 0
+            assert provenance["reused"] is (tick > 0)
 
 
 def test_transcoded_image_can_exceed_input_record_limit(tmp_path: Path) -> None:

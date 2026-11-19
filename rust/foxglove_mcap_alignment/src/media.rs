@@ -26,8 +26,13 @@ pub struct EncodedFrame {
 /// A single isolated file/channel decoder. Implementations must reject duplicate,
 /// missing and unknown tokens, B pictures and unsupported configuration changes.
 pub trait MediaDecoder: Send {
-    fn feed(&mut self, data: &[u8], token: u64, selected: bool)
-    -> Result<Vec<EncodedFrame>, Error>;
+    /// Return `None` for a prefix packet before complete decoder initialization.
+    fn feed(
+        &mut self,
+        data: &[u8],
+        token: u64,
+        selected: bool,
+    ) -> Result<Option<Vec<EncodedFrame>>, Error>;
     fn flush(&mut self) -> Result<Vec<EncodedFrame>, Error>;
 }
 /// Backend-independent boundary; a factory can serve independent camera workers.
@@ -731,7 +736,9 @@ pub(crate) fn prepare(
                                 channel: source.identity.channel,
                             },
                         ));
-                        selected.push(source)?;
+                        if !slot.reused {
+                            selected.push(source)?;
+                        }
                     }
                 }
             }
@@ -1066,6 +1073,15 @@ fn process_binding(
                 wanted,
             )?;
             cancel(cancellation)?;
+            let Some(frames) = frames else {
+                if wanted {
+                    return Err(Error::new(
+                        ErrorKind::DecodeFailed,
+                        "Selected video frame has no complete keyframe at or before it",
+                    ));
+                }
+                continue;
+            };
             packets = packets.checked_add(1).ok_or_else(|| {
                 Error::new(ErrorKind::ArithmeticOverflow, "packet ordinal overflow")
             })?;
@@ -1229,9 +1245,9 @@ mod tests {
             _data: &[u8],
             _token: u64,
             _selected: bool,
-        ) -> Result<Vec<EncodedFrame>, Error> {
+        ) -> Result<Option<Vec<EncodedFrame>>, Error> {
             self.0.store(true, Ordering::Relaxed);
-            Ok(Vec::new())
+            Ok(Some(Vec::new()))
         }
         fn flush(&mut self) -> Result<Vec<EncodedFrame>, Error> {
             panic!("cancelled decoder must not flush")

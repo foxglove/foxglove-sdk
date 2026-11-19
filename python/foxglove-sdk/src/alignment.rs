@@ -85,12 +85,18 @@ impl MediaDecoder for PythonDecoder {
         data: &[u8],
         token: u64,
         selected: bool,
-    ) -> Result<Vec<EncodedFrame>, Error> {
+    ) -> Result<Option<Vec<EncodedFrame>>, Error> {
         Python::attach(|py| {
             self.decoder
                 .bind(py)
                 .call_method1("feed", (PyBytes::new(py, data), token, selected))
-                .and_then(frames)
+                .and_then(|value| {
+                    if value.is_none() {
+                        Ok(None)
+                    } else {
+                        frames(value).map(Some)
+                    }
+                })
                 .map_err(|e| py_error(py, e))
         })
     }

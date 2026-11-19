@@ -1230,8 +1230,9 @@ fn execute_body(
                 selections += 1;
                 if slot.reused {
                     reused += 1;
+                } else {
+                    selected_records.push(source)?;
                 }
-                selected_records.push(source)?;
             }
             targets += 1;
         }

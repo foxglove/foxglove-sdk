@@ -337,7 +337,7 @@ class Decoder:
     """One isolated non-B Annex B stream, with bounded pending token association.
 
     Each input envelope contains one frame. Tokens are private monotonic ordinals;
-    they carry no presentation-time claim. All frames are validated, but only
+    they carry no presentation-time claim. Decoded frames are validated, but only
     selected frames become RGB/images. Caller must drain each returned list before
     feeding more packets. A decoder belongs to exactly one source file/channel.
     """
@@ -392,7 +392,8 @@ class Decoder:
         if self.closed or self.finished:
             _fail("decode_failed", "Decoder already flushed or closed")
 
-    def _validate_packet(self, data: bytes) -> None:
+    def _validate_packet(self, data: bytes) -> bool:
+        """Validate the Annex B envelope and report whether decoding can proceed."""
         if not isinstance(data, bytes) or len(data) > self.max_frame_bytes:
             _fail("resource_limit", "Packet exceeds frame buffer capacity")
         starts: list[re.Match[bytes]] = []
@@ -427,17 +428,16 @@ class Decoder:
             else bool(kinds.intersection(range(16, 24)))
         )
         if self.packet_count == 0 and (not key or not parameters.issubset(kinds)):
-            _fail(
-                "decode_failed",
-                "Stream must begin with complete decoder initialization",
-            )
+            self.parameters.clear()
+            return False
         required_key_parameters = {7} if self.codec == "h264" else parameters
         if key and not required_key_parameters.issubset(kinds):
             _fail("unsupported_media", "Keyframe missing required parameter sets")
+        return True
 
     def feed(
         self, data: bytes, token: int, selected: bool
-    ) -> list[tuple[int, bytes, dict[str, Any]]]:
+    ) -> list[tuple[int, bytes, dict[str, Any]]] | None:
         self._check_open()
         if type(token) is not int or not self.last_token < token <= _MAX_INTEGER:
             _fail(
@@ -445,7 +445,8 @@ class Decoder:
             )
         if type(selected) is not bool:
             _fail("invalid_configuration", "selected must be boolean")
-        self._validate_packet(data)
+        if not self._validate_packet(data):
+            return None
         if len(self.pending) >= 128:
             _fail("resource_limit", "Decoder association backlog exceeds 128")
         packet = av.Packet(data)
