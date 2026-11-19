@@ -9,11 +9,15 @@ classifiers = ["Programming Language :: Python :: 3", "Programming Language :: R
 dependencies = []
 dynamic = ["version"]
 
+[project.scripts]
+foxglove-align-mcap = "foxglove.mcap_alignment:main"
+
 [project.urls]
 repository = "https://github.com/foxglove/foxglove-sdk"
 documentation = "https://docs.foxglove.dev/"
 
 [project.optional-dependencies]
+alignment = ["mcap>=1.6,<2", "mcap-protobuf-support>=0.5.4,<0.6", "av==16.1.0", "Pillow==12.0.0"]
 notebook = ["anywidget", "mcap", "traitlets"]
 torch = ["foxglove-client>=0.23.0", "torch>=2.5,<3", "pyarrow>=16", "mcap>=1.6,<2"]
 ray = ["foxglove-client>=0.23.0", "ray[data]>=2.49,<3", "pyarrow>=16", "mcap>=1.6,<2"]

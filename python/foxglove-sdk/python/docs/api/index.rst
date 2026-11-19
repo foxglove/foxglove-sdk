@@ -11,6 +11,25 @@ foxglove
    :exclude-members: Capability, MCAPWriter, ParameterType, ParameterValue, StatusLevel, init_notebook_buffer
 
 
+MCAP alignment
+^^^^^^^^^^^^^^
+
+Install the SDK with the ``alignment`` extra. Call
+``foxglove.mcap_alignment.align`` to write one sample per populated topic at each
+target MCAP log time. Use either a fixed rate or a reference topic's timestamps.
+
+.. code-block:: python
+
+   from foxglove.mcap_alignment import align
+
+   counts = align("input.mcap", "at-10hz.mcap", hz=10)
+   align("input.mcap", "at-camera-times.mcap", reference_topic="/camera/front")
+
+The ``foxglove-align-mcap`` command accepts the same timelines via ``--hz``
+and ``--reference-topic``. Each target uses the most recent message at or before
+its timestamp. Supported video streams become independently readable PNG images.
+Choose a new destination for each output.
+
 Message Types
 ^^^^^^^^^^^^^
 
