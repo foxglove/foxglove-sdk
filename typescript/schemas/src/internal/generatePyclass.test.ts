@@ -1,3 +1,5 @@
+import { describe, expect, it } from "vitest";
+
 import { generateSchemaPrelude, generatePyclass } from "./generatePyclass";
 import { exampleEnum, exampleMessage } from "./testFixtures";
 

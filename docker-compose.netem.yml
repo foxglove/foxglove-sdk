@@ -37,8 +37,7 @@
 # NETEM_LINK_<NAME>_DST env var is set. See scripts/container/netem_setup.py for details.
 #
 # To apply per-link impairment to a real stack, use an overlay that pins peers
-# to known IPs. See `docker-compose.netem-perlink.yml` for a working example
-# with target containers on a fixed-subnet bridge network.
+# to known IPs. See `docker-compose.netem-livekit.yml` for a working example.
 #
 # Requirements:
 #   - Linux host: works natively.
@@ -46,10 +45,6 @@
 #   - GitHub Actions: works on ubuntu-latest runners.
 
 services:
-  livekit:
-    ports:
-      - "9999:9999/udp" # UDP echo for netem packet loss testing
-
   netem:
     image: python:3-alpine
     network_mode: "service:livekit"
@@ -60,26 +55,17 @@ services:
     volumes:
       - ./scripts/container/netem_setup.py:/netem_setup.py:ro
       - ./scripts/container/netem_impair.py:/netem_impair.py:ro
-      - ./scripts/container/udp_echo.py:/udp_echo.py:ro
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
-        apk add --no-cache iproute2 socat > /dev/null 2>&1
-        # Start a UDP echo server for packet loss testing. Each received
-        # datagram is echoed back through the netem-shaped egress path.
-        python3 /udp_echo.py 9999 &
+        apk add --no-cache iproute2 > /dev/null 2>&1
         # Apply netem rules (flat or per-link depending on env vars).
         # Exit on failure so a broken tc hierarchy doesn't silently persist.
         python3 /netem_setup.py || exit 1
         # Keep the container alive so the qdisc rules persist.
         exec sleep infinity
     healthcheck:
-      # Verify the tc hierarchy is applied and the UDP echo server is listening.
-      test:
-        [
-          "CMD-SHELL",
-          "tc qdisc show | grep -q netem && netstat -uln | grep -q ':9999 '",
-        ]
+      test: ["CMD-SHELL", "tc qdisc show | grep -q netem"]
       interval: 2s
       timeout: 5s
       retries: 10

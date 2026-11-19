@@ -5,11 +5,12 @@ from __future__ import annotations
 import os
 from collections.abc import Callable, Generator, Iterable, Iterator, Mapping, Sequence
 from contextlib import ExitStack
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, Literal, Protocol, TypeVar, cast
 
+from .splits import DatasetSplit, SplitName, SplitSummary
 from .storage import (
     ObjectLocation,
     ObjectStore,
@@ -45,12 +46,14 @@ class _Client(Protocol):
         version_number: int,
         limit: int,
         include_recordings: bool = False,
+        include_properties: bool = False,
     ) -> _Page: ...
 
     def iter_messages(
         self,
         *,
         episode_id: str,
+        episode_version: int,
         topics: list[str],
         decoder_factories: list[DecoderFactory] | None = None,
         start: datetime | None = None,
@@ -75,23 +78,19 @@ class _Episode:
     id: str
     start_time: datetime
     end_time: datetime
-    metadata: dict[str, Any]
     locations: tuple[ObjectLocation, ...] = ()
+    version: int = field(kw_only=True)
+    # None when properties were not requested during planning.
+    properties: dict[str, Any] | None = field(default=None, kw_only=True)
 
 
 class EpisodeReader:
     """An episode scoped to the topics selected by ``read_dataset``.
 
-    .. warning::
-
-        This API is experimental and unstable. It may change in backward-incompatible
-        ways as we continue development and incorporate user feedback.
-
-    Instances are supplied to the user's ``read_episode`` callback and remain
-    usable only until that callback's iterator finishes or is closed. Message tuples
+    Instances are supplied to the user's ``read_episode`` callback. The SDK closes
+    an instance when that callback's iterator finishes or is closed. Message tuples
     are the client's ``(schema, channel, message, decoded_message)`` values. Create
     custom message decoders inside the callback and pass them to :meth:`iter_messages`.
-    Media decoding (such as H.264 to images) is a separate processing step.
     """
 
     def __init__(
@@ -125,9 +124,20 @@ class EpisodeReader:
         return self._episode.end_time
 
     @property
-    def metadata(self) -> Mapping[str, Any]:
-        """User-defined episode metadata."""
-        return MappingProxyType(self._episode.metadata)
+    def properties(self) -> Mapping[str, Any]:
+        """Read-only properties of the episode version pinned by the dataset version.
+
+        Requires ``include_properties=True`` in ``read_dataset``. Empty if the episode
+        has no properties.
+
+        :raises RuntimeError: If properties were not requested.
+        """
+        if self._episode.properties is None:
+            raise RuntimeError(
+                "Episode properties were not requested; "
+                "pass include_properties=True to read_dataset"
+            )
+        return MappingProxyType(self._episode.properties)
 
     def iter_messages(
         self,
@@ -142,20 +152,35 @@ class EpisodeReader:
         redownload data. Active streams are closed when the callback ends.
         Message context and stream order are preserved for stateful processing.
 
-        :param decoder_factories: MCAP decoder factories used for message
+        :param decoder_factories: Optional. MCAP decoder factories used for message
             deserialization. ``None`` uses the client's default decoders; an explicit
             list replaces them. Construct factories inside the callback so their
-            state stays local to the worker and episode. This does not decode media
-            payloads into images.
-        :param topics: Optional nonempty subset of the dataset topics. Filtering
-            happens on the server or through MCAP indexes for object storage;
-            separate calls open separate downloads.
-        :param lookback: Additional history to request before the episode start,
-            for stateful media decoding. Must be nonnegative. Only recordings
-            attached to the episode are searched; history may be unavailable.
-            Consumers must exclude lookback messages from their training samples.
+            state stays local to the worker and episode.
+        :param topics: Optional. Nonempty subset of the dataset topics; ``None``
+            streams all of them. Filtering happens on the server or through MCAP
+            indexes for object storage; separate calls open separate downloads.
+        :param lookback: Optional. Additional history to request before the episode
+            start, for stateful media decoding. Must be nonnegative. The history is
+            read from the recordings attached to the episode. Consumers must
+            exclude lookback messages, which are logged before :attr:`start_time`,
+            from their training samples.
         :returns: Tuples of schema (possibly ``None``), channel, raw MCAP message,
             and decoded message payload.
+        :raises ValueError: On first iteration, if ``lookback`` is negative, or
+            ``topics`` is empty or not a subset of the dataset topics.
+        :raises RuntimeError: On first iteration, if the callback that received
+            this reader has ended.
+        :raises mcap.exceptions.DecoderNotFoundError: If no decoder factory handles
+            the encoding of a message.
+
+        Example::
+
+            def read_episode(episode):
+                for _, channel, message, _ in episode.iter_messages():
+                    yield {
+                        "topic": channel.topic,
+                        "log_time": message.log_time,
+                    }
         """
         if self._closed:
             raise RuntimeError("Episode reader is closed")
@@ -192,6 +217,7 @@ class EpisodeReader:
         )
         stream = self._client.iter_messages(
             episode_id=self.id,
+            episode_version=self._episode.version,
             topics=list(selected_topics),
             decoder_factories=(
                 None if decoder_factories is None else list(decoder_factories)
@@ -283,7 +309,16 @@ def _plan(
     object_store_factory: ObjectStoreFactory | None = None,
     *,
     source: Literal["foxglove", "object_storage"] = "foxglove",
+    split_config: DatasetSplit | None = None,
+    split: SplitName | None = None,
+    include_properties: bool = False,
 ) -> _Plan:
+    if (split_config is None) != (split is None):
+        raise ValueError("split_config and split must be provided together")
+    if split_config is not None and not isinstance(split_config, DatasetSplit):
+        raise ValueError("split_config must be a DatasetSplit")
+    if split is not None and split not in ("train", "validation", "test"):
+        raise ValueError("split must be train, validation, or test")
     if source not in ("foxglove", "object_storage"):
         raise ValueError("source must be 'foxglove' or 'object_storage'")
     if source == "foxglove" and object_store_factory is not None:
@@ -304,38 +339,41 @@ def _plan(
             if object_store_factory is not None
             else _CloudObjectStore
         )
-    client = make_client()
-    info = client.get_dataset_version(dataset_id=dataset_id, version_number=version)
-    if info["committed_at"] is None:
-        raise ValueError("Dataset version must be committed")
-    if info.get("has_missing_recordings", False):
-        raise ValueError("Dataset version contains missing recordings")
     episodes = []
-    page = client.get_dataset_version_episodes(
-        dataset_id=dataset_id,
-        version_number=version,
-        limit=_EPISODE_PAGE_SIZE,
-        include_recordings=make_store is not None,
-    )
-    for entry in page.auto_paging_iter():
-        episode = entry["episode"]
-        if entry.get("has_missing_recordings", False):
-            raise ValueError(f"Episode {episode['id']} contains missing recordings")
+    recordings: dict[str, tuple[str, ...]] = {}
+    for episode in _version_episodes(
+        dataset_id,
+        version,
+        make_client,
+        include_recordings=make_store is not None or split_config is not None,
+        include_properties=include_properties,
+    ):
+        if split_config is not None:
+            recordings[episode["id"]] = _recording_ids(episode)
         episodes.append(
             _Episode(
                 episode["id"],
                 episode["start_time"],
                 episode["end_time"],
-                dict(episode["metadata"]),
                 (
                     _locations(episode, validate=object_store_factory is None)
                     if make_store is not None
                     else ()
                 ),
+                version=episode["version"],
+                # Episodes without properties may omit the field.
+                properties=(
+                    dict(episode.get("properties") or {})
+                    if include_properties
+                    else None
+                ),
             )
         )
     # Make rank/worker partitioning independent of pagination order and sort ties.
     episodes.sort(key=lambda episode: episode.id)
+    if split_config is not None and split is not None:
+        selected = split_config._select(recordings, split)
+        episodes = [episode for episode in episodes if episode.id in selected]
     return _Plan(
         dataset_id,
         version,
@@ -344,6 +382,111 @@ def _plan(
         make_client if make_store is None else None,
         make_store,
     )
+
+
+def _version_episodes(
+    dataset_id: str,
+    version: int,
+    client_factory: ClientFactory,
+    *,
+    include_recordings: bool,
+    include_properties: bool = False,
+) -> Iterator[Mapping[str, Any]]:
+    if not dataset_id:
+        raise ValueError("dataset_id must be nonempty")
+    if version < 1:
+        raise ValueError("version must be a positive integer")
+    client = client_factory()
+    info = client.get_dataset_version(dataset_id=dataset_id, version_number=version)
+    if info.get("has_missing_recordings", False):
+        raise ValueError("Dataset version contains missing recordings")
+    page = client.get_dataset_version_episodes(
+        dataset_id=dataset_id,
+        version_number=version,
+        limit=_EPISODE_PAGE_SIZE,
+        include_recordings=include_recordings,
+        include_properties=include_properties,
+    )
+    for entry in page.auto_paging_iter():
+        episode = entry["episode"]
+        if "version" not in episode:
+            raise ValueError(
+                "Dataset membership must include pinned episode versions; "
+                "upgrade to foxglove-client>=0.23.0"
+            )
+        if entry.get("has_missing_recordings", False):
+            raise ValueError(f"Episode {episode['id']} contains missing recordings")
+        yield episode
+
+
+def _recording_ids(episode: Mapping[str, Any]) -> tuple[str, ...]:
+    episode_recordings = episode.get("recordings")
+    if not isinstance(episode_recordings, list) or not episode_recordings:
+        raise ValueError(
+            f"Episode {episode['id']} requires recording IDs for splitting"
+        )
+    recording_ids = []
+    for recording in episode_recordings:
+        recording_id = recording.get("id") if isinstance(recording, Mapping) else None
+        if not isinstance(recording_id, str) or not recording_id:
+            raise ValueError(f"Episode {episode['id']} has invalid recording IDs")
+        recording_ids.append(recording_id)
+    return tuple(recording_ids)
+
+
+def inspect_splits(
+    dataset_id: str,
+    *,
+    version: int,
+    split_config: DatasetSplit,
+    client_factory: ClientFactory | None = None,
+) -> dict[SplitName, SplitSummary]:
+    """Inspect train, validation, and test sizes using episode metadata only.
+
+    Uses the same assignment as the PyTorch and Ray readers, without downloading
+    messages or requiring either framework. Counts cover the whole dataset
+    version, before worker/rank partitioning. Proportions are probabilities per
+    connected group.
+
+    :param dataset_id: Required. ID of the dataset.
+    :param version: Required. Number of the dataset version to inspect: a
+        committed version or the dataset's draft.
+    :param split_config: Required. Split configuration to inspect.
+    :param client_factory: Optional. Callable that returns the API client, for
+        custom authentication or endpoints, as with ``read_dataset``. The default
+        client uses ``FOXGLOVE_API_TOKEN``.
+    :returns: The :class:`~foxglove.datasets.SplitSummary` of each split, keyed by
+        ``"train"``, ``"validation"``, and ``"test"``.
+    :raises ValueError: If an argument is invalid, ``FOXGLOVE_API_TOKEN`` is not
+        set and no ``client_factory`` is given, the version contains missing
+        recordings, an episode has no recording IDs, or ``split_config.groups``
+        does not cover exactly the version's episodes.
+
+    Example::
+
+        from foxglove.datasets import DatasetSplit, inspect_splits
+
+        summaries = inspect_splits(
+            "dset_123", version=2, split_config=DatasetSplit()
+        )
+        print(summaries["train"].episode_count)
+    """
+    if not isinstance(split_config, DatasetSplit):
+        raise ValueError("split_config must be a DatasetSplit")
+    make_client = client_factory if client_factory is not None else _make_client
+    recordings = {
+        episode["id"]: _recording_ids(episode)
+        for episode in _version_episodes(
+            dataset_id, version, make_client, include_recordings=True
+        )
+    }
+    return {
+        name: SplitSummary(
+            group_count=len(groups),
+            episode_count=sum(len(episodes) for episodes in groups.values()),
+        )
+        for name, groups in split_config._partition(recordings).items()
+    }
 
 
 def _locations(

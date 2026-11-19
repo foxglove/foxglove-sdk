@@ -22,10 +22,10 @@ class ObjectPage:
         for index in range(4):
             yield {
                 "episode": {
+                    "version": 2,
                     "id": str(index),
                     "start_time": START + timedelta(seconds=index),
                     "end_time": START + timedelta(seconds=index, microseconds=1),
-                    "metadata": {},
                     "recordings": [
                         {
                             "id": "recording",
@@ -54,6 +54,7 @@ class ObjectClient(Client):
         version_number: int,
         limit: int,
         include_recordings: bool = False,
+        include_properties: bool = False,
     ) -> Any:
         assert include_recordings
         return ObjectPage(self.directory)

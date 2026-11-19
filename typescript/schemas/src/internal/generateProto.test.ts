@@ -1,4 +1,5 @@
 import protobufjs from "protobufjs";
+import { describe, expect, it } from "vitest";
 
 import { generateProto } from "./generateProto";
 import { foxgloveEnumSchemas, foxgloveMessageSchemas } from "./schemas";

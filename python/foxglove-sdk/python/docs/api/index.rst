@@ -314,3 +314,49 @@ Used with the playback control feature during live visualization. Requires the
    .. py:data:: Ended
 
       The end of the available data has been reached.
+
+
+foxglove.datasets
+-----------------
+
+.. Constructors are excluded. The SDK creates most of these objects, and DatasetSplit documents its arguments on the class.
+.. automodule:: foxglove.datasets
+   :members:
+   :exclude-members: __init__, __new__
+
+
+foxglove.datasets.ray
+---------------------
+
+.. automodule:: foxglove.datasets.ray
+   :members:
+
+
+foxglove.datasets.torch
+-----------------------
+
+.. TorchDataset is created by read_dataset, so its constructor is excluded.
+.. automodule:: foxglove.datasets.torch
+   :members:
+   :show-inheritance:
+   :exclude-members: __init__, __new__
+
+
+foxglove.datasets.video
+-----------------------
+
+.. automodule:: foxglove.datasets.video
+   :members:
+   :show-inheritance:
+
+
+foxglove.client (foxglove-client package)
+-----------------------------------------
+
+``foxglove.client`` is the Python client for the Foxglove API. It is published separately from the
+SDK, as the `foxglove-client <https://pypi.org/project/foxglove-client/>`__ package.
+
+.. toctree::
+   :maxdepth: 1
+
+   Dataset, episode, data coverage, and custom property methods <./client>

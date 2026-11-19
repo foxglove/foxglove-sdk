@@ -1,0 +1,16 @@
+name: Install CUDA headers
+description: Install the CUDA headers needed to compile NVENC support on Linux.
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: |
+        set -euo pipefail
+        # webrtc-sys loads the driver at runtime; compiling only needs headers.
+        cuda_target="$RUNNER_TEMP/cuda-python"
+        uv pip install --target "$cuda_target" --no-deps --only-binary :all: \
+          nvidia-cuda-runtime-cu12==12.6.77
+        cuda_home="$cuda_target/nvidia/cuda_runtime"
+        test -f "$cuda_home/include/cuda.h"
+        echo "CUDA_HOME=$cuda_home" >> "$GITHUB_ENV"

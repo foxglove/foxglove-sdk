@@ -3,7 +3,7 @@
 # For the full list of built-in configuration values, see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 from datetime import date
-from typing import Any
+from typing import Any, get_origin
 
 from docs.extensions.foxglove_autopanels import (
     AutoPanelsDirective,
@@ -11,6 +11,7 @@ from docs.extensions.foxglove_autopanels import (
 )
 from docs.version import SDK_VERSION
 from sphinx.application import Sphinx
+from sphinx.config import Config
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
@@ -48,6 +49,16 @@ nitpick_ignore = [
     ("py:class", "mcap.records.Schema"),
     ("py:class", "mcap.records.Channel"),
     ("py:class", "mcap.records.Message"),
+    ("py:exc", "mcap.exceptions.DecoderNotFoundError"),
+    ("py:class", "numpy.ndarray"),
+    # External types on the hand-written foxglove.client page.
+    ("py:class", "os.PathLike"),
+    ("py:class", "pathlib.Path"),
+    ("py:exc", "requests.exceptions.HTTPError"),
+    # The structural type of the API client that the dataset readers accept.
+    ("py:class", "foxglove.datasets.reader._Client"),
+    # The sample type variable of TorchDataset.
+    ("py:obj", "foxglove.datasets.torch._T"),
 ]
 nitpick_ignore_regex = [
     # Ignore warnings for built-in types from autodoc_typehints
@@ -62,6 +73,25 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 # Config for sphinx_autodoc_typehints
 # https://pypi.org/project/sphinx-autodoc-typehints/
 typehints_defaults = "braces"
+
+
+def format_typehint(annotation: Any, _config: Config | None = None) -> str | None:
+    """Render ``numpy.typing.NDArray`` annotations as ``numpy.ndarray``.
+
+    The default formatter names the private NumPy class that implements the alias.
+    sphinx-autodoc-typehints passes the config in some calls and omits it in others.
+    """
+    origin = get_origin(annotation)
+    if getattr(origin, "__module__", "").startswith("numpy") and getattr(
+        origin, "__name__", ""
+    ) in ("NDArray", "ndarray"):
+        return ":py:class:`~numpy.ndarray`"
+    return None
+
+
+typehints_formatter = format_typehint
+# Sphinx warns that it cannot cache a function-valued setting such as typehints_formatter.
+suppress_warnings = ["config.cache"]
 
 # Treat __init__ signatures as separate methods so we can exclude them using :exclude-members:
 autodoc_class_signature = "separated"

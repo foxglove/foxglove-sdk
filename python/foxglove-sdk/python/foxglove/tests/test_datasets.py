@@ -132,18 +132,25 @@ def test_rejects_invalid_version() -> None:
         _plan("dataset", 0, ["/camera"], Client)
 
 
-@pytest.mark.parametrize(
-    "info, message",
-    [
-        ({"committed_at": None}, "committed"),
-        ({"committed_at": "date", "has_missing_recordings": True}, "missing"),
-    ],
-)
-def test_rejects_editable_or_incomplete_version(
-    monkeypatch: pytest.MonkeyPatch, info: dict[str, Any], message: str
+def test_reads_uncommitted_draft_version(monkeypatch: pytest.MonkeyPatch) -> None:
+    committed = _plan("dataset", 7, ["/camera"], Client)
+    monkeypatch.setattr(
+        Client,
+        "get_dataset_version",
+        lambda *args, **kwargs: {"committed_at": None, "has_missing_recordings": False},
+    )
+    draft = _plan("dataset", 7, ["/camera"], Client)
+    assert draft.episodes
+    assert draft.episodes == committed.episodes
+
+
+@pytest.mark.parametrize("committed_at", ["date", None])
+def test_rejects_version_with_missing_recordings(
+    monkeypatch: pytest.MonkeyPatch, committed_at: str | None
 ) -> None:
+    info = {"committed_at": committed_at, "has_missing_recordings": True}
     monkeypatch.setattr(Client, "get_dataset_version", lambda *args, **kwargs: info)
-    with pytest.raises(ValueError, match=message):
+    with pytest.raises(ValueError, match="missing"):
         _plan("dataset", 7, ["/camera"], Client)
 
 
@@ -170,7 +177,7 @@ def test_callback_lifecycle_closes_resources(outcome: str) -> None:
     readers = []
     retained = []
 
-    def read_episode(episode: EpisodeReader) -> Iterator[tuple[str, str]]:
+    def read_episode(episode: EpisodeReader) -> Iterator[str]:
         readers.append(episode)
         messages = episode.iter_messages()
         retained.append(messages)
@@ -178,7 +185,7 @@ def test_callback_lifecycle_closes_resources(outcome: str) -> None:
         try:
             if outcome == "error":
                 raise ValueError("bad schema")
-            yield (episode.id, episode.metadata["label"])
+            yield episode.id
         finally:
             events.append(episode.id)
 
@@ -192,11 +199,11 @@ def test_callback_lifecycle_closes_resources(outcome: str) -> None:
         assert isinstance(error.value.__cause__, ValueError)
         expected = ["a"]
     elif outcome == "cancel":
-        assert next(stream) == ("a", "a")
+        assert next(stream) == "a"
         stream.close()
         expected = ["a"]
     else:
-        assert list(stream) == [(name, name) for name in ("a", "b", "c", "d")]
+        assert list(stream) == ["a", "b", "c", "d"]
         expected = ["a", "b", "c", "d"]
     assert events == expected
     assert client.closed == expected
@@ -215,3 +222,57 @@ def test_reader_rejects_invalid_topic_subset(topics: Any) -> None:
     with pytest.raises(ValueError, match="topics"):
         next(reader.iter_messages(topics=topics))
     assert not client.calls
+
+
+def test_older_client_cannot_stream_latest_in_place_of_pin(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def iter_messages(
+        *, episode_id: str, topics: list[str], decoder_factories: Any = None
+    ) -> Any:
+        raise AssertionError("An unsupported client must not open a stream")
+
+    client = Client()
+    monkeypatch.setattr(client, "iter_messages", iter_messages)
+    plan = _plan("dataset", 7, ["/camera"], lambda: client)
+    with pytest.raises(RuntimeError) as error:
+        list(plan.read(plan.episodes, samples))
+    assert isinstance(error.value.__cause__, TypeError)
+    assert "unexpected keyword argument 'episode_version'" in str(error.value.__cause__)
+
+
+def test_client_type_error_is_preserved_with_episode_context(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    failure = TypeError("invalid episode_version value")
+
+    def iter_messages(**kwargs: Any) -> Any:
+        assert kwargs["episode_version"] == 2
+        raise failure
+
+    client = Client()
+    monkeypatch.setattr(client, "iter_messages", iter_messages)
+    plan = _plan("dataset", 7, ["/camera"], lambda: client)
+    with pytest.raises(
+        RuntimeError, match="Failed to read episode a in dataset dataset version 7"
+    ) as error:
+        list(plan.read(plan.episodes, samples))
+    assert error.value.__cause__ is failure
+
+
+def test_missing_episode_pin_does_not_fall_back_to_latest(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    original = Page.auto_paging_iter
+
+    def unversioned(page: Page) -> Iterator[dict[str, Any]]:
+        for entry in original(page):
+            del entry["episode"]["version"]
+            yield entry
+
+    monkeypatch.setattr(Page, "auto_paging_iter", unversioned)
+    with pytest.raises(
+        ValueError,
+        match=r"pinned episode versions; upgrade to foxglove-client>=0\.23\.0",
+    ):
+        _plan("dataset", 7, ["/camera"], Client)

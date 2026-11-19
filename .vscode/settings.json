@@ -18,7 +18,6 @@
     "yarn.lock": true
   },
   "typescript.tsdk": "node_modules/typescript/lib",
-  "jest.jestCommandLine": "yarn test",
   "python.analysis.typeCheckingMode": "strict",
   "[python]": {
     "editor.defaultFormatter": "ms-python.black-formatter"

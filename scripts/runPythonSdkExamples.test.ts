@@ -2,29 +2,30 @@ import { ChildProcess, spawn } from "node:child_process";
 import { SIGTERM } from "node:constants";
 import { access, readdir } from "node:fs/promises";
 import path from "node:path";
+import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
 
 import { testOnlyExports } from "./runPythonSdkExamples";
 
-jest.mock("node:child_process", () => ({
-  ...jest.requireActual<typeof import("node:child_process")>("node:child_process"),
-  spawn: jest.fn(),
+vi.mock("node:child_process", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("node:child_process")>()),
+  spawn: vi.fn(),
 }));
 
-jest.mock("node:fs/promises", () => ({
-  ...jest.requireActual<typeof import("node:fs/promises")>("node:fs/promises"),
-  readdir: jest.fn(),
+vi.mock("node:fs/promises", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("node:fs/promises")>()),
+  readdir: vi.fn(),
 }));
 
 describe("main", () => {
   afterEach(() => {
-    jest.restoreAllMocks();
-    jest.mocked(spawn).mockReset();
-    jest.mocked(readdir).mockReset();
+    vi.restoreAllMocks();
+    vi.mocked(spawn).mockReset();
+    vi.mocked(readdir).mockReset();
   });
 
   it("skips the so101-visualization example because it requires a physical robot", async () => {
-    const actualFs = jest.requireActual<typeof import("node:fs/promises")>("node:fs/promises");
-    jest.mocked(readdir).mockImplementation(async (...args) => {
+    const actualFs = await vi.importActual<typeof import("node:fs/promises")>("node:fs/promises");
+    vi.mocked(readdir).mockImplementation(async (...args) => {
       const entries = await actualFs.readdir(...args);
       return entries.filter((entry) => entry.name.toString() === "so101-visualization");
     });
@@ -59,23 +60,22 @@ describe("runExample", () => {
   let dependencies: ChildProcess;
   let sdk: ChildProcess;
   let example: ChildProcess;
-  const killMocks = new Map<ChildProcess, jest.SpiedFunction<ChildProcess["kill"]>>();
+  const killMocks = new Map<ChildProcess, MockInstance<ChildProcess["kill"]>>();
 
   beforeEach(() => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     dependencies = new ChildProcess();
     sdk = new ChildProcess();
     example = new ChildProcess();
     killMocks.clear();
-    jest
-      .mocked(spawn)
+    vi.mocked(spawn)
       .mockReturnValueOnce(dependencies)
       .mockReturnValueOnce(sdk)
       .mockReturnValueOnce(example);
     for (const child of [dependencies, sdk, example]) {
       killMocks.set(
         child,
-        jest.spyOn(child, "kill").mockImplementation(() => {
+        vi.spyOn(child, "kill").mockImplementation(() => {
           child.emit("exit", null, "SIGTERM");
           return true;
         }),
@@ -84,34 +84,32 @@ describe("runExample", () => {
   });
 
   afterEach(() => {
-    jest.useRealTimers();
-    jest.restoreAllMocks();
-    jest.mocked(spawn).mockReset();
+    vi.useRealTimers();
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+    vi.mocked(spawn).mockReset();
   });
 
   it("waits for dependencies and the local SDK before starting the example timeout", async () => {
-    jest.replaceProperty(process, "env", {
-      ...process.env,
-      UV_PROJECT_ENVIRONMENT: "/tmp/other-environment",
-      RUNNER_TEST_ENV: "inherited",
-    });
+    vi.stubEnv("UV_PROJECT_ENVIRONMENT", "/tmp/other-environment");
+    vi.stubEnv("RUNNER_TEST_ENV", "inherited");
     const run = testOnlyExports.runExample("ws-playback-control-mcap", {
       timeoutMillis,
       installSdkFromPath: true,
     });
 
-    await jest.advanceTimersByTimeAsync(timeoutMillis * 2);
+    await vi.advanceTimersByTimeAsync(timeoutMillis * 2);
     expect(killMocks.get(dependencies)).not.toHaveBeenCalled();
     expect(spawn).toHaveBeenCalledTimes(1);
 
     dependencies.emit("exit", 0, null);
-    await jest.advanceTimersByTimeAsync(0);
-    await jest.advanceTimersByTimeAsync(timeoutMillis * 2);
+    await vi.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(timeoutMillis * 2);
     expect(killMocks.get(sdk)).not.toHaveBeenCalled();
     expect(spawn).toHaveBeenCalledTimes(2);
 
     sdk.emit("exit", 0, null);
-    await jest.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(0);
 
     const dir = path.resolve(__dirname, "../python/foxglove-sdk-examples/ws-playback-control-mcap");
     const python = path.join(
@@ -119,39 +117,39 @@ describe("runExample", () => {
       ".venv",
       process.platform === "win32" ? "Scripts/python.exe" : "bin/python",
     );
-    expect(jest.mocked(spawn).mock.calls.map(([command, args]) => [command, args])).toEqual([
+    expect(vi.mocked(spawn).mock.calls.map(([command, args]) => [command, args])).toEqual([
       ["uv", ["sync"]],
       ["uv", ["pip", "install", "--python", python, "../../foxglove-sdk"]],
       [python, ["main.py", "--file", path.resolve(__dirname, "fixtures/empty.mcap")]],
     ]);
-    for (const [, , options] of jest.mocked(spawn).mock.calls) {
+    for (const [, , options] of vi.mocked(spawn).mock.calls) {
       expect(options.env != undefined).toBe(true);
       expect(options.env?.UV_PROJECT_ENVIRONMENT).toBeUndefined();
       expect(options.env?.RUNNER_TEST_ENV).toBe("inherited");
     }
 
-    await jest.advanceTimersByTimeAsync(timeoutMillis - 1);
+    await vi.advanceTimersByTimeAsync(timeoutMillis - 1);
     expect(killMocks.get(example)).not.toHaveBeenCalled();
-    await jest.advanceTimersByTimeAsync(1);
+    await vi.advanceTimersByTimeAsync(1);
     await expect(run).resolves.toBeUndefined();
     expect(killMocks.get(example)).toHaveBeenCalledWith(SIGTERM);
   });
 
   it("runs against the published SDK without a local install and clears the timer on exit", async () => {
-    jest.mocked(spawn).mockReset().mockReturnValueOnce(dependencies).mockReturnValueOnce(example);
+    vi.mocked(spawn).mockReset().mockReturnValueOnce(dependencies).mockReturnValueOnce(example);
     const run = testOnlyExports.runExample("quickstart", {
       timeoutMillis,
       installSdkFromPath: false,
     });
     dependencies.emit("exit", 0, null);
-    await jest.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(0);
     expect(spawn).toHaveBeenCalledTimes(2);
-    expect(jest.mocked(spawn).mock.calls[1]?.[1]).toEqual(["main.py"]);
+    expect(vi.mocked(spawn).mock.calls[1]?.[1]).toEqual(["main.py"]);
 
     example.emit("exit", 0, null);
     await expect(run).resolves.toBeUndefined();
-    expect(jest.getTimerCount()).toBe(0);
-    await jest.advanceTimersByTimeAsync(timeoutMillis);
+    expect(vi.getTimerCount()).toBe(0);
+    await vi.advanceTimersByTimeAsync(timeoutMillis);
     expect(killMocks.get(example)).not.toHaveBeenCalled();
   });
 
@@ -170,17 +168,17 @@ describe("runExample", () => {
     );
     if (stage !== "dependencies") {
       dependencies.emit("exit", 0, null);
-      await jest.advanceTimersByTimeAsync(0);
+      await vi.advanceTimersByTimeAsync(0);
     }
     if (stage === "example") {
       sdk.emit("exit", 0, null);
-      await jest.advanceTimersByTimeAsync(0);
+      await vi.advanceTimersByTimeAsync(0);
     }
     const children = { dependencies, sdk, example };
     children[stage].emit("exit", code, signal);
     await rejected;
     expect(spawn).toHaveBeenCalledTimes({ dependencies: 1, sdk: 2, example: 3 }[stage]);
-    expect(jest.getTimerCount()).toBe(0);
+    expect(vi.getTimerCount()).toBe(0);
   });
 
   it("propagates process launch errors", async () => {

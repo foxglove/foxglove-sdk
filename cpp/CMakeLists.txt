@@ -4,7 +4,7 @@
 # includes to include paths.
 
 cmake_minimum_required(VERSION 3.22)
-project(foxglove-sdk VERSION 0.30.3)
+project(foxglove-sdk VERSION 0.31.0)
 
 # Enable ccache if available
 find_program(CCACHE_PROGRAM ccache)
@@ -61,7 +61,7 @@ set(LWS_WITHOUT_TEST_PING ON CACHE BOOL "" FORCE)
 set(LWS_WITHOUT_TEST_CLIENT ON CACHE BOOL "" FORCE)
 find_or_fetch(libwebsockets
   GIT_REPOSITORY https://github.com/warmcat/libwebsockets.git
-  GIT_TAG v4.3.3
+  GIT_TAG v4.5.8
   # Ubuntu packages the config file as LibwebsocketsConfig.cmake (capital L),
   # which doesn't match find_package(libwebsockets) on case-sensitive filesystems.
   ALT_NAME Libwebsockets

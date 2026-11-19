@@ -349,8 +349,8 @@ async function main({ clean }: { clean: boolean }) {
     await exec("clang-format", [cppFile, "-i", "-Werror"], { cwd: repoRoot });
   });
 
-  await logProgressLn("Updating Jest snapshots", async () => {
-    await exec("yarn", ["test", "--updateSnapshot"], {
+  await logProgressLn("Updating test snapshots", async () => {
+    await exec("yarn", ["test", "--update"], {
       cwd: repoRoot,
     });
   });
