@@ -4068,7 +4068,7 @@ pub struct LocationFix {
     /// Longitude in degrees
     pub longitude: f64,
 
-    /// Altitude in meters
+    /// Altitude in meters above the WGS84 ellipsoid
     pub altitude: f64,
 
     /// Position covariance (m^2) defined relative to a tangential plane through the reported position. The components are East, North, and Up (ENU), in row-major order.
