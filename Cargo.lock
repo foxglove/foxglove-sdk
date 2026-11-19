@@ -1552,9 +1552,11 @@ dependencies = [
  "base64 0.23.1",
  "bytes",
  "foxglove",
+ "foxglove_mcap_alignment",
  "log",
  "pyo3",
  "pyo3-log",
+ "serde_json",
  "thiserror 2.0.20",
  "tokio",
  "tracing",
@@ -1602,6 +1604,22 @@ dependencies = [
  "syn 3.0.3",
  "tracing",
  "tracing-test",
+]
+
+[[package]]
+name = "foxglove_mcap_alignment"
+version = "0.0.0"
+dependencies = [
+ "crc32fast",
+ "foxglove",
+ "fs2",
+ "lz4",
+ "mcap",
+ "prost",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "zstd",
 ]
 
 [[package]]
@@ -4604,7 +4622,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.3.4",
+ "getrandom 0.4.3",
  "once_cell",
  "rustix",
  "windows-sys 0.61.2",

@@ -56,6 +56,7 @@ jobs:
         timeout-minutes: 5
       - run: cargo test -p foxglove_c --features full
       - run: cargo test -p foxglove_data_loader
+      - run: cargo test -p foxglove_mcap_alignment
       # The data loader ships as WASM and builds against the workspace foxglove crate, so a
       # change to rust/foxglove can break its WASM build without affecting the host build.
       - run: rustup target add wasm32-unknown-unknown

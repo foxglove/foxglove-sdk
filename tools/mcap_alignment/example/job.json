@@ -1,0 +1,65 @@
+{
+  "paths": [
+    "source.mcap"
+  ],
+  "destination": "aligned.mcap",
+  "temporary_directory": ".",
+  "episode": {
+    "start": 1700000000000000000,
+    "end": 1700000000450000000
+  },
+  "timeline": {
+    "kind": "fixed",
+    "numerator": 10
+  },
+  "streams": [
+    {
+      "topic": "/camera/0",
+      "output_topic": "/aligned/camera/0",
+      "policy": "previous",
+      "tolerance_ns": 200000000,
+      "required": true,
+      "media": {
+        "calibration": {
+          "status": "unavailable"
+        }
+      }
+    },
+    {
+      "topic": "/camera/1",
+      "output_topic": "/aligned/camera/1",
+      "policy": "previous",
+      "tolerance_ns": 200000000,
+      "required": true,
+      "media": {
+        "calibration": {
+          "status": "unavailable"
+        }
+      }
+    },
+    {
+      "topic": "/camera/2",
+      "output_topic": "/aligned/camera/2",
+      "policy": "previous",
+      "tolerance_ns": 200000000,
+      "required": true,
+      "media": {
+        "calibration": {
+          "status": "unavailable"
+        }
+      }
+    },
+    {
+      "topic": "/camera/3",
+      "output_topic": "/aligned/camera/3",
+      "policy": "previous",
+      "tolerance_ns": 200000000,
+      "required": true,
+      "media": {
+        "calibration": {
+          "status": "unavailable"
+        }
+      }
+    }
+  ]
+}

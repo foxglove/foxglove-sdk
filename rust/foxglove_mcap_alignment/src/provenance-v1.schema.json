@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "foxglove.AlignmentProvenanceV1",
+  "type": "object",
+  "properties": {
+    "contract_version": {
+      "const": 1
+    },
+    "target_index": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "stream": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "output_channel": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "source_file": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "source_channel": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "source_sequence": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "output_sequence": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "target_time": {
+      "type": "string",
+      "pattern": "^[0-9]+$"
+    },
+    "source_log_time": {
+      "type": "string",
+      "pattern": "^[0-9]+$"
+    },
+    "source_publish_time": {
+      "type": "string",
+      "pattern": "^[0-9]+$"
+    },
+    "implementation_version": {
+      "type": "string"
+    },
+    "config_hash": {
+      "type": "string"
+    },
+    "output_topic": {
+      "type": "string"
+    },
+    "offset_ns": {
+      "type": "string",
+      "pattern": "^-?[0-9]+$"
+    },
+    "valid": {
+      "const": true
+    },
+    "reused": {
+      "type": "boolean"
+    },
+    "source_locator": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "offset": {
+              "type": "string",
+              "pattern": "^[0-9]+$"
+            }
+          },
+          "required": [
+            "offset"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "chunk_offset": {
+              "type": "string",
+              "pattern": "^[0-9]+$"
+            },
+            "message_offset": {
+              "type": "string",
+              "pattern": "^[0-9]+$"
+            }
+          },
+          "required": [
+            "chunk_offset",
+            "message_offset"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "media": {
+      "type": "object"
+    }
+  },
+  "required": [
+    "contract_version",
+    "target_index",
+    "stream",
+    "output_channel",
+    "source_file",
+    "source_channel",
+    "source_sequence",
+    "output_sequence",
+    "target_time",
+    "source_log_time",
+    "source_publish_time",
+    "implementation_version",
+    "config_hash",
+    "output_topic",
+    "offset_ns",
+    "valid",
+    "reused",
+    "source_locator"
+  ],
+  "additionalProperties": false
+}

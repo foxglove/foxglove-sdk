@@ -43,6 +43,8 @@ tracing.workspace = true
 foxglove = { workspace = true, features = ["lz4", "zstd"] }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
+foxglove_mcap_alignment = { path = "../../rust/foxglove_mcap_alignment" }
+serde_json = "1.0.142"
 tokio.workspace = true
 foxglove = { workspace = true, features = [
   "lz4",

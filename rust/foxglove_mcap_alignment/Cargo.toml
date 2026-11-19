@@ -1,0 +1,28 @@
+[package]
+name = "foxglove_mcap_alignment"
+version = "0.0.0"
+description = "Experimental internal timestamp selection for MCAP alignment"
+publish = false
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[features]
+default = []
+full = []
+
+[lints]
+workspace = true
+
+[dependencies]
+mcap = { workspace = true, features = ["zstd", "lz4"] }
+sha2 = "0.10"
+crc32fast = "1.4"
+tempfile = "3"
+fs2 = "0.4"
+zstd = "0.14"
+lz4 = "1.28"
+
+serde_json = "1.0.142"
+foxglove.workspace = true
+prost.workspace = true
