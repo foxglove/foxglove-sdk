@@ -202,6 +202,15 @@ void declareParameters(rclcpp::Node* node) {
   publishClientCountDescription.read_only = true;
   node->declare_parameter(PARAM_PUBLISH_CLIENT_COUNT, false, publishClientCountDescription);
 
+  auto publishDiagnosticsDescription = rcl_interfaces::msg::ParameterDescriptor{};
+  publishDiagnosticsDescription.name = PARAM_PUBLISH_DIAGNOSTICS;
+  publishDiagnosticsDescription.type = rcl_interfaces::msg::ParameterType::PARAMETER_BOOL;
+  publishDiagnosticsDescription.description =
+    "Publish bridge and remote access health on /diagnostics using diagnostic_updater";
+  publishDiagnosticsDescription.read_only = true;
+  node->declare_parameter(PARAM_PUBLISH_DIAGNOSTICS, DEFAULT_PUBLISH_DIAGNOSTICS,
+                          publishDiagnosticsDescription);
+
   auto sysinfoDescription = rcl_interfaces::msg::ParameterDescriptor{};
   sysinfoDescription.name = PARAM_SYSINFO;
   sysinfoDescription.type = rcl_interfaces::msg::ParameterType::PARAMETER_BOOL;

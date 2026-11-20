@@ -17,6 +17,7 @@
   <arg name="capabilities"                    default="[clientPublish,parameters,parametersSubscribe,services,connectionGraph,assets]" />
   <arg name="include_hidden"                  default="false" />
   <arg name="publish_client_count"            default="false" />
+  <arg name="publish_diagnostics"             default="false" />
   <arg name="sysinfo"                         default="true" />
   <arg name="sysinfo_topic"                   default="/foxglove_bridge/sysinfo" />
   <arg name="sysinfo_refresh_interval"        default="500" />
@@ -55,6 +56,7 @@
     <param name="include_hidden"                  value="$(var include_hidden)" />
     <param name="asset_uri_allowlist"             value="$(var asset_uri_allowlist)" />
     <param name="publish_client_count"            value="$(var publish_client_count)" />
+    <param name="publish_diagnostics"             value="$(var publish_diagnostics)" />
     <param name="sysinfo"                         value="$(var sysinfo)" />
     <param name="sysinfo_topic"                   value="$(var sysinfo_topic)" />
     <param name="sysinfo_refresh_interval"        value="$(var sysinfo_refresh_interval)" />

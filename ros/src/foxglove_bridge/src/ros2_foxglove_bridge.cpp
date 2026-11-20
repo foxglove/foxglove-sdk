@@ -190,6 +190,7 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
   const auto ignoreUnresponsiveParamNodes =
     this->get_parameter(PARAM_IGN_UNRESPONSIVE_PARAM_NODES).as_bool();
   const bool publishClientCount = this->get_parameter(PARAM_PUBLISH_CLIENT_COUNT).as_bool();
+  const bool publishDiagnostics = this->get_parameter(PARAM_PUBLISH_DIAGNOSTICS).as_bool();
   const auto messageBacklogSize =
     saturatingToSizeT(this->get_parameter(PARAM_MESSAGE_BACKLOG_SIZE).as_int());
 
@@ -465,6 +466,10 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
   }
 #endif
 
+  if (publishDiagnostics) {
+    setupDiagnostics();
+  }
+
   if (_paramInterface) {
     _paramWorkerThread =
       std::make_unique<std::thread>(std::bind(&FoxgloveBridge::parameterWorkerLoop, this));
@@ -477,6 +482,9 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
 FoxgloveBridge::~FoxgloveBridge() {
   _shuttingDown = true;
   RCLCPP_INFO(this->get_logger(), "Shutting down %s", this->get_name());
+  // Stop publishing diagnostics before the server and gateway are stopped, so that a normal
+  // shutdown isn't reported as a remote access error.
+  _diagnosticUpdater.reset();
   if (_rosgraphPollThread) {
     _rosgraphPollThread->join();
   }
@@ -940,9 +948,11 @@ Subscription FoxgloveBridge::createRosSubscription(ChannelId channelId, const st
                                                    const rclcpp::QoS& qos) {
   rclcpp::SubscriptionEventCallbacks eventCallbacks;
   eventCallbacks.incompatible_qos_callback =
-    [this, topic, datatype](const rclcpp::QOSRequestedIncompatibleQoSInfo&) {
+    [this, topic, datatype](const rclcpp::QOSRequestedIncompatibleQoSInfo& info) {
       RCLCPP_ERROR(this->get_logger(), "Incompatible subscriber QoS settings for topic \"%s\" (%s)",
                    topic.c_str(), datatype.c_str());
+      _diagnostics.recordIncompatibleQosEvents(
+        static_cast<uint64_t>(std::max(info.total_count_change, int32_t{1})));
     };
 
   rclcpp::SubscriptionOptions subscriptionOptions;
@@ -1009,6 +1019,7 @@ void FoxgloveBridge::createOrIncrementSubscriptionLocked(ChannelId channelId, Cl
                      "Cannot subscribe to topic \"%s\" on channel %" PRIu64
                      ": no schema and no matching topic in the ROS graph",
                      topic.c_str(), static_cast<uint64_t>(channelId));
+        _diagnostics.recordFailedSubscription();
         return;
       }
       datatype = topicIt->second.front();
@@ -1016,7 +1027,12 @@ void FoxgloveBridge::createOrIncrementSubscriptionLocked(ChannelId channelId, Cl
     const rclcpp::QoS qos = determineQoS(topic);
 
     ChannelSubscription channelSub;
-    channelSub.rosSubscription = createRosSubscription(channelId, topic, datatype, qos);
+    try {
+      channelSub.rosSubscription = createRosSubscription(channelId, topic, datatype, qos);
+    } catch (const std::exception&) {
+      _diagnostics.recordFailedSubscription();
+      throw;
+    }
     channelSub.qos = qos;
 
     if (qos.durability() == rclcpp::DurabilityPolicy::TransientLocal) {
@@ -1490,6 +1506,7 @@ void FoxgloveBridge::handleServiceRequest(const foxglove::ServiceRequest& reques
   if (serviceIt == _advertisedServices.end()) {
     std::string errorMessage = "Service " + request.service_name + " does not exist";
     RCLCPP_ERROR(this->get_logger(), "%s", errorMessage.c_str());
+    _diagnostics.recordFailedServiceCall();
     std::move(responder).respondError(errorMessage);
     return;
   }
@@ -1500,6 +1517,7 @@ void FoxgloveBridge::handleServiceRequest(const foxglove::ServiceRequest& reques
     std::string errorMessage =
       "Service " + request.service_name + " is advertised but no client exists for it";
     RCLCPP_ERROR(this->get_logger(), "%s", errorMessage.c_str());
+    _diagnostics.recordFailedServiceCall();
     std::move(responder).respondError(errorMessage);
     return;
   }
@@ -1508,6 +1526,7 @@ void FoxgloveBridge::handleServiceRequest(const foxglove::ServiceRequest& reques
   if (!client->wait_for_service(1s)) {
     std::string errorMessage = "Service " + serviceName + " is not available";
     RCLCPP_ERROR(this->get_logger(), "%s", errorMessage.c_str());
+    _diagnostics.recordFailedServiceCall();
     std::move(responder).respondError(errorMessage);
     return;
   }
@@ -1517,6 +1536,7 @@ void FoxgloveBridge::handleServiceRequest(const foxglove::ServiceRequest& reques
                                " received a request with an unsupported encoding " +
                                request.encoding;
     RCLCPP_ERROR(this->get_logger(), "%s", errorMessage.c_str());
+    _diagnostics.recordFailedServiceCall();
     std::move(responder).respondError(errorMessage);
     return;
   }
@@ -1526,7 +1546,12 @@ void FoxgloveBridge::handleServiceRequest(const foxglove::ServiceRequest& reques
               request.payload.size());
   reqMessage->get_rcl_serialized_message().buffer_length = request.payload.size();
 
-  client->async_send_request(reqMessage, std::move(responder));
+  try {
+    client->async_send_request(reqMessage, std::move(responder));
+  } catch (const std::exception&) {
+    _diagnostics.recordFailedServiceCall();
+    throw;
+  }
 }
 
 void FoxgloveBridge::fetchAsset(const std::string_view uriView,
@@ -1706,21 +1731,53 @@ void FoxgloveBridge::publishClientCount() {
   _clientCountPublisher->publish(msg);
 }
 
+void FoxgloveBridge::setupDiagnostics() {
+  // The updater publishes from a node timer. Tasks only read state cached by callbacks, so
+  // nothing is published from SDK threads.
+  _diagnosticUpdater = std::make_unique<diagnostic_updater::Updater>(this);
+  _diagnosticUpdater->setHardwareID(DIAGNOSTICS_HARDWARE_ID);
+  _diagnosticUpdater->add(DIAGNOSTICS_TASK_WEBSOCKET_SERVER,
+                          [this](diagnostic_updater::DiagnosticStatusWrapper& stat) {
+                            reportWebSocketServer(_server->port(), _server->clientCount(), stat);
+                          });
+#ifdef FOXGLOVE_REMOTE_ACCESS
+  if (_gateway) {
+    _diagnosticUpdater->add(DIAGNOSTICS_TASK_REMOTE_ACCESS,
+                            [this](diagnostic_updater::DiagnosticStatusWrapper& stat) {
+                              _diagnostics.reportRemoteAccess(stat);
+                            });
+  }
+#endif
+  _diagnosticUpdater->add(DIAGNOSTICS_TASK_FORWARDING,
+                          [this](diagnostic_updater::DiagnosticStatusWrapper& stat) {
+                            size_t activeSubscriptions = 0;
+                            {
+                              std::lock_guard<std::mutex> lock(_subscriptionsMutex);
+                              activeSubscriptions = _subscriptions.size();
+                            }
+                            _diagnostics.reportForwarding(activeSubscriptions, stat);
+                          });
+}
+
 #ifdef FOXGLOVE_REMOTE_ACCESS
 void FoxgloveBridge::gatewayConnectionStatusChanged(foxglove::RemoteAccessConnectionStatus status) {
   const char* label = "unknown";
   switch (status) {
     case foxglove::RemoteAccessConnectionStatus::Connecting:
       label = "connecting";
+      _diagnostics.setRemoteAccessState(RemoteAccessState::Connecting);
       break;
     case foxglove::RemoteAccessConnectionStatus::Connected:
       label = "connected";
+      _diagnostics.setRemoteAccessState(RemoteAccessState::Connected);
       break;
     case foxglove::RemoteAccessConnectionStatus::ShuttingDown:
       label = "shutting down";
+      _diagnostics.setRemoteAccessState(RemoteAccessState::ShuttingDown);
       break;
     case foxglove::RemoteAccessConnectionStatus::Shutdown:
       label = "shutdown";
+      _diagnostics.setRemoteAccessState(RemoteAccessState::Shutdown);
       break;
   }
   RCLCPP_INFO(this->get_logger(), "Remote access gateway status: %s", label);
