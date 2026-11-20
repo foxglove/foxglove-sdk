@@ -1,3 +1,4 @@
+#include <atomic>
 #include <chrono>
 #include <filesystem>
 #include <future>
@@ -7,6 +8,7 @@
 #include <gtest/gtest.h>
 #include <nlohmann/json.hpp>
 #include <rclcpp/rclcpp.hpp>
+#include <rcutils/logging.h>
 #include <std_msgs/msg/string.hpp>
 #include <std_srvs/srv/set_bool.hpp>
 // Use the no-TLS variant: <websocketpp/config/asio_client.hpp> is misleadingly named —
@@ -32,6 +34,17 @@ constexpr char HELLO_WORLD_JSON[] = "{\"data\": \"hello world\"}";
 constexpr char STD_MSGS_STRING_SCHEMA[] = "data string";
 
 constexpr auto DEFAULT_TIMEOUT = std::chrono::seconds(10);
+
+std::atomic<int> g_errorLogCount = 0;
+rcutils_logging_output_handler_t g_defaultLogHandler = nullptr;
+
+void countErrorLogs(const rcutils_log_location_t* location, int severity, const char* name,
+                    rcutils_time_point_value_t timestamp, const char* format, va_list* args) {
+  if (severity >= RCUTILS_LOG_SEVERITY_ERROR) {
+    ++g_errorLogCount;
+  }
+  g_defaultLogHandler(location, severity, name, timestamp, format, args);
+}
 
 class TestWithExecutor : public testing::Test {
 protected:
@@ -238,6 +251,21 @@ TEST(SmokeTest, testConnectionGraphSubscribeUnsubscribe) {
     return g_bridge->graphSubscriptionCount() == startCount;
   }))
     << "count did not decrement; got " << g_bridge->graphSubscriptionCount();
+}
+
+TEST(SmokeTest, subscribingToSystemInfoChannelLogsNoErrors) {
+  foxglove::test::Client<websocketpp::config::asio_client> wsClient;
+  auto channelFuture = wsClient.waitForChannel("/foxglove_bridge/sysinfo");
+  ASSERT_EQ(std::future_status::ready, wsClient.connect(URI).wait_for(DEFAULT_TIMEOUT));
+  ASSERT_EQ(std::future_status::ready, channelFuture.wait_for(DEFAULT_TIMEOUT));
+
+  const int errorLogCount = g_errorLogCount;
+  wsClient.subscribe({{1, channelFuture.get().id}});
+  wsClient.unsubscribe({1});
+  auto requestsHandled = wsClient.waitForFetchAssetResponse();
+  wsClient.fetchAsset("file:///nonexistent", 1);
+  ASSERT_EQ(std::future_status::ready, requestsHandled.wait_for(DEFAULT_TIMEOUT));
+  EXPECT_EQ(errorLogCount, g_errorLogCount.load());
 }
 
 TEST(SmokeTest, testSubscription) {
@@ -905,6 +933,9 @@ TEST(SmokeTest, serviceEventTopicDoesNotPreventFutureAdvertisements) {
 int main(int argc, char** argv) {
   testing::InitGoogleTest(&argc, argv);
   rclcpp::init(argc, argv);
+
+  g_defaultLogHandler = rcutils_logging_get_output_handler();
+  rcutils_logging_set_output_handler(countErrorLogs);
 
   int testResult = 0;
   {
