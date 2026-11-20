@@ -5,7 +5,6 @@ import subprocess
 import sys
 from fractions import Fraction
 from pathlib import Path
-from typing import cast
 
 import pytest
 
@@ -253,11 +252,8 @@ def compressed_video_class() -> type[Message]:
     pool = descriptor_pool.DescriptorPool()
     pool.AddSerializedFile(TIMESTAMP_DESCRIPTOR.serialized_pb)
     pool.Add(descriptor)
-    return cast(
-        type[Message],
-        message_factory.GetMessageClass(
-            pool.FindMessageTypeByName("foxglove.CompressedVideo")
-        ),
+    return message_factory.GetMessageClass(
+        pool.FindMessageTypeByName("foxglove.CompressedVideo")
     )
 
 

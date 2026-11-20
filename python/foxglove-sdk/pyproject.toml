@@ -37,6 +37,7 @@ dev = [
   "sphinx-autodoc-typehints>=3.0.0,<4",
   "sphinx-toolbox>=4.1.2,<5; python_full_version >= '3.11.5'",
   "types-docutils",
+  "types-protobuf",
   "types-requests",
   "mcap>=1.6.0,<2",
   "sphinx-copybutton>=0.5.2",
