@@ -113,6 +113,7 @@ name | value | description
 `INT32` | 6 | Signed 32-bit integer
 `FLOAT32` | 7 | 32-bit floating-point number
 `FLOAT64` | 8 | 64-bit floating-point number
+`FLOAT16` | 9 | 16-bit floating-point number (IEEE 754 half precision)
 
 
 

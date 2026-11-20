@@ -949,6 +949,8 @@ pub mod packed_element_field {
         Float32 = 7,
         /// 64-bit floating-point number
         Float64 = 8,
+        /// 16-bit floating-point number (IEEE 754 half precision)
+        Float16 = 9,
     }
     impl NumericType {
         /// String value of the enum field names used in the ProtoBuf definition.
@@ -966,6 +968,7 @@ pub mod packed_element_field {
                 Self::Int32 => "INT32",
                 Self::Float32 => "FLOAT32",
                 Self::Float64 => "FLOAT64",
+                Self::Float16 => "FLOAT16",
             }
         }
         /// Creates an enum from field names used in the ProtoBuf definition.
@@ -980,6 +983,7 @@ pub mod packed_element_field {
                 "INT32" => Some(Self::Int32),
                 "FLOAT32" => Some(Self::Float32),
                 "FLOAT64" => Some(Self::Float64),
+                "FLOAT16" => Some(Self::Float16),
                 _ => None,
             }
         }

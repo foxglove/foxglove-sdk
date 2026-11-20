@@ -1259,6 +1259,12 @@ const NumericType: FoxgloveEnumSchema = {
     { name: "INT32", value: 6, description: "Signed 32-bit integer" },
     { name: "FLOAT32", value: 7, description: "32-bit floating-point number" },
     { name: "FLOAT64", value: 8, description: "64-bit floating-point number" },
+    {
+      name: "FLOAT16",
+      value: 9,
+      description: "16-bit floating-point number (IEEE 754 half precision)",
+      omitRos1Constant: true,
+    },
   ],
 };
 

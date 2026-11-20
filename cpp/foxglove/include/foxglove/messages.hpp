@@ -867,6 +867,8 @@ struct PackedElementField {
     FLOAT32 = 7,
     /// @brief 64-bit floating-point number
     FLOAT64 = 8,
+    /// @brief 16-bit floating-point number (IEEE 754 half precision)
+    FLOAT16 = 9,
   };
   /// @brief Name of the field
   std::string name;

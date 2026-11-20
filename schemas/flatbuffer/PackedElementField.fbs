@@ -30,6 +30,9 @@ enum NumericType : ubyte {
 
   /// 64-bit floating-point number
   FLOAT64 = 8,
+
+  /// 16-bit floating-point number (IEEE 754 half precision)
+  FLOAT16 = 9,
 }
 /// A field present within each element in a byte array of packed elements.
 table PackedElementField {

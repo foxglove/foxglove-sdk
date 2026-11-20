@@ -53,6 +53,7 @@ pub enum FoxgloveNumericType {
     Int32 = 6,
     Float32 = 7,
     Float64 = 8,
+    Float16 = 9,
 }
 
 #[derive(Clone, Copy, Debug)]

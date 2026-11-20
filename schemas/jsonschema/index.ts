@@ -1388,6 +1388,11 @@ export const Grid = {
                 "title": "FLOAT64",
                 "const": 8,
                 "description": "64-bit floating-point number"
+              },
+              {
+                "title": "FLOAT16",
+                "const": 9,
+                "description": "16-bit floating-point number (IEEE 754 half precision)"
               }
             ]
           }
@@ -1622,6 +1627,11 @@ export const VoxelGrid = {
                 "title": "FLOAT64",
                 "const": 8,
                 "description": "64-bit floating-point number"
+              },
+              {
+                "title": "FLOAT16",
+                "const": 9,
+                "description": "16-bit floating-point number (IEEE 754 half precision)"
               }
             ]
           }
@@ -6210,6 +6220,11 @@ export const PackedElementField = {
           "title": "FLOAT64",
           "const": 8,
           "description": "64-bit floating-point number"
+        },
+        {
+          "title": "FLOAT16",
+          "const": 9,
+          "description": "16-bit floating-point number (IEEE 754 half precision)"
         }
       ]
     }
@@ -6485,6 +6500,11 @@ export const PointCloud = {
                 "title": "FLOAT64",
                 "const": 8,
                 "description": "64-bit floating-point number"
+              },
+              {
+                "title": "FLOAT16",
+                "const": 9,
+                "description": "16-bit floating-point number (IEEE 754 half precision)"
               }
             ]
           }

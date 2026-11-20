@@ -36,5 +36,8 @@ uint8 FLOAT32=7
 # 64-bit floating-point number
 uint8 FLOAT64=8
 
+# 16-bit floating-point number (IEEE 754 half precision)
+uint8 FLOAT16=9
+
 # Type of data in the field. Integers are stored using little-endian byte order.
 uint8 type

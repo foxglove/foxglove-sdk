@@ -37,4 +37,6 @@ uint8 FLOAT32=7
 uint8 FLOAT64=8
 
 # Type of data in the field. Integers are stored using little-endian byte order.
+# These values have no constants, because constants are part of the ROS 1 message MD5:
+# FLOAT16=9: 16-bit floating-point number (IEEE 754 half precision)
 uint8 type

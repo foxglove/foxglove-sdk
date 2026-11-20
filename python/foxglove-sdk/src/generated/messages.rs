@@ -119,6 +119,7 @@ pub(crate) enum PackedElementFieldNumericType {
     Int32 = 6,
     Float32 = 7,
     Float64 = 8,
+    Float16 = 9,
 }
 
 #[pymethods]
@@ -135,6 +136,7 @@ impl PackedElementFieldNumericType {
             Self::Int32 => "Int32",
             Self::Float32 => "Float32",
             Self::Float64 => "Float64",
+            Self::Float16 => "Float16",
         }
     }
 
@@ -150,6 +152,7 @@ impl PackedElementFieldNumericType {
             Self::Int32 => 6,
             Self::Float32 => 7,
             Self::Float64 => 8,
+            Self::Float16 => 9,
         }
     }
 }

@@ -99,12 +99,12 @@ pub(crate) fn transcode_point_cloud_message(
     // After that, order matters: colors must be retyped before the non-finite filter
     // runs, because packed rgba values with a nonzero alpha have `0xff------` bit
     // patterns — NaN/infinity encodings when read as floats — and retyping to uint32
-    // exempts them. Narrowing runs before the filter so a float64 value that overflows
-    // f32 becomes non-finite and its point is dropped, rather than failing the whole
-    // cloud.
+    // exempts them. Float conversion runs before the filter so a float64 value that
+    // overflows f32, or a float16 NaN or infinity, is non-finite as float32 and its point
+    // is dropped, rather than failing the whole cloud.
     drop_irrelevant_fields(&mut cloud);
     reinterpret_packed_color_fields(&mut cloud);
-    narrow_float64_fields(&mut cloud);
+    convert_floats_to_float32(&mut cloud);
     drop_non_finite_points(&mut cloud);
     let compressed = compress_point_cloud(&cloud, &options.draco_options())?;
     Ok(Bytes::from(compressed.encode_to_vec()))
@@ -209,7 +209,7 @@ fn field_size(numeric_type: i32) -> Option<usize> {
 
     match NumericType::try_from(numeric_type).ok()? {
         NumericType::Uint8 | NumericType::Int8 => Some(1),
-        NumericType::Uint16 | NumericType::Int16 => Some(2),
+        NumericType::Uint16 | NumericType::Int16 | NumericType::Float16 => Some(2),
         NumericType::Uint32 | NumericType::Int32 | NumericType::Float32 => Some(4),
         NumericType::Float64 => Some(8),
         NumericType::Unknown => None,
@@ -244,7 +244,7 @@ fn reinterpret_packed_color_fields(cloud: &mut PointCloud) {
     }
 }
 
-/// Narrows float64 fields to float32 so the cloud can be quantized.
+/// Converts float64 and float16 fields to float32 so the encoder can quantize them.
 ///
 /// The default kd-tree encoder cannot encode float64 attributes, and clouds carrying one
 /// not on the drop list (doubles from PCL pipelines, vendor fields under nonstandard
@@ -257,22 +257,34 @@ fn reinterpret_packed_color_fields(cloud: &mut PointCloud) {
 /// encoding could carry float64 raw, but eight uncompressed bytes per point defeats the
 /// compression, so narrowing applies under either method.
 ///
-/// Narrowing halves each float64 field, so the buffer is repacked: every field is
-/// assigned a new offset in declaration order and the stride becomes the sum of the field
-/// sizes (which also drops any inter-field padding). Layout problems (zero or misaligned
+/// Draco has no 16-bit float type, so a float16 field would otherwise fail compression.
+/// Widening is exact: every float16 value, including subnormals, infinities, and NaN, has
+/// a float32 equivalent, and a NaN or infinite value drops its point in
+/// [`drop_non_finite_points`].
+///
+/// Conversion changes field sizes, so the buffer is repacked: every field is assigned a
+/// new offset in declaration order and the stride becomes the sum of the field sizes
+/// (which also drops any inter-field padding). Layout problems (zero or misaligned
 /// stride, fields past the stride, unknown field types) are left for the encoder, which
 /// reports them precisely; this pass only rewrites clouds it can read.
-fn narrow_float64_fields(cloud: &mut PointCloud) {
+fn convert_floats_to_float32(cloud: &mut PointCloud) {
     use crate::messages::packed_element_field::NumericType;
 
-    let stride = cloud.point_stride as usize;
-    if stride == 0 || !cloud.data.len().is_multiple_of(stride) {
-        return;
+    #[derive(Clone, Copy, PartialEq, Eq)]
+    enum Conversion {
+        Keep,
+        Narrow,
+        Widen,
     }
     struct Field {
         offset: usize,
         size: usize,
-        is_f64: bool,
+        conversion: Conversion,
+    }
+
+    let stride = cloud.point_stride as usize;
+    if stride == 0 || !cloud.data.len().is_multiple_of(stride) {
+        return;
     }
     let mut fields = Vec::with_capacity(cloud.fields.len());
     for f in &cloud.fields {
@@ -283,13 +295,18 @@ fn narrow_float64_fields(cloud: &mut PointCloud) {
         if offset + size > stride {
             return;
         }
+        let conversion = match NumericType::try_from(f.r#type) {
+            Ok(NumericType::Float64) => Conversion::Narrow,
+            Ok(NumericType::Float16) => Conversion::Widen,
+            _ => Conversion::Keep,
+        };
         fields.push(Field {
             offset,
             size,
-            is_f64: f.r#type == NumericType::Float64 as i32,
+            conversion,
         });
     }
-    if !fields.iter().any(|f| f.is_f64) {
+    if fields.iter().all(|f| f.conversion == Conversion::Keep) {
         return;
     }
 
@@ -300,7 +317,10 @@ fn narrow_float64_fields(cloud: &mut PointCloud) {
         .iter()
         .map(|f| {
             let offset = new_stride;
-            new_stride += if f.is_f64 { 4 } else { f.size };
+            new_stride += match f.conversion {
+                Conversion::Keep => f.size,
+                Conversion::Narrow | Conversion::Widen => 4,
+            };
             offset
         })
         .collect();
@@ -311,24 +331,52 @@ fn narrow_float64_fields(cloud: &mut PointCloud) {
         let src = &cloud.data[p * stride..(p + 1) * stride];
         let dst = &mut data[p * new_stride..(p + 1) * new_stride];
         for (f, &new_offset) in fields.iter().zip(&new_offsets) {
-            if f.is_f64 {
-                let v = f64::from_le_bytes(src[f.offset..f.offset + 8].try_into().unwrap());
-                dst[new_offset..new_offset + 4].copy_from_slice(&(v as f32).to_le_bytes());
-            } else {
-                dst[new_offset..new_offset + f.size]
-                    .copy_from_slice(&src[f.offset..f.offset + f.size]);
+            match f.conversion {
+                Conversion::Narrow => {
+                    let v = f64::from_le_bytes(src[f.offset..f.offset + 8].try_into().unwrap());
+                    dst[new_offset..new_offset + 4].copy_from_slice(&(v as f32).to_le_bytes());
+                }
+                Conversion::Widen => {
+                    let bits = u16::from_le_bytes(src[f.offset..f.offset + 2].try_into().unwrap());
+                    dst[new_offset..new_offset + 4]
+                        .copy_from_slice(&f16_bits_to_f32(bits).to_le_bytes());
+                }
+                Conversion::Keep => {
+                    dst[new_offset..new_offset + f.size]
+                        .copy_from_slice(&src[f.offset..f.offset + f.size]);
+                }
             }
         }
     }
 
     for (f, (field, &new_offset)) in fields.iter().zip(cloud.fields.iter_mut().zip(&new_offsets)) {
         field.offset = new_offset as u32;
-        if f.is_f64 {
+        if f.conversion != Conversion::Keep {
             field.r#type = NumericType::Float32 as i32;
         }
     }
     cloud.point_stride = new_stride as u32;
     cloud.data = data.into();
+}
+
+/// Converts an IEEE 754 half-precision value, given as its bits, to float32. The
+/// conversion is exact.
+fn f16_bits_to_f32(bits: u16) -> f32 {
+    let exponent = u32::from((bits >> 10) & 0x1f);
+    let mantissa = u32::from(bits & 0x3ff);
+    let magnitude = match exponent {
+        // Zero and subnormals: mantissa × 2^-24, exact in float32.
+        0 => mantissa as f32 / 16_777_216.0,
+        0x1f if mantissa == 0 => f32::INFINITY,
+        0x1f => f32::NAN,
+        // Normal values: rebias the exponent from 15 to 127 and widen the mantissa.
+        _ => f32::from_bits(((exponent + 112) << 23) | (mantissa << 13)),
+    };
+    if bits & 0x8000 == 0 {
+        magnitude
+    } else {
+        -magnitude
+    }
 }
 
 /// Removes points containing a non-finite (NaN or infinite) value in any float field.
@@ -426,7 +474,7 @@ pub(crate) fn rewrite_advertisement(channel: &mut advertise::Channel<'_>) {
 #[cfg(test)]
 mod tests {
     use super::{
-        PointCloudInputSchema, drop_non_finite_points, narrow_float64_fields,
+        PointCloudInputSchema, convert_floats_to_float32, drop_non_finite_points, f16_bits_to_f32,
         point_cloud_input_schema, transcode_point_cloud_message,
     };
     use crate::messages::{PackedElementField, PointCloud, packed_element_field::NumericType};
@@ -724,7 +772,7 @@ mod tests {
         // a new offset and the stride shrinks; the stamp values are narrowed, the rest
         // copied verbatim, and the field type flips to float32.
         let mut cloud = stamped_cloud(3);
-        narrow_float64_fields(&mut cloud);
+        convert_floats_to_float32(&mut cloud);
 
         assert_eq!(cloud.point_stride, 16);
         assert_eq!(cloud.fields.len(), 4);
@@ -743,7 +791,7 @@ mod tests {
         // A cloud with no float64 fields passes through untouched.
         let mut cloud = xyz_cloud(&[[1.0, 2.0, 3.0]]);
         let before = cloud.data.clone();
-        narrow_float64_fields(&mut cloud);
+        convert_floats_to_float32(&mut cloud);
         assert_eq!(cloud.point_stride, 12);
         assert_eq!(cloud.data, before);
     }
@@ -772,6 +820,83 @@ mod tests {
             &buf.into(),
             PointCloudInputSchema::FoxgloveProtobuf,
             &options,
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn test_f16_bits_to_f32() {
+        let cases: &[(u16, f32)] = &[
+            (0x0000, 0.0),
+            (0x3c00, 1.0),
+            (0xc000, -2.0),
+            (0x3555, 1365.0 / 4096.0),
+            (0x7bff, 65504.0),
+            // Smallest and largest subnormals: 1 × 2^-24 and 1023 × 2^-24.
+            (0x0001, 1.0 / 16_777_216.0),
+            (0x03ff, 1023.0 / 16_777_216.0),
+            (0x7c00, f32::INFINITY),
+            (0xfc00, f32::NEG_INFINITY),
+        ];
+        for &(bits, expected) in cases {
+            assert_eq!(f16_bits_to_f32(bits), expected, "bits {bits:#06x}");
+        }
+        assert!(f16_bits_to_f32(0x8000).is_sign_negative());
+        assert!(f16_bits_to_f32(0x7e00).is_nan());
+    }
+
+    #[test]
+    fn test_transcodes_float16_fields() {
+        // Draco has no 16-bit float type, so a float16 field must be widened before
+        // encoding. The NaN in the last point must drop that point after widening.
+        let intensities: [u16; 3] = [0x3c00, 0xc000, 0x7e00];
+        let mut data = Vec::new();
+        for (i, intensity) in intensities.iter().enumerate() {
+            for v in [i as f32, i as f32 * 2.0, 0.5] {
+                data.extend_from_slice(&v.to_le_bytes());
+            }
+            data.extend_from_slice(&intensity.to_le_bytes());
+        }
+        let field = |name: &str, offset: u32, t: NumericType| PackedElementField {
+            name: name.to_string(),
+            offset,
+            r#type: t as i32,
+        };
+        let cloud = PointCloud {
+            timestamp: None,
+            frame_id: "t".to_string(),
+            pose: None,
+            point_stride: 14,
+            fields: vec![
+                field("x", 0, NumericType::Float32),
+                field("y", 4, NumericType::Float32),
+                field("z", 8, NumericType::Float32),
+                field("intensity", 12, NumericType::Float16),
+            ],
+            data: data.into(),
+        };
+
+        let mut converted = cloud.clone();
+        convert_floats_to_float32(&mut converted);
+        drop_non_finite_points(&mut converted);
+        assert_eq!(converted.point_stride, 16);
+        assert_eq!(converted.fields[3].offset, 12);
+        assert_eq!(converted.fields[3].r#type, NumericType::Float32 as i32);
+        let widened: Vec<f32> = converted
+            .data
+            .as_chunks::<16>()
+            .0
+            .iter()
+            .map(|point| f32::from_le_bytes(point[12..16].try_into().unwrap()))
+            .collect();
+        assert_eq!(widened, [1.0, -2.0]);
+
+        let mut buf = Vec::new();
+        cloud.encode(&mut buf).unwrap();
+        transcode_point_cloud_message(
+            &buf.into(),
+            PointCloudInputSchema::FoxgloveProtobuf,
+            &PointCloudCompression::default(),
         )
         .unwrap();
     }
