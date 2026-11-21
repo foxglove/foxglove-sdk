@@ -33,7 +33,7 @@ rustup target add wasm32-unknown-emscripten
 Now you can build the wheel.
 
 ```sh
-cd ../python/foxglove-sdk
+cd ../../python/foxglove-sdk
 CFLAGS=-fPIC \
   MATURIN_PYEMSCRIPTEN_PLATFORM_VERSION=2026_0 \
   uv run maturin build --release --out dist --target wasm32-unknown-emscripten -i python3.12
