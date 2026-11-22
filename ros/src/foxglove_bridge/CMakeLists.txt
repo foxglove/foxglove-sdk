@@ -91,23 +91,29 @@ endif()
 # ros/README.md).
 set(FOXGLOVE_SDK_VERSION "0.30.2")
 
-if (CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
-  set(FOXGLOVE_SDK_PLATFORM "aarch64-unknown-linux-gnu")
-  set(FOXGLOVE_SDK_SHA "9e388b0374ef2c3aa152bcfd1d7f4a8105283abd39cb5ea4ae74619bcfeb7fd7")
-elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
-  set(FOXGLOVE_SDK_PLATFORM "x86_64-unknown-linux-gnu")
-  set(FOXGLOVE_SDK_SHA "71bf8ded6907f2abb528b7844d9d441d82b93e0679c88724fc1144e6567be2d9")
-else()
-  message(FATAL_ERROR "Unsupported platform/architecture combination: ${CMAKE_SYSTEM_PROCESSOR}-${CMAKE_SYSTEM_NAME}")
-endif()
-set(FOXGLOVE_SDK_URL "https://github.com/foxglove/foxglove-sdk/releases/download/sdk%2Fv${FOXGLOVE_SDK_VERSION}/foxglove-v${FOXGLOVE_SDK_VERSION}-cpp-${FOXGLOVE_SDK_PLATFORM}.zip")
-
 include(FetchContent)
-FetchContent_Declare(
-  foxglove_sdk
-  URL ${FOXGLOVE_SDK_URL}
-  URL_HASH SHA256=${FOXGLOVE_SDK_SHA}
-)
+if (FETCHCONTENT_SOURCE_DIR_FOXGLOVE_SDK)
+  # A locally built SDK dist is used as is: nothing is downloaded, so no released
+  # archive is needed for this platform.
+  FetchContent_Declare(foxglove_sdk SOURCE_DIR "${FETCHCONTENT_SOURCE_DIR_FOXGLOVE_SDK}")
+else()
+  if (CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
+    set(FOXGLOVE_SDK_PLATFORM "aarch64-unknown-linux-gnu")
+    set(FOXGLOVE_SDK_SHA "9e388b0374ef2c3aa152bcfd1d7f4a8105283abd39cb5ea4ae74619bcfeb7fd7")
+  elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
+    set(FOXGLOVE_SDK_PLATFORM "x86_64-unknown-linux-gnu")
+    set(FOXGLOVE_SDK_SHA "71bf8ded6907f2abb528b7844d9d441d82b93e0679c88724fc1144e6567be2d9")
+  else()
+    message(FATAL_ERROR "No released Foxglove SDK for ${CMAKE_SYSTEM_PROCESSOR}-${CMAKE_SYSTEM_NAME}. Build the SDK dist from source and set FETCHCONTENT_SOURCE_DIR_FOXGLOVE_SDK (see ros/README.md).")
+  endif()
+  set(FOXGLOVE_SDK_URL "https://github.com/foxglove/foxglove-sdk/releases/download/sdk%2Fv${FOXGLOVE_SDK_VERSION}/foxglove-v${FOXGLOVE_SDK_VERSION}-cpp-${FOXGLOVE_SDK_PLATFORM}.zip")
+
+  FetchContent_Declare(
+    foxglove_sdk
+    URL ${FOXGLOVE_SDK_URL}
+    URL_HASH SHA256=${FOXGLOVE_SDK_SHA}
+  )
+endif()
 FetchContent_MakeAvailable(foxglove_sdk)
 
 # The dist's CMake package config defines IMPORTED targets for the prebuilt C libraries
