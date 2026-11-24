@@ -216,8 +216,12 @@ jobs:
           echo "CC=clang" >> $GITHUB_ENV
           echo "CXX=clang++" >> $GITHUB_ENV
 
-      - if: contains(matrix.target, 'windows')
-        uses: ilammy/setup-nasm@v1
+      - name: Install NASM
+        if: contains(matrix.target, 'windows')
+        shell: pwsh
+        run: |
+          choco install nasm --version 2.16.01 --no-progress -y
+          echo "C:\Program Files\NASM" | Out-File -FilePath $env:GITHUB_PATH -Append
 
       - name: Build and package C/C++ SDK
         env:
