@@ -2698,7 +2698,7 @@ export const LocationFix = {
     },
     "altitude": {
       "type": "number",
-      "description": "Altitude in meters"
+      "description": "Altitude in meters above the WGS84 ellipsoid"
     },
     "position_covariance": {
       "type": "array",
@@ -2870,7 +2870,7 @@ export const LocationFixes = {
           },
           "altitude": {
             "type": "number",
-            "description": "Altitude in meters"
+            "description": "Altitude in meters above the WGS84 ellipsoid"
           },
           "position_covariance": {
             "type": "array",

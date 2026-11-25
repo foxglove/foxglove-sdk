@@ -1735,7 +1735,7 @@ typedef struct foxglove_location_fix {
    */
   double longitude;
   /**
-   * Altitude in meters
+   * Altitude in meters above the WGS84 ellipsoid
    */
   double altitude;
   /**

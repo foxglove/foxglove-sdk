@@ -1932,7 +1932,7 @@ float64
 </td>
 <td>
 
-Altitude in meters
+Altitude in meters above the WGS84 ellipsoid
 
 </td>
 </tr>
