@@ -27,7 +27,7 @@ We agreed on architecture 2: a shared layer puts the actively-maintained ROS 2 b
 All build targets run inside Docker containers. Targets without a distribution
 suffix default to `rolling`.
 
-Supported distributions: `humble`, `jazzy`, `kilted`, `rolling`.
+Supported distributions: `humble`, `jazzy`, `kilted`, `lyrical`, `rolling`.
 
 ### Build the Docker image
 
