@@ -46,6 +46,9 @@ and clang 21 or later; select clang with `CC=clang CXX=clang++`.
 
 ## Examples
 
+To align camera and telemetry streams on a shared timeline, run the
+[experimental MCAP alignment example](../../tools/mcap_alignment/README.md).
+
 We're using uv as a Python package manager in the foxglove-sdk-examples.
 
 To test that all examples run (as the CI does) you can use `yarn run-python-sdk-examples` in the repo root.
