@@ -135,6 +135,7 @@ Parameters are provided to configure the behavior of the bridge. These parameter
 - **sysinfo_topic**: Topic name for system info messages. Defaults to `/foxglove_bridge/sysinfo`.
 - **sysinfo_refresh_interval**: Refresh interval for system info messages in milliseconds. Minimum 200ms. Defaults to `500`.
 - **message_backlog_size**: Maximum number of outgoing messages to buffer per connected WebSocket client or remote access gateway participant. The WebSocket server drops the oldest data-plane message on overflow and disconnects clients whose control-plane queue fills. The remote access gateway disconnects participants whose queue fills. Defaults to `1024`.
+- **channel_source_plugins**: Names of channel source plugin instances to load. See [Channel source plugins](#channel-source-plugins). Defaults to `[]`.
 - **remote_access**: Enable the remote access gateway, allowing the bridge to be reached through Foxglove's platform without exposing a port on the device. Requires the bridge to be built with `FOXGLOVE_BRIDGE_REMOTE_ACCESS=ON` (the default for our published Docker images). Defaults to `false`.
 - **device_token**: Foxglove device token used to authenticate with the Foxglove platform when `remote_access` is enabled. If empty, the bridge falls back to the `FOXGLOVE_DEVICE_TOKEN` environment variable, which is preferred: a token passed as a parameter is readable by other nodes via the ROS 2 parameter services, while the environment variable is only visible to the bridge process.
 - **video_encoder**: Preferred backend for encoding published video tracks when `remote_access` is enabled: one of `auto`, `software`, `hardware`, `nvenc`, `vaapi`, `videotoolbox`. With `auto` (the default) the SDK chooses the backend and honors the `FOXGLOVE_VIDEO_ENCODER` environment variable. If the requested backend is unavailable on the host, the SDK falls back to another compatible encoder.
@@ -155,6 +156,73 @@ The `capabilities` parameter can accept one or more of the following values.
 - `connectionGraph`: Allow clients to subscribe to updates to the connection graph
 - `assets`: Allow clients to fetch assets
 - `time`: The server may publish time messages using `broadcastTime`. This can be used to sync frame state in panels like the 3D panel if the server's time disagrees with wall time.
+
+### Channel source plugins
+
+Channel source plugins serve data that does not come from ROS, such as a shared-memory transport or a hardware SDK, over the bridge's WebSocket server and remote access gateway, next to the ROS topics.
+
+> [!NOTE]
+> Channel source plugins are experimental. The interface may change in any release, and a plugin must be built against the foxglove_bridge version that loads it.
+
+A plugin is a [pluginlib](https://docs.ros.org/en/jazzy/Tutorials/Beginner-Client-Libraries/Pluginlib.html) class deriving from `foxglove_bridge::ChannelSourcePlugin` ([`channel_source_plugin.hpp`](include/foxglove_bridge/channel_source_plugin.hpp)). In `initialize()` it creates SDK channels on the bridge's context, and it logs to them until `shutdown()`.
+
+```cpp
+class MyChannelSource : public foxglove_bridge::ChannelSourcePlugin {
+public:
+  void initialize(rclcpp::Node& node, const std::string& name,
+                  const foxglove::Context& context) override {
+    auto topic = node.declare_parameter<std::string>(name + ".topic", "/my_source");
+    auto channel = foxglove::RawChannel::create(topic, "json", std::nullopt, context);
+    if (!channel.has_value()) {
+      throw std::runtime_error(foxglove::strerror(channel.error()));
+    }
+    _channel.emplace(std::move(channel.value()));
+    // Start receiving data, and log it with _channel->log(data, size, node.now().nanoseconds()).
+  }
+
+  void shutdown() override {
+    // Stop all threads and callbacks. No logging may happen after this returns.
+  }
+
+private:
+  std::optional<foxglove::RawChannel> _channel;
+};
+
+PLUGINLIB_EXPORT_CLASS(MyChannelSource, foxglove_bridge::ChannelSourcePlugin)
+```
+
+Link the plugin against `foxglove_bridge::plugin_api`, export its plugin description for `foxglove_bridge`, and depend on the exact release in `package.xml` (`<depend version_eq="X.Y.Z">foxglove_bridge</depend>`).
+
+```cmake
+find_package(foxglove_bridge REQUIRED)
+find_package(pluginlib REQUIRED)
+add_library(my_channel_source SHARED src/my_channel_source.cpp)
+target_link_libraries(my_channel_source foxglove_bridge::plugin_api pluginlib::pluginlib)
+pluginlib_export_plugin_description_file(foxglove_bridge plugins.xml)
+install(TARGETS my_channel_source LIBRARY DESTINATION lib)
+```
+
+```xml
+<library path="my_channel_source">
+  <class type="MyChannelSource" base_class_type="foxglove_bridge::ChannelSourcePlugin" />
+</library>
+```
+
+Instances are listed in `channel_source_plugins`, and each reads its parameters under its name. An instance that fails to load is logged and skipped.
+
+```yaml
+/**:
+  ros__parameters:
+    channel_source_plugins: ["my_source"]
+    my_source:
+      plugin: "MyChannelSource"
+```
+
+Plugins run in the bridge process:
+
+- A crashing plugin takes the bridge down.
+- Plugin callbacks on the node share the bridge's default callback group. Use a separate one for anything that may block.
+- A plugin channel must not be identical (topic, encoding, schema and metadata) to a ROS topic's channel, since the bridge would then share it. `topic_whitelist` does not apply to plugin channels.
 
 ### Diagnostic topics
 

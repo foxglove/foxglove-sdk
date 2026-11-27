@@ -146,6 +146,7 @@ set(ROS_BUILD_TYPE "ament_cmake")
 
 find_package(ament_cmake REQUIRED)
 find_package(ament_index_cpp REQUIRED)
+find_package(pluginlib REQUIRED)
 find_package(rcl_interfaces REQUIRED)
 find_package(rcpputils REQUIRED)
 find_package(rcutils REQUIRED)
@@ -160,10 +161,36 @@ find_package(std_msgs REQUIRED)
 # Generate version.hpp
 configure_file(include/foxglove_bridge/version.hpp.in include/foxglove_bridge/version.hpp @ONLY)
 
+# For channel source plugins: the plugin interface and the bridge's SDK, which plugins must share.
+add_library(plugin_api INTERFACE)
+target_include_directories(plugin_api INTERFACE
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+)
+# See channel_source_plugin.hpp.
+string(MAKE_C_IDENTIFIER "abi_v${FOXGLOVE_BRIDGE_VERSION}" FOXGLOVE_BRIDGE_PLUGIN_ABI_NAMESPACE)
+target_compile_definitions(plugin_api INTERFACE
+  FOXGLOVE_BRIDGE_PLUGIN_ABI_NAMESPACE=${FOXGLOVE_BRIDGE_PLUGIN_ABI_NAMESPACE}
+)
+target_link_libraries(plugin_api INTERFACE
+  foxglove_cpp_shared
+  rclcpp::rclcpp
+)
+# The SDK helper only sets build-tree include paths; add the installed SDK headers for consumers.
+get_target_property(_sdk_build_include_dirs foxglove_cpp_shared INTERFACE_INCLUDE_DIRECTORIES)
+list(TRANSFORM _sdk_build_include_dirs PREPEND "$<BUILD_INTERFACE:")
+list(TRANSFORM _sdk_build_include_dirs APPEND ">")
+set_target_properties(foxglove_cpp_shared PROPERTIES
+  INTERFACE_INCLUDE_DIRECTORIES
+    "${_sdk_build_include_dirs};$<INSTALL_INTERFACE:include/${PROJECT_NAME}/sdk>"
+  INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${_sdk_build_include_dirs}"
+)
+
 add_library(foxglove_bridge_component SHARED
   src/message_definition_cache.cpp
   src/param_utils.cpp
   src/ros2_foxglove_bridge.cpp
+  src/channel_source_plugin_host.cpp
   src/parameter_interface.cpp
   src/generic_client.cpp
 )
@@ -188,10 +215,12 @@ endif()
 
 target_link_libraries(foxglove_bridge_component
   foxglove_cpp_shared
+  plugin_api
   ${rcl_interfaces_TARGETS}
   ${rosgraph_msgs_TARGETS}
   ${std_msgs_TARGETS}
   ament_index_cpp::ament_index_cpp
+  pluginlib::pluginlib
   rclcpp::rclcpp
   rclcpp_components::component
   rcpputils::rcpputils
@@ -256,6 +285,39 @@ if(BUILD_TESTING)
   ament_add_gtest(message_definition_cache_test tests/message_definition_cache_test.cpp)
   target_link_libraries(message_definition_cache_test foxglove_bridge_component)
   enable_strict_compiler_warnings(message_definition_cache_test)
+
+  # Built like out-of-tree plugins and mock-installed, so the bridge loads them through pluginlib.
+  add_library(foxglove_bridge_test_plugins SHARED
+    tests/channel_source_plugin/test_plugins.cpp
+    tests/channel_source_plugin/version_mismatch_plugin.cpp
+  )
+  target_link_libraries(foxglove_bridge_test_plugins
+    plugin_api
+    pluginlib::pluginlib
+  )
+  enable_strict_compiler_warnings(foxglove_bridge_test_plugins)
+  pluginlib_enable_plugin_testing(
+    CMAKE_TARGET_VAR test_plugins_target
+    AMENT_PREFIX_PATH_VAR test_plugins_prefix
+    PACKAGE_NAME foxglove_bridge_test_plugins
+    PACKAGE_XML tests/channel_source_plugin/test_plugins_package.xml
+    PLUGIN_CATEGORY ${PROJECT_NAME}
+    PLUGIN_DESCRIPTIONS tests/channel_source_plugin/test_plugins.xml
+    PLUGIN_LIBRARIES foxglove_bridge_test_plugins
+  )
+
+  ament_add_gtest(channel_source_plugin_test tests/channel_source_plugin_test.cpp TIMEOUT 600
+    APPEND_ENV AMENT_PREFIX_PATH=${test_plugins_prefix}
+  )
+  target_compile_definitions(channel_source_plugin_test PRIVATE ASIO_STANDALONE)
+  target_link_libraries(channel_source_plugin_test
+    foxglove_bridge_component
+    nlohmann_json::nlohmann_json
+    rclcpp::rclcpp
+    websocketpp::websocketpp
+  )
+  add_dependencies(channel_source_plugin_test ${test_plugins_target})
+  enable_strict_compiler_warnings(channel_source_plugin_test)
 endif()
 
 install(FILES include/foxglove_bridge/ros2_foxglove_bridge.hpp
@@ -269,7 +331,16 @@ install(TARGETS foxglove_bridge_component
 # Install the SDK shared library alongside the bridge component library so the
 # runtime linker can find it via RPATH ($ORIGIN). Not needed when remote access
 # is disabled, since the SDK is statically linked into foxglove_cpp_shared.
-install(FILES $<TARGET_FILE:foxglove_cpp_shared> DESTINATION lib)
+install(TARGETS foxglove_cpp_shared plugin_api
+  EXPORT ${PROJECT_NAME}_plugin_api
+  LIBRARY DESTINATION lib
+)
+# Included by the config extras: ament_export_targets would make ament_target_dependencies()
+# ignore foxglove_bridge_LIBRARIES.
+install(EXPORT ${PROJECT_NAME}_plugin_api
+  NAMESPACE ${PROJECT_NAME}::
+  DESTINATION share/${PROJECT_NAME}/cmake
+)
 if (FOXGLOVE_BRIDGE_REMOTE_ACCESS)
   install(FILES $<TARGET_FILE:foxglove-shared> DESTINATION lib)
 endif()
@@ -282,5 +353,11 @@ install(DIRECTORY launch
 install(FILES include/foxglove_bridge/utils.hpp
   DESTINATION include/${PROJECT_NAME}/
 )
+install(FILES include/foxglove_bridge/channel_source_plugin.hpp
+  DESTINATION include/${PROJECT_NAME}/
+)
+install(DIRECTORY ${FOXGLOVE_SDK_INCLUDE_DIRS}/
+  DESTINATION include/${PROJECT_NAME}/sdk/
+)
 ament_export_libraries(foxglove_bridge_component)
-ament_package()
+ament_package(CONFIG_EXTRAS cmake/foxglove_bridge-extras.cmake)
